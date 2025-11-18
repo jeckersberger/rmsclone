@@ -1,0 +1,13 @@
+body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 12px; }
+.r { text-align:right; }
+table { width:100%; border-collapse:collapse; }
+th, td { padding:6px; border-bottom:1px solid #ddd; vertical-align:top; }
+.lines th:nth-child(1){ width:36px; }
+.lines th:nth-child(3), .lines th:nth-child(6){ width:60px; }
+.lines th:nth-child(5), .lines th:nth-child(7){ width:110px; }
+.line-set > td { border-top:2px solid #000; }
+.line-comp td { color:#333; }
+.addresses { display:flex; justify-content:space-between; margin:10px 0 20px; }
+.kur-note { margin:8px 0 12px; font-size:11px; color:#333; }
+.totals { margin-top: 10px; }
+.doc-footer { margin-top: 24px; font-size: 11px; color:#444; }
