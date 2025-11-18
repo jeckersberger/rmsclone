@@ -1,0 +1,51 @@
+{% set title = 'Rechnung' %}
+<!doctype html><html lang="de"><head><meta charset="utf-8"><style>{{ css|raw }}</style></head><body>
+<header class="doc-header">
+  <div class="brand">{% if business.logo %}<img src="{{ business.logo }}" alt="Logo">{% endif %}<h1>{{ title }}</h1></div>
+  <div class="meta">
+    <div><strong>Rechnungsnr.:</strong> {{ doc.number }}</div>
+    <div><strong>Datum:</strong> {{ doc.date|date("d.m.Y") }}</div>
+    {% if project.projects_dateStart and project.projects_dateEnd %}
+      <div><strong>Leistungszeitraum:</strong> {{ project.projects_dateStart|date("d.m.Y") }} – {{ project.projects_dateEnd|date("d.m.Y") }} ({{ doc.duration_days }} {{ doc.duration_days == 1 ? 'Tag' : 'Tage' }})</div>
+    {% endif %}
+  </div>
+</header>
+<section class="addresses">
+  <div class="from"><strong>{{ business.name }}</strong><br>{{ business.address|nl2br }}</div>
+  <div class="to"><strong>{{ client.name }}</strong><br>{{ client.address|nl2br }}</div>
+</section>
+<section class="kur-note"><em>Kein Steuerausweis gem. § 19 UStG (Kleinunternehmerregelung).</em></section>
+<table class="lines">
+  <thead><tr><th>Pos.</th><th>Beschreibung</th><th class="r">Menge</th><th>Einheit</th><th class="r">Tagespreis</th><th class="r">Tage</th><th class="r">Summe (Istpreis)</th></tr></thead>
+  <tbody>
+  {% set pos = 0 %}
+  {% for line in lines %}
+    {% if line.kind == 'set' %}
+      {% set pos = pos + 1 %}
+      <tr class="line-set"><td>{{ pos }}</td><td><strong>Set: {{ line.name }}</strong></td><td class="r">{{ line.qty }}</td><td>{{ line.unit }}</td><td class="r">{{ line.day_price|number_format(2, ',', '.') }} €</td><td class="r">{{ line.days }}</td><td class="r">{{ line.total|number_format(2, ',', '.') }} €</td></tr>
+      {% for c in line.components %}
+        <tr class="line-comp">
+          <td></td><td>— {{ c.name }}{% if c.note %} <span class="note">({{ c.note }})</span>{% endif %}</td>
+          <td class="r">{{ c.qty }}</td><td>{{ c.unit }}</td>
+          <td class="r">{{ c.day_price|number_format(2, ',', '.') }} €</td><td class="r">{{ c.days }}</td><td class="r">{{ c.total|number_format(2, ',', '.') }} €</td>
+        </tr>
+      {% endfor %}
+    {% else %}
+      {% set pos = pos + 1 %}
+      <tr><td>{{ pos }}</td><td>{{ line.name }}{% if line.note %}<div class="note">{{ line.note }}</div>{% endif %}</td><td class="r">{{ line.qty }}</td><td>{{ line.unit }}</td><td class="r">{{ line.is_daily ? (line.day_price|number_format(2, ',', '.')) ~ ' €' : '—' }}</td><td class="r">{{ line.is_daily ? line.days : '—' }}</td><td class="r">{{ line.total|number_format(2, ',', '.') }} €</td></tr>
+    {% endif %}
+  {% endfor %}
+  </tbody>
+  </table>
+<table class="totals">
+  <tr><td>Zwischensumme</td><td class="r">{{ totals.subtotal|number_format(2, ',', '.') }} €</td></tr>
+  {% if totals.discount_pct > 0 %}
+    <tr><td>Projektrabatt ({{ totals.discount_pct|number_format(2, ',', '.') }} %)</td><td class="r">− {{ totals.discount|number_format(2, ',', '.') }} €</td></tr>
+  {% endif %}
+  <tr class="grand"><td><strong>Gesamtbetrag</strong></td><td class="r"><strong>{{ totals.gross|number_format(2, ',', '.') }} €</strong></td></tr>
+</table>
+<footer class="doc-footer">
+  {% if business.payment_text %}<div>{{ business.payment_text|raw }}</div>{% endif %}
+  {% if business.iban and business.bic %}<div class="bank">IBAN {{ business.iban }} · BIC {{ business.bic }} · {{ business.bank }}</div>{% endif %}
+</footer>
+</body></html>
