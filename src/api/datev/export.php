@@ -1,24 +1,39 @@
 <?php
+/**
+ * Steuer-CSV-Export (fuer WISO und eigene Steuererklaerung)
+ * Einfacher CSV-Download: Einnahmen, Ausgaben, Kunden, EUER-Zusammenfassung
+ */
 require_once __DIR__ . '/../apiHeadSecure.php';
 if (!$AUTH->instancePermissionCheck("BUSINESS:BUSINESS_SETTINGS:VIEW")) finish(false, ["code" => "PERMISSIONS"]);
 
 $instanceId = $AUTH->data['instance']['instances_id'];
-$exportType = $_POST['type'] ?? 'buchungen';
-$periodFrom = $_POST['period_from'] ?? date('Y-01-01');
-$periodTo = $_POST['period_to'] ?? date('Y-m-d');
+$exportType = $_REQUEST['type'] ?? 'einnahmen';
+$from = $_REQUEST['from'] ?? date('Y-01-01');
+$to = $_REQUEST['to'] ?? date('Y-m-d');
+$year = (int)($_REQUEST['year'] ?? date('Y'));
 
-$svc = new DatevExportService($DBLIB);
+$svc = new SteuerExportService($DBLIB);
 
-if ($exportType === 'stammdaten') {
-    $result = $svc->exportStammdaten($instanceId, $AUTH->data['users_userid']);
-} else {
-    $result = $svc->exportBuchungen($instanceId, $periodFrom, $periodTo, $AUTH->data['users_userid']);
+switch ($exportType) {
+    case 'ausgaben':
+        $result = $svc->exportAusgaben($instanceId, $from, $to);
+        break;
+    case 'kunden':
+        $result = $svc->exportKunden($instanceId);
+        break;
+    case 'euer':
+        $result = $svc->exportEuerZusammenfassung($instanceId, $year);
+        break;
+    case 'einnahmen':
+    default:
+        $result = $svc->exportEinnahmen($instanceId, $from, $to);
+        break;
 }
 
-// Convert to Windows-1252 for DATEV compatibility
-$csvContent = mb_convert_encoding($result['csv'], 'Windows-1252', 'UTF-8');
+// UTF-8 BOM fuer Excel/WISO Kompatibilitaet
+$bom = "\xEF\xBB\xBF";
 
-header('Content-Type: text/csv; charset=Windows-1252');
+header('Content-Type: text/csv; charset=UTF-8');
 header('Content-Disposition: attachment; filename="' . $result['filename'] . '"');
-echo $csvContent;
+echo $bom . $result['csv'];
 exit;

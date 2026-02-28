@@ -4,85 +4,102 @@
     <div class="col-lg-8 offset-lg-2">
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title"><i class="fas fa-file-export"></i> {{ t('datev_export') }}</h3>
+                <h3 class="card-title"><i class="fas fa-file-csv"></i> {{ t('steuer_export') }}</h3>
             </div>
             <div class="card-body">
-                <p>{{ t('datev_export_desc') }}</p>
-                <form id="datevExportForm">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label>{{ t('date_from') }}</label>
-                                <input type="date" class="form-control" id="datevFrom" value="{{ "now"|date("Y") }}-01-01">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label>{{ t('date_to') }}</label>
-                                <input type="date" class="form-control" id="datevTo" value="{{ "now"|date("Y-m-d") }}">
-                            </div>
+                <p>{{ t('steuer_export_desc') }}</p>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>{{ t('date_from') }}</label>
+                            <input type="date" class="form-control" id="exportFrom" value="{{ "now"|date("Y") }}-01-01">
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label>{{ t('export_type') }}</label>
-                                <select class="form-control" id="datevType">
-                                    <option value="buchungen">{{ t('datev_buchungen') }}</option>
-                                    <option value="stammdaten">{{ t('datev_stammdaten') }}</option>
-                                </select>
-                            </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>{{ t('date_to') }}</label>
+                            <input type="date" class="form-control" id="exportTo" value="{{ "now"|date("Y-m-d") }}">
                         </div>
                     </div>
-                </form>
-            </div>
-            <div class="card-footer">
-                <button class="btn btn-primary" id="datevExportBtn"><i class="fas fa-download"></i> {{ t('export') }}</button>
+                </div>
             </div>
         </div>
 
-        {# DATEV Settings #}
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title"><i class="fas fa-cog"></i> {{ t('datev_settings') }}</h3>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>{{ t('datev_beraternr') }}</label>
-                            <input type="text" class="form-control datevSetting" id="instances_datevBeraternr" value="{{ USERDATA.instance.instances_datevBeraternr }}" placeholder="1234567">
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>{{ t('datev_mandantennr') }}</label>
-                            <input type="text" class="form-control datevSetting" id="instances_datevMandantennr" value="{{ USERDATA.instance.instances_datevMandantennr }}" placeholder="12345">
-                        </div>
+        {# Export-Buttons #}
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-arrow-down fa-3x text-success mb-3"></i>
+                        <h4>{{ t('export_einnahmen') }}</h4>
+                        <p class="text-muted">{{ t('export_einnahmen_desc') }}</p>
+                        <button class="btn btn-success btn-block exportBtn" data-type="einnahmen">
+                            <i class="fas fa-download"></i> {{ t('download') }} CSV
+                        </button>
                     </div>
                 </div>
-                <div class="row">
-                    <div class="col-md-6">
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-arrow-up fa-3x text-danger mb-3"></i>
+                        <h4>{{ t('export_ausgaben') }}</h4>
+                        <p class="text-muted">{{ t('export_ausgaben_desc') }}</p>
+                        <button class="btn btn-danger btn-block exportBtn" data-type="ausgaben">
+                            <i class="fas fa-download"></i> {{ t('download') }} CSV
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-calculator fa-3x text-info mb-3"></i>
+                        <h4>{{ t('export_euer_summary') }}</h4>
+                        <p class="text-muted">{{ t('export_euer_summary_desc') }}</p>
                         <div class="form-group">
-                            <label>{{ t('datev_kontenrahmen') }}</label>
-                            <select class="form-control datevSetting" id="instances_datevKontenrahmen">
-                                <option value="SKR03" {{ USERDATA.instance.instances_datevKontenrahmen == 'SKR03' ? 'selected' : '' }}>SKR03</option>
-                                <option value="SKR04" {{ USERDATA.instance.instances_datevKontenrahmen == 'SKR04' ? 'selected' : '' }}>SKR04</option>
+                            <select class="form-control" id="euerYear" style="width:auto;margin:0 auto;">
+                                {% for y in range("now"|date("Y") - 2, "now"|date("Y")) %}
+                                    <option value="{{ y }}" {{ y == "now"|date("Y") ? 'selected' : '' }}>{{ y }}</option>
+                                {% endfor %}
                             </select>
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>{{ t('datev_wj_beginn') }}</label>
-                            <input type="date" class="form-control datevSetting" id="instances_datevWjBeginn" value="{{ USERDATA.instance.instances_datevWjBeginn }}" placeholder="{{ "now"|date("Y") }}-01-01">
-                        </div>
+                        <button class="btn btn-info btn-block" id="exportEuerBtn">
+                            <i class="fas fa-download"></i> {{ t('download') }} CSV
+                        </button>
                     </div>
                 </div>
             </div>
-            <div class="card-footer">
-                {% if "BUSINESS:BUSINESS_SETTINGS:EDIT"|instancePermissions %}
-                <button class="btn btn-primary" id="saveDatevSettings"><i class="fas fa-save"></i> {{ t('save') }}</button>
-                {% endif %}
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-users fa-3x text-primary mb-3"></i>
+                        <h4>{{ t('export_kunden') }}</h4>
+                        <p class="text-muted">{{ t('export_kunden_desc') }}</p>
+                        <button class="btn btn-primary btn-block exportBtn" data-type="kunden">
+                            <i class="fas fa-download"></i> {{ t('download') }} CSV
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# WISO Hinweis #}
+        <div class="card">
+            <div class="card-header bg-light">
+                <h3 class="card-title"><i class="fas fa-info-circle"></i> {{ t('wiso_hint_title') }}</h3>
+            </div>
+            <div class="card-body">
+                <p>{{ t('wiso_hint_text') }}</p>
+                <ol>
+                    <li>{{ t('wiso_step1') }}</li>
+                    <li>{{ t('wiso_step2') }}</li>
+                    <li>{{ t('wiso_step3') }}</li>
+                </ol>
             </div>
         </div>
     </div>
@@ -90,29 +107,19 @@
 
 <script>
 $(document).ready(function() {
-    $('#datevExportBtn').click(function() {
-        var from = $('#datevFrom').val();
-        var to = $('#datevTo').val();
-        var type = $('#datevType').val();
-        // Direct download via form submission
-        var url = '{{ CONFIG.ROOTURL }}/api/datev/export.php?from=' + from + '&to=' + to + '&type=' + type;
-        window.location.href = url;
+    var baseUrl = '{{ CONFIG.ROOTURL }}/api/datev/export.php';
+
+    $('.exportBtn').click(function() {
+        var type = $(this).data('type');
+        var from = $('#exportFrom').val();
+        var to = $('#exportTo').val();
+        window.location.href = baseUrl + '?type=' + type + '&from=' + from + '&to=' + to;
     });
 
-    {% if "BUSINESS:BUSINESS_SETTINGS:EDIT"|instancePermissions %}
-    $('#saveDatevSettings').click(function() {
-        ajaxcall('instances/editInstance.php', {
-            'formData': [
-                {'name': 'instances_datevBeraternr', 'value': $('#instances_datevBeraternr').val()},
-                {'name': 'instances_datevMandantennr', 'value': $('#instances_datevMandantennr').val()},
-                {'name': 'instances_datevKontenrahmen', 'value': $('#instances_datevKontenrahmen').val()},
-                {'name': 'instances_datevWjBeginn', 'value': $('#instances_datevWjBeginn').val()}
-            ]
-        }, function() {
-            location.reload();
-        });
+    $('#exportEuerBtn').click(function() {
+        var year = $('#euerYear').val();
+        window.location.href = baseUrl + '?type=euer&year=' + year;
     });
-    {% endif %}
 });
 </script>
 {% endblock %}
