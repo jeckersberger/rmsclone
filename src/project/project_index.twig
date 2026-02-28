@@ -336,6 +336,10 @@
                                                             {% endif %}
                                                         {% endif %}
                                                         {% if "PROJECTS:DELETE"|instancePermissions %}<a class="dropdown-item" id="deleteProject" href="#">Delete</a>{% endif %}
+                                                        {% if "PROJECTS:CREATE"|instancePermissions %}
+                                                            <div class="dropdown-divider"></div>
+                                                            <a class="dropdown-item" id="cloneProject" href="#"><i class="fas fa-copy"></i> {{ t('clone_project') }}</a>
+                                                        {% endif %}
                                                     </div>
                                                 </button>
                                             </div>
@@ -1089,6 +1093,40 @@
                             ajaxcall("projects/delete.php", {"projects_id": "{{ project.projects_id }}"}, function (data) {
                                 window.location.href = "{{CONFIG.ROOTURL}}/";
                             });
+                        }
+                    }
+                });
+            });
+            {% endif %}
+            {% if "PROJECTS:CREATE"|instancePermissions %}
+            $("#cloneProject").click(function () {
+                bootbox.dialog({
+                    title: '{{ t("clone_project") }}',
+                    message: '<form id="cloneProjectForm">' +
+                        '<div class="form-group"><label>{{ t("project_name") }}</label>' +
+                        '<input type="text" class="form-control" id="cloneNewName" value="{{ project.projects_name|escape("js") }} ({{ t("copy") }})"></div>' +
+                        '<div class="form-group"><div class="custom-control custom-checkbox">' +
+                        '<input type="checkbox" class="custom-control-input" id="cloneAssets" checked>' +
+                        '<label class="custom-control-label" for="cloneAssets">{{ t("clone_assets") }}</label></div></div>' +
+                        '<div class="form-group"><div class="custom-control custom-checkbox">' +
+                        '<input type="checkbox" class="custom-control-input" id="cloneCrew">' +
+                        '<label class="custom-control-label" for="cloneCrew">{{ t("clone_crew") }}</label></div></div>' +
+                        '</form>',
+                    buttons: {
+                        cancel: { label: '{{ t("cancel") }}', className: 'btn-default' },
+                        confirm: {
+                            label: '<i class="fas fa-copy"></i> {{ t("clone_project") }}',
+                            className: 'btn-primary',
+                            callback: function() {
+                                ajaxcall("projects/clone.php", {
+                                    source_project_id: {{ project.projects_id }},
+                                    new_name: $('#cloneNewName').val(),
+                                    clone_assets: $('#cloneAssets').is(':checked') ? '1' : '0',
+                                    clone_crew: $('#cloneCrew').is(':checked') ? '1' : '0'
+                                }, function(data) {
+                                    window.location.href = "{{ CONFIG.ROOTURL }}/project/?id=" + data.response.projects_id;
+                                });
+                            }
                         }
                     }
                 });

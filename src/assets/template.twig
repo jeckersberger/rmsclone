@@ -286,15 +286,16 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 					{% endif %}
 				</ul>
 				{% if USERDATA.instances|length > 0 and pageConfig.NOMENU != true %}
-					<form class="form-inline ml-3 d-none d-sm-block" action="{{CONFIG.ROOTURL}}/search.php" method="GET">
+					<form class="form-inline ml-3 d-none d-sm-block" action="{{CONFIG.ROOTURL}}/search.php" method="GET" autocomplete="off" style="position:relative;">
 						<div class="input-group input-group-sm">
-							<input class="form-control form-control-navbar" name="term" type="search" placeholder="Search" aria-label="Search">
+							<input class="form-control form-control-navbar" name="term" id="globalSearchInput" type="search" placeholder="{{ t('search') }}..." aria-label="Search">
 							<div class="input-group-append">
 								<button class="btn btn-navbar" type="submit">
 									<i class="fas fa-search"></i>
 								</button>
 							</div>
 						</div>
+						<div id="quickSearchResults" class="dropdown-menu dropdown-menu-lg" style="display:none; position:absolute; top:100%; left:0; width:400px; max-height:400px; overflow-y:auto; z-index:9999;"></div>
 					</form>
 					<ul class="navbar-nav ml-auto">
 						{% if USERDATA.instances|length > 0 %}
@@ -510,6 +511,16 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 												</li>
 											{% endif %}
 
+											{% if "PROJECTS:VIEW"|instancePermissions %}
+												<li class="nav-item">
+													<a href="{{ CONFIG.ROOTURL }}/business/availability.php" class="nav-link">
+														<i class="fas fa-calendar-check nav-icon"></i>
+														<p>
+															{{ t('availability_calendar') }}
+														</p>
+													</a>
+												</li>
+											{% endif %}
 											{% if "LOCATIONS:VIEW"|instancePermissions %}
 												<li class="nav-item">
 													<a href="{{ CONFIG.ROOTURL }}/location/" class="nav-link">
@@ -917,6 +928,57 @@ location.reload();
 });{% endif %}
 });
 console.log("Welcome to    {{ CONFIG.PROJECT_NAME|escape("js") }}version    {{ VERSION|escape("js") }}");
+
+// ── Global Quick Search (Live) ──
+(function() {
+    var searchTimer = null;
+    var $input = $('#globalSearchInput');
+    var $results = $('#quickSearchResults');
+    if (!$input.length) return;
+
+    $input.on('input', function() {
+        var term = $(this).val().trim();
+        clearTimeout(searchTimer);
+        if (term.length < 2) { $results.hide(); return; }
+        searchTimer = setTimeout(function() {
+            $.ajax({
+                url: "{{ CONFIG.ROOTURL }}/api/search/quick.php",
+                type: "POST",
+                data: { term: term },
+                success: function(data) {
+                    if (!data.result || !data.response || !data.response.results || data.response.results.length === 0) {
+                        $results.html('<span class="dropdown-item text-muted"><i>{{ t("no_results") }}</i></span>').show();
+                        return;
+                    }
+                    var html = '';
+                    data.response.results.forEach(function(r) {
+                        html += '<a href="{{ CONFIG.ROOTURL }}' + r.url + '" class="dropdown-item">';
+                        html += '<i class="' + r.icon + ' mr-2"></i> ';
+                        html += '<span>' + r.title + '</span>';
+                        if (r.subtitle) html += ' <small class="text-muted">- ' + r.subtitle + '</small>';
+                        html += '<span class="float-right badge bg-' + r.badge + '">' + r.type + '</span>';
+                        html += '</a>';
+                    });
+                    html += '<div class="dropdown-divider"></div>';
+                    html += '<a href="{{ CONFIG.ROOTURL }}/search.php?term=' + encodeURIComponent(term) + '" class="dropdown-item dropdown-footer">{{ t("show_all_results") }}</a>';
+                    $results.html(html).show();
+                }
+            });
+        }, 300);
+    });
+
+    // Hide on click outside
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('#globalSearchInput, #quickSearchResults').length) {
+            $results.hide();
+        }
+    });
+
+    // Show again on focus if there are results
+    $input.on('focus', function() {
+        if ($results.children().length > 0 && $(this).val().trim().length >= 2) $results.show();
+    });
+})();
 			</script>
 			{{ CONFIG.FOOTER_ANALYTICS|raw }}
 		</body>

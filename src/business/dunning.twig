@@ -136,14 +136,39 @@ $(document).ready(function() {
 
     loadDunning();
 
-    // Create dunning
+    // Create dunning - suggestion only, user confirms manually
     $(document).on('click', '.createDunningBtn', function() {
         var docId = $(this).data('id');
-        bootbox.confirm('{{ t("create_dunning_confirm") }}', function(result) {
-            if (result) {
-                ajaxcall('dunning/create.php', {doc_id: docId}, function() {
-                    loadDunning();
-                });
+        var row = $(this).closest('tr');
+        var docNumber = row.find('td:first').text().trim();
+        var clientName = row.find('td:eq(2)').text().trim();
+        var amount = row.find('td:eq(3)').text().trim();
+        var daysText = row.find('td:eq(5) .badge').text().trim();
+        var level = row.find('td:eq(6) .badge').text().trim();
+
+        bootbox.dialog({
+            title: '<i class="fas fa-bell"></i> {{ t("dunning_suggestion_title") }}',
+            message: '<div class="alert alert-info"><i class="fas fa-info-circle"></i> ' +
+                '<strong>{{ t("dunning_suggestion_hint") }}</strong></div>' +
+                '<table class="table table-sm table-borderless">' +
+                '<tr><td><strong>{{ t("doc_number") }}:</strong></td><td>' + docNumber + '</td></tr>' +
+                '<tr><td><strong>{{ t("client") }}:</strong></td><td>' + clientName + '</td></tr>' +
+                '<tr><td><strong>{{ t("gross_amount") }}:</strong></td><td>' + amount + '</td></tr>' +
+                '<tr><td><strong>{{ t("days_overdue") }}:</strong></td><td>' + daysText + '</td></tr>' +
+                '<tr><td><strong>{{ t("dunning_level") }}:</strong></td><td>' + level + '</td></tr>' +
+                '</table>' +
+                '<hr><p class="text-muted"><small>{{ t("dunning_suggestion_desc") }}</small></p>',
+            buttons: {
+                cancel: { label: '{{ t("cancel") }}', className: 'btn-default' },
+                confirm: {
+                    label: '<i class="fas fa-envelope"></i> {{ t("create_dunning") }}',
+                    className: 'btn-warning',
+                    callback: function() {
+                        ajaxcall('dunning/create.php', {doc_id: docId}, function() {
+                            loadDunning();
+                        });
+                    }
+                }
             }
         });
     });

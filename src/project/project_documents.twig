@@ -91,6 +91,14 @@ $(document).ready(function() {
                         html += '<button class="btn btn-default docEmailBtn" data-s3id="' + doc.s3files_id + '" data-number="' + (doc.doc_number || '') + '" data-type="' + doc.doc_type + '" title="{{ t("send_email") }}"><i class="fas fa-envelope"></i></button>';
                     }
                     html += '<button class="btn btn-default docStatusBtn" data-id="' + doc.id + '" data-type="' + doc.doc_type + '" data-status="' + doc.status + '" title="{{ t("change_status") }}"><i class="fas fa-exchange-alt"></i></button>';
+                    if (doc.doc_type === 'quote' && doc.status === 'accepted') {
+                        html += '<button class="btn btn-success docQuickConvertBtn" data-id="' + doc.id + '" data-target="order_confirmation" title="{{ t("quick_convert_to_order") }}"><i class="fas fa-arrow-right"></i> {{ t("order_confirmation") }}</button>';
+                    } else if (doc.doc_type === 'quote' && doc.status !== 'cancelled' && doc.status !== 'rejected') {
+                        html += '<button class="btn btn-outline-success btn-sm docQuickAcceptConvertBtn" data-id="' + doc.id + '" title="{{ t("accept_and_convert") }}"><i class="fas fa-check-double"></i></button>';
+                    }
+                    if (doc.doc_type === 'order_confirmation') {
+                        html += '<button class="btn btn-primary btn-sm docQuickConvertBtn" data-id="' + doc.id + '" data-target="invoice" title="{{ t("quick_convert_to_invoice") }}"><i class="fas fa-arrow-right"></i> {{ t("invoice") }}</button>';
+                    }
                     if (doc.doc_type === 'quote' || doc.doc_type === 'order_confirmation' || doc.doc_type === 'invoice') {
                         html += '<button class="btn btn-default docConvertBtn" data-id="' + doc.id + '" data-type="' + doc.doc_type + '" title="{{ t("convert_document") }}"><i class="fas fa-arrow-right"></i></button>';
                     }
@@ -181,6 +189,33 @@ $(document).ready(function() {
                         loadDocuments();
                     });
                 }
+            }
+        });
+    });
+
+    // Quick convert (one-click: Angebot -> AB, AB -> Rechnung)
+    $(document).on('click', '.docQuickConvertBtn', function() {
+        var docId = $(this).data('id');
+        var targetType = $(this).data('target');
+        var btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+        ajaxcall('documentLifecycle/convert.php', {source_doc_id: docId, target_type: targetType}, function() {
+            loadDocuments();
+        });
+    });
+
+    // Accept quote and convert to order confirmation in one click
+    $(document).on('click', '.docQuickAcceptConvertBtn', function() {
+        var docId = $(this).data('id');
+        bootbox.confirm('{{ t("accept_and_convert_confirm") }}', function(result) {
+            if (result) {
+                // First set status to accepted
+                ajaxcall('documentLifecycle/changeStatus.php', {doc_id: docId, status: 'accepted'}, function() {
+                    // Then convert to order confirmation
+                    ajaxcall('documentLifecycle/convert.php', {source_doc_id: docId, target_type: 'order_confirmation'}, function() {
+                        loadDocuments();
+                    });
+                });
             }
         });
     });

@@ -90,4 +90,100 @@ return [
     'subtotal'            => 'SubTotal',
     'payments_received'   => 'Payments Received to Date',
     'grand_total_outstanding' => 'Grand Total Outstanding',
+
+    // ── Document Lifecycle ──
+    'document_lifecycle'  => 'Document Lifecycle',
+    'create_document'     => 'Create Document',
+    'doc_number'          => 'Doc No.',
+    'doc_type'            => 'Document Type',
+    'status'              => 'Status',
+    'net_amount'          => 'Net Amount',
+    'gross_amount'        => 'Gross Amount',
+    'date'                => 'Date',
+    'due_date'            => 'Due Date',
+    'order_confirmation'  => 'Order Confirmation',
+    'credit_note'         => 'Credit Note',
+    'cancellation_doc'    => 'Cancellation',
+    'document_chain'      => 'Document Chain',
+    'change_status'       => 'Change Status',
+    'convert_document'    => 'Convert Document',
+    'no_documents'        => 'No documents available',
+    'send_email'          => 'Send Email',
+
+    // ── Dunning ──
+    'dunning_overview'    => 'Dunning Overview',
+    'overdue_invoices'    => 'Overdue Invoices',
+    'overdue_amount'      => 'Overdue Amount',
+    'dunnings_sent'       => 'Dunnings Sent (Month)',
+    'dunnings_resolved'   => 'Resolved (Month)',
+    'days_overdue'        => 'Days Overdue',
+    'dunning_level'       => 'Dunning Level',
+    'create_dunning'      => 'Create Dunning',
+    'mark_paid'           => 'Mark as Paid',
+    'no_overdue_invoices' => 'No overdue invoices',
+    'days'                => 'days',
+    'project'             => 'Project',
+    'client'              => 'Client',
+
+    // ── Packing Lists ──
+    'packing_lists'       => 'Packing Lists',
+    'checkinout'          => 'Check In/Out',
+
+    // ── Dashboard (Enhanced) ──
+    'today_projects'      => "Today's Projects",
+    'overdue_returns'     => 'Overdue Returns',
+    'unpaid_projects'     => 'Unpaid Projects',
+    'active_projects'     => 'Active Projects',
+    'next_7_days'         => 'Next 7 Days',
+    'no_projects_today'   => 'No projects for today',
+    'no_overdue_returns'  => 'No overdue returns',
+    'no_unpaid_projects'  => 'No unpaid projects',
+    'no_upcoming_projects' => 'No projects in the next 7 days',
+    'time'                => 'Time',
+    'no_widgets'          => 'No widgets added to dashboard',
+
+    // ── Dunning Suggestions ──
+    'dunning_suggestions' => 'Dunning Suggestions',
+    'suggested_action'    => 'Suggested Action',
+    'no_dunning_suggestions' => 'No dunning suggestions',
+    'dunning_suggestion_title' => 'Dunning Suggestion',
+    'dunning_suggestion_hint' => 'The system suggests a dunning notice. You decide whether to send it.',
+    'dunning_suggestion_desc' => 'Click "Create Dunning" to manually send the notice. Nothing is sent automatically.',
+    'payment_reminder'    => 'Payment Reminder',
+    'first_dunning'       => '1st Dunning',
+    'second_dunning'      => '2nd Dunning',
+    'final_dunning'       => 'Final Dunning',
+
+    // ── Project Clone / Templates ──
+    'clone_project'       => 'Clone Project',
+    'copy'                => 'Copy',
+    'clone_assets'        => 'Copy asset assignments',
+    'clone_crew'          => 'Copy crew assignments',
+    'project_name'        => 'Project Name',
+    'project_start'       => 'Start Date',
+    'project_end'         => 'End Date',
+    'project_delivery_start' => 'Delivery Start',
+    'project_delivery_end' => 'Delivery End',
+
+    // ── Quick Search ──
+    'no_results'          => 'No results found',
+    'show_all_results'    => 'Show all results',
+
+    // ── Document Quick Convert ──
+    'quick_convert_to_order' => 'Create Order Confirmation',
+    'quick_convert_to_invoice' => 'Create Invoice',
+    'accept_and_convert'  => 'Accept & Convert',
+    'accept_and_convert_confirm' => 'Accept quotation and automatically create an order confirmation?',
+
+    // ── Availability Calendar ──
+    'availability_calendar' => 'Availability Calendar',
+    'availability_list'   => 'Booking List',
+    'all_asset_types'     => 'All Asset Types',
+    'no_bookings'         => 'No bookings in the selected period',
+
+    // ── Reports / Common ──
+    'reports'             => 'Reports',
+    'euer_report'         => 'Income/Expense Report',
+    'steuer_export'       => 'Tax Export',
+    'amount'              => 'Amount',
 ];

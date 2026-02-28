@@ -346,4 +346,47 @@ return [
     // ── Kalender ──
     'calendar_subscribe'  => 'Kalender abonnieren',
     'calendar_subscribe_desc' => 'Kopieren Sie diese URL in Ihren iCloud-Kalender (Einstellungen → Accounts → Kalenderabo hinzufügen):',
+
+    // ── Dashboard (Enhanced) ──
+    'today_projects'      => 'Heutige Projekte',
+    'overdue_returns'     => 'Überfällige Rückgaben',
+    'unpaid_projects'     => 'Unbezahlte Projekte',
+    'active_projects'     => 'Aktive Projekte',
+    'next_7_days'         => 'Nächste 7 Tage',
+    'no_projects_today'   => 'Keine Projekte für heute',
+    'no_overdue_returns'  => 'Keine überfälligen Rückgaben',
+    'no_unpaid_projects'  => 'Keine unbezahlten Projekte',
+    'no_upcoming_projects' => 'Keine Projekte in den nächsten 7 Tagen',
+    'time'                => 'Uhrzeit',
+    'no_widgets'          => 'Keine Widgets zum Dashboard hinzugefügt',
+
+    // ── Dunning Suggestions ──
+    'dunning_suggestions' => 'Mahnvorschläge',
+    'suggested_action'    => 'Empfohlene Aktion',
+    'no_dunning_suggestions' => 'Keine Mahnvorschläge',
+    'dunning_suggestion_title' => 'Mahnvorschlag',
+    'dunning_suggestion_hint' => 'Das System schlägt eine Mahnung vor. Sie entscheiden, ob diese versendet wird.',
+    'dunning_suggestion_desc' => 'Klicken Sie auf "Mahnung erstellen", um die Mahnung manuell zu versenden. Es wird nichts automatisch verschickt.',
+
+    // ── Project Clone / Templates ──
+    'clone_project'       => 'Projekt klonen',
+    'copy'                => 'Kopie',
+    'clone_assets'        => 'Equipment-Zuweisungen übernehmen',
+    'clone_crew'          => 'Crew-Zuweisungen übernehmen',
+
+    // ── Quick Search ──
+    'no_results'          => 'Keine Ergebnisse gefunden',
+    'show_all_results'    => 'Alle Ergebnisse anzeigen',
+
+    // ── Document Quick Convert ──
+    'quick_convert_to_order' => 'Auftragsbestätigung erstellen',
+    'quick_convert_to_invoice' => 'Rechnung erstellen',
+    'accept_and_convert'  => 'Annehmen & umwandeln',
+    'accept_and_convert_confirm' => 'Angebot annehmen und automatisch eine Auftragsbestätigung erstellen?',
+
+    // ── Availability Calendar ──
+    'availability_calendar' => 'Verfügbarkeitskalender',
+    'availability_list'   => 'Belegungsliste',
+    'all_asset_types'     => 'Alle Equipment-Typen',
+    'no_bookings'         => 'Keine Buchungen im gewählten Zeitraum',
 ];
