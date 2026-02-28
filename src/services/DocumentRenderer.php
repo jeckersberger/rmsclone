@@ -31,8 +31,10 @@ class DocumentRenderer {
       ? (int)$opts['duration_days']
       : self::calcDays(new DateTime($project['projects_dateStart']), new DateTime($project['projects_dateEnd']));
 
-    // 3) Zeilen (Sets, Tagespreis, Istpreis)
-    $lines = self::buildLines($project, $durationDays, $opts);
+    // 3) Zeilen (Sets, Tagespreis, Istpreis) - gruppiert nach Kategorie
+    $lineData = self::buildLines($project, $durationDays, $opts);
+    $flatLines  = $lineData['_flat'];
+    $categories = $lineData['_grouped'];
 
     // 4) KUR aus Business-Settings
     $kurEnabled = (bool)($business['instances_kurEnabled'] ?? true);
@@ -40,7 +42,7 @@ class DocumentRenderer {
 
     // 5) Summen + Rabatt + KUR/MwSt
     $discountPct = max(0.0, min(100.0, (float)($opts['discount_pct'] ?? 0)));
-    $totals = self::calcTotals($lines, [
+    $totals = self::calcTotals($flatLines, [
       'kur' => $kurEnabled,
       'vat_rate' => $vatRate,
       'discount_pct' => $discountPct,
@@ -99,13 +101,14 @@ class DocumentRenderer {
     }));
 
     $templateVars = [
-      'business' => $business,
-      'client'   => $client,
-      'project'  => $project,
-      'doc'      => $docData,
-      'lines'    => $lines,
-      'totals'   => $totals,
-      'options'  => $opts,
+      'business'   => $business,
+      'client'     => $client,
+      'project'    => $project,
+      'doc'        => $docData,
+      'lines'      => $flatLines,
+      'categories' => $categories,
+      'totals'     => $totals,
+      'options'    => $opts,
     ];
 
     $html = $tpl
@@ -130,7 +133,7 @@ class DocumentRenderer {
       'instances_id'=>$instanceId,'projects_id'=>$projectId,'type'=>$type,
       'template_id'=>$tpl ? $tpl['id'] : 0,
       'doc_number'=>$docNumber,'language'=>'de-DE','currency'=>'EUR',
-      'totals_json'=>json_encode($totals),'snapshot_json'=>json_encode(['lines'=>$lines,'doc'=>$docData]),
+      'totals_json'=>json_encode($totals),'snapshot_json'=>json_encode(['lines'=>$flatLines,'categories'=>$categories,'doc'=>$docData]),
       's3files_id'=>$fileInfo['s3files_id'],'generated_by'=>$userId
     ]);
     return ['doc_number'=>$docNumber,'s3files_id'=>$fileInfo['s3files_id']];
@@ -144,8 +147,9 @@ class DocumentRenderer {
   private static function buildLines(array $project, int $days, array $opts): array {
     $groupPrefix = $opts['set_group_prefix'] ?? 'Set:';
     $showCompPrices = $opts['show_component_prices'] ?? true;
-    $sets = [];
-    $singles = [];
+
+    // Collect all lines with their category info
+    $allLines = [];
 
     foreach ($project['assets'] as $a) {
       $qty = (float)($a['qty'] ?? 1);
@@ -154,28 +158,95 @@ class DocumentRenderer {
       $line = [
         'kind'=>'asset','name'=>$a['name'],'qty'=>$qty,'unit'=>$a['unit'] ?? 'Tag',
         'day_price'=>$dayPrice,'days'=>$days,'total'=>round($dayPrice*$days*$qty,2),
-        'note'=>$a['note'] ?? null,'is_daily'=>true
+        'note'=>$a['note'] ?? null,'is_daily'=>true,
+        'category_name' => $a['assetCategories_name'] ?? $a['category_name'] ?? 'Sonstiges',
+        'category_rank' => (int)($a['assetCategories_rank'] ?? $a['category_rank'] ?? 999),
+        'category_icon' => $a['assetCategories_fontAwesome'] ?? $a['category_icon'] ?? '',
       ];
       $setName = null;
       foreach (($a['groups'] ?? []) as $g) {
         if (stripos($g['name'],$groupPrefix)===0) { $setName = trim(substr($g['name'], strlen($groupPrefix))); break; }
       }
-      if ($setName) { $sets[$setName]['components'][] = $line; } else { $singles[] = $line; }
+      if ($setName) {
+        if (!isset($allLines['_sets'][$setName])) {
+          $allLines['_sets'][$setName] = [
+            'components' => [],
+            'category_name' => $line['category_name'],
+            'category_rank' => $line['category_rank'],
+            'category_icon' => $line['category_icon'],
+          ];
+        }
+        $allLines['_sets'][$setName]['components'][] = $line;
+      } else {
+        $allLines[] = $line;
+      }
     }
 
+    // Extras go into "Sonstige Leistungen" category
     foreach ($project['extras'] as $e) {
-      $singles[] = ['kind'=>'extra','name'=>$e['name'],'qty'=>(float)($e['qty'] ?? 1),'unit'=>$e['unit'] ?? '',
-        'day_price'=>null,'days'=>null,'total'=>round((float)($e['total_net'] ?? 0),2),'note'=>$e['note'] ?? null,'is_daily'=>false];
+      $allLines[] = [
+        'kind'=>'extra','name'=>$e['name'],'qty'=>(float)($e['qty'] ?? 1),'unit'=>$e['unit'] ?? '',
+        'day_price'=>null,'days'=>null,'total'=>round((float)($e['total_net'] ?? 0),2),
+        'note'=>$e['note'] ?? null,'is_daily'=>false,
+        'category_name' => 'Sonstige Leistungen',
+        'category_rank' => 9999,
+        'category_icon' => 'fas fa-plus-circle',
+      ];
     }
 
-    $lines = [];
-    foreach ($sets as $name=>$payload) {
+    // Build sets as single lines with their category from first component
+    $sets = $allLines['_sets'] ?? [];
+    unset($allLines['_sets']);
+    $flatLines = [];
+    foreach ($sets as $name => $payload) {
       $sumDay=0; $sumTotal=0;
       foreach ($payload['components'] as $c) { $sumDay += ($c['day_price']??0)*($c['qty']??1); $sumTotal += ($c['total']??0); }
-      $lines[] = ['kind'=>'set','name'=>$name,'qty'=>1,'unit'=>'Set','day_price'=>round($sumDay,2),'days'=>$days,'total'=>round($sumTotal,2),
-        'components'=>$payload['components'],'show_component_prices'=>$showCompPrices];
+      $flatLines[] = [
+        'kind'=>'set','name'=>$name,'qty'=>1,'unit'=>'Set',
+        'day_price'=>round($sumDay,2),'days'=>$days,'total'=>round($sumTotal,2),
+        'components'=>$payload['components'],'show_component_prices'=>$showCompPrices,
+        'category_name' => $payload['category_name'],
+        'category_rank' => $payload['category_rank'],
+        'category_icon' => $payload['category_icon'],
+      ];
     }
-    return array_merge($lines, $singles);
+    $flatLines = array_merge($flatLines, array_values($allLines));
+
+    // Sort by category_rank, then by name within category
+    usort($flatLines, function ($a, $b) {
+      $cmp = ($a['category_rank'] ?? 999) <=> ($b['category_rank'] ?? 999);
+      if ($cmp !== 0) return $cmp;
+      $cmp = ($a['category_name'] ?? '') <=> ($b['category_name'] ?? '');
+      if ($cmp !== 0) return $cmp;
+      return ($a['name'] ?? '') <=> ($b['name'] ?? '');
+    });
+
+    // Group into categories for the template
+    $grouped = [];
+    foreach ($flatLines as $line) {
+      $cat = $line['category_name'] ?? 'Sonstiges';
+      if (!isset($grouped[$cat])) {
+        $grouped[$cat] = [
+          'name'  => $cat,
+          'icon'  => $line['category_icon'] ?? '',
+          'rank'  => $line['category_rank'] ?? 999,
+          'lines' => [],
+          'subtotal' => 0.0,
+        ];
+      }
+      $grouped[$cat]['lines'][] = $line;
+      $grouped[$cat]['subtotal'] += (float)$line['total'];
+    }
+    // Round subtotals
+    foreach ($grouped as &$g) { $g['subtotal'] = round($g['subtotal'], 2); }
+    unset($g);
+
+    // Sort groups by rank
+    uasort($grouped, function ($a, $b) { return $a['rank'] <=> $b['rank']; });
+
+    // Return both flat lines (for totals calculation) and grouped (for template)
+    // We embed the grouped data as a special structure
+    return ['_flat' => $flatLines, '_grouped' => array_values($grouped)];
   }
 
   private static function calcTotals(array $lines, array $cfg): array {
