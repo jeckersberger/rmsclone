@@ -167,4 +167,36 @@
         </div>
     </div>
 </div>
+
+{# iCloud / Kalender-Abo #}
+<div class="row">
+    <div class="col-12 col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-calendar-plus"></i> {{ t('calendar_subscribe') }}</h3>
+            </div>
+            <div class="card-body">
+                <p>{{ t('calendar_subscribe_desc') }}</p>
+                {% if USERDATA.instance.instances_calendarHash %}
+                    {% set icsUrl = CONFIG.ROOTURL ~ '/api/instances/calendar-ics.php?id=' ~ USERDATA.instance.instances_id ~ '&key=' ~ USERDATA.instance.instances_calendarHash %}
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="icsUrlField" value="{{ icsUrl }}" readonly>
+                        <div class="input-group-append">
+                            <button class="btn btn-primary" onclick="navigator.clipboard.writeText(document.getElementById('icsUrlField').value); $(this).html('<i class=\'fas fa-check\'></i> Kopiert!');">
+                                <i class="fas fa-copy"></i> Kopieren
+                            </button>
+                        </div>
+                    </div>
+                    <small class="text-muted mt-2 d-block">
+                        <strong>iPhone/iPad:</strong> Einstellungen &rarr; Kalender &rarr; Accounts &rarr; Account hinzufügen &rarr; Andere &rarr; Kalenderabo hinzufügen<br>
+                        <strong>Mac:</strong> Kalender.app &rarr; Ablage &rarr; Neues Kalenderabonnement<br>
+                        <strong>Google Calendar:</strong> Andere Kalender &rarr; Per URL &rarr; URL einfügen
+                    </small>
+                {% else %}
+                    <p class="text-muted">Kalender-Hash wird beim ersten Aufruf der Kalenderseite generiert. <a href="{{ CONFIG.ROOTURL }}/instances/calendar.php">Kalender öffnen</a>, dann hierher zurückkehren.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

@@ -1,0 +1,17 @@
+{
+  "name": "AdamRMS Mobile",
+  "short_name": "RMS",
+  "description": "Verleih-Management - Projekte, Equipment, Kunden",
+  "start_url": "/mobile/",
+  "display": "standalone",
+  "background_color": "#343a40",
+  "theme_color": "#007bff",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/static-assets/img/icons/android-icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

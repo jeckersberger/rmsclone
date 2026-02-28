@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#343a40">
+    <link rel="manifest" href="{{ CONFIG.ROOTURL }}/static-assets/manifest.json">
+    <link rel="apple-touch-icon" href="{{ CONFIG.ROOTURL }}/static-assets/img/icons/apple-icon-180x180.png">
+    <title>{{ CONFIG.PROJECT_NAME }} Mobile</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="{{ CONFIG.ROOTURL }}/static-assets/css/adminlte.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.4.1/js/bootstrap.bundle.min.js"></script>
+
+    <style>
+        :root { --primary: #007bff; --dark: #343a40; }
+        body { background: #f4f6f9; padding-top: 56px; padding-bottom: 70px; }
+        .mobile-header { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: var(--dark); color: #fff; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; }
+        .mobile-header h1 { font-size: 18px; margin: 0; font-weight: 600; }
+        .mobile-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000; background: #fff; border-top: 1px solid #dee2e6; display: flex; }
+        .mobile-nav a { flex: 1; text-align: center; padding: 8px 0; color: #6c757d; text-decoration: none; font-size: 11px; }
+        .mobile-nav a.active { color: var(--primary); }
+        .mobile-nav a i { display: block; font-size: 20px; margin-bottom: 2px; }
+        .mobile-page { display: none; padding: 12px; }
+        .mobile-page.active { display: block; }
+        .mobile-card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .mobile-card h3 { font-size: 16px; margin: 0 0 4px; }
+        .mobile-card .meta { font-size: 13px; color: #6c757d; }
+        .mobile-list-item { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #f0f0f0; }
+        .mobile-list-item:last-child { border-bottom: none; }
+        .mobile-list-item .icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 12px; font-size: 18px; color: #fff; flex-shrink: 0; }
+        .mobile-list-item .info { flex: 1; }
+        .mobile-list-item .info h4 { font-size: 15px; margin: 0; }
+        .mobile-list-item .info p { font-size: 12px; color: #6c757d; margin: 0; }
+        .mobile-fab { position: fixed; bottom: 80px; right: 16px; width: 56px; height: 56px; border-radius: 28px; background: var(--primary); color: #fff; border: none; box-shadow: 0 4px 12px rgba(0,123,255,0.4); font-size: 24px; z-index: 999; }
+        .mobile-form .form-group { margin-bottom: 12px; }
+        .mobile-form label { font-size: 13px; font-weight: 600; color: #495057; }
+        .mobile-form .form-control { border-radius: 8px; font-size: 15px; padding: 10px 12px; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+        .search-bar { padding: 8px 12px; background: #fff; border-radius: 10px; border: 1px solid #dee2e6; display: flex; align-items: center; margin-bottom: 12px; }
+        .search-bar input { border: none; outline: none; flex: 1; font-size: 15px; margin-left: 8px; }
+        .quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+        .quick-action { background: #fff; border-radius: 12px; padding: 16px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08); text-decoration: none; color: #333; }
+        .quick-action i { font-size: 28px; display: block; margin-bottom: 6px; }
+        .quick-action span { font-size: 13px; }
+    </style>
+</head>
+<body>
+    {# Header #}
+    <div class="mobile-header">
+        <h1><i class="fas fa-warehouse"></i> {{ CONFIG.PROJECT_NAME }}</h1>
+        <a href="{{ CONFIG.ROOTURL }}/" style="color:#fff;"><i class="fas fa-desktop"></i></a>
+    </div>
+
+    {# ═══ Dashboard Page ═══ #}
+    <div class="mobile-page active" id="page-dashboard">
+        <div class="quick-actions">
+            <a href="#" class="quick-action" onclick="showPage('page-new-project')">
+                <i class="fas fa-plus-circle text-primary"></i>
+                <span>{{ t('new_project') }}</span>
+            </a>
+            <a href="#" class="quick-action" onclick="showPage('page-new-client')">
+                <i class="fas fa-user-plus text-success"></i>
+                <span>Neuer Kunde</span>
+            </a>
+            <a href="#" class="quick-action" onclick="showPage('page-scanner')">
+                <i class="fas fa-qrcode text-info"></i>
+                <span>QR-Scanner</span>
+            </a>
+            <a href="#" class="quick-action" onclick="showPage('page-labels')">
+                <i class="fas fa-print text-warning"></i>
+                <span>Labels drucken</span>
+            </a>
+        </div>
+
+        <h5 style="margin: 16px 0 8px; font-weight: 600;">Aktive Projekte</h5>
+        {% for p in recentProjects %}
+        <div class="mobile-card" onclick="window.location='{{ CONFIG.ROOTURL }}/project/?id={{ p.projects_id }}'">
+            <h3><span class="status-dot" style="background:{{ p.projectsStatuses_backgroundColour }}"></span>{{ p.projects_name }}</h3>
+            <div class="meta">
+                {% if p.clients_name %}{{ p.clients_name }} &middot; {% endif %}
+                {{ p.projectsStatuses_name }}
+                {% if p.projects_dates_use_start %} &middot; {{ p.projects_dates_use_start|date("d.m.Y") }}{% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="mobile-card"><p class="text-muted text-center">Keine aktiven Projekte</p></div>
+        {% endfor %}
+    </div>
+
+    {# ═══ Projects Page ═══ #}
+    <div class="mobile-page" id="page-projects">
+        <div class="search-bar">
+            <i class="fas fa-search text-muted"></i>
+            <input type="text" id="projectSearch" placeholder="Projekt suchen...">
+        </div>
+        <div id="projectList">
+            {% for p in recentProjects %}
+            <div class="mobile-list-item project-item" data-name="{{ p.projects_name|lower }}">
+                <div class="icon" style="background:{{ p.projectsStatuses_backgroundColour ?? '#6c757d' }}">
+                    <i class="fas fa-folder-open"></i>
+                </div>
+                <div class="info" onclick="window.location='{{ CONFIG.ROOTURL }}/project/?id={{ p.projects_id }}'">
+                    <h4>{{ p.projects_name }}</h4>
+                    <p>{{ p.clients_name ?? '-' }} &middot; {{ p.projectsStatuses_name }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {# ═══ Clients Page ═══ #}
+    <div class="mobile-page" id="page-clients">
+        <div class="search-bar">
+            <i class="fas fa-search text-muted"></i>
+            <input type="text" id="clientSearch" placeholder="Kunde suchen...">
+        </div>
+        <div id="clientList">
+            {% for c in clients %}
+            <div class="mobile-list-item client-item" data-name="{{ c.clients_name|lower }}">
+                <div class="icon" style="background:#28a745"><i class="fas fa-user"></i></div>
+                <div class="info">
+                    <h4>{{ c.clients_name }}</h4>
+                    <p>
+                        {% if c.clients_email %}<a href="mailto:{{ c.clients_email }}">{{ c.clients_email }}</a>{% endif %}
+                        {% if c.clients_phone %} &middot; <a href="tel:{{ c.clients_phone }}">{{ c.clients_phone }}</a>{% endif %}
+                    </p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {# ═══ New Project Form ═══ #}
+    <div class="mobile-page" id="page-new-project">
+        <div class="mobile-card">
+            <h3><i class="fas fa-plus"></i> {{ t('new_project') }}</h3>
+            <form class="mobile-form" id="newProjectForm">
+                <div class="form-group">
+                    <label>{{ t('project_name') }}</label>
+                    <input type="text" class="form-control" name="projects_name" required placeholder="z.B. Firmenfeier Müller GmbH">
+                </div>
+                <div class="form-group">
+                    <label>{{ t('project_client') }}</label>
+                    <select class="form-control" name="clients_id">
+                        <option value="">-- Kein Kunde --</option>
+                        {% for c in clients %}
+                        <option value="{{ c.clients_id }}">{{ c.clients_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>{{ t('project_type') }}</label>
+                    <select class="form-control" name="projectsTypes_id">
+                        {% for t in projectTypes %}
+                        <option value="{{ t.projectsTypes_id }}">{{ t.projectsTypes_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>{{ t('project_start') }}</label>
+                    <input type="datetime-local" class="form-control" name="projects_dates_use_start">
+                </div>
+                <div class="form-group">
+                    <label>{{ t('project_end') }}</label>
+                    <input type="datetime-local" class="form-control" name="projects_dates_use_end">
+                </div>
+                <div class="form-group">
+                    <label>Lieferbeginn</label>
+                    <input type="datetime-local" class="form-control" name="projects_dates_deliver_start">
+                </div>
+                <div class="form-group">
+                    <label>Lieferende</label>
+                    <input type="datetime-local" class="form-control" name="projects_dates_deliver_end">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block btn-lg" style="border-radius:10px;">
+                    <i class="fas fa-check"></i> Projekt anlegen
+                </button>
+            </form>
+        </div>
+    </div>
+
+    {# ═══ New Client Form ═══ #}
+    <div class="mobile-page" id="page-new-client">
+        <div class="mobile-card">
+            <h3><i class="fas fa-user-plus"></i> Neuer Kunde</h3>
+            <form class="mobile-form" id="newClientForm">
+                <div class="form-group">
+                    <label>{{ t('client_name') }}</label>
+                    <input type="text" class="form-control" name="clients_name" required placeholder="Firma / Name">
+                </div>
+                <div class="form-group">
+                    <label>{{ t('client_email') }}</label>
+                    <input type="email" class="form-control" name="clients_email" placeholder="mail@beispiel.de">
+                </div>
+                <div class="form-group">
+                    <label>{{ t('client_phone') }}</label>
+                    <input type="tel" class="form-control" name="clients_phone" placeholder="+49 ...">
+                </div>
+                <div class="form-group">
+                    <label>{{ t('client_address') }}</label>
+                    <textarea class="form-control" name="clients_address" rows="3" placeholder="Straße, PLZ Ort"></textarea>
+                </div>
+                <button type="submit" class="btn btn-success btn-block btn-lg" style="border-radius:10px;">
+                    <i class="fas fa-check"></i> Kunde anlegen
+                </button>
+            </form>
+        </div>
+    </div>
+
+    {# ═══ QR Scanner Page ═══ #}
+    <div class="mobile-page" id="page-scanner">
+        <div class="mobile-card text-center">
+            <h3><i class="fas fa-qrcode"></i> QR-Code Scanner</h3>
+            <p class="text-muted">Scannen Sie QR-Codes von Equipment-Labels</p>
+            <div id="scannerPreview" style="width:100%;max-width:400px;margin:0 auto;background:#000;border-radius:12px;overflow:hidden;">
+                <video id="scannerVideo" style="width:100%;display:block;"></video>
+            </div>
+            <div id="scanResult" class="mt-3" style="display:none;">
+                <div class="alert alert-success"><strong>Erkannt:</strong> <span id="scanResultText"></span></div>
+            </div>
+            <button class="btn btn-info btn-block mt-3" id="startScanBtn" style="border-radius:10px;">
+                <i class="fas fa-camera"></i> Scanner starten
+            </button>
+        </div>
+    </div>
+
+    {# ═══ Labels/Print Page ═══ #}
+    <div class="mobile-page" id="page-labels">
+        <div class="mobile-card">
+            <h3><i class="fas fa-print"></i> Labels drucken</h3>
+            <p class="text-muted">Wählen Sie Equipment für den Labeldruck</p>
+            <div class="search-bar">
+                <i class="fas fa-search text-muted"></i>
+                <input type="text" id="labelAssetSearch" placeholder="Equipment suchen...">
+            </div>
+            <div id="labelAssetResults"></div>
+            <hr>
+            <div id="labelQueue">
+                <h5>Druckwarteschlange <span class="badge badge-info" id="labelQueueCount">0</span></h5>
+                <div id="labelQueueList"></div>
+            </div>
+            <button class="btn btn-warning btn-block btn-lg mt-3" id="printLabelsBtn" style="border-radius:10px;" disabled>
+                <i class="fas fa-print"></i> Labels drucken
+            </button>
+        </div>
+    </div>
+
+    {# ═══ Bottom Navigation ═══ #}
+    <nav class="mobile-nav">
+        <a href="#" class="active" onclick="showPage('page-dashboard')">
+            <i class="fas fa-home"></i>Start
+        </a>
+        <a href="#" onclick="showPage('page-projects')">
+            <i class="fas fa-folder-open"></i>Projekte
+        </a>
+        <a href="#" onclick="showPage('page-clients')">
+            <i class="fas fa-users"></i>Kunden
+        </a>
+        <a href="#" onclick="showPage('page-labels')">
+            <i class="fas fa-print"></i>Labels
+        </a>
+    </nav>
+
+    <script>
+    // ═══ Navigation ═══
+    function showPage(pageId) {
+        $('.mobile-page').removeClass('active');
+        $('#' + pageId).addClass('active');
+        $('.mobile-nav a').removeClass('active');
+        // Highlight correct nav
+        var navMap = {'page-dashboard':0, 'page-projects':1, 'page-clients':2, 'page-labels':3};
+        if (navMap[pageId] !== undefined) {
+            $('.mobile-nav a').eq(navMap[pageId]).addClass('active');
+        }
+    }
+
+    // ═══ API Helper ═══
+    function api(path, data, callback) {
+        $.ajax({
+            url: '{{ CONFIG.ROOTURL }}/api/' + path,
+            type: 'POST', data: data, cache: false,
+            success: function(r) { if (r.result && callback) callback(r); else if (r.error) alert(r.error.message || 'Fehler'); },
+            error: function() { alert('Verbindungsfehler'); }
+        });
+    }
+
+    // ═══ Search ═══
+    $('#projectSearch').on('input', function() {
+        var q = $(this).val().toLowerCase();
+        $('.project-item').each(function() { $(this).toggle($(this).data('name').indexOf(q) !== -1); });
+    });
+    $('#clientSearch').on('input', function() {
+        var q = $(this).val().toLowerCase();
+        $('.client-item').each(function() { $(this).toggle($(this).data('name').indexOf(q) !== -1); });
+    });
+
+    // ═══ Create Project ═══
+    $('#newProjectForm').submit(function(e) {
+        e.preventDefault();
+        var data = {};
+        $(this).serializeArray().forEach(function(f) { data[f.name] = f.value; });
+        api('projects/new.php', data, function(r) {
+            alert('Projekt angelegt!');
+            if (r.response && r.response.projects_id) {
+                window.location = '{{ CONFIG.ROOTURL }}/project/?id=' + r.response.projects_id;
+            } else {
+                location.reload();
+            }
+        });
+    });
+
+    // ═══ Create Client ═══
+    $('#newClientForm').submit(function(e) {
+        e.preventDefault();
+        var data = {};
+        $(this).serializeArray().forEach(function(f) { data[f.name] = f.value; });
+        api('clients/new.php', data, function(r) {
+            alert('Kunde angelegt!');
+            location.reload();
+        });
+    });
+
+    // ═══ Label Print Queue ═══
+    var labelQueue = [];
+
+    $('#labelAssetSearch').on('input', function() {
+        var q = $(this).val();
+        if (q.length < 2) { $('#labelAssetResults').html(''); return; }
+        api('assets/search.php', {term: q}, function(r) {
+            var html = '';
+            var items = r.response || r.data || [];
+            if (Array.isArray(items)) {
+                items.forEach(function(a) {
+                    html += '<div class="mobile-list-item" style="cursor:pointer;" onclick="addToLabelQueue(' + a.assets_id + ',\'' + escHtml(a.assets_tag || '') + '\',\'' + escHtml(a.assetTypes_name || '') + '\')">';
+                    html += '<div class="icon" style="background:#17a2b8"><i class="fas fa-box"></i></div>';
+                    html += '<div class="info"><h4>' + (a.assets_tag || '#' + a.assets_id) + '</h4><p>' + (a.assetTypes_name || '') + '</p></div>';
+                    html += '<i class="fas fa-plus text-primary"></i></div>';
+                });
+            }
+            $('#labelAssetResults').html(html || '<p class="text-muted p-2">Nichts gefunden</p>');
+        });
+    });
+
+    function addToLabelQueue(id, tag, typeName) {
+        if (labelQueue.find(function(l) { return l.id === id; })) return;
+        labelQueue.push({id: id, tag: tag, typeName: typeName});
+        updateLabelQueue();
+    }
+
+    function removeLabelItem(id) {
+        labelQueue = labelQueue.filter(function(l) { return l.id !== id; });
+        updateLabelQueue();
+    }
+
+    function updateLabelQueue() {
+        var html = '';
+        labelQueue.forEach(function(l) {
+            html += '<div class="mobile-list-item">';
+            html += '<div class="icon" style="background:#ffc107"><i class="fas fa-tag"></i></div>';
+            html += '<div class="info"><h4>' + l.tag + '</h4><p>' + l.typeName + '</p></div>';
+            html += '<button class="btn btn-sm btn-danger" onclick="removeLabelItem(' + l.id + ')"><i class="fas fa-times"></i></button>';
+            html += '</div>';
+        });
+        $('#labelQueueList').html(html || '<p class="text-muted">Noch keine Labels ausgewählt</p>');
+        $('#labelQueueCount').text(labelQueue.length);
+        $('#printLabelsBtn').prop('disabled', labelQueue.length === 0);
+    }
+
+    $('#printLabelsBtn').click(function() {
+        var ids = labelQueue.map(function(l) { return l.id; });
+        // Öffne Label-Druckseite
+        window.open('{{ CONFIG.ROOTURL }}/mobile/labels.php?ids=' + ids.join(','), '_blank');
+    });
+
+    function escHtml(s) { return s.replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+
+    // ═══ QR Scanner ═══
+    var scanning = false;
+    $('#startScanBtn').click(function() {
+        if (scanning) return;
+        scanning = true;
+        $(this).text('Scanner aktiv...').prop('disabled', true);
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert('Kamera nicht verfügbar. Bitte Zugriff erlauben.');
+            scanning = false;
+            $(this).text('Scanner starten').prop('disabled', false);
+            return;
+        }
+
+        navigator.mediaDevices.getUserMedia({video: {facingMode: 'environment'}})
+        .then(function(stream) {
+            var video = document.getElementById('scannerVideo');
+            video.srcObject = stream;
+            video.play();
+
+            // Simple barcode detection (if available)
+            if ('BarcodeDetector' in window) {
+                var detector = new BarcodeDetector({formats: ['qr_code', 'code_128', 'ean_13']});
+                var scanInterval = setInterval(function() {
+                    detector.detect(video).then(function(barcodes) {
+                        if (barcodes.length > 0) {
+                            clearInterval(scanInterval);
+                            stream.getTracks().forEach(function(t) { t.stop(); });
+                            scanning = false;
+                            var code = barcodes[0].rawValue;
+                            $('#scanResultText').text(code);
+                            $('#scanResult').show();
+                            // Versuche Asset zu finden
+                            handleScanResult(code);
+                        }
+                    }).catch(function() {});
+                }, 500);
+            } else {
+                alert('QR-Code-Erkennung wird in diesem Browser nicht unterstützt. Bitte Chrome auf Android nutzen.');
+                stream.getTracks().forEach(function(t) { t.stop(); });
+                scanning = false;
+                $('#startScanBtn').text('Scanner starten').prop('disabled', false);
+            }
+        })
+        .catch(function(err) {
+            alert('Kamerazugriff verweigert: ' + err.message);
+            scanning = false;
+            $('#startScanBtn').text('Scanner starten').prop('disabled', false);
+        });
+    });
+
+    function handleScanResult(code) {
+        // Versuche Asset-URL zu erkennen oder direkt als Tag zu suchen
+        var assetTag = code;
+        if (code.indexOf('/asset/') !== -1) {
+            assetTag = code.split('/asset/').pop().split('?')[0];
+        }
+        // Weiterleitung zum Asset
+        api('assets/search.php', {term: assetTag}, function(r) {
+            var items = r.response || [];
+            if (items.length > 0) {
+                window.location = '{{ CONFIG.ROOTURL }}/asset/?id=' + items[0].assets_id;
+            } else {
+                alert('Equipment "' + assetTag + '" nicht gefunden.');
+                $('#startScanBtn').text('Scanner starten').prop('disabled', false);
+            }
+        });
+    }
+
+    // ═══ PWA Service Worker ═══
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('{{ CONFIG.ROOTURL }}/static-assets/sw.js');
+    }
+    </script>
+</body>
+</html>

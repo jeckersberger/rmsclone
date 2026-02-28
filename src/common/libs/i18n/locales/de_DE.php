@@ -336,4 +336,14 @@ return [
     'condition_poor'      => 'Mangelhaft',
     'condition_damaged'   => 'Beschädigt',
     'bulk_checkout_confirm' => 'Alle zugewiesenen Assets als ausgegeben markieren?',
+
+    // ── E-Mail-Versand ──
+    'send_email'          => 'Per E-Mail senden',
+    'send_email_confirm'  => 'Dokument an die beim Kunden hinterlegte E-Mail-Adresse senden?',
+    'send_email_auto_hint' => 'Die PDF wird automatisch als Anhang versendet.',
+    'email_sent_success'  => 'E-Mail erfolgreich versendet.',
+
+    // ── Kalender ──
+    'calendar_subscribe'  => 'Kalender abonnieren',
+    'calendar_subscribe_desc' => 'Kopieren Sie diese URL in Ihren iCloud-Kalender (Einstellungen → Accounts → Kalenderabo hinzufügen):',
 ];

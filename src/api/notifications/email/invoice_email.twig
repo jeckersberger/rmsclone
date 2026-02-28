@@ -1,0 +1,12 @@
+<p>Sehr geehrte/r {{ recipient_name }},</p>
+
+<p>anbei erhalten Sie {{ doc_type }} <strong>{{ doc_number }}</strong>{% if project_name %} zum Projekt <em>{{ project_name }}</em>{% endif %}.</p>
+
+<p>Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
+
+<p>Mit freundlichen Grüßen<br>
+{{ business_name }}</p>
+
+{% if instance.instances_address %}
+<p style="font-size:12px;color:#666;">{{ instance.instances_address|nl2br }}</p>
+{% endif %}

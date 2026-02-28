@@ -88,6 +88,7 @@ $(document).ready(function() {
                     html += '<div class="btn-group btn-group-sm">';
                     if (doc.s3files_id) {
                         html += '<a href="{{ CONFIG.ROOTURL }}/api/projects/generateDocument.php?dl=' + doc.s3files_id + '" class="btn btn-default" title="{{ t("download") }}"><i class="fas fa-download"></i></a>';
+                        html += '<button class="btn btn-default docEmailBtn" data-s3id="' + doc.s3files_id + '" data-number="' + (doc.doc_number || '') + '" data-type="' + doc.doc_type + '" title="{{ t("send_email") }}"><i class="fas fa-envelope"></i></button>';
                     }
                     html += '<button class="btn btn-default docStatusBtn" data-id="' + doc.id + '" data-type="' + doc.doc_type + '" data-status="' + doc.status + '" title="{{ t("change_status") }}"><i class="fas fa-exchange-alt"></i></button>';
                     if (doc.doc_type === 'quote' || doc.doc_type === 'order_confirmation' || doc.doc_type === 'invoice') {
@@ -177,6 +178,30 @@ $(document).ready(function() {
             callback: function(targetType) {
                 if (targetType) {
                     ajaxcall('documentLifecycle/convert.php', {doc_id: docId, target_type: targetType}, function() {
+                        loadDocuments();
+                    });
+                }
+            }
+        });
+    });
+
+    // E-Mail versenden
+    $(document).on('click', '.docEmailBtn', function() {
+        var s3id = $(this).data('s3id');
+        var docNumber = $(this).data('number');
+        var docType = $(this).data('type');
+        bootbox.confirm({
+            title: '<i class="fas fa-envelope"></i> {{ t("send_email") }}',
+            message: '{{ t("send_email_confirm") }}<br><small class="text-muted">{{ t("send_email_auto_hint") }}</small>',
+            callback: function(result) {
+                if (result) {
+                    ajaxcall('invoiceMail/send.php', {
+                        project_id: projectId,
+                        s3file_id: s3id,
+                        doc_number: docNumber,
+                        doc_type: docType
+                    }, function(data) {
+                        bootbox.alert(data.response ? data.response.message : '{{ t("email_sent_success") }}');
                         loadDocuments();
                     });
                 }
