@@ -91,7 +91,8 @@
                         {% if user.crewAssignments|length > 0 %}<li class="nav-item"><a class="nav-link" href="#roles" data-toggle="tab">Crew Roles</a></li>{% endif %}
                         {% if user.projectManagement|length > 0 %}<li class="nav-item"><a class="nav-link" href="#projects" data-toggle="tab">Projects Managed</a></li>{% endif %}
                         {% if user.users_userid == USERDATA.users_userid %}
-                        <li class="nav-item"><a class="nav-link" href="#export" data-toggle="tab">Export Calendar</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#export" data-toggle="tab">{{ t('calendar') }}</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#dsgvo" data-toggle="tab">{{ t('privacy_policy') }}</a></li>
                         {% endif %}
                         <li class="nav-item"><a class="nav-link active" href="#calendar" data-toggle="tab"><i class="far fa-calendar-alt"></i></a></li>
                     </ul>
@@ -546,6 +547,89 @@
                                 </li>
                             </ol>
                         </div>
+                        {% endif %}
+                        {# ══════ DSGVO / Datenschutz Tab ══════ #}
+                        {% if user.users_userid == USERDATA.users_userid %}
+                        <div class="tab-pane" style="padding: 1.25rem" id="dsgvo">
+                            <h3><i class="fas fa-shield-alt"></i> {{ t('privacy_policy') }}</h3>
+                            <p class="text-muted">{{ t('data_processing_notice') }}</p>
+                            <hr>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h3 class="card-title"><i class="fas fa-download"></i> {{ t('data_export') }}</h3>
+                                        </div>
+                                        <div class="card-body">
+                                            <p>{{ t('data_export_desc') }}</p>
+                                            <a href="{{ CONFIG.ROOTURL }}/api/account/dataExport.php" class="btn btn-primary" target="_blank">
+                                                <i class="fas fa-file-download"></i> {{ t('data_export') }}
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h3 class="card-title"><i class="fas fa-user-times"></i> {{ t('delete_account') }}</h3>
+                                        </div>
+                                        <div class="card-body">
+                                            <p>{{ t('delete_account_desc') }}</p>
+                                            <button id="deleteAccountBtn" class="btn btn-danger">
+                                                <i class="fas fa-trash-alt"></i> {{ t('delete_account') }}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title"><i class="fas fa-info-circle"></i> {{ t('data_processing_notice') }}</h3>
+                                </div>
+                                <div class="card-body">
+                                    <h5>Welche Daten speichern wir?</h5>
+                                    <ul>
+                                        <li><strong>Kontodaten:</strong> Name, E-Mail-Adresse, Benutzername</li>
+                                        <li><strong>Nutzungsdaten:</strong> Login-Zeiten, aufgerufene Seiten (Analysezwecke)</li>
+                                        <li><strong>Projektdaten:</strong> Zuweisungen zu Projekten und Crew-Rollen</li>
+                                        <li><strong>Kommunikation:</strong> Nachrichten in Wartungsauftraegen</li>
+                                    </ul>
+                                    <h5>Rechtsgrundlage</h5>
+                                    <p>Die Verarbeitung erfolgt auf Grundlage von Art. 6 Abs. 1 lit. b DSGVO (Vertragserfuellung) sowie Art. 6 Abs. 1 lit. f DSGVO (berechtigte Interessen).</p>
+                                    <h5>Ihre Rechte</h5>
+                                    <ul>
+                                        <li><strong>Auskunft</strong> (Art. 15 DSGVO) - Nutzen Sie den Datenexport oben</li>
+                                        <li><strong>Berichtigung</strong> (Art. 16 DSGVO) - Aendern Sie Ihre Daten im Account-Tab</li>
+                                        <li><strong>Loeschung</strong> (Art. 17 DSGVO) - Nutzen Sie die Konto-Loeschung oben</li>
+                                        <li><strong>Datenportabilitaet</strong> (Art. 20 DSGVO) - Export als JSON-Datei</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <script>
+                        $(document).ready(function() {
+                            $('#deleteAccountBtn').on('click', function() {
+                                bootbox.confirm({
+                                    message: "{{ t('delete_account_confirm') }}",
+                                    buttons: {
+                                        confirm: { label: '{{ t('yes') }}', className: 'btn-danger' },
+                                        cancel: { label: '{{ t('no') }}', className: 'btn-default' }
+                                    },
+                                    callback: function(result) {
+                                        if (result) {
+                                            ajaxcall("account/softDelete.php", {
+                                                "users_userid": "{{ user.users_userid }}"
+                                            }, function(data) {
+                                                window.location.href = "{{ CONFIG.ROOTURL }}/login/?logout";
+                                            });
+                                        }
+                                    }
+                                });
+                            });
+                        });
+                        </script>
                         {% endif %}
                     </div>
                 </div>

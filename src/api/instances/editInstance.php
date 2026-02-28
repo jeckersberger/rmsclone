@@ -12,8 +12,13 @@ foreach ($_POST['formData'] as $item) {
 if (isset($array['instances_termsAndPayment'])) $array['instances_termsAndPayment'] = $bCMS->cleanString($array['instances_termsAndPayment']);
 if (isset($array['instances_quoteTerms'])) $array['instances_quoteTerms'] = $bCMS->cleanString($array['instances_quoteTerms']);
 
+// Sanitise German business fields
+if (isset($array['instances_kurEnabled'])) $array['instances_kurEnabled'] = ($array['instances_kurEnabled'] == '1' || $array['instances_kurEnabled'] === 'on') ? 1 : 0;
+if (isset($array['instances_vatRate'])) $array['instances_vatRate'] = max(0, min(100, (float)str_replace(',', '.', $array['instances_vatRate'])));
+if (isset($array['instances_paymentTermDays'])) $array['instances_paymentTermDays'] = max(0, (int)$array['instances_paymentTermDays']);
+
 $DBLIB->where("instances_id",$AUTH->data['instance']["instances_id"]);
-$result = $DBLIB->update("instances", array_intersect_key( $array, array_flip( ["instances_name","instances_address","instances_phone","instances_email","instances_website","instances_weekStartDates","instances_logo","instances_emailHeader","instances_termsAndPayment", "instances_quoteTerms", "instances_cableColours"] ) ));
+$result = $DBLIB->update("instances", array_intersect_key( $array, array_flip( ["instances_name","instances_address","instances_phone","instances_email","instances_website","instances_weekStartDates","instances_logo","instances_emailHeader","instances_termsAndPayment", "instances_quoteTerms", "instances_cableColours", "instances_taxNumber","instances_vatId","instances_kurEnabled","instances_vatRate","instances_bankName","instances_bankIban","instances_bankBic","instances_paymentTermDays","instances_courtOfJurisdiction","instances_ceoName","instances_companyRegNumber","instances_locale"] ) ));
 echo $DBLIB->getLastError();
 if (!$result) finish(false, ["code" => "UPDATE-FAIL", "message"=> "Could not update instance"]);
 else {

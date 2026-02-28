@@ -1,0 +1,204 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+			<div class="card-header">
+				<ul class="nav nav-pills">
+					<li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/navigation.php"><i class="fas fa-arrow-left"></i> Einstellungen</a></li>
+					<li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/billing.php">Abrechnung</a></li>
+					<li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/settings.php">Grundeinstellungen</a></li>
+					{% if CONFIG.FILES_ENABLED == "Enabled" and USERDATA.instance.instances_storageEnabled == 1 %}
+					<li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/configuration/logo.php">Logo</a></li>
+                    {% endif %}
+					<li class="nav-item"><a class="nav-link active" href="{{CONFIG.ROOTURL}}/instances/germanSettings.php">Geschäftsdaten</a></li>
+				</ul>
+			</div>
+		</div>
+    </div>
+</div>
+
+{# ── Steuerdaten ── #}
+<div class="row">
+    <div class="col-12 col-md-8 offset-md-2">
+        <div class="card">
+            <form id="taxSettings">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-file-invoice"></i> Steuerdaten</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label>Steuernummer</label>
+                        <input type="text" class="form-control" name="instances_taxNumber"
+                               value="{{ USERDATA.instance.instances_taxNumber }}"
+                               placeholder="z.B. 123/456/78901">
+                        <small class="form-text text-muted">Vom Finanzamt zugeteilte Steuernummer. Pflichtangabe auf Rechnungen.</small>
+                    </div>
+                    <div class="form-group">
+                        <label>USt-IdNr.</label>
+                        <input type="text" class="form-control" name="instances_vatId"
+                               value="{{ USERDATA.instance.instances_vatId }}"
+                               placeholder="z.B. DE123456789">
+                        <small class="form-text text-muted">Umsatzsteuer-Identifikationsnummer (optional, wenn Steuernummer angegeben).</small>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="kurToggle" name="instances_kurEnabled"
+                                           {{ USERDATA.instance.instances_kurEnabled == 1 ? 'checked' : '' }}>
+                                    <label class="custom-control-label" for="kurToggle"><b>Kleinunternehmerregelung (§ 19 UStG)</b></label>
+                                </div>
+                                <small class="form-text text-muted">Wenn aktiv, wird <b>keine MwSt</b> auf Rechnungen ausgewiesen. Pflichthinweis wird automatisch ergänzt.</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group" id="vatRateGroup">
+                                <label>MwSt-Satz (%)</label>
+                                <input type="number" step="0.01" min="0" max="100" class="form-control" name="instances_vatRate"
+                                       value="{{ USERDATA.instance.instances_vatRate ?? '19.00' }}">
+                                <small class="form-text text-muted">Standard: 19 %. Wird nur verwendet wenn KUR deaktiviert ist.</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Standard-Zahlungsziel (Tage)</label>
+                        <input type="number" min="0" class="form-control" name="instances_paymentTermDays"
+                               value="{{ USERDATA.instance.instances_paymentTermDays ?? '14' }}" style="max-width:150px;">
+                        <small class="form-text text-muted">Anzahl Tage bis zur Fälligkeit. Wird auf Rechnungen gedruckt.</small>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    {% if "BUSINESS:BUSINESS_SETTINGS:EDIT"|instancePermissions %}
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# ── Bankverbindung ── #}
+<div class="row">
+    <div class="col-12 col-md-8 offset-md-2">
+        <div class="card">
+            <form id="bankSettings">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-university"></i> Bankverbindung</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label>Bankname</label>
+                        <input type="text" class="form-control" name="instances_bankName"
+                               value="{{ USERDATA.instance.instances_bankName }}"
+                               placeholder="z.B. Sparkasse München">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="form-group">
+                                <label>IBAN</label>
+                                <input type="text" class="form-control" name="instances_bankIban"
+                                       value="{{ USERDATA.instance.instances_bankIban }}"
+                                       placeholder="DE89 3704 0044 0532 0130 00" maxlength="34">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>BIC / SWIFT</label>
+                                <input type="text" class="form-control" name="instances_bankBic"
+                                       value="{{ USERDATA.instance.instances_bankBic }}"
+                                       placeholder="COBADEFFXXX" maxlength="11">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    {% if "BUSINESS:BUSINESS_SETTINGS:EDIT"|instancePermissions %}
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# ── Rechtliche Angaben ── #}
+<div class="row">
+    <div class="col-12 col-md-8 offset-md-2">
+        <div class="card">
+            <form id="legalSettings">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-balance-scale"></i> Rechtliche Angaben</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label>Geschäftsführer / Inhaber</label>
+                        <input type="text" class="form-control" name="instances_ceoName"
+                               value="{{ USERDATA.instance.instances_ceoName }}"
+                               placeholder="Max Mustermann">
+                        <small class="form-text text-muted">Erscheint im Impressum-Block auf Dokumenten.</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Handelsregisternummer</label>
+                        <input type="text" class="form-control" name="instances_companyRegNumber"
+                               value="{{ USERDATA.instance.instances_companyRegNumber }}"
+                               placeholder="z.B. HRB 12345, Amtsgericht München">
+                        <small class="form-text text-muted">Nur falls Handelsregistereintrag vorhanden.</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Gerichtsstand</label>
+                        <input type="text" class="form-control" name="instances_courtOfJurisdiction"
+                               value="{{ USERDATA.instance.instances_courtOfJurisdiction }}"
+                               placeholder="z.B. München">
+                    </div>
+                </div>
+                <div class="card-footer">
+                    {% if "BUSINESS:BUSINESS_SETTINGS:EDIT"|instancePermissions %}
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Toggle MwSt-Satz Feld basierend auf KUR
+    function toggleVatField() {
+        if ($('#kurToggle').is(':checked')) {
+            $('#vatRateGroup').hide();
+        } else {
+            $('#vatRateGroup').show();
+        }
+    }
+    toggleVatField();
+    $('#kurToggle').on('change', toggleVatField);
+
+    {% if "BUSINESS:BUSINESS_SETTINGS:EDIT"|instancePermissions %}
+    // Save handlers for all three forms
+    function saveForm(formId) {
+        var $form = $(formId);
+        $form.on("submit", function(e) {
+            e.preventDefault();
+            var formData = $form.serializeArray();
+            // Handle unchecked checkbox
+            if (formId === '#taxSettings') {
+                var kurFound = false;
+                for (var i = 0; i < formData.length; i++) {
+                    if (formData[i].name === 'instances_kurEnabled') { formData[i].value = '1'; kurFound = true; }
+                }
+                if (!kurFound) formData.push({name: 'instances_kurEnabled', value: '0'});
+            }
+            ajaxcall("instances/editInstance.php", {formData}, function(data) {
+                location.reload();
+            }, false);
+        });
+    }
+    saveForm('#taxSettings');
+    saveForm('#bankSettings');
+    saveForm('#legalSettings');
+    {% endif %}
+});
+</script>
+{% endblock %}

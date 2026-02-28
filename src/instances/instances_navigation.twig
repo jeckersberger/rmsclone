@@ -99,6 +99,18 @@
                 <a href="{{ CONFIG.ROOTURL }}/instances/settings.php" class="small-box-footer">Manage Basic Settings <i class="fas fa-arrow-circle-right"></i></a>
             </div>
         </div>
+        <div class="col-lg-3 col-6">
+            <div class="small-box bg-success">
+                <div class="inner">
+                    <h3>Geschäftsdaten</h3>
+                    <p>Steuerdaten, Bankverbindung, Kleinunternehmerregelung</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-file-invoice"></i>
+                </div>
+                <a href="{{ CONFIG.ROOTURL }}/instances/germanSettings.php" class="small-box-footer">Geschäftsdaten verwalten <i class="fas fa-arrow-circle-right"></i></a>
+            </div>
+        </div>
         {% if CONFIG.FILES_ENABLED == "Enabled" and USERDATA.instance.instances_storageEnabled == 1 %}        
         <div class="col-lg-3 col-6">
             <div class="small-box bg-primary">

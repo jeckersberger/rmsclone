@@ -2,19 +2,19 @@
 	<div class="col-lg-6 col-md-6 col-sm-12">
 		<div class="card">
 			<div class="card-header">
-				<h3 class="card-title">Overview</h3>
+				<h3 class="card-title">{{ t('overview') }}</h3>
 			</div>
 			<div class="card-body p-0">
 				<table class="table">
 					<tr>
 						<td style="width: 35%;">
-							Equipment SubTotal
+							{{ t('equipment_subtotal') }}
 						</td>
 						<td style="width: 15%;text-align: right;">
 							{{ FINANCIALS.prices.subTotal|money }}
 						</td>
 						<td style="width: 35%;">
-							Sales
+							{{ t('sales') }}
 						</td>
 						<td style="width: 15%;text-align: right;">
 							{{ FINANCIALS.payments.sales.total|money }}
@@ -22,15 +22,15 @@
 					</tr>
 					<tr>
 						<td style="width: 35%;">
-							{% if FINANCIALS.prices.discounts|moneyPositive %}Discounts{% else %}Adjustments
+							{% if FINANCIALS.prices.discounts|moneyPositive %}{{ t('discounts') }}{% else %}{{ t('adjustments') }}
 							{% endif %}
 						</td>
 						<td style="width: 15%;text-align: right;">
-							{% if FINANCIALS.prices.discounts|moneyPositive %}&#8209;{{ FINANCIALS.prices.discounts|money }}{% else %}None
+							{% if FINANCIALS.prices.discounts|moneyPositive %}&#8209;{{ FINANCIALS.prices.discounts|money }}{% else %}-
 							{% endif %}
 						</td>
 						<td style="width: 35%;">
-							Staffing
+							{{ t('staffing') }}
 						</td>
 						<td style="width: 15%;text-align: right;">
 							{{ FINANCIALS.payments.staff.total|money }}
@@ -38,13 +38,13 @@
 					</tr>
 					<tr>
 						<td style="width: 35%;">
-							<b>Equipment Total</b>
+							<b>{{ t('equipment_total') }}</b>
 						</td>
 						<td style="width: 15%;text-align: right;">
 							{{ FINANCIALS.prices.total|money }}
 						</td>
 						<td style="width: 35%;">
-							Additional Hires
+							{{ t('additional_hires') }}
 						</td>
 						<td style="width: 15%;text-align: right;">
 							{{ FINANCIALS.payments.subHire.total|money }}
@@ -54,7 +54,7 @@
                         <td style="width: 35%;"></td>
 						<td style="width: 15%;text-align: right;"></td>
 						<td style="width: 35%;">
-							<b>SubTotal</b>
+							<b>{{ t('subtotal') }}</b>
 						</td>
 						<td style="width: 15%;text-align: right;">
 							{{ FINANCIALS.payments.subTotal|money }}
@@ -64,7 +64,7 @@
 						<td style="width: 35%;"></td>
 						<td style="width: 10%;"></td>
 						<td style="width: 40%;">
-							Payments Received to Date
+							{{ t('payments_received') }}
 						</td>
 						<td style="width: 15%;text-align: right;">
 							&#8209;{{ FINANCIALS.payments.received.total|money }}
@@ -74,7 +74,7 @@
 						<td style="width: 35%;"></td>
 						<td style="width: 15%;text-align: right;"></td>
 						<td style="width: 35%;">
-							<b>Grand Total Outstanding</b>
+							<b>{{ t('grand_total_outstanding') }}</b>
 						</td>
 						<td style="width: 15%;text-align: right;">
 							{{ FINANCIALS.payments.total|money }}
@@ -84,16 +84,16 @@
 			</div>
 			<div class="card-footer">
 				<div class="btn-group float-right">
-					<a href="{{ CONFIG.LINKS_USERGUIDEURL }}projects/finance" target="_blank" type="button" class="btn btn-info">Help</a>
+					<a href="{{ CONFIG.LINKS_USERGUIDEURL }}projects/finance" target="_blank" type="button" class="btn btn-info">{{ t('help') }}</a>
 
 					{% if "PROJECTS:PROJECT_PAYMENTS:CREATE"|instancePermissions %}
-						<button type="button" class="btn btn-default newPayment" data-type="1">Add Payment Received</button>
+						<button type="button" class="btn btn-default newPayment" data-type="1">{{ t('add_payment_received') }}</button>
 						<button type="button" class="btn btn-default dropdown-toggle dropdown-icon" data-toggle="dropdown">
 							<span class="sr-only">Toggle Dropdown</span>
 							<div class="dropdown-menu" role="menu">
-								<a class="dropdown-item newPayment" data-type="2" href="#">Add Sales Item</a>
-								<a class="dropdown-item newPayment" data-type="3" href="#">Add Additional Hire</a>
-								<a class="dropdown-item newPayment" data-type="4" href="#">Add Staff Cost</a>
+								<a class="dropdown-item newPayment" data-type="2" href="#">{{ t('add_sales_item') }}</a>
+								<a class="dropdown-item newPayment" data-type="3" href="#">{{ t('add_additional_hire') }}</a>
+								<a class="dropdown-item newPayment" data-type="4" href="#">{{ t('add_staff_cost') }}</a>
 							</div>
 						</button>
 					{% endif %}
@@ -105,38 +105,38 @@
 	<div class="col-lg-6 col-md-6 col-sm-12">
 		<div class="card">
 			<div class="card-header">
-				<h3 class="card-title">Invoice Notes</h3>
+				<h3 class="card-title">{{ t('invoice_notes') }}</h3>
 			</div>
 			<div class="card-body">
 				{% if project.projects_invoiceNotes|nl2br %}
 					{{ project.projects_invoiceNotes|nl2br }}
 				{% else %}
-					<i>None Set</i>
+					<i>{{ t('none_set') }}</i>
 				{% endif %}
 			</div>
             {% if "PROJECTS:EDIT:INVOICE_NOTES"|instancePermissions %}
 			<div class="card-footer">
 				<div class="btn-group float-right">
-                    <button type="button" class="btn btn-default editProjectInvoiceNotes" title="Edit">Edit Invoice Notes</button>
+                    <button type="button" class="btn btn-default editProjectInvoiceNotes" title="{{ t('edit') }}">{{ t('edit_invoice_notes') }}</button>
 				</div>
 			</div>
             {% endif %}
 		</div>
         <div class="card">
 			<div class="card-header">
-				<h3 class="card-title">Delivery Notes</h3>
+				<h3 class="card-title">{{ t('delivery_notes') }}</h3>
 			</div>
 			<div class="card-body">
 				{% if project.projects_deliveryNotes|nl2br %}
 					{{ project.projects_deliveryNotes|nl2br }}
 				{% else %}
-					<i>None Set</i>
+					<i>{{ t('none_set') }}</i>
 				{% endif %}
 			</div>
             {% if "PROJECTS:EDIT:DELIVERY_NOTES"|instancePermissions %}
 			<div class="card-footer">
 				<div class="btn-group float-right">
-                    <button type="button" class="btn btn-default editProjectDeliveryNotes" title="Edit">Edit Delivery Notes</button>
+                    <button type="button" class="btn btn-default editProjectDeliveryNotes" title="{{ t('edit') }}">{{ t('edit_delivery_notes') }}</button>
 				</div>
 			</div>
             {% endif %}
@@ -148,16 +148,16 @@
 		{% if FINANCIALS.payments.sales.ledger %}
 			<div class="card">
 				<div class="card-header">
-					<h3 class="card-title">Sales</h3>
+					<h3 class="card-title">{{ t('sales') }}</h3>
 				</div>
 				<div class="card-body p-0">
 					<table class="table table-bordered">
 						<thead>
 							<tr>
-								<th>Quantity</th>
-								<th style="width: 100%;">Description</th>
-								<th>Amount</th>
-								<th>Total</th>
+								<th>{{ t('quantity') }}</th>
+								<th style="width: 100%;">{{ t('description') }}</th>
+								<th>{{ t('amount') }}</th>
+								<th>{{ t('total') }}</th>
 								<th></th>
 							</tr>
 						</thead>
@@ -185,7 +185,7 @@
 											</button>
 										{% endif %}
 										{% if "PROJECTS:PROJECT_PAYMENTS:DELETE"|instancePermissions %}
-											<button title="Delete" class="btn btn-sm btn-danger deletePaymentButton" data-paymentid="{{ payment.payments_id }}">
+											<button title="{{ t('delete') }}" class="btn btn-sm btn-danger deletePaymentButton" data-paymentid="{{ payment.payments_id }}">
 												<i class="fa fa-trash"></i>
 											</button>
 										{% endif %}
@@ -200,16 +200,16 @@
 		{% if FINANCIALS.payments.subHire.ledger %}
 			<div class="card">
 				<div class="card-header">
-					<h3 class="card-title">Additional Hires</h3>
+					<h3 class="card-title">{{ t('additional_hires') }}</h3>
 				</div>
 				<div class="card-body p-0">
 					<table class="table table-bordered">
 						<thead>
 							<tr>
-								<th>Quantity</th>
-								<th style="width: 100%;">Description</th>
-								<th>Amount</th>
-								<th>Total</th>
+								<th>{{ t('quantity') }}</th>
+								<th style="width: 100%;">{{ t('description') }}</th>
+								<th>{{ t('amount') }}</th>
+								<th>{{ t('total') }}</th>
 								<th></th>
 							</tr>
 						</thead>
@@ -237,7 +237,7 @@
 											</button>
 										{% endif %}
 										{% if "PROJECTS:PROJECT_PAYMENTS:DELETE"|instancePermissions %}
-											<button title="Delete" class="btn btn-sm btn-danger deletePaymentButton" data-paymentid="{{ payment.payments_id }}">
+											<button title="{{ t('delete') }}" class="btn btn-sm btn-danger deletePaymentButton" data-paymentid="{{ payment.payments_id }}">
 												<i class="fa fa-trash"></i>
 											</button>
 										{% endif %}
@@ -252,17 +252,17 @@
 		{% if FINANCIALS.payments.staff.ledger %}
 			<div class="card">
 				<div class="card-header">
-					<h3 class="card-title">Staff</h3>
+					<h3 class="card-title">{{ t('staffing') }}</h3>
 				</div>
 				<div class="card-body p-0">
 					<table class="table table-bordered">
 						<thead>
 							<tr>
-								<th>Quantity</th>
-								<th>Supplier</th>
-								<th style="width: 100%;">Description</th>
-								<th>Amount</th>
-								<th>Total</th>
+								<th>{{ t('quantity') }}</th>
+								<th>{{ t('supplier') }}</th>
+								<th style="width: 100%;">{{ t('description') }}</th>
+								<th>{{ t('amount') }}</th>
+								<th>{{ t('total') }}</th>
 								<th></th>
 							</tr>
 						</thead>
@@ -280,7 +280,7 @@
 											</button>
 										{% endif %}
 										{% if "PROJECTS:PROJECT_PAYMENTS:DELETE"|instancePermissions %}
-											<button title="Delete" class="btn btn-sm btn-danger deletePaymentButton" data-paymentid="{{ payment.payments_id }}">
+											<button title="{{ t('delete') }}" class="btn btn-sm btn-danger deletePaymentButton" data-paymentid="{{ payment.payments_id }}">
 												<i class="fa fa-trash"></i>
 											</button>
 										{% endif %}
@@ -297,17 +297,17 @@
 		{% if FINANCIALS.payments.received.ledger %}
 			<div class="card">
 				<div class="card-header">
-					<h3 class="card-title">Payments Received</h3>
+					<h3 class="card-title">{{ t('payments_received') }}</h3>
 				</div>
 				<div class="card-body p-0">
 					<table class="table table-bordered">
 						<thead>
 							<tr>
-								<th>Reference</th>
-								<th>Date</th>
-								<th>Method</th>
-								<th>Comment</th>
-								<th>Amount</th>
+								<th>{{ t('reference') }}</th>
+								<th>{{ t('date') }}</th>
+								<th>{{ t('method') }}</th>
+								<th>{{ t('comment') }}</th>
+								<th>{{ t('amount') }}</th>
 								<th></th>
 							</tr>
 						</thead>
@@ -315,7 +315,7 @@
 							{% for payment in FINANCIALS.payments.received.ledger %}
 								<tr>
 									<td>{{ payment.payments_reference }}</td>
-									<td>{{ payment.payments_date|date("d/M/Y G:i:s") }}</td>
+									<td>{{ payment.payments_date|dateDe('d.m.Y H:i') }}</td>
 									<td>{{ payment.payments_method }}</td>
 									<td>{{ payment.payments_comment|nl2br }}</td>
 									<td>{{ payment.payments_amount|money }}</td>
@@ -325,7 +325,7 @@
 											</button>
 										{% endif %}
 										{% if "PROJECTS:PROJECT_PAYMENTS:DELETE"|instancePermissions %}
-											<button title="Delete" class="btn btn-sm btn-danger deletePaymentButton" data-paymentid="{{ payment.payments_id }}">
+											<button title="{{ t('delete') }}" class="btn btn-sm btn-danger deletePaymentButton" data-paymentid="{{ payment.payments_id }}">
 												<i class="fa fa-trash"></i>
 											</button>
 										{% endif %}
