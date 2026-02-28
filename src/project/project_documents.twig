@@ -1,0 +1,187 @@
+{# Document Lifecycle panel - embedded in project_index.twig #}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-file-invoice"></i> {{ t('document_lifecycle') }}</h3>
+                <div class="card-tools">
+                    <button class="btn btn-sm btn-primary" id="createDocBtn"><i class="fas fa-plus"></i> {{ t('create_document') }}</button>
+                </div>
+            </div>
+            <div class="card-body p-0" id="docLifecycleBody">
+                <div class="overlay" id="docLoadingOverlay"><i class="fas fa-sync fa-spin fa-3x"></i></div>
+                <table class="table table-striped table-sm" id="docTable">
+                    <thead>
+                        <tr>
+                            <th>{{ t('doc_number') }}</th>
+                            <th>{{ t('doc_type') }}</th>
+                            <th>{{ t('status') }}</th>
+                            <th>{{ t('net_amount') }}</th>
+                            <th>{{ t('gross_amount') }}</th>
+                            <th>{{ t('date') }}</th>
+                            <th>{{ t('due_date') }}</th>
+                            <th>{{ t('actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="docTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Document Chain Modal #}
+<div class="modal fade" id="docChainModal">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">{{ t('document_chain') }}</h4>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body" id="docChainBody"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    var projectId = {{ project.projects_id }};
+    var instanceId = {{ USERDATA.instance.instances_id }};
+
+    var docTypeLabels = {
+        'quote': '{{ t("quote") }}',
+        'order_confirmation': '{{ t("order_confirmation") }}',
+        'invoice': '{{ t("invoice") }}',
+        'credit_note': '{{ t("credit_note") }}',
+        'cancellation': '{{ t("cancellation_doc") }}'
+    };
+    var statusLabels = {
+        'draft': '{{ t("status_draft") }}',
+        'sent': '{{ t("status_sent") }}',
+        'accepted': '{{ t("status_accepted") }}',
+        'rejected': '{{ t("status_rejected") }}',
+        'paid': '{{ t("status_paid") }}',
+        'overdue': '{{ t("status_overdue") }}',
+        'reminded': '{{ t("status_reminded") }}',
+        'cancelled': '{{ t("status_cancelled") }}'
+    };
+    var statusBadges = {
+        'draft': 'secondary', 'sent': 'info', 'accepted': 'success',
+        'rejected': 'danger', 'paid': 'success', 'overdue': 'warning',
+        'reminded': 'warning', 'cancelled': 'dark'
+    };
+
+    function loadDocuments() {
+        ajaxcall('documentLifecycle/list.php', {project_id: projectId}, function(data) {
+            var html = '';
+            if (data.response && data.response.documents) {
+                data.response.documents.forEach(function(doc) {
+                    html += '<tr>';
+                    html += '<td>' + (doc.doc_number || '-') + '</td>';
+                    html += '<td>' + (docTypeLabels[doc.doc_type] || doc.doc_type) + '</td>';
+                    html += '<td><span class="badge badge-' + (statusBadges[doc.status] || 'secondary') + '">' + (statusLabels[doc.status] || doc.status) + '</span></td>';
+                    html += '<td>' + formatMoney(doc.net_amount) + '</td>';
+                    html += '<td>' + formatMoney(doc.gross_amount) + '</td>';
+                    html += '<td>' + (doc.created_at ? doc.created_at.substring(0,10) : '-') + '</td>';
+                    html += '<td>' + (doc.due_date || '-') + '</td>';
+                    html += '<td>';
+                    html += '<div class="btn-group btn-group-sm">';
+                    if (doc.s3files_id) {
+                        html += '<a href="{{ CONFIG.ROOTURL }}/api/projects/generateDocument.php?dl=' + doc.s3files_id + '" class="btn btn-default" title="{{ t("download") }}"><i class="fas fa-download"></i></a>';
+                    }
+                    html += '<button class="btn btn-default docStatusBtn" data-id="' + doc.id + '" data-type="' + doc.doc_type + '" data-status="' + doc.status + '" title="{{ t("change_status") }}"><i class="fas fa-exchange-alt"></i></button>';
+                    if (doc.doc_type === 'quote' || doc.doc_type === 'order_confirmation' || doc.doc_type === 'invoice') {
+                        html += '<button class="btn btn-default docConvertBtn" data-id="' + doc.id + '" data-type="' + doc.doc_type + '" title="{{ t("convert_document") }}"><i class="fas fa-arrow-right"></i></button>';
+                    }
+                    html += '</div>';
+                    html += '</td>';
+                    html += '</tr>';
+                });
+            }
+            $('#docTableBody').html(html || '<tr><td colspan="8" class="text-center text-muted">{{ t("no_documents") }}</td></tr>');
+            $('#docLoadingOverlay').hide();
+        }, false);
+    }
+
+    function formatMoney(val) {
+        return parseFloat(val || 0).toFixed(2).replace('.', ',') + ' \u20AC';
+    }
+
+    loadDocuments();
+
+    // Create document
+    $('#createDocBtn').click(function() {
+        bootbox.prompt({
+            title: '{{ t("create_document") }}',
+            inputType: 'select',
+            inputOptions: [
+                {text: '{{ t("quote") }}', value: 'quote'},
+                {text: '{{ t("order_confirmation") }}', value: 'order_confirmation'},
+                {text: '{{ t("invoice") }}', value: 'invoice'}
+            ],
+            callback: function(docType) {
+                if (docType) {
+                    // Trigger the existing document generation
+                    window.location.href = '{{ CONFIG.ROOTURL }}/project/projectInvoice.php?id=' + projectId + '&type=' + (docType === 'order_confirmation' ? 'invoice' : docType);
+                }
+            }
+        });
+    });
+
+    // Change status
+    $(document).on('click', '.docStatusBtn', function() {
+        var docId = $(this).data('id');
+        var currentStatus = $(this).data('status');
+        var transitions = {
+            'draft': ['sent'],
+            'sent': ['accepted', 'rejected', 'paid', 'overdue', 'cancelled'],
+            'overdue': ['paid', 'reminded', 'cancelled'],
+            'reminded': ['paid', 'overdue', 'cancelled']
+        };
+        var opts = (transitions[currentStatus] || []).map(function(s) {
+            return {text: statusLabels[s] || s, value: s};
+        });
+        if (opts.length === 0) {
+            bootbox.alert('{{ t("no_transitions_available") }}');
+            return;
+        }
+        bootbox.prompt({
+            title: '{{ t("change_status") }}',
+            inputType: 'select',
+            inputOptions: opts,
+            callback: function(newStatus) {
+                if (newStatus) {
+                    ajaxcall('documentLifecycle/changeStatus.php', {doc_id: docId, status: newStatus}, function() {
+                        loadDocuments();
+                    });
+                }
+            }
+        });
+    });
+
+    // Convert document
+    $(document).on('click', '.docConvertBtn', function() {
+        var docId = $(this).data('id');
+        var docType = $(this).data('type');
+        var convMap = {
+            'quote': [{text: '{{ t("order_confirmation") }}', value: 'order_confirmation'}, {text: '{{ t("invoice") }}', value: 'invoice'}],
+            'order_confirmation': [{text: '{{ t("invoice") }}', value: 'invoice'}],
+            'invoice': [{text: '{{ t("credit_note") }}', value: 'credit_note'}, {text: '{{ t("cancellation_doc") }}', value: 'cancellation'}]
+        };
+        var opts = convMap[docType] || [];
+        if (opts.length === 0) return;
+        bootbox.prompt({
+            title: '{{ t("convert_document") }}',
+            inputType: 'select',
+            inputOptions: opts,
+            callback: function(targetType) {
+                if (targetType) {
+                    ajaxcall('documentLifecycle/convert.php', {doc_id: docId, target_type: targetType}, function() {
+                        loadDocuments();
+                    });
+                }
+            }
+        });
+    });
+});
+</script>

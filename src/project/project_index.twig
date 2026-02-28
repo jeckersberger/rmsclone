@@ -112,6 +112,13 @@
                                 {% if project.subProjects %}
                                     <li class="nav-item"><a class="nav-link" href="#calendar-view" data-toggle="tab"><i class="fas fa-calendar-alt"></i> Sub Projects</a></li>
                                 {% endif %}
+                                {% if "PROJECTS:PROJECT_PAYMENTS:VIEW"|instancePermissions and project.projectsTypes_config_finance == 1 %}
+                                    <li class="nav-item"><a class="nav-link" href="#documents-view" data-toggle="tab"><i class="fas fa-file-invoice"></i> {{ t('document_lifecycle') }}</a></li>
+                                {% endif %}
+                                {% if project.projectsTypes_config_assets == 1 %}
+                                    <li class="nav-item"><a class="nav-link" href="#packlist-view" data-toggle="tab"><i class="fas fa-clipboard-list"></i> {{ t('packing_lists') }}</a></li>
+                                    <li class="nav-item"><a class="nav-link" href="#checkinout-view" data-toggle="tab"><i class="fas fa-exchange-alt"></i> {{ t('checkinout') }}</a></li>
+                                {% endif %}
                                 {% if project.auditLog|length > 0 %}
                                 <li class="nav-item"><a class="nav-link" href="#log-view" data-toggle="tab"><i class="fas fa-comments"></i> Comments & History</a></li>
                                 {% endif %}
@@ -415,6 +422,21 @@
                                             {% endembed %}
                                         </div>
                                     </div>
+                            {% endif %}
+                        </div>
+                        <div class="tab-pane" id="documents-view">
+                            {% if "PROJECTS:PROJECT_PAYMENTS:VIEW"|instancePermissions and project.projectsTypes_config_finance == 1 %}
+                                {% embed 'project/project_documents.twig' %}{% endembed %}
+                            {% endif %}
+                        </div>
+                        <div class="tab-pane" id="packlist-view">
+                            {% if project.projectsTypes_config_assets == 1 %}
+                                {% embed 'project/project_packinglist.twig' %}{% endembed %}
+                            {% endif %}
+                        </div>
+                        <div class="tab-pane" id="checkinout-view">
+                            {% if project.projectsTypes_config_assets == 1 %}
+                                {% embed 'project/project_checkinout.twig' %}{% endembed %}
                             {% endif %}
                         </div>
                         <div class="tab-pane" id="log-view">

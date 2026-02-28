@@ -1,0 +1,189 @@
+{# Check-in / Check-out panel - embedded in project_index.twig #}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-exchange-alt"></i> {{ t('checkinout') }}</h3>
+                <div class="card-tools">
+                    <button class="btn btn-sm btn-success" id="bulkCheckoutBtn"><i class="fas fa-sign-out-alt"></i> {{ t('checkout_all') }}</button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="overlay" id="cioLoadingOverlay"><i class="fas fa-sync fa-spin fa-3x"></i></div>
+
+                {# Outstanding checkouts #}
+                <div class="p-3" id="outstandingSection">
+                    <h5>{{ t('outstanding_checkouts') }}</h5>
+                    <table class="table table-sm table-striped" id="outstandingTable">
+                        <thead>
+                            <tr>
+                                <th>{{ t('asset_tag') }}</th>
+                                <th>{{ t('asset_type') }}</th>
+                                <th>{{ t('condition') }}</th>
+                                <th>{{ t('checked_out_at') }}</th>
+                                <th>{{ t('actions') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="outstandingBody"></tbody>
+                    </table>
+                </div>
+
+                <hr>
+
+                {# History #}
+                <div class="p-3">
+                    <h5>{{ t('checkinout_history') }}</h5>
+                    <table class="table table-sm table-striped" id="cioHistoryTable">
+                        <thead>
+                            <tr>
+                                <th>{{ t('direction') }}</th>
+                                <th>{{ t('asset_tag') }}</th>
+                                <th>{{ t('asset_type') }}</th>
+                                <th>{{ t('condition') }}</th>
+                                <th>{{ t('checked_by') }}</th>
+                                <th>{{ t('date') }}</th>
+                                <th>{{ t('notes') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cioHistoryBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Check-in Modal #}
+<div class="modal fade" id="checkinModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">{{ t('checkin_asset') }}</h4>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="checkinAssetId">
+                <div class="form-group">
+                    <label>{{ t('condition') }}</label>
+                    <select class="form-control" id="checkinCondition">
+                        <option value="excellent">{{ t('condition_excellent') }}</option>
+                        <option value="good" selected>{{ t('condition_good') }}</option>
+                        <option value="fair">{{ t('condition_fair') }}</option>
+                        <option value="poor">{{ t('condition_poor') }}</option>
+                        <option value="damaged">{{ t('condition_damaged') }}</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>{{ t('notes') }}</label>
+                    <textarea class="form-control" id="checkinNotes" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">{{ t('cancel') }}</button>
+                <button type="button" class="btn btn-primary" id="checkinSubmitBtn">{{ t('checkin') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    var projectId = {{ project.projects_id }};
+
+    var conditionLabels = {
+        'excellent': '{{ t("condition_excellent") }}',
+        'good': '{{ t("condition_good") }}',
+        'fair': '{{ t("condition_fair") }}',
+        'poor': '{{ t("condition_poor") }}',
+        'damaged': '{{ t("condition_damaged") }}'
+    };
+    var conditionBadges = {
+        'excellent': 'success', 'good': 'info', 'fair': 'warning',
+        'poor': 'danger', 'damaged': 'dark'
+    };
+    var directionLabels = {'out': '{{ t("checkout") }}', 'in': '{{ t("checkin") }}'};
+
+    function loadCioData() {
+        ajaxcall('checkinout/history.php', {project_id: projectId}, function(data) {
+            if (!data.response) return;
+
+            // Outstanding
+            var outHtml = '';
+            if (data.response.outstanding && data.response.outstanding.length > 0) {
+                data.response.outstanding.forEach(function(item) {
+                    outHtml += '<tr>';
+                    outHtml += '<td>' + (item.assets_tag || '-') + '</td>';
+                    outHtml += '<td>' + (item.assetTypes_name || '-') + '</td>';
+                    outHtml += '<td><span class="badge badge-' + (conditionBadges[item.condition_before] || 'secondary') + '">' + (conditionLabels[item.condition_before] || item.condition_before || '-') + '</span></td>';
+                    outHtml += '<td>' + (item.checked_at || '-') + '</td>';
+                    outHtml += '<td><button class="btn btn-sm btn-warning checkinBtn" data-asset-id="' + item.assets_id + '"><i class="fas fa-sign-in-alt"></i> {{ t("checkin") }}</button></td>';
+                    outHtml += '</tr>';
+                });
+            } else {
+                outHtml = '<tr><td colspan="5" class="text-center text-muted">{{ t("no_outstanding_checkouts") }}</td></tr>';
+            }
+            $('#outstandingBody').html(outHtml);
+
+            // History
+            var histHtml = '';
+            if (data.response.history && data.response.history.length > 0) {
+                data.response.history.forEach(function(item) {
+                    var dirIcon = item.direction === 'out' ? '<i class="fas fa-sign-out-alt text-danger"></i>' : '<i class="fas fa-sign-in-alt text-success"></i>';
+                    var condition = item.direction === 'in' ? item.condition_after : item.condition_before;
+                    histHtml += '<tr>';
+                    histHtml += '<td>' + dirIcon + ' ' + (directionLabels[item.direction] || item.direction) + '</td>';
+                    histHtml += '<td>' + (item.assets_tag || '-') + '</td>';
+                    histHtml += '<td>' + (item.assetTypes_name || '-') + '</td>';
+                    histHtml += '<td><span class="badge badge-' + (conditionBadges[condition] || 'secondary') + '">' + (conditionLabels[condition] || condition || '-') + '</span></td>';
+                    histHtml += '<td>' + (item.users_name1 || '') + ' ' + (item.users_name2 || '') + '</td>';
+                    histHtml += '<td>' + (item.checked_at || '-') + '</td>';
+                    histHtml += '<td>' + (item.condition_notes || '-') + '</td>';
+                    histHtml += '</tr>';
+                });
+            } else {
+                histHtml = '<tr><td colspan="7" class="text-center text-muted">{{ t("no_history") }}</td></tr>';
+            }
+            $('#cioHistoryBody').html(histHtml);
+            $('#cioLoadingOverlay').hide();
+        }, false);
+    }
+
+    loadCioData();
+
+    // Check-in button
+    $(document).on('click', '.checkinBtn', function() {
+        var assetId = $(this).data('asset-id');
+        $('#checkinAssetId').val(assetId);
+        $('#checkinCondition').val('good');
+        $('#checkinNotes').val('');
+        $('#checkinModal').modal('show');
+    });
+
+    // Submit check-in
+    $('#checkinSubmitBtn').click(function() {
+        ajaxcall('checkinout/checkin.php', {
+            asset_id: $('#checkinAssetId').val(),
+            project_id: projectId,
+            condition: $('#checkinCondition').val(),
+            notes: $('#checkinNotes').val()
+        }, function() {
+            $('#checkinModal').modal('hide');
+            loadCioData();
+        });
+    });
+
+    // Bulk checkout
+    $('#bulkCheckoutBtn').click(function() {
+        bootbox.confirm('{{ t("bulk_checkout_confirm") }}', function(result) {
+            if (result) {
+                // Individual checkout for each assigned asset
+                ajaxcall('checkinout/checkout.php', {
+                    asset_id: 0, project_id: projectId, condition: 'good', notes: 'Bulk checkout'
+                }, function() {
+                    loadCioData();
+                });
+            }
+        });
+    });
+});
+</script>

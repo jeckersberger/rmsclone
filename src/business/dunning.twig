@@ -1,0 +1,164 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-exclamation-triangle"></i> {{ t('dunning_overview') }}</h3>
+            </div>
+            <div class="card-body">
+                <div class="row" id="dunningStats">
+                    <div class="col-md-3">
+                        <div class="info-box bg-warning">
+                            <span class="info-box-icon"><i class="fas fa-clock"></i></span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">{{ t('overdue_invoices') }}</span>
+                                <span class="info-box-number" id="statOverdueCount">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="info-box bg-danger">
+                            <span class="info-box-icon"><i class="fas fa-euro-sign"></i></span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">{{ t('overdue_amount') }}</span>
+                                <span class="info-box-number" id="statOverdueAmount">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="info-box bg-info">
+                            <span class="info-box-icon"><i class="fas fa-envelope"></i></span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">{{ t('dunnings_sent') }}</span>
+                                <span class="info-box-number" id="statDunningSent">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="info-box bg-success">
+                            <span class="info-box-icon"><i class="fas fa-check"></i></span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">{{ t('dunnings_resolved') }}</span>
+                                <span class="info-box-number" id="statDunningResolved">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">{{ t('overdue_invoices') }}</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="overlay" id="dunningLoadingOverlay"><i class="fas fa-sync fa-spin fa-3x"></i></div>
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th>{{ t('doc_number') }}</th>
+                            <th>{{ t('project') }}</th>
+                            <th>{{ t('client') }}</th>
+                            <th>{{ t('gross_amount') }}</th>
+                            <th>{{ t('due_date') }}</th>
+                            <th>{{ t('days_overdue') }}</th>
+                            <th>{{ t('dunning_level') }}</th>
+                            <th>{{ t('actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dunningTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    var levelLabels = {
+        0: '{{ t("no_dunning") }}',
+        1: '{{ t("payment_reminder") }}',
+        2: '{{ t("first_dunning") }}',
+        3: '{{ t("second_dunning") }}',
+        4: '{{ t("final_dunning") }}'
+    };
+    var levelBadges = {0: 'secondary', 1: 'info', 2: 'warning', 3: 'danger', 4: 'dark'};
+
+    function loadDunning() {
+        ajaxcall('dunning/overview.php', {}, function(data) {
+            if (!data.response) return;
+
+            // Stats
+            if (data.response.stats) {
+                var s = data.response.stats;
+                $('#statOverdueCount').text(s.overdue_count || 0);
+                $('#statOverdueAmount').text(formatMoney(s.overdue_amount));
+                $('#statDunningSent').text(s.dunnings_this_month || 0);
+                $('#statDunningResolved').text(s.resolved_this_month || 0);
+            }
+
+            // Table
+            var html = '';
+            if (data.response.invoices && data.response.invoices.length > 0) {
+                data.response.invoices.forEach(function(inv) {
+                    var daysOverdue = Math.floor((Date.now() - new Date(inv.due_date).getTime()) / 86400000);
+                    var level = inv.dunning_level || 0;
+                    html += '<tr>';
+                    html += '<td>' + (inv.doc_number || '-') + '</td>';
+                    html += '<td>' + (inv.projects_name || '-') + '</td>';
+                    html += '<td>' + (inv.clients_name || '-') + '</td>';
+                    html += '<td>' + formatMoney(inv.gross_amount) + '</td>';
+                    html += '<td>' + (inv.due_date || '-') + '</td>';
+                    html += '<td><span class="badge badge-' + (daysOverdue > 30 ? 'danger' : 'warning') + '">' + daysOverdue + ' {{ t("days") }}</span></td>';
+                    html += '<td><span class="badge badge-' + (levelBadges[level] || 'secondary') + '">' + (levelLabels[level] || '-') + '</span></td>';
+                    html += '<td>';
+                    html += '<button class="btn btn-sm btn-warning createDunningBtn" data-id="' + inv.id + '" title="{{ t("create_dunning") }}"><i class="fas fa-envelope"></i></button> ';
+                    html += '<button class="btn btn-sm btn-success markPaidBtn" data-id="' + inv.id + '" title="{{ t("mark_paid") }}"><i class="fas fa-check"></i></button>';
+                    html += '</td>';
+                    html += '</tr>';
+                });
+            } else {
+                html = '<tr><td colspan="8" class="text-center text-muted">{{ t("no_overdue_invoices") }}</td></tr>';
+            }
+            $('#dunningTableBody').html(html);
+            $('#dunningLoadingOverlay').hide();
+        }, false);
+    }
+
+    function formatMoney(val) {
+        return parseFloat(val || 0).toFixed(2).replace('.', ',') + ' \u20AC';
+    }
+
+    loadDunning();
+
+    // Create dunning
+    $(document).on('click', '.createDunningBtn', function() {
+        var docId = $(this).data('id');
+        bootbox.confirm('{{ t("create_dunning_confirm") }}', function(result) {
+            if (result) {
+                ajaxcall('dunning/create.php', {doc_id: docId}, function() {
+                    loadDunning();
+                });
+            }
+        });
+    });
+
+    // Mark as paid
+    $(document).on('click', '.markPaidBtn', function() {
+        var docId = $(this).data('id');
+        bootbox.prompt('{{ t("enter_paid_amount") }}', function(amount) {
+            if (amount) {
+                ajaxcall('documentLifecycle/changeStatus.php', {doc_id: docId, status: 'paid'}, function() {
+                    loadDunning();
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,226 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+{# Dashboard KPIs #}
+<div class="row" id="kpiRow">
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-info">
+            <div class="inner">
+                <h3 id="kpiRevenue">-</h3>
+                <p>{{ t('revenue_this_year') }}</p>
+            </div>
+            <div class="icon"><i class="fas fa-euro-sign"></i></div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-success">
+            <div class="inner">
+                <h3 id="kpiPaid">-</h3>
+                <p>{{ t('paid_invoices') }}</p>
+            </div>
+            <div class="icon"><i class="fas fa-check-circle"></i></div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-warning">
+            <div class="inner">
+                <h3 id="kpiOutstanding">-</h3>
+                <p>{{ t('total_outstanding') }}</p>
+            </div>
+            <div class="icon"><i class="fas fa-hourglass-half"></i></div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-danger">
+            <div class="inner">
+                <h3 id="kpiOverdue">-</h3>
+                <p>{{ t('overdue_invoices') }}</p>
+            </div>
+            <div class="icon"><i class="fas fa-exclamation-triangle"></i></div>
+        </div>
+    </div>
+</div>
+
+{# KUR Threshold Warning #}
+<div class="row" id="kurWarningRow" style="display:none;">
+    <div class="col-12">
+        <div class="alert alert-warning" id="kurWarningAlert">
+            <i class="fas fa-exclamation-triangle"></i> <span id="kurWarningText"></span>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    {# Revenue Report #}
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-chart-line"></i> {{ t('revenue_report') }}</h3>
+                <div class="card-tools">
+                    <select class="form-control form-control-sm" id="revenueYear" style="width:auto;display:inline-block;">
+                        {% for y in range("now"|date("Y") - 2, "now"|date("Y")) %}
+                            <option value="{{ y }}" {{ y == "now"|date("Y") ? 'selected' : '' }}>{{ y }}</option>
+                        {% endfor %}
+                    </select>
+                    <select class="form-control form-control-sm" id="revenueGroupBy" style="width:auto;display:inline-block;">
+                        <option value="month">{{ t('by_month') }}</option>
+                        <option value="client">{{ t('by_client') }}</option>
+                    </select>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th id="revGroupHeader">{{ t('month') }}</th>
+                            <th class="text-right">{{ t('net_amount') }}</th>
+                            <th class="text-right">{{ t('gross_amount') }}</th>
+                            <th class="text-right">{{ t('count') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="revenueBody"></tbody>
+                    <tfoot>
+                        <tr class="font-weight-bold">
+                            <td>{{ t('total') }}</td>
+                            <td class="text-right" id="revTotalNet">-</td>
+                            <td class="text-right" id="revTotalGross">-</td>
+                            <td class="text-right" id="revTotalCount">-</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {# Outstanding Report #}
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-clock"></i> {{ t('outstanding_aging') }}</h3>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm">
+                    <tbody id="agingBody"></tbody>
+                    <tfoot>
+                        <tr class="font-weight-bold">
+                            <td>{{ t('total') }}</td>
+                            <td class="text-right" id="agingTotal">-</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        {# Quick Actions #}
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-bolt"></i> {{ t('quick_actions') }}</h3>
+            </div>
+            <div class="card-body">
+                <a href="{{ CONFIG.ROOTURL }}/business/dunning.php" class="btn btn-warning btn-block mb-2">
+                    <i class="fas fa-exclamation-triangle"></i> {{ t('dunning_overview') }}
+                </a>
+                <a href="{{ CONFIG.ROOTURL }}/business/datev.php" class="btn btn-info btn-block mb-2">
+                    <i class="fas fa-file-export"></i> {{ t('datev_export') }}
+                </a>
+                <a href="{{ CONFIG.ROOTURL }}/business/euer.php" class="btn btn-success btn-block mb-2">
+                    <i class="fas fa-calculator"></i> {{ t('euer_report') }}
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    var monthNames = ['{{ t("jan") }}','{{ t("feb") }}','{{ t("mar") }}','{{ t("apr") }}','{{ t("may") }}','{{ t("jun") }}','{{ t("jul") }}','{{ t("aug") }}','{{ t("sep") }}','{{ t("oct") }}','{{ t("nov") }}','{{ t("dec") }}'];
+
+    function formatMoney(val) {
+        return parseFloat(val || 0).toFixed(2).replace('.', ',') + ' \u20AC';
+    }
+
+    // Load KPIs
+    function loadKPIs() {
+        ajaxcall('reports/dashboard.php', {}, function(data) {
+            if (!data.response || !data.response.kpis) return;
+            var k = data.response.kpis;
+            $('#kpiRevenue').text(formatMoney(k.revenue_year));
+            $('#kpiPaid').text(k.paid_count || 0);
+            $('#kpiOutstanding').text(formatMoney(k.outstanding_total));
+            $('#kpiOverdue').text(k.overdue_count || 0);
+
+            if (k.kur_warning) {
+                $('#kurWarningText').text(k.kur_warning);
+                $('#kurWarningRow').show();
+            }
+        }, false);
+    }
+
+    // Load Revenue
+    function loadRevenue() {
+        var year = $('#revenueYear').val();
+        var groupBy = $('#revenueGroupBy').val();
+        ajaxcall('reports/revenue.php', {year: year, group_by: groupBy}, function(data) {
+            if (!data.response || !data.response.data) return;
+            var rows = data.response.data;
+            var html = '';
+            var totalNet = 0, totalGross = 0, totalCount = 0;
+
+            rows.forEach(function(row) {
+                var label = groupBy === 'month' ? monthNames[(row.month || 1) - 1] : (row.client_name || '-');
+                html += '<tr>';
+                html += '<td>' + label + '</td>';
+                html += '<td class="text-right">' + formatMoney(row.net_total) + '</td>';
+                html += '<td class="text-right">' + formatMoney(row.gross_total) + '</td>';
+                html += '<td class="text-right">' + (row.invoice_count || 0) + '</td>';
+                html += '</tr>';
+                totalNet += parseFloat(row.net_total || 0);
+                totalGross += parseFloat(row.gross_total || 0);
+                totalCount += parseInt(row.invoice_count || 0);
+            });
+
+            $('#revenueBody').html(html || '<tr><td colspan="4" class="text-center text-muted">{{ t("no_data") }}</td></tr>');
+            $('#revTotalNet').text(formatMoney(totalNet));
+            $('#revTotalGross').text(formatMoney(totalGross));
+            $('#revTotalCount').text(totalCount);
+            $('#revGroupHeader').text(groupBy === 'month' ? '{{ t("month") }}' : '{{ t("client") }}');
+        }, false);
+    }
+
+    // Load Outstanding/Aging
+    function loadOutstanding() {
+        ajaxcall('reports/outstanding.php', {}, function(data) {
+            if (!data.response || !data.response.aging) return;
+            var aging = data.response.aging;
+            var bucketLabels = {
+                'current': '{{ t("aging_current") }}',
+                '1_30': '1-30 {{ t("days") }}',
+                '31_60': '31-60 {{ t("days") }}',
+                '61_90': '61-90 {{ t("days") }}',
+                'over_90': '90+ {{ t("days") }}'
+            };
+            var bucketColors = {'current': 'success', '1_30': 'info', '31_60': 'warning', '61_90': 'danger', 'over_90': 'dark'};
+            var html = '';
+            var total = 0;
+
+            Object.keys(aging).forEach(function(key) {
+                var bucket = aging[key];
+                html += '<tr>';
+                html += '<td><span class="badge badge-' + (bucketColors[key] || 'secondary') + '">' + (bucketLabels[key] || key) + '</span> (' + (bucket.count || 0) + ')</td>';
+                html += '<td class="text-right">' + formatMoney(bucket.total) + '</td>';
+                html += '</tr>';
+                total += parseFloat(bucket.total || 0);
+            });
+
+            $('#agingBody').html(html);
+            $('#agingTotal').text(formatMoney(total));
+        }, false);
+    }
+
+    loadKPIs();
+    loadRevenue();
+    loadOutstanding();
+
+    $('#revenueYear, #revenueGroupBy').change(function() { loadRevenue(); });
+});
+</script>
+{% endblock %}
