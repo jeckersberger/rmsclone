@@ -1,0 +1,264 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+<div class="row">
+    {# ── My Partner Code ── #}
+    <div class="col-lg-4">
+        <div class="card card-primary card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-key"></i> {{ t('my_partner_code') }}</h3>
+            </div>
+            <div class="card-body text-center">
+                <p class="text-muted">{{ t('partner_code_desc') }}</p>
+                <h2 id="myPartnerCode" class="text-primary" style="font-family:monospace; letter-spacing:4px;">-</h2>
+                <button class="btn btn-sm btn-default" id="generateCodeBtn"><i class="fas fa-sync"></i> {{ t('generate_new_code') }}</button>
+                <button class="btn btn-sm btn-default" id="copyCodeBtn"><i class="fas fa-copy"></i> {{ t('copy') }}</button>
+            </div>
+        </div>
+
+        {# ── Invite Partner ── #}
+        <div class="card card-success card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-user-plus"></i> {{ t('invite_partner') }}</h3>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">{{ t('invite_partner_desc') }}</p>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="partnerCodeInput" placeholder="{{ t('enter_partner_code') }}" maxlength="8" style="font-family:monospace; letter-spacing:2px; text-transform:uppercase;">
+                    <div class="input-group-append">
+                        <button class="btn btn-success" id="inviteBtn"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ── Active Partnerships ── #}
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-handshake"></i> {{ t('active_partnerships') }}</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="overlay" id="partnersLoading"><i class="fas fa-sync fa-spin fa-2x"></i></div>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>{{ t('partner_name') }}</th>
+                            <th>{{ t('status') }}</th>
+                            <th>{{ t('connected_since') }}</th>
+                            <th>{{ t('actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="partnershipsBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        {# ── Pending Invitations ── #}
+        <div class="card" id="pendingCard" style="display:none;">
+            <div class="card-header bg-warning">
+                <h3 class="card-title"><i class="fas fa-inbox"></i> {{ t('pending_invitations') }}</h3>
+            </div>
+            <div class="card-body p-0">
+                <table class="table">
+                    <tbody id="pendingBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Partner Equipment Browser ── #}
+<div class="row">
+    <div class="col-12">
+        <div class="card card-outline card-info">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-warehouse"></i> {{ t('partner_equipment') }}</h3>
+                <div class="card-tools">
+                    <div class="input-group input-group-sm" style="width:200px; display:inline-flex;">
+                        <input type="text" class="form-control" id="partnerEquipSearch" placeholder="{{ t('search') }}...">
+                    </div>
+                    <div class="input-group input-group-sm ml-2" style="width:150px; display:inline-flex;">
+                        <input type="date" class="form-control" id="partnerDateFrom">
+                    </div>
+                    <div class="input-group input-group-sm ml-1" style="width:150px; display:inline-flex;">
+                        <input type="date" class="form-control" id="partnerDateTo">
+                    </div>
+                    <button class="btn btn-sm btn-info ml-1" id="searchPartnerEquipBtn"><i class="fas fa-search"></i></button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="overlay" id="equipLoading"><i class="fas fa-sync fa-spin fa-2x"></i></div>
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th>{{ t('partner') }}</th>
+                            <th>{{ t('asset_category') }}</th>
+                            <th>{{ t('asset_type') }}</th>
+                            <th>{{ t('total_count') }}</th>
+                            <th>{{ t('available') }}</th>
+                            <th>{{ t('partner_day_rate') }}</th>
+                            <th>{{ t('partner_week_rate') }}</th>
+                            <th>{{ t('actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="partnerEquipBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    function formatDate(d) {
+        if (!d) return '-';
+        return new Date(d).toLocaleDateString('de-DE');
+    }
+    function formatMoney(v) {
+        return parseFloat(v || 0).toFixed(2).replace('.', ',') + ' \u20AC';
+    }
+
+    function loadPartners() {
+        ajaxcall('partner/list.php', {}, function(data) {
+            if (!data.response) return;
+            var r = data.response;
+
+            // Show partner code
+            $('#myPartnerCode').text(r.my_partner_code || '{{ t("not_generated") }}');
+
+            // Partnerships
+            var html = '';
+            if (r.partnerships && r.partnerships.length > 0) {
+                r.partnerships.forEach(function(p) {
+                    var statusBadge = p.status === 'active' ? 'success' : (p.status === 'pending' ? 'warning' : 'secondary');
+                    html += '<tr>';
+                    html += '<td><strong>' + p.partner_name + '</strong></td>';
+                    html += '<td><span class="badge badge-' + statusBadge + '">' + p.status + '</span></td>';
+                    html += '<td>' + formatDate(p.accepted_at || p.created_at) + '</td>';
+                    html += '<td>';
+                    if (p.status === 'active') {
+                        html += '<a href="{{ CONFIG.ROOTURL }}/business/partners.php?view=' + p.partner_id + '" class="btn btn-sm btn-info"><i class="fas fa-eye"></i> {{ t("view_equipment") }}</a> ';
+                    }
+                    html += '<button class="btn btn-sm btn-danger removePartnerBtn" data-id="' + p.id + '"><i class="fas fa-unlink"></i></button>';
+                    html += '</td></tr>';
+                });
+            } else {
+                html = '<tr><td colspan="4" class="text-center text-muted">{{ t("no_partnerships") }}</td></tr>';
+            }
+            $('#partnershipsBody').html(html);
+
+            // Pending invitations
+            if (r.pending_invitations && r.pending_invitations.length > 0) {
+                $('#pendingCard').show();
+                var phtml = '';
+                r.pending_invitations.forEach(function(inv) {
+                    phtml += '<tr>';
+                    phtml += '<td><strong>' + inv.from_name + '</strong> {{ t("wants_to_connect") }}</td>';
+                    phtml += '<td>';
+                    phtml += '<button class="btn btn-sm btn-success acceptInvBtn" data-id="' + inv.id + '"><i class="fas fa-check"></i> {{ t("accept") }}</button> ';
+                    phtml += '<button class="btn btn-sm btn-danger removePartnerBtn" data-id="' + inv.id + '"><i class="fas fa-times"></i> {{ t("reject") }}</button>';
+                    phtml += '</td></tr>';
+                });
+                $('#pendingBody').html(phtml);
+            }
+
+            $('#partnersLoading').hide();
+        }, false);
+    }
+
+    function loadPartnerEquipment() {
+        var params = {};
+        if ($('#partnerEquipSearch').val()) params.search = $('#partnerEquipSearch').val();
+        if ($('#partnerDateFrom').val()) params.start_date = $('#partnerDateFrom').val();
+        if ($('#partnerDateTo').val()) params.end_date = $('#partnerDateTo').val();
+
+        ajaxcall('partner/equipment.php', params, function(data) {
+            if (!data.response) return;
+            var html = '';
+            if (data.response.equipment && data.response.equipment.length > 0) {
+                data.response.equipment.forEach(function(e) {
+                    html += '<tr>';
+                    html += '<td>' + e.instances_name + '</td>';
+                    html += '<td>' + (e.assetCategories_name || '-') + '</td>';
+                    html += '<td><strong>' + e.assetTypes_name + '</strong></td>';
+                    html += '<td>' + e.total_count + '</td>';
+                    html += '<td>' + (e.available_count !== undefined ? '<span class="badge badge-' + (e.available_count > 0 ? 'success' : 'danger') + '">' + e.available_count + '</span>' : '-') + '</td>';
+                    html += '<td>' + formatMoney(e.partner_day_rate) + (e.partner_discount_pct > 0 ? ' <small class="text-success">(-' + e.partner_discount_pct + '%)</small>' : '') + '</td>';
+                    html += '<td>' + formatMoney(e.partner_week_rate) + '</td>';
+                    html += '<td><button class="btn btn-sm btn-primary requestEquipBtn" data-instance="' + e.instances_id + '" data-type="' + e.assetTypes_id + '" data-name="' + e.assetTypes_name + '"><i class="fas fa-shopping-cart"></i> {{ t("request") }}</button></td>';
+                    html += '</tr>';
+                });
+            } else {
+                html = '<tr><td colspan="8" class="text-center text-muted">{{ t("no_partner_equipment") }}</td></tr>';
+            }
+            $('#partnerEquipBody').html(html);
+            $('#equipLoading').hide();
+        }, false);
+    }
+
+    loadPartners();
+    loadPartnerEquipment();
+
+    // Generate new code
+    $('#generateCodeBtn').click(function() {
+        ajaxcall('partner/generateCode.php', {}, function(data) {
+            if (data.response) $('#myPartnerCode').text(data.response.partner_code);
+        });
+    });
+
+    // Copy code
+    $('#copyCodeBtn').click(function() {
+        navigator.clipboard.writeText($('#myPartnerCode').text());
+        $(this).html('<i class="fas fa-check"></i> {{ t("copied") }}');
+        setTimeout(function() { $('#copyCodeBtn').html('<i class="fas fa-copy"></i> {{ t("copy") }}'); }, 2000);
+    });
+
+    // Invite
+    $('#inviteBtn').click(function() {
+        var code = $('#partnerCodeInput').val().trim();
+        if (!code) return;
+        ajaxcall('partner/invite.php', {partner_code: code}, function(data) {
+            if (data.response) {
+                bootbox.alert('{{ t("invitation_sent") }}: ' + data.response.partner_name);
+                loadPartners();
+            }
+        });
+    });
+
+    // Accept invitation
+    $(document).on('click', '.acceptInvBtn', function() {
+        ajaxcall('partner/accept.php', {link_id: $(this).data('id')}, function() { loadPartners(); });
+    });
+
+    // Search partner equipment
+    $('#searchPartnerEquipBtn').click(loadPartnerEquipment);
+
+    // Request equipment
+    $(document).on('click', '.requestEquipBtn', function() {
+        var instanceId = $(this).data('instance');
+        var typeId = $(this).data('type');
+        var typeName = $(this).data('name');
+        bootbox.prompt({
+            title: '{{ t("request_equipment") }}: ' + typeName,
+            inputType: 'number',
+            value: 1,
+            callback: function(qty) {
+                if (qty && qty > 0) {
+                    var equipment = JSON.stringify([{assetTypes_id: typeId, quantity: parseInt(qty)}]);
+                    ajaxcall('partner/request.php', {
+                        to_instance_id: instanceId,
+                        project_id: 0,
+                        start_date: $('#partnerDateFrom').val() || '{{ "now"|date("Y-m-d") }}',
+                        end_date: $('#partnerDateTo').val() || '{{ "+7 days"|date("Y-m-d") }}',
+                        equipment: equipment
+                    }, function() {
+                        bootbox.alert('{{ t("request_sent") }}');
+                    });
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

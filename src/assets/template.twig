@@ -520,6 +520,46 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 														</p>
 													</a>
 												</li>
+												<li class="nav-item">
+													<a href="{{ CONFIG.ROOTURL }}/business/recurring.php" class="nav-link">
+														<i class="fas fa-redo nav-icon"></i>
+														<p>{{ t('recurring_projects') }}</p>
+													</a>
+												</li>
+												<li class="nav-item">
+													<a href="{{ CONFIG.ROOTURL }}/business/partners.php" class="nav-link">
+														<i class="fas fa-handshake nav-icon"></i>
+														<p>{{ t('partner_management') }}</p>
+													</a>
+												</li>
+											{% endif %}
+											{% if "PROJECTS:PROJECT_FINANCE:VIEW"|instancePermissions %}
+												<li class="nav-item">
+													<a href="{{ CONFIG.ROOTURL }}/business/profit.php" class="nav-link">
+														<i class="fas fa-chart-line nav-icon"></i>
+														<p>{{ t('profit_dashboard') }}</p>
+													</a>
+												</li>
+											{% endif %}
+											{% if "ASSETS:VIEW"|instancePermissions %}
+												<li class="nav-item">
+													<a href="{{ CONFIG.ROOTURL }}/business/inventory.php" class="nav-link">
+														<i class="fas fa-clipboard-check nav-icon"></i>
+														<p>{{ t('inventory_check') }}</p>
+													</a>
+												</li>
+												<li class="nav-item">
+													<a href="{{ CONFIG.ROOTURL }}/business/maintenance-schedule.php" class="nav-link">
+														<i class="fas fa-tools nav-icon"></i>
+														<p>{{ t('maintenance_schedule') }}</p>
+													</a>
+												</li>
+												<li class="nav-item">
+													<a href="{{ CONFIG.ROOTURL }}/business/damage-reports.php" class="nav-link">
+														<i class="fas fa-exclamation-circle nav-icon"></i>
+														<p>{{ t('damage_reports') }}</p>
+													</a>
+												</li>
 											{% endif %}
 											{% if "LOCATIONS:VIEW"|instancePermissions %}
 												<li class="nav-item">

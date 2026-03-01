@@ -1,0 +1,189 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+<div class="row">
+    {# ── New Damage Report ── #}
+    <div class="col-lg-4">
+        <div class="card card-danger card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-exclamation-circle"></i> {{ t('new_damage_report') }}</h3>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label>{{ t('asset_tag') }}</label>
+                    <input type="text" class="form-control" id="damageAssetTag" placeholder="{{ t('scan_or_enter_tag') }}">
+                </div>
+                <div class="form-group">
+                    <label>{{ t('severity') }}</label>
+                    <select class="form-control" id="damageSeverity">
+                        <option value="minor">{{ t('severity_minor') }}</option>
+                        <option value="moderate">{{ t('severity_moderate') }}</option>
+                        <option value="major">{{ t('severity_major') }}</option>
+                        <option value="total_loss">{{ t('severity_total_loss') }}</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>{{ t('description') }}</label>
+                    <textarea class="form-control" id="damageDescription" rows="3" placeholder="{{ t('damage_description_placeholder') }}"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>{{ t('repair_estimate') }} (&euro;)</label>
+                    <input type="number" class="form-control" id="repairEstimate" step="0.01" min="0">
+                </div>
+                <div class="form-group">
+                    <div class="custom-control custom-checkbox">
+                        <input type="checkbox" class="custom-control-input" id="chargeToClient">
+                        <label class="custom-control-label" for="chargeToClient">{{ t('charge_to_client') }}</label>
+                    </div>
+                </div>
+                <button class="btn btn-danger btn-block" id="submitDamageBtn"><i class="fas fa-paper-plane"></i> {{ t('submit_report') }}</button>
+            </div>
+        </div>
+
+        {# ── Stats ── #}
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div class="text-center">
+                        <h4 id="openReports" class="text-danger">-</h4>
+                        <small class="text-muted">{{ t('open_reports') }}</small>
+                    </div>
+                    <div class="text-center">
+                        <h4 id="monthReports" class="text-warning">-</h4>
+                        <small class="text-muted">{{ t('this_month') }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ── Reports List ── #}
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-list"></i> {{ t('damage_reports') }}</h3>
+                <div class="card-tools">
+                    <div class="input-group input-group-sm" style="width:200px;">
+                        <input type="text" class="form-control" id="damageSearchAsset" placeholder="{{ t('search_by_asset') }}...">
+                        <div class="input-group-append">
+                            <button class="btn btn-default" id="searchDamageBtn"><i class="fas fa-search"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="overlay" id="damageLoading"><i class="fas fa-sync fa-spin fa-2x"></i></div>
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th>{{ t('asset') }}</th>
+                            <th>{{ t('project') }}</th>
+                            <th>{{ t('severity') }}</th>
+                            <th>{{ t('description') }}</th>
+                            <th>{{ t('status') }}</th>
+                            <th>{{ t('actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="damageBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    function loadReports(assetId) {
+        var params = {};
+        if (assetId) params.asset_id = assetId;
+        ajaxcall('damage/list.php', params, function(data) {
+            if (!data.response) return;
+            var r = data.response;
+
+            // Stats
+            if (r.stats) {
+                $('#openReports').text(r.stats.open || 0);
+                $('#monthReports').text(r.stats.this_month || 0);
+            }
+
+            // Reports
+            var html = '';
+            if (r.reports && r.reports.length > 0) {
+                r.reports.forEach(function(d) {
+                    var sevBadge = {minor: 'info', moderate: 'warning', major: 'danger', total_loss: 'dark'};
+                    var statusBadge = {reported: 'warning', in_repair: 'info', resolved: 'success', written_off: 'dark'};
+                    html += '<tr>';
+                    html += '<td>' + (d.assetTypes_name || '-') + ' <small>#' + (d.assets_tag || '') + '</small></td>';
+                    html += '<td>' + (d.projects_name || '-') + '</td>';
+                    html += '<td><span class="badge badge-' + (sevBadge[d.severity] || 'secondary') + '">' + d.severity + '</span></td>';
+                    html += '<td>' + (d.description ? d.description.substring(0, 50) : '-') + '</td>';
+                    html += '<td><span class="badge badge-' + (statusBadge[d.status] || 'secondary') + '">' + d.status + '</span></td>';
+                    html += '<td>';
+                    if (d.status === 'reported') {
+                        html += '<button class="btn btn-xs btn-success resolveBtn" data-id="' + d.id + '" data-status="resolved"><i class="fas fa-check"></i></button> ';
+                    }
+                    html += '</td></tr>';
+                });
+            } else {
+                html = '<tr><td colspan="6" class="text-center text-muted">{{ t("no_damage_reports") }}</td></tr>';
+            }
+            $('#damageBody').html(html);
+            $('#damageLoading').hide();
+        }, false);
+    }
+    loadReports();
+
+    // Search asset by tag to find its ID
+    $('#searchDamageBtn').click(function() {
+        var tag = $('#damageSearchAsset').val().trim();
+        if (tag) {
+            // Use search API to find asset
+            ajaxcall('search/quick.php', {term: tag}, function(data) {
+                if (data.response && data.response.results) {
+                    var asset = data.response.results.find(function(r) { return r.type === 'asset'; });
+                    if (asset) loadReports(asset.id);
+                    else loadReports();
+                }
+            }, false);
+        } else {
+            loadReports();
+        }
+    });
+
+    $('#submitDamageBtn').click(function() {
+        var tag = $('#damageAssetTag').val().trim();
+        var desc = $('#damageDescription').val().trim();
+        if (!tag || !desc) { bootbox.alert('{{ t("fill_required_fields") }}'); return; }
+
+        // First find the asset by tag
+        ajaxcall('search/quick.php', {term: tag}, function(data) {
+            var assetId = 0;
+            if (data.response && data.response.results) {
+                var asset = data.response.results.find(function(r) { return r.type === 'asset'; });
+                if (asset) assetId = asset.id;
+            }
+            if (!assetId) { bootbox.alert('{{ t("asset_not_found") }}'); return; }
+
+            ajaxcall('damage/create.php', {
+                asset_id: assetId,
+                project_id: 0,
+                severity: $('#damageSeverity').val(),
+                description: desc,
+                repair_estimate: $('#repairEstimate').val() || 0,
+                charge_to_client: $('#chargeToClient').is(':checked') ? 1 : 0
+            }, function() {
+                $('#damageAssetTag').val('');
+                $('#damageDescription').val('');
+                $('#repairEstimate').val('');
+                loadReports();
+            });
+        }, false);
+    });
+
+    $(document).on('click', '.resolveBtn', function() {
+        var id = $(this).data('id');
+        var status = $(this).data('status');
+        ajaxcall('damage/updateStatus.php', {report_id: id, status: status}, function() { loadReports(); });
+    });
+});
+</script>
+{% endblock %}
