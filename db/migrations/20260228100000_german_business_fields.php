@@ -15,82 +15,98 @@ final class GermanBusinessFields extends AbstractMigration
     {
         // --- instances: German business / tax fields ---
         $instances = $this->table('instances');
-        $instances
-            ->addColumn('instances_taxNumber', 'string', [
-                'limit' => 60, 'null' => true, 'after' => 'instances_website',
+
+        $instanceCols = [
+            'instances_taxNumber' => ['type' => 'string', 'opts' => [
+                'limit' => 60, 'null' => true,
                 'comment' => 'Steuernummer (z.B. 123/456/78901)'
-            ])
-            ->addColumn('instances_vatId', 'string', [
-                'limit' => 30, 'null' => true, 'after' => 'instances_taxNumber',
+            ]],
+            'instances_vatId' => ['type' => 'string', 'opts' => [
+                'limit' => 30, 'null' => true,
                 'comment' => 'USt-IdNr. (z.B. DE123456789)'
-            ])
-            ->addColumn('instances_kurEnabled', 'boolean', [
-                'default' => 1, 'after' => 'instances_vatId',
+            ]],
+            'instances_kurEnabled' => ['type' => 'boolean', 'opts' => [
+                'default' => 1,
                 'comment' => 'Kleinunternehmerregelung aktiv (§19 UStG)'
-            ])
-            ->addColumn('instances_vatRate', 'decimal', [
+            ]],
+            'instances_vatRate' => ['type' => 'decimal', 'opts' => [
                 'precision' => 5, 'scale' => 2, 'default' => 19.00,
-                'after' => 'instances_kurEnabled',
                 'comment' => 'Standard-MwSt-Satz in Prozent'
-            ])
-            ->addColumn('instances_bankName', 'string', [
-                'limit' => 120, 'null' => true, 'after' => 'instances_vatRate',
+            ]],
+            'instances_bankName' => ['type' => 'string', 'opts' => [
+                'limit' => 120, 'null' => true,
                 'comment' => 'Name der Bank'
-            ])
-            ->addColumn('instances_bankIban', 'string', [
-                'limit' => 34, 'null' => true, 'after' => 'instances_bankName',
+            ]],
+            'instances_bankIban' => ['type' => 'string', 'opts' => [
+                'limit' => 34, 'null' => true,
                 'comment' => 'IBAN'
-            ])
-            ->addColumn('instances_bankBic', 'string', [
-                'limit' => 11, 'null' => true, 'after' => 'instances_bankIban',
+            ]],
+            'instances_bankBic' => ['type' => 'string', 'opts' => [
+                'limit' => 11, 'null' => true,
                 'comment' => 'BIC/SWIFT'
-            ])
-            ->addColumn('instances_paymentTermDays', 'integer', [
-                'default' => 14, 'after' => 'instances_bankBic',
+            ]],
+            'instances_paymentTermDays' => ['type' => 'integer', 'opts' => [
+                'default' => 14,
                 'comment' => 'Standard-Zahlungsziel in Tagen'
-            ])
-            ->addColumn('instances_courtOfJurisdiction', 'string', [
-                'limit' => 120, 'null' => true, 'after' => 'instances_paymentTermDays',
+            ]],
+            'instances_courtOfJurisdiction' => ['type' => 'string', 'opts' => [
+                'limit' => 120, 'null' => true,
                 'comment' => 'Gerichtsstand'
-            ])
-            ->addColumn('instances_ceoName', 'string', [
-                'limit' => 200, 'null' => true, 'after' => 'instances_courtOfJurisdiction',
+            ]],
+            'instances_ceoName' => ['type' => 'string', 'opts' => [
+                'limit' => 200, 'null' => true,
                 'comment' => 'Geschaeftsfuehrer / Inhaber'
-            ])
-            ->addColumn('instances_companyRegNumber', 'string', [
-                'limit' => 60, 'null' => true, 'after' => 'instances_ceoName',
+            ]],
+            'instances_companyRegNumber' => ['type' => 'string', 'opts' => [
+                'limit' => 60, 'null' => true,
                 'comment' => 'Handelsregisternummer (z.B. HRB 12345)'
-            ])
-            ->addColumn('instances_locale', 'string', [
-                'limit' => 10, 'default' => 'de_DE', 'after' => 'instances_companyRegNumber',
+            ]],
+            'instances_locale' => ['type' => 'string', 'opts' => [
+                'limit' => 10, 'default' => 'de_DE',
                 'comment' => 'Spracheinstellung (de_DE, en_GB, ...)'
-            ])
-            ->update();
+            ]],
+        ];
+
+        foreach ($instanceCols as $colName => $def) {
+            if (!$instances->hasColumn($colName)) {
+                $instances->addColumn($colName, $def['type'], $def['opts']);
+            }
+        }
+        $instances->update();
 
         // --- clients: add tax ID and customer number ---
         $clients = $this->table('clients');
-        $clients
-            ->addColumn('clients_vatId', 'string', [
-                'limit' => 30, 'null' => true, 'after' => 'clients_website',
+        $clientCols = [
+            'clients_vatId' => ['type' => 'string', 'opts' => [
+                'limit' => 30, 'null' => true,
                 'comment' => 'USt-IdNr. des Kunden'
-            ])
-            ->addColumn('clients_customerNumber', 'string', [
-                'limit' => 30, 'null' => true, 'after' => 'clients_vatId',
+            ]],
+            'clients_customerNumber' => ['type' => 'string', 'opts' => [
+                'limit' => 30, 'null' => true,
                 'comment' => 'Kundennummer'
-            ])
-            ->addColumn('clients_paymentTermDays', 'integer', [
-                'null' => true, 'after' => 'clients_customerNumber',
+            ]],
+            'clients_paymentTermDays' => ['type' => 'integer', 'opts' => [
+                'null' => true,
                 'comment' => 'Individuelles Zahlungsziel (NULL = Firmen-Standard)'
-            ])
-            ->update();
+            ]],
+        ];
+
+        foreach ($clientCols as $colName => $def) {
+            if (!$clients->hasColumn($colName)) {
+                $clients->addColumn($colName, $def['type'], $def['opts']);
+            }
+        }
+        $clients->update();
 
         // --- projects: add Leistungszeitraum fields for GoBD ---
         $projects = $this->table('projects');
-        $projects
-            ->addColumn('projects_deliveryNotes', 'text', [
-                'null' => true, 'after' => 'projects_invoiceNotes',
-                'comment' => 'Lieferschein-Notizen'
-            ])
-            ->update();
+        if (!$projects->hasColumn('projects_deliveryNotes')) {
+            $projects
+                ->addColumn('projects_deliveryNotes', 'text', [
+                    'null' => true,
+                    'comment' => 'Lieferschein-Notizen'
+                ])
+                ->update();
+        }
     }
 }

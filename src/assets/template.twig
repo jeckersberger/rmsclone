@@ -509,6 +509,12 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 														<p>{{ t('steuer_export') }}</p>
 													</a>
 												</li>
+												<li class="nav-item">
+													<a href="{{ CONFIG.ROOTURL }}/business/dsgvo.php" class="nav-link">
+														<i class="nav-icon fas fa-shield-alt"></i>
+														<p>{{ t('dsgvo_management') }}</p>
+													</a>
+												</li>
 											{% endif %}
 
 											{% if "PROJECTS:VIEW"|instancePermissions %}
@@ -533,7 +539,7 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 													</a>
 												</li>
 											{% endif %}
-											{% if "PROJECTS:PROJECT_FINANCE:VIEW"|instancePermissions %}
+											{% if "PROJECTS:PROJECT_PAYMENTS:VIEW"|instancePermissions %}
 												<li class="nav-item">
 													<a href="{{ CONFIG.ROOTURL }}/business/profit.php" class="nav-link">
 														<i class="fas fa-chart-line nav-icon"></i>
@@ -541,13 +547,15 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 													</a>
 												</li>
 											{% endif %}
-											{% if "ASSETS:VIEW"|instancePermissions %}
+											{% if "ASSETS:CREATE"|instancePermissions %}
 												<li class="nav-item">
 													<a href="{{ CONFIG.ROOTURL }}/business/inventory.php" class="nav-link">
 														<i class="fas fa-clipboard-check nav-icon"></i>
 														<p>{{ t('inventory_check') }}</p>
 													</a>
 												</li>
+											{% endif %}
+											{% if "MAINTENANCE_JOBS:VIEW"|instancePermissions %}
 												<li class="nav-item">
 													<a href="{{ CONFIG.ROOTURL }}/business/maintenance-schedule.php" class="nav-link">
 														<i class="fas fa-tools nav-icon"></i>

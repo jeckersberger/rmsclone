@@ -1,0 +1,243 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+<div class="callout callout-info">
+    <h5><i class="fas fa-shield-alt"></i> {{ t('dsgvo_info_title') }}</h5>
+    <p>{{ t('dsgvo_info_text') }}</p>
+</div>
+
+<div class="row">
+    {# ── Client Data Export / Anonymization ── #}
+    <div class="col-lg-5">
+        <div class="card card-primary card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-user-shield"></i> {{ t('client_data_actions') }}</h3>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label>{{ t('select_client') }}</label>
+                    <select class="form-control" id="dsgvoClientSelect">
+                        <option value="">{{ t('select') }}...</option>
+                    </select>
+                </div>
+                <div class="btn-group btn-group-sm d-flex mb-3">
+                    <button class="btn btn-info" id="btnExport" disabled><i class="fas fa-eye"></i> {{ t('dsgvo_view_data') }}</button>
+                    <button class="btn btn-success" id="btnDownload" disabled><i class="fas fa-download"></i> {{ t('dsgvo_export_json') }}</button>
+                    <button class="btn btn-warning" id="btnRetention" disabled><i class="fas fa-clock"></i> {{ t('dsgvo_check_retention') }}</button>
+                </div>
+                <button class="btn btn-danger btn-block" id="btnAnonymize" disabled>
+                    <i class="fas fa-user-slash"></i> {{ t('dsgvo_anonymize') }}
+                </button>
+
+                {# Retention Check Result #}
+                <div id="retentionResult" class="mt-3" style="display:none;"></div>
+            </div>
+        </div>
+
+        {# ── Deletion Suggestions ── #}
+        <div class="card card-warning card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-broom"></i> {{ t('dsgvo_deletion_suggestions') }}</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="overlay" id="suggestionsLoading"><i class="fas fa-sync fa-spin fa-2x"></i></div>
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>{{ t('client') }}</th>
+                            <th>{{ t('last_activity') }}</th>
+                            <th>{{ t('actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="suggestionsBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {# ── Data Export Preview ── #}
+    <div class="col-lg-7">
+        <div class="card" id="exportPreviewCard" style="display:none;">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-database"></i> {{ t('dsgvo_stored_data') }}</h3>
+                <div class="card-tools">
+                    <button class="btn btn-tool" id="closePreview"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            <div class="card-body">
+                <pre id="exportPreviewContent" style="max-height:500px; overflow:auto; font-size:12px;"></pre>
+            </div>
+        </div>
+
+        {# ── DSGVO Log ── #}
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-history"></i> {{ t('dsgvo_log') }}</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="overlay" id="logLoading"><i class="fas fa-sync fa-spin fa-2x"></i></div>
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th>{{ t('date') }}</th>
+                            <th>{{ t('action') }}</th>
+                            <th>{{ t('client') }}</th>
+                            <th>{{ t('user') }}</th>
+                            <th>{{ t('details') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    var actionLabels = {
+        'data_export': '{{ t("dsgvo_action_export") }}',
+        'deletion_request': '{{ t("dsgvo_action_deletion_request") }}',
+        'partial_anonymization': '{{ t("dsgvo_action_partial_anon") }}',
+        'full_anonymization': '{{ t("dsgvo_action_full_anon") }}'
+    };
+
+    // Load clients
+    ajaxcall('search/quick.php', {term: ''}, function(data) {
+        // Fallback: load from a basic search
+    }, false);
+
+    // Load clients via projects data (clients are linked)
+    $.ajax({
+        url: '{{ CONFIG.ROOTURL }}/api/clients/list.php',
+        method: 'POST',
+        success: function(data) {
+            if (data.result && data.response) {
+                (data.response.clients || data.response || []).forEach(function(c) {
+                    $('#dsgvoClientSelect').append('<option value="' + c.clients_id + '">' + c.clients_name + (c.clients_email ? ' (' + c.clients_email + ')' : '') + '</option>');
+                });
+            }
+        }
+    });
+
+    $('#dsgvoClientSelect').change(function() {
+        var hasValue = !!$(this).val();
+        $('#btnExport, #btnDownload, #btnRetention, #btnAnonymize').prop('disabled', !hasValue);
+    });
+
+    // Export / View data
+    $('#btnExport').click(function() {
+        ajaxcall('dsgvo/export.php', {client_id: $('#dsgvoClientSelect').val()}, function(data) {
+            if (data.response) {
+                $('#exportPreviewContent').text(JSON.stringify(data.response, null, 2));
+                $('#exportPreviewCard').show();
+            }
+        });
+    });
+
+    // Download JSON
+    $('#btnDownload').click(function() {
+        var form = $('<form>', {method: 'POST', action: '{{ CONFIG.ROOTURL }}/api/dsgvo/export.php'});
+        form.append($('<input>', {name: 'client_id', value: $('#dsgvoClientSelect').val()}));
+        form.append($('<input>', {name: 'format', value: 'download'}));
+        form.appendTo('body').submit().remove();
+    });
+
+    // Check retention periods
+    $('#btnRetention').click(function() {
+        ajaxcall('dsgvo/retentionCheck.php', {client_id: $('#dsgvoClientSelect').val()}, function(data) {
+            if (!data.response) return;
+            var r = data.response;
+            var html = '';
+            if (r.has_retained_data) {
+                html = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> <strong>{{ t("dsgvo_retention_active") }}</strong><br>';
+                r.reasons.forEach(function(reason) { html += '&bull; ' + reason + '<br>'; });
+                html += '{{ t("dsgvo_earliest_deletion") }}: <strong>' + r.earliest_deletion + '</strong></div>';
+            } else {
+                html = '<div class="alert alert-success"><i class="fas fa-check"></i> {{ t("dsgvo_no_retention") }}</div>';
+            }
+            $('#retentionResult').html(html).show();
+        });
+    });
+
+    // Anonymize
+    $('#btnAnonymize').click(function() {
+        var clientName = $('#dsgvoClientSelect option:selected').text();
+        bootbox.confirm({
+            title: '<i class="fas fa-exclamation-triangle text-danger"></i> {{ t("dsgvo_anonymize_confirm_title") }}',
+            message: '{{ t("dsgvo_anonymize_confirm_text") }}<br><br><strong>' + clientName + '</strong><br><br><em>{{ t("dsgvo_anonymize_irreversible") }}</em>',
+            buttons: {
+                confirm: {label: '{{ t("dsgvo_anonymize") }}', className: 'btn-danger'},
+                cancel: {label: '{{ t("cancel") }}', className: 'btn-default'}
+            },
+            callback: function(r) {
+                if (!r) return;
+                ajaxcall('dsgvo/anonymize.php', {client_id: $('#dsgvoClientSelect').val()}, function(data) {
+                    if (data.response) {
+                        var msg = data.response.message;
+                        if (data.response.partial) {
+                            bootbox.alert('<div class="alert alert-warning">' + msg + '</div>');
+                        } else {
+                            bootbox.alert('<div class="alert alert-success"><i class="fas fa-check"></i> ' + msg + '</div>');
+                        }
+                        loadLog();
+                    }
+                });
+            }
+        });
+    });
+
+    $('#closePreview').click(function() { $('#exportPreviewCard').hide(); });
+
+    // Load DSGVO log
+    function loadLog() {
+        ajaxcall('dsgvo/log.php', {}, function(data) {
+            if (!data.response) return;
+            var html = '';
+            var log = data.response.log || [];
+            if (log.length > 0) {
+                log.forEach(function(l) {
+                    html += '<tr>';
+                    html += '<td>' + new Date(l.created_at).toLocaleDateString('de-DE') + '</td>';
+                    html += '<td><span class="badge badge-secondary">' + (actionLabels[l.action] || l.action) + '</span></td>';
+                    html += '<td>' + (l.clients_id || '-') + '</td>';
+                    html += '<td>' + (l.users_name1 || '') + ' ' + (l.users_name2 || '') + '</td>';
+                    html += '<td><small>' + (l.details || '-') + '</small></td>';
+                    html += '</tr>';
+                });
+            } else {
+                html = '<tr><td colspan="5" class="text-center text-muted">{{ t("no_log_entries") }}</td></tr>';
+            }
+            $('#logBody').html(html);
+            $('#logLoading').hide();
+        }, false);
+    }
+    loadLog();
+
+    // Load deletion suggestions
+    ajaxcall('dsgvo/deletionSuggestions.php', {}, function(data) {
+        if (!data.response) return;
+        var html = '';
+        var clients = data.response.clients || [];
+        if (clients.length > 0) {
+            clients.forEach(function(c) {
+                html += '<tr>';
+                html += '<td>' + c.clients_name + '</td>';
+                html += '<td><small>' + new Date(c.last_activity).toLocaleDateString('de-DE') + '</small></td>';
+                html += '<td><button class="btn btn-xs btn-danger suggestDeleteBtn" data-id="' + c.clients_id + '"><i class="fas fa-user-slash"></i></button></td>';
+                html += '</tr>';
+            });
+        } else {
+            html = '<tr><td colspan="3" class="text-center text-muted">{{ t("no_deletion_suggestions") }}</td></tr>';
+        }
+        $('#suggestionsBody').html(html);
+        $('#suggestionsLoading').hide();
+    }, false);
+
+    $(document).on('click', '.suggestDeleteBtn', function() {
+        var id = $(this).data('id');
+        $('#dsgvoClientSelect').val(id).trigger('change');
+        $('#btnAnonymize').trigger('click');
+    });
+});
+</script>
+{% endblock %}

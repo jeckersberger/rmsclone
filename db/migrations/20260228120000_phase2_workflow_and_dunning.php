@@ -140,8 +140,8 @@ class Phase2WorkflowAndDunning extends AbstractMigration
         }
         if (!$this->hasTable('client_tag_assignments')) {
             $this->table('client_tag_assignments', ['id' => false, 'primary_key' => ['clients_id', 'client_tags_id'], 'engine' => 'InnoDB'])
-                ->addColumn('clients_id', 'integer')
-                ->addColumn('client_tags_id', 'integer')
+                ->addColumn('clients_id', 'integer', ['null' => false])
+                ->addColumn('client_tags_id', 'integer', ['null' => false])
                 ->create();
         }
 
