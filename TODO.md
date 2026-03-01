@@ -83,9 +83,14 @@
 - [ ] Automatischer Rechnungsversand per E-Mail (Cronjob-basiert)
 - [x] Wiederkehrende Projekte (Vorlage) — `src/services/RecurringProjectService.php`
 - [ ] Mahngebühren automatisch berechnen und auf Mahnung ausweisen
+- [ ] Mahnbriefe als PDF generieren und per E-Mail versenden
+- [ ] Mahnsperre bei Teilzahlung (automatisch pausieren)
 - [ ] Zahlungseingänge mit Bankdaten abgleichen (MT940/CAMT Import)
 - [ ] Sammelrechnung (mehrere Projekte → eine Rechnung)
 - [ ] Reverse-Charge-Verfahren für EU-Auslandsgeschäfte
+- [ ] Teilzahlungs-Tracking auf Rechnungsebene
+- [ ] Cron-Automatisierung für wiederkehrende Projekte (Scheduler fehlt!)
+- [ ] Wiederkehrende Projekte: Verfügbarkeits-Check vor Auto-Erstellung
 
 ### 6.2.3 Buchhaltungsanbindung
 - [x] DATEV-Export — `src/services/DatevExportService.php` + `src/business/datev.php`
@@ -153,17 +158,28 @@
 
 ## Sicherheit & Robustheit
 
+### KRITISCH - Sofort beheben!
+- [ ] **CORS Wildcard entfernen** — `src/api/apiHead.php` Zeile 6: `Access-Control-Allow-Origin: *` erlaubt JEDEM Cross-Origin-Zugriff auf alle APIs! → Auf eigene Domain beschränken
+- [ ] **CSRF-Token-Schutz** für alle POST-Endpunkte (aktuell KEIN Token in der gesamten API!)
+- [ ] **Partner-Code unsicher** — `PartnerService.php:318`: `md5($instanceId . time())` ist vorhersagbar → `random_bytes(16)` oder `bin2hex(random_bytes(8))` verwenden
+- [ ] **DSGVO IP-Logging falsch** — `DsgvoService.php:218`: Nutzt `$_SERVER['REMOTE_ADDR']` statt Cloudflare/Proxy-Header → `HTTP_CF_CONNECTING_IP` / `HTTP_X_FORWARDED_FOR` prüfen
+
 ### API-Sicherheit
-- [ ] CSRF-Token-Schutz für alle POST-Endpunkte (aktuell nicht vorhanden!)
 - [ ] Rate-Limiting für Login und API-Endpunkte (Brute-Force-Schutz)
 - [ ] Input-Sanitization: htmlspecialchars/strip_tags für alle User-Inputs
 - [ ] Content-Security-Policy (CSP) Header setzen
 - [ ] X-Frame-Options Header (Clickjacking-Schutz)
 - [ ] Prepared Statements in allen rawQuery()-Aufrufen prüfen
 - [ ] API-Antworten: keine internen Fehler-Details an Client leaken
+- [ ] **Partner-API: Keine Input-Validierung** — `accept.php`, `invite.php`, `equipment.php`, `generateCode.php`, `request.php`: 0 Aufrufe von intval/filter_input!
+- [ ] **JSON-Decoding unsicher** — `partner/request.php:9`: `json_decode()` ohne `json_last_error()` Prüfung
+- [ ] **Datumsformate nicht validiert** — `partner/equipment.php`, `partner/request.php`: Daten werden ungeprüft an DB weitergereicht
+- [ ] **Equipment-IDs nicht geprüft** — `PartnerService.php:246`: `assetTypes_id` wird nicht validiert ob es zur Partner-Instance gehört
+- [ ] **Rate-Limiting für Partner-Code-Generierung** — `partner/generateCode.php`: Unbegrenzte Code-Erzeugung möglich
+- [ ] **Account-Enumeration** — `PartnerService.php:33-37`: Verschiedene Fehler-Antworten verraten ob Instance existiert → einheitliche Fehlermeldung
 
 ### Session & Auth
-- [ ] Session-Cookie: HttpOnly + Secure + SameSite=Strict setzen
+- [ ] Session-Cookie: HttpOnly + Secure + SameSite=Strict setzen — `head.php:182` setzt nur Dauer (12h)
 - [ ] Session-Regeneration nach Login (Session-Fixation verhindern)
 - [ ] Passwort-Policy erzwingen (Mindestlänge, Komplexität)
 - [ ] Account-Lockout nach X fehlgeschlagenen Login-Versuchen
@@ -175,11 +191,17 @@
 - [ ] Verschlüsselung sensibler Daten at-rest (IBAN, Steuernummer)
 - [ ] Automatische Datenbank-Backups (mysqldump Cronjob)
 - [ ] DB-Benutzer mit minimalen Rechten (kein DROP/ALTER in Produktion)
+- [ ] **Inkonsistente SQL-Sanitization** — `search/quick.php` nutzt `$DBLIB->escape()`, aber `groups/search.php` nutzt `sanitizeStringMYSQL()` → vereinheitlichen
 
 ### Datei-Sicherheit
 - [ ] Upload-Validierung: Dateityp, Dateigröße, MIME-Type prüfen
 - [ ] Uploaded Files außerhalb des Webroot speichern
 - [ ] Virus-Scan für hochgeladene Dateien (ClamAV)
+
+### DSGVO-Sicherheit
+- [ ] **Datenexport filtert interne Felder nicht** — `DsgvoService.php:72-80`: Export enthält System-IDs und interne Flags → nur personenbezogene Daten exportieren
+- [ ] Verschlüsselter Datenexport (ZIP mit Passwort) für E-Mail-Versand
+- [ ] Automatische Löschung temporärer Export-Dateien
 
 ---
 
@@ -303,16 +325,18 @@
 | Phase 1 - DSGVO            | 6/10      | 4     | 60%         |
 | Phase 1 - DB & Lokalisierung | 10/10   | 0     | 100%        |
 | Phase 2 - Angebotswesen    | 3/8       | 5     | 38%         |
-| Phase 2 - Rechnungswesen   | 5/12      | 7     | 42%         |
+| Phase 2 - Rechnungswesen   | 5/15      | 10    | 33%         |
 | Phase 2 - Buchhaltung      | 2/8       | 6     | 25%         |
 | Phase 2 - Kunden           | 4/13      | 9     | 31%         |
 | Phase 3 - Reporting        | 4/11      | 7     | 36%         |
 | Phase 3 - Logistik         | 3/8       | 5     | 38%         |
 | Phase 3 - Code-Qualität    | 0/8       | 8     | 0%          |
-| Sicherheit - API           | 0/7       | 7     | 0%          |
+| Sicherheit - KRITISCH      | 0/4       | 4     | 0%          |
+| Sicherheit - API           | 0/12      | 12    | 0%          |
 | Sicherheit - Session/Auth  | 0/6       | 6     | 0%          |
-| Sicherheit - Datenbank     | 0/4       | 4     | 0%          |
+| Sicherheit - Datenbank     | 0/5       | 5     | 0%          |
 | Sicherheit - Dateien       | 0/3       | 3     | 0%          |
+| Sicherheit - DSGVO         | 0/3       | 3     | 0%          |
 | Extra - Dashboard/Nav      | 4/8       | 4     | 50%         |
 | Extra - Projekte           | 2/8       | 6     | 25%         |
 | Extra - Multi-Business     | 5/9       | 4     | 56%         |
@@ -324,35 +348,43 @@
 | Extra - Integrationen      | 0/6       | 6     | 0%          |
 | Extra - Dokumentation      | 3/7       | 4     | 43%         |
 | Extra - DevOps             | 0/8       | 8     | 0%          |
-| **GESAMT**                  | **72/219**| **147**| **33%**    |
+| **GESAMT**                  | **72/236**| **164**| **31%**    |
 
 ---
 
 ## Priorisierte Empfehlung (nächste Schritte)
 
-### Sofort umsetzen (Blocker für Produktivbetrieb)
-1. KUR-Toggle in Business-Settings-UI
-2. Leistungszeitraum auf Rechnungen
-3. Unveränderbarkeit der Rechnung nach Erstellung
-4. CSRF-Token-Schutz für POST-Endpunkte
-5. Session-Cookie-Sicherheit (HttpOnly, Secure, SameSite)
-6. Input-Validierung in Partner-APIs (aktuell 0 Validierung!)
+### SOFORT - Sicherheitslücken schließen (VOR Produktivbetrieb!)
+1. **CORS Wildcard entfernen** (`apiHead.php`: `Access-Control-Allow-Origin: *`)
+2. **CSRF-Token-Schutz** implementieren (kein einziger Endpoint hat Tokens!)
+3. **Partner-Code sicher machen** (`md5(time())` → `random_bytes()`)
+4. **Session-Cookie absichern** (HttpOnly + Secure + SameSite)
+5. **Input-Validierung in Partner-APIs** (aktuell 0 Validierung!)
+6. **IP-Logging in DSGVO-Service fixen** (Proxy-Header beachten)
 
-### Bald umsetzen (Komfort + Sicherheit)
-7. Automatischer Rechnungsversand per E-Mail
-8. Rate-Limiting für Login
-9. Lieferschein-Nummer über SequenceService
-10. Kundenhistorie-Übersichtsseite
-11. Foreign Keys für neue Tabellen
-12. Angebots-Vorlagen mit Textbausteinen
+### Sofort umsetzen (Blocker für legalen Betrieb)
+7. KUR-Toggle in Business-Settings-UI
+8. Leistungszeitraum auf Rechnungen (GoBD-Pflicht!)
+9. Unveränderbarkeit der Rechnung nach Erstellung (GoBD-Pflicht!)
+10. Rate-Limiting für Login (Brute-Force-Schutz)
+
+### Bald umsetzen (Komfort + Compliance)
+11. Automatischer Rechnungsversand per E-Mail
+12. Mahnbriefe als PDF generieren + versenden
+13. Lieferschein-Nummer über SequenceService (statt `rand()`)
+14. Kundenhistorie-Übersichtsseite
+15. Foreign Keys für neue Tabellen (Datenintegrität)
+16. Angebots-Vorlagen mit Textbausteinen
+17. Cron-Job für wiederkehrende Projekte
 
 ### Mittelfristig (Skalierung + Professionalisierung)
-13. ZUGFeRD/XRechnung implementieren
-14. Teilrechnungen / Abschlagsrechnungen
-15. Unit Tests für kritische Services
-16. Kunden-Portal (Self-Service)
-17. Equipment-Auslastungsberichte
-18. Docker-Compose Produktions-Setup
+18. ZUGFeRD/XRechnung implementieren (`horstoeko/zugferd` installieren)
+19. Teilrechnungen / Abschlagsrechnungen
+20. Unit Tests für kritische Services (PHPUnit)
+21. Kunden-Portal (Self-Service)
+22. Equipment-Auslastungsberichte
+23. Docker-Compose Produktions-Setup mit SSL
+24. 2-Faktor-Authentifizierung (TOTP)
 
 ---
 
