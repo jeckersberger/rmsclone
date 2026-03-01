@@ -12,6 +12,8 @@
 - [x] Pflichthinweis "Gemäß § 19 UStG..." auf Rechnungen — `DocumentRenderer.php`
 - [x] Umsatzgrenze-Tracking/Warnung — `src/business/euer.php` + `euer.twig`
 - [ ] KUR-Einstellung in Business-Settings-UI (Toggle)
+- [ ] Automatische E-Mail-Warnung bei Annäherung an Umsatzgrenze (80%, 90%, 100%)
+- [ ] KUR-Übergangslogik: Automatischer Wechsel zur Regelbesteuerung bei Überschreitung
 
 ### 6.1.2 GoBD-Konforme Rechnungen
 - [x] Steuernummer/USt-IdNr. in DB — `instances_taxNumber`, `instances_vatId`
@@ -22,13 +24,16 @@
 - [x] KUR-Hinweis auf Steuerbefreiung — `DocumentRenderer.php`
 - [ ] Leistungszeitraum/Lieferdatum auf Rechnung
 - [ ] Aufbewahrungspflicht (10 Jahre) - automatische Archivierung
-- [ ] Unveränderbarkeit der Rechnung nach Erstellung
+- [ ] Unveränderbarkeit der Rechnung nach Erstellung (Dokument-Locking)
+- [ ] Lückenlose Nummernkreise sicherstellen (keine gelöschten Nummern)
+- [ ] Verfahrensdokumentation (GoBD-Pflicht) als generiertes PDF
 
 ### 6.1.3 XRechnung / ZUGFeRD
 - [x] DB-Tabellen für ZUGFeRD-Struktur — `db/migrations/20260228130000_phase3_zugferd_reports_logistics.php`
 - [ ] horstoeko/zugferd Composer-Package installieren
 - [ ] ZUGFeRD PDF/A-3 + XML Generierung
 - [ ] XRechnung Unterstützung
+- [ ] Leitweg-ID Feld für öffentliche Auftraggeber
 
 ### 6.1.4 DSGVO (Datenschutz)
 - [x] Löschkonzept für Kundendaten — `src/services/DsgvoService.php` (Art. 17, Aufbewahrungsfristen § 147 AO)
@@ -38,6 +43,9 @@
 - [x] DSGVO-Verwaltungsoberfläche — `src/business/dsgvo.php` + `dsgvo.twig`
 - [x] Aufbewahrungsfristen-Prüfung — `src/api/dsgvo/retentionCheck.php`
 - [x] Löschvorschläge (Clients > 10 Jahre inaktiv) — `src/api/dsgvo/deletionSuggestions.php`
+- [ ] Auftragsverarbeitungsvertrag (AVV) Vorlage generieren
+- [ ] Datenschutzerklärung / Impressum-Seite
+- [ ] Automatischer DSGVO-Report (jährlich) als PDF
 
 ### Datenbank & Lokalisierung
 - [x] DB auf utf8mb4 umstellen — Migration vorhanden
@@ -62,6 +70,8 @@
 - [ ] Angebots-Vorlagen mit Textbausteinen
 - [ ] Angebots-Gültigkeit (Ablaufdatum)
 - [ ] Angebots-Versionen
+- [ ] PDF-Vorschau vor dem Versand
+- [ ] Skonto-Bedingungen auf Angeboten/Rechnungen (z.B. "2% bei Zahlung innerhalb 10 Tagen")
 
 ### 6.2.2 Rechnungswesen
 - [x] Mahnwesen (Vorschlagssystem) — `src/business/dunning.php` + `dunning.twig`
@@ -70,8 +80,12 @@
 - [x] Zahlungsbedingungen in DB — `instances_paymentTermDays`, `clients_paymentTermDays`
 - [ ] Teilrechnungen / Abschlagsrechnungen
 - [ ] SEPA-Lastschrift-Mandatsverwaltung
-- [ ] Automatischer Rechnungsversand per E-Mail
+- [ ] Automatischer Rechnungsversand per E-Mail (Cronjob-basiert)
 - [x] Wiederkehrende Projekte (Vorlage) — `src/services/RecurringProjectService.php`
+- [ ] Mahngebühren automatisch berechnen und auf Mahnung ausweisen
+- [ ] Zahlungseingänge mit Bankdaten abgleichen (MT940/CAMT Import)
+- [ ] Sammelrechnung (mehrere Projekte → eine Rechnung)
+- [ ] Reverse-Charge-Verfahren für EU-Auslandsgeschäfte
 
 ### 6.2.3 Buchhaltungsanbindung
 - [x] DATEV-Export — `src/services/DatevExportService.php` + `src/business/datev.php`
@@ -80,6 +94,8 @@
 - [ ] BWA-Auswertung (Betriebswirtschaftliche Auswertung)
 - [ ] Export für lexoffice, sevDesk
 - [ ] Bankanbindung (FinTS/HBCI) für automatischen Zahlungsabgleich
+- [ ] Umsatzsteuervoranmeldung (UStVA) vorbereiten (ELSTER-kompatibel)
+- [ ] Kassenbuch (für Bareinnahmen/Barausgaben)
 
 ### 6.2.4 Kundenverwaltung erweitern
 - [x] Kundennummern — `clients_customerNumber` in DB
@@ -91,6 +107,10 @@
 - [ ] Kundenhistorie (alle Projekte, Angebote, Rechnungen) - Übersichtsseite
 - [ ] Kommunikationsprotokoll
 - [ ] Kreditlimit
+- [ ] Kunden-Duplikate erkennen und zusammenführen (Merge)
+- [ ] Kunden-Import aus CSV/Excel
+- [ ] Verschiedene Lieferadressen pro Kunde
+- [ ] USt-IdNr. Validierung über VIES (EU-Dienst)
 
 ---
 
@@ -101,20 +121,65 @@
 - [x] Gewinn-Dashboard (Projekt-Profit, Marge) — `src/business/profit.php` + `profit.twig`
 - [x] Umsatzprognose/Forecast — `src/services/ProfitCalculationService.php`
 - [x] Steuer-Export (CSV) — `src/services/SteuerExportService.php`
-- [ ] Auslastungsberichte für Equipment
+- [ ] Auslastungsberichte für Equipment (Auslastungsquote pro Asset-Typ)
 - [ ] Export nach Excel/PDF für Reports
+- [ ] Top-Kunden Ranking nach Umsatz
+- [ ] Saisonalitäts-Analyse (welche Monate sind am stärksten)
+- [ ] Equipment-ROI Berechnung (Anschaffung vs. Mieteinnahmen)
+- [ ] Vergleichsreports (Monat-zu-Monat, Jahr-zu-Jahr)
+- [ ] Dashboard-Widgets konfigurierbar machen (Drag & Drop Anordnung)
 
 ### Logistik
 - [x] Packlisten-Generierung — `src/services/PackingListService.php`
 - [x] Lieferschein-Service — `src/services/DeliveryNoteService.php` + `src/api/deliveryNote/generate.php`
 - [x] Check-in/Check-out mit Zustandsprotokoll — `src/services/DamageReportService.php`
-- [ ] Transportplanung
+- [ ] Transportplanung (Fahrzeuge, Routen, Fahrer)
 - [ ] Multi-Lager/Standortverwaltung
+- [ ] Lieferschein-Nummer über SequenceService statt rand() generieren
+- [ ] GPS-Tracking Integration für Transportfahrzeuge
+- [ ] Rückgabe-Erinnerungen automatisch versenden (1 Tag vorher)
 
 ### Code-Qualität
-- [ ] Unit Tests
+- [ ] Unit Tests (PHPUnit) für Services
 - [ ] SQL-Injection Audit (LIKE-Suche in clients.php etc.)
 - [ ] Code-Refactoring (Service-Layer konsequent nutzen)
+- [ ] API-Eingabevalidierung: intval/filter_input in allen Endpoints (besonders Partner-APIs)
+- [ ] Error-Handling: Einheitliche try/catch-Blöcke in allen API-Endpunkten
+- [ ] PHP-CS-Fixer oder PHP_CodeSniffer für einheitlichen Code-Stil
+- [ ] Composer autoloading für Service-Klassen (statt manuelles require)
+- [ ] PHPStan / Psalm Static Analysis (Level 5+)
+
+---
+
+## Sicherheit & Robustheit
+
+### API-Sicherheit
+- [ ] CSRF-Token-Schutz für alle POST-Endpunkte (aktuell nicht vorhanden!)
+- [ ] Rate-Limiting für Login und API-Endpunkte (Brute-Force-Schutz)
+- [ ] Input-Sanitization: htmlspecialchars/strip_tags für alle User-Inputs
+- [ ] Content-Security-Policy (CSP) Header setzen
+- [ ] X-Frame-Options Header (Clickjacking-Schutz)
+- [ ] Prepared Statements in allen rawQuery()-Aufrufen prüfen
+- [ ] API-Antworten: keine internen Fehler-Details an Client leaken
+
+### Session & Auth
+- [ ] Session-Cookie: HttpOnly + Secure + SameSite=Strict setzen
+- [ ] Session-Regeneration nach Login (Session-Fixation verhindern)
+- [ ] Passwort-Policy erzwingen (Mindestlänge, Komplexität)
+- [ ] Account-Lockout nach X fehlgeschlagenen Login-Versuchen
+- [ ] Zwei-Faktor-Authentifizierung (2FA/TOTP)
+- [ ] Login-Protokoll (IP, Zeitpunkt, Erfolg/Fehler)
+
+### Datenbank-Sicherheit
+- [ ] Foreign Keys für alle neuen Tabellen (dsgvo_log, deposits, partner_links, etc.)
+- [ ] Verschlüsselung sensibler Daten at-rest (IBAN, Steuernummer)
+- [ ] Automatische Datenbank-Backups (mysqldump Cronjob)
+- [ ] DB-Benutzer mit minimalen Rechten (kein DROP/ALTER in Produktion)
+
+### Datei-Sicherheit
+- [ ] Upload-Validierung: Dateityp, Dateigröße, MIME-Type prüfen
+- [ ] Uploaded Files außerhalb des Webroot speichern
+- [ ] Virus-Scan für hochgeladene Dateien (ClamAV)
 
 ---
 
@@ -125,11 +190,20 @@
 - [x] Dashboard-API (Projekte heute, überfällige Rückgaben, offene Posten) — `src/api/dashboard/overview.php`
 - [x] Globale Live-Schnellsuche — `src/api/search/quick.php` + Template-Integration
 - [x] Verfügbarkeitskalender — `src/business/availability.php` + `availability.twig`
+- [ ] Benachrichtigungs-Center (In-App Benachrichtigungen)
+- [ ] Tastaturkürzel für häufige Aktionen (z.B. N = neues Projekt)
+- [ ] Dashboard: Wetter-Widget für Outdoor-Events
+- [ ] Favoriten/Lesezeichen für häufig genutzte Seiten
 
 ### Projekt-Features
 - [x] Projekt-Klonen — `src/api/projects/clone.php` + UI in `project_index.twig`
 - [x] Wiederkehrende Projekte — `src/business/recurring.php` + `recurring.twig`
 - [ ] Drag & Drop Kalender-Ansicht für Projekte
+- [ ] Projekt-Timeline/Gantt-Diagramm
+- [ ] Checklisten pro Projekt (Aufgaben abhaken)
+- [ ] Projekt-Kommentare/Notizen-Thread (intern)
+- [ ] Projekt-Fotos (Vorher/Nachher für Events)
+- [ ] Automatische Konflikt-Warnung bei Doppelbuchungen (UI-Integration)
 
 ### Multi-Business Kooperation
 - [x] Partner-Code-System — `src/services/PartnerService.php`
@@ -139,6 +213,8 @@
 - [x] Partner-Management UI — `src/business/partners.php` + `partners.twig`
 - [ ] Partner-Preisabstimmung automatisch synchronisieren
 - [ ] Partner-Auftragsverwaltung (cross-business Projekte)
+- [ ] Partner-Abrechnung: Mieteinnahmen automatisch aufteilen
+- [ ] Partner-Verfügbarkeitskalender synchronisieren
 
 ### Equipment-Verwaltung
 - [x] Inventur/Barcode-Scanner — `src/business/inventory.php` + `inventory.twig`
@@ -147,27 +223,73 @@
 - [x] Schadensmeldungen — `src/business/damage-reports.php` + `damage-reports.twig`
 - [x] Kautionsverwaltung — `src/services/DepositService.php` + API
 - [x] Versicherungsnachweis-Verwaltung — `src/services/InsuranceService.php`
+- [ ] Equipment-Fotos (mehrere Bilder pro Asset)
+- [ ] QR-Code auf Equipment-Label mit Link zur Asset-Seite
+- [ ] Seriennummern-Verwaltung
+- [ ] Handbücher/Datenblätter pro Asset-Typ hinterlegen
+- [ ] Abschreibungsrechner (AfA nach deutschem Steuerrecht)
+- [ ] Equipment-Lebenszyklus: Anschaffung → Betrieb → Ausmusterung
+- [ ] Mindestbestand-Warnung (z.B. "nur noch 2 von 10 verfügbar")
 
 ### Finanzen & Kunden
 - [x] Kundenspezifische Preislisten — `src/services/CustomerPricingService.php` + API
 - [x] Projekt-Gewinnberechnung — `src/services/ProfitCalculationService.php` + UI
 - [x] Umsatzprognose — `ProfitCalculationService.php` Forecast
+- [ ] Staffelpreise (ab X Tage günstiger)
+- [ ] Wochenend-/Feiertags-Zuschläge automatisch berechnen
+- [ ] Mindestmietdauer pro Asset-Typ
+- [ ] Rabatt-Codes / Aktionspreise
 
 ### Kommunikation
 - [ ] WhatsApp/SMS Benachrichtigungen
-- [ ] Digitale Unterschrift
-- [ ] Kunden-Portal (Self-Service)
+- [ ] Digitale Unterschrift (auf Lieferschein / Angebot)
+- [ ] Kunden-Portal (Self-Service: Projekte einsehen, Rechnungen downloaden)
+- [ ] E-Mail-Vorlagen konfigurierbar machen (Twig-basiert)
+- [ ] Automatische Projekt-Bestätigungs-E-Mail an Kunden
+- [ ] Termin-Erinnerungen per E-Mail (X Tage vor Projekt-Start)
+- [ ] Feedback-Anfrage nach Projekt-Ende
 
 ### RFID-Integration (Konzept fertig)
 - [x] RFID-Konzept dokumentiert — `docs/RFID_KONZEPT.md`
 - [ ] RfidService.php implementieren
 - [ ] RFID Gateway-Anbindung
 - [ ] RFID Label-Druck
+- [ ] Automatische Inventur beim Durchfahren eines RFID-Gates
+
+### Mobile & UX
+- [ ] Progressive Web App (PWA) für mobile Nutzung
+- [ ] Barcode-Scanner über Handy-Kamera (ohne extra App)
+- [ ] Offline-Modus für Inventur (Sync bei Internetverbindung)
+- [ ] Dark Mode (DB-Feld existiert bereits)
+- [ ] Touch-optimierte UI für Tablets (Lager-Nutzung)
+- [ ] Schnellerfassung: Projekt anlegen in unter 30 Sekunden
+
+### Integrationen
+- [ ] Google Calendar / Outlook Sync (bidirektional, nicht nur ICS-Export)
+- [ ] Stripe/PayPal Zahlungslinks auf Rechnungen
+- [ ] Versand-Integration (DHL, DPD) für Equipment-Lieferung
+- [ ] Buchhaltungs-API (lexoffice, sevDesk, FastBill)
+- [ ] Webhook-System für externe Integrationen
+- [ ] REST-API mit Swagger/OpenAPI Dokumentation (aktuell nicht RESTful)
 
 ### Dokumentation
 - [x] System-Visualisierungen (ASCII) — `docs/VISUALISIERUNGEN.md`
 - [x] RFID-Konzept — `docs/RFID_KONZEPT.md`
 - [x] Analyse & Empfehlungen — `ANALYSE_UND_EMPFEHLUNGEN.md`
+- [ ] Benutzerhandbuch (PDF/Wiki)
+- [ ] Admin-Handbuch (Installation, Konfiguration, Backup)
+- [ ] API-Dokumentation (OpenAPI/Swagger generieren)
+- [ ] Video-Tutorials für Endbenutzer
+
+### DevOps & Betrieb
+- [ ] Docker-Compose Setup für Produktion (mit SSL, Reverse-Proxy)
+- [ ] Automatische Datenbank-Migrationen beim Deployment
+- [ ] Health-Check Endpoint (/api/health)
+- [ ] Monitoring/Alerting (Uptime, Fehlerrate, Performance)
+- [ ] Automatische Backups (DB + Dateien) mit Retention-Policy
+- [ ] CI/CD Pipeline (GitHub Actions) für Tests + Deployment
+- [ ] Staging-Umgebung für Tests vor Produktion
+- [ ] Log-Rotation und zentrales Logging
 
 ---
 
@@ -175,26 +297,62 @@
 
 | Bereich                    | Umgesetzt | Offen | Fortschritt |
 |----------------------------|-----------|-------|-------------|
-| Phase 1 - KUR              | 4/5       | 1     | 80%         |
-| Phase 1 - GoBD             | 6/9       | 3     | 67%         |
-| Phase 1 - ZUGFeRD          | 1/4       | 3     | 25%         |
-| Phase 1 - DSGVO            | 6/7       | 1     | 86%         |
+| Phase 1 - KUR              | 4/7       | 3     | 57%         |
+| Phase 1 - GoBD             | 6/11      | 5     | 55%         |
+| Phase 1 - ZUGFeRD          | 1/5       | 4     | 20%         |
+| Phase 1 - DSGVO            | 6/10      | 4     | 60%         |
 | Phase 1 - DB & Lokalisierung | 10/10   | 0     | 100%        |
-| Phase 2 - Angebotswesen    | 3/6       | 3     | 50%         |
-| Phase 2 - Rechnungswesen   | 5/8       | 3     | 63%         |
-| Phase 2 - Buchhaltung      | 2/6       | 4     | 33%         |
-| Phase 2 - Kunden           | 4/9       | 5     | 44%         |
-| Phase 3 - Reporting        | 4/6       | 2     | 67%         |
-| Phase 3 - Logistik         | 3/5       | 2     | 60%         |
-| Phase 3 - Code-Qualität    | 0/3       | 3     | 0%          |
-| Extra - Dashboard/Nav      | 4/4       | 0     | 100%        |
-| Extra - Projekte           | 2/3       | 1     | 67%         |
-| Extra - Multi-Business     | 5/7       | 2     | 71%         |
-| Extra - Equipment          | 6/6       | 0     | 100%        |
-| Extra - Finanzen           | 3/3       | 0     | 100%        |
-| Extra - Kommunikation      | 0/3       | 3     | 0%          |
-| Extra - RFID               | 1/4       | 3     | 25%         |
-| **GESAMT**                  | **72/108**| **36**| **67%**     |
+| Phase 2 - Angebotswesen    | 3/8       | 5     | 38%         |
+| Phase 2 - Rechnungswesen   | 5/12      | 7     | 42%         |
+| Phase 2 - Buchhaltung      | 2/8       | 6     | 25%         |
+| Phase 2 - Kunden           | 4/13      | 9     | 31%         |
+| Phase 3 - Reporting        | 4/11      | 7     | 36%         |
+| Phase 3 - Logistik         | 3/8       | 5     | 38%         |
+| Phase 3 - Code-Qualität    | 0/8       | 8     | 0%          |
+| Sicherheit - API           | 0/7       | 7     | 0%          |
+| Sicherheit - Session/Auth  | 0/6       | 6     | 0%          |
+| Sicherheit - Datenbank     | 0/4       | 4     | 0%          |
+| Sicherheit - Dateien       | 0/3       | 3     | 0%          |
+| Extra - Dashboard/Nav      | 4/8       | 4     | 50%         |
+| Extra - Projekte           | 2/8       | 6     | 25%         |
+| Extra - Multi-Business     | 5/9       | 4     | 56%         |
+| Extra - Equipment          | 6/13      | 7     | 46%         |
+| Extra - Finanzen           | 3/7       | 4     | 43%         |
+| Extra - Kommunikation      | 0/7       | 7     | 0%          |
+| Extra - RFID               | 1/5       | 4     | 20%         |
+| Extra - Mobile/UX          | 0/6       | 6     | 0%          |
+| Extra - Integrationen      | 0/6       | 6     | 0%          |
+| Extra - Dokumentation      | 3/7       | 4     | 43%         |
+| Extra - DevOps             | 0/8       | 8     | 0%          |
+| **GESAMT**                  | **72/219**| **147**| **33%**    |
+
+---
+
+## Priorisierte Empfehlung (nächste Schritte)
+
+### Sofort umsetzen (Blocker für Produktivbetrieb)
+1. KUR-Toggle in Business-Settings-UI
+2. Leistungszeitraum auf Rechnungen
+3. Unveränderbarkeit der Rechnung nach Erstellung
+4. CSRF-Token-Schutz für POST-Endpunkte
+5. Session-Cookie-Sicherheit (HttpOnly, Secure, SameSite)
+6. Input-Validierung in Partner-APIs (aktuell 0 Validierung!)
+
+### Bald umsetzen (Komfort + Sicherheit)
+7. Automatischer Rechnungsversand per E-Mail
+8. Rate-Limiting für Login
+9. Lieferschein-Nummer über SequenceService
+10. Kundenhistorie-Übersichtsseite
+11. Foreign Keys für neue Tabellen
+12. Angebots-Vorlagen mit Textbausteinen
+
+### Mittelfristig (Skalierung + Professionalisierung)
+13. ZUGFeRD/XRechnung implementieren
+14. Teilrechnungen / Abschlagsrechnungen
+15. Unit Tests für kritische Services
+16. Kunden-Portal (Self-Service)
+17. Equipment-Auslastungsberichte
+18. Docker-Compose Produktions-Setup
 
 ---
 
