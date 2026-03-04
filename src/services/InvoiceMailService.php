@@ -212,13 +212,11 @@ class InvoiceMailService
     private function getPdfData(array $s3file): ?string
     {
         global $bCMS;
-        // Versuche über S3
         try {
-            if (isset($s3file['s3files_path']) && $s3file['s3files_path']) {
-                $url = $bCMS->s3URL($s3file['s3files_path']);
-                if ($url) {
-                    $ctx = stream_context_create(['http' => ['timeout' => 10]]);
-                    $data = @file_get_contents($url, false, $ctx);
+            if (isset($s3file['s3files_id']) && $s3file['s3files_id']) {
+                $localPath = $bCMS->localFilePath($s3file['s3files_id']);
+                if ($localPath && file_exists($localPath)) {
+                    $data = file_get_contents($localPath);
                     if ($data !== false) return $data;
                 }
             }

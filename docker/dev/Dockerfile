@@ -41,20 +41,14 @@ RUN printf '%s\n' \
     'PassEnv CONFIG_TIMEZONE' \
     'PassEnv CONFIG_AUTH_JWTKey' \
     'PassEnv CONFIG_SIGNUP_ENABLED' \
-    'PassEnv CONFIG_AWS_S3_KEY' \
-    'PassEnv CONFIG_AWS_S3_SECRET' \
-    'PassEnv CONFIG_AWS_S3_BUCKET' \
-    'PassEnv CONFIG_AWS_S3_BROWSER_ENDPOINT' \
-    'PassEnv CONFIG_AWS_S3_SERVER_ENDPOINT' \
-    'PassEnv CONFIG_AWS_S3_ENDPOINT_PATHSTYLE' \
-    'PassEnv CONFIG_AWS_S3_REGION' \
-    'PassEnv CONFIG_AWS_CLOUDFRONT_ENDPOINT' \
+    'PassEnv CONFIG_FILES_ENABLED' \
     'PassEnv CONFIG_EMAILS_ENABLED' \
     'PassEnv CONFIG_EMAILS_PROVIDER' \
     'PassEnv CONFIG_EMAILS_FROMEMAIL' \
     'PassEnv CONFIG_EMAILS_FROM_EMAIL' \
     'PassEnv CONFIG_EMAILS_SMTP_SERVER' \
     'PassEnv CONFIG_EMAILS_SMTP_PORT' \
+    'PassEnv LOCAL_STORAGE_PATH' \
     > /etc/apache2/conf-available/adamrms.conf \
     && a2enconf adamrms
 
@@ -67,7 +61,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 
 # Entrypoint: Migrationen + Apache starten
 COPY docker/dev/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE 80
 

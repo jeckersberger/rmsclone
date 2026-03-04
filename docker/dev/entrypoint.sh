@@ -3,6 +3,12 @@ set -e
 
 echo "=== AdamRMS Dev Environment ==="
 
+# Storage-Verzeichnis erstellen
+STORAGE_DIR="${LOCAL_STORAGE_PATH:-/var/www/html/storage}"
+mkdir -p "$STORAGE_DIR/uploads"
+chown -R www-data:www-data "$STORAGE_DIR"
+echo "[0/3] Storage directory ready: $STORAGE_DIR"
+
 # Composer install (falls vendor/ nicht existiert oder veraltet)
 if [ ! -f /var/www/html/vendor/autoload.php ]; then
     echo "[1/3] Installing Composer dependencies..."

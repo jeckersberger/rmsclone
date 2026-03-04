@@ -8,7 +8,6 @@
 #   App:         http://localhost:8080
 #   phpMyAdmin:  http://localhost:8082
 #   Mailpit:     http://localhost:8083
-#   S3 Mock:     http://localhost:8081
 
 services:
   app:
@@ -19,11 +18,10 @@ services:
       - "8080:80"
     volumes:
       - .:/var/www/html:cached
+      - file_storage:/var/www/html/storage
     depends_on:
       db:
         condition: service_healthy
-      s3filestore:
-        condition: service_started
     environment:
       - DB_HOSTNAME=db
       - DB_DATABASE=adamrms
@@ -36,14 +34,7 @@ services:
       - CONFIG_ROOTURL=http://localhost:8080
       - CONFIG_PROJECT_NAME=AdamRMS Dev
       - CONFIG_TIMEZONE=Europe/Berlin
-      - CONFIG_AWS_S3_KEY=key-id-of-top-secret-key
-      - CONFIG_AWS_S3_SECRET=topsecretkeydonottellanyone
-      - CONFIG_AWS_S3_BUCKET=localtestingbucket
-      - CONFIG_AWS_S3_BROWSER_ENDPOINT=http://localhost:8081/localtestingbucket
-      - CONFIG_AWS_S3_SERVER_ENDPOINT=http://s3filestore:9090/localtestingbucket
-      - CONFIG_AWS_S3_ENDPOINT_PATHSTYLE=Enabled
-      - CONFIG_AWS_S3_REGION=dev-east-1
-      - CONFIG_AWS_CLOUDFRONT_ENDPOINT=http://localhost:8081/localtestingbucket
+      - LOCAL_STORAGE_PATH=/var/www/html/storage
       - CONFIG_EMAILS_ENABLED=Enabled
       - CONFIG_EMAILS_PROVIDER=SMTP
       - CONFIG_EMAILS_FROMEMAIL=adamrms@localhost.dev
@@ -68,17 +59,6 @@ services:
       timeout: 5s
       retries: 10
 
-  s3filestore:
-    image: adobe/s3mock:3.5.2
-    ports:
-      - "8081:9090"
-    environment:
-      - initialBuckets=localtestingbucket
-      - retainFilesOnExit=true
-      - root=/s3files
-    volumes:
-      - s3_data:/s3files
-
   phpmyadmin:
     image: phpmyadmin:5-apache
     depends_on:
@@ -102,4 +82,4 @@ services:
 
 volumes:
   db_data:
-  s3_data:
+  file_storage:

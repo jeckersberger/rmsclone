@@ -1,0 +1,66 @@
+<?php
+/**
+ * Local file upload endpoint for Uppy XHRUpload plugin.
+ * Receives file via multipart form upload, saves to local storage, records in DB.
+ * Replaces the old S3 presigned URL flow.
+ */
+require_once __DIR__ . '/../apiHeadSecure.php';
+
+if ($CONFIG['FILES_ENABLED'] !== "Enabled") {
+    finish(false, ["code" => null, "message" => "File uploads are disabled"]);
+}
+
+$DBLIB->where("instances_id", $AUTH->data['instance']['instances_id']);
+$storageCapacity = $DBLIB->getvalue("instances", "instances_storageLimit");
+$storageUsed = $bCMS->s3StorageUsed($AUTH->data['instance']['instances_id']);
+if ($storageCapacity > 0 and $storageCapacity < $storageUsed) {
+    finish(false, ["code" => null, "message" => "Storage limit reached"]);
+}
+
+if (!isset($_FILES['file'])) {
+    finish(false, ["code" => null, "message" => "No file uploaded"]);
+}
+
+$typeid = isset($_POST['typeid']) ? $bCMS->sanitizeString($_POST['typeid']) : null;
+$subtype = isset($_POST['subtype']) && is_numeric($_POST['subtype']) ? $bCMS->sanitizeString($_POST['subtype']) : null;
+$isPublic = isset($_POST['public']) ? $bCMS->sanitizeString($_POST['public']) : 0;
+$type = isset($_POST['type']) ? $bCMS->sanitizeString($_POST['type']) : 'GENERAL';
+$originalName = isset($_POST['originalName']) ? $bCMS->sanitizeString($_POST['originalName']) : $_FILES['file']['name'];
+
+$extension = strtolower(pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION));
+$storagePath = "uploads/" . $type;
+$filename = time() . "-" . mt_rand(1000000000, 9999999999) . "." . $extension;
+
+$storageRoot = getenv('LOCAL_STORAGE_PATH') ?: '/var/www/html/storage';
+$fullDir = $storageRoot . "/" . $storagePath;
+$fullPath = $fullDir . "/" . $filename;
+
+if (!is_dir($fullDir)) {
+    mkdir($fullDir, 0775, true);
+}
+
+if (!move_uploaded_file($_FILES['file']['tmp_name'], $fullPath)) {
+    finish(false, ["code" => null, "message" => "Failed to save uploaded file"]);
+}
+
+$fileData = [
+    "s3files_extension" => $extension,
+    "s3files_path" => $storagePath,
+    "s3files_meta_size" => $_FILES['file']['size'],
+    "s3files_meta_type" => $typeid,
+    "s3files_meta_subType" => $subtype,
+    "users_userid" => $AUTH->data['users_userid'],
+    "s3files_original_name" => $originalName,
+    "s3files_filename" => pathinfo($filename, PATHINFO_FILENAME),
+    "s3files_name" => pathinfo($originalName, PATHINFO_FILENAME),
+    "s3files_meta_public" => $isPublic,
+    "instances_id" => $AUTH->data['instance']['instances_id']
+];
+
+$id = $DBLIB->insert("s3files", $fileData);
+if (!$id) {
+    unlink($fullPath);
+    finish(false, ["code" => null, "message" => "Database error"]);
+}
+
+finish(true, null, ["id" => $id, "url" => $CONFIG['ROOTURL'] . '/api/file/?f=' . $id]);
