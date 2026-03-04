@@ -65,10 +65,10 @@
         <div class="col-12 col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">Barcode Scanner</h3>
+                    <h3 class="card-title">Scanner / RFID</h3>
                     <div class="card-tools">
-                        <button class="btn btn-sm btn-danger" title="Stop Scanning" id="barcodeScanResetButton" style="display: none;">Stop Scanning</button>
-                        <a class="btn btn-sm btn-info" href="{{ CONFIG.ROOTURL }}/maintenance/barcodeGenerator.php">Generate/Export Barcodes</a>
+                        <button class="btn btn-sm btn-danger" title="Scannen stoppen" id="barcodeScanResetButton" style="display: none;">Scannen stoppen</button>
+                        <a class="btn btn-sm btn-info" href="{{ CONFIG.ROOTURL }}/maintenance/barcodeGenerator.php">Barcodes generieren/exportieren</a>
                     </div>
                 </div>
                 <div class="card-body" id="barcodeScanVideoCard">
@@ -501,7 +501,7 @@
                         }
                         if (err && !(err instanceof ZXing.NotFoundException)) {
                             console.error(err)
-                            bootbox.alert("Sorry - Barcode scanner encountered a problem: " + err, function () {
+                            bootbox.alert("Fehler beim Scannen: " + err, function () {
                                 codeReader.reset()
                             });
                         }
@@ -520,7 +520,7 @@
                     }
                     // Catch all for other errors, Missing camera error should be handled elsewhere
                     console.error(err)
-                    bootbox.alert("Sorry - Barcode scanner encountered a problem: " + err, function () {
+                    bootbox.alert("Fehler beim Scannen: " + err, function () {
                         location.reload()
                     });
                 })

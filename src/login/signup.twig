@@ -1,16 +1,16 @@
 {% extends "login/login_template.twig" %}
 {% block content %}
    <div class="spinner-border" role="status" id="loadingOverlay" style="display: none;">
-        <span class="sr-only">Loading...</span>
+        <span class="sr-only">Laden...</span>
     </div>
     <form id="signupForm">
         <div id="errorMessageBox" class="alert alert-danger"></div>
-        <input class="form-control form-control-lg" id="signupForm_users_email" maxlength="100" required placeholder="Enter your email address" autocomplete="email" type="email" style="margin-top: 10px; margin-bottom: 10px;">
-        <input class="form-control form-control-lg" id="signupForm_users_username" minlength="6" maxlength="100" required placeholder="Choose a username" autocomplete="username"  type="text" style="margin-top: 10px; margin-bottom: 10px;">
-        <input class="form-control form-control-lg" id="signupForm_users_password" minlength="10" maxlength="100" required placeholder="Choose a password" autocomplete="new-password"  type="password" style="margin-top: 10px; margin-bottom: 10px;">
-        <input class="form-control form-control-lg" id="signupForm_users_name1" minlength="1" maxlength="100" required autocomplete="given-name" placeholder="First Name" type="text" style="margin-top: 10px; margin-bottom: 10px;">
-        <input class="form-control form-control-lg" id="signupForm_users_name2" minlength="1" maxlength="100" required autocomplete="family-name" placeholder="Last Name" type="text" style="margin-top: 10px; margin-bottom: 10px;">
-        <button class="btn btn-secondary" type="submit" value="Submit">Sign Up</button>
+        <input class="form-control form-control-lg" id="signupForm_users_email" maxlength="100" required placeholder="E-Mail-Adresse eingeben" autocomplete="email" type="email" style="margin-top: 10px; margin-bottom: 10px;">
+        <input class="form-control form-control-lg" id="signupForm_users_username" minlength="6" maxlength="100" required placeholder="Benutzernamen waehlen" autocomplete="username"  type="text" style="margin-top: 10px; margin-bottom: 10px;">
+        <input class="form-control form-control-lg" id="signupForm_users_password" minlength="10" maxlength="100" required placeholder="Passwort waehlen" autocomplete="new-password"  type="password" style="margin-top: 10px; margin-bottom: 10px;">
+        <input class="form-control form-control-lg" id="signupForm_users_name1" minlength="1" maxlength="100" required autocomplete="given-name" placeholder="Vorname" type="text" style="margin-top: 10px; margin-bottom: 10px;">
+        <input class="form-control form-control-lg" id="signupForm_users_name2" minlength="1" maxlength="100" required autocomplete="family-name" placeholder="Nachname" type="text" style="margin-top: 10px; margin-bottom: 10px;">
+        <button class="btn btn-secondary" type="submit" value="Submit">Registrieren</button>
     </form>
 	<script>
 		$( document ).ready(function() {
@@ -48,7 +48,7 @@
                                 error: function(){
                                     $("#signupForm").show();
                                     $("#loadingOverlay").hide();
-                                    $("#errorMessageBox").html("Account created, but login unsuccessful: please refresh the page and check your internet connection");
+                                    $("#errorMessageBox").html("Konto erstellt, aber Anmeldung fehlgeschlagen: Bitte laden Sie die Seite neu und pruefen Sie Ihre Internetverbindung.");
                                     $("#errorMessageBox").show();
                                 }
                             });
@@ -61,14 +61,13 @@
                     }, error: function () {
                         $("#signupForm").show();
                         $("#loadingOverlay").hide();
-                        $("#errorMessageBox").html("Please refresh the page and check your internet connection");
+                        $("#errorMessageBox").html("Bitte laden Sie die Seite neu und pruefen Sie Ihre Internetverbindung.");
                         $("#errorMessageBox").show();
                     }
                 });
             });
-            
+
             function formVerifyEmail() {
-                //They want us to send out another verification email
                 if (initialData.hasOwnProperty("error") && initialData.error.hasOwnProperty("userid")) {
                     var userid = initialData.error.userid;
                 } else {
@@ -82,12 +81,12 @@
                         "userid": userid
                     }, success: function (result) {
                         if (result.result) {
-                            toastr.success("E-Mail re-sent");
+                            toastr.success("E-Mail erneut gesendet");
                         } else {
-                            toastr.error("Error verifying email address - please contact support");
+                            toastr.error("Fehler bei der E-Mail-Verifizierung - bitte kontaktieren Sie den Support");
                         }
                     }, error: function () {
-                        toastr.error("Please refresh the page and check your internet connection");
+                        toastr.error("Bitte laden Sie die Seite neu und pruefen Sie Ihre Internetverbindung.");
                     }
                 });
             }

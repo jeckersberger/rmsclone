@@ -1,8 +1,8 @@
 <?php
 /**
- * Inventur-Service (Barcode-Scanner)
+ * Inventur-Service (Scanner / RFID)
  *
- * Schnellinventur: Assets per Barcode-Scanner als "vorhanden" markieren.
+ * Schnellinventur: Assets per Scanner/RFID als "vorhanden" markieren.
  * - Neue Inventur starten
  * - Assets scannen (Barcode/Tag)
  * - Fehlende Assets identifizieren
