@@ -47,13 +47,13 @@ PassEnv MAIL_PORT' > /etc/apache2/conf-available/adamrms.conf \
 
 # PHP Konfiguration fuer Entwicklung
 RUN cp /usr/local/etc/php/php.ini-development /usr/local/etc/php/php.ini
-COPY php-dev.ini /usr/local/etc/php/conf.d/99-dev.ini
+COPY docker/dev/php-dev.ini /usr/local/etc/php/conf.d/99-dev.ini
 
 # Composer installieren
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 
 # Entrypoint: Migrationen + Apache starten
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY docker/dev/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE 80
