@@ -19,12 +19,30 @@ ENV APACHE_DOCUMENT_ROOT=/var/www/html/src
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
     && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
-# Apache: AllowOverride All fuer .htaccess
+# Apache: AllowOverride All + PassEnv fuer Docker-Umgebungsvariablen
 RUN echo '<Directory /var/www/html/src>\n\
     Options Indexes FollowSymLinks\n\
     AllowOverride All\n\
     Require all granted\n\
-</Directory>' > /etc/apache2/conf-available/adamrms.conf \
+</Directory>\n\
+\n\
+# Docker env vars an PHP/Apache durchreichen\n\
+PassEnv DB_HOSTNAME\n\
+PassEnv DB_USERNAME\n\
+PassEnv DB_PASSWORD\n\
+PassEnv DB_DATABASE\n\
+PassEnv DB_PORT\n\
+PassEnv DEV_MODE\n\
+PassEnv CONFIG_ROOTURL\n\
+PassEnv CONFIG_AUTH_JWTKey\n\
+PassEnv CORS_ALLOWED_ORIGIN\n\
+PassEnv S3_ENDPOINT\n\
+PassEnv S3_BUCKET\n\
+PassEnv S3_KEY\n\
+PassEnv S3_SECRET\n\
+PassEnv S3_REGION\n\
+PassEnv MAIL_HOST\n\
+PassEnv MAIL_PORT' > /etc/apache2/conf-available/adamrms.conf \
     && a2enconf adamrms
 
 # PHP Konfiguration fuer Entwicklung
