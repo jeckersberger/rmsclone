@@ -1,0 +1,105 @@
+# AdamRMS - Lokale Entwicklungsumgebung
+# Start:   docker compose up -d
+# Stop:    docker compose down
+# Logs:    docker compose logs -f app
+# DB-Reset: docker compose down -v && docker compose up -d
+#
+# URLs nach dem Start:
+#   App:         http://localhost:8080
+#   phpMyAdmin:  http://localhost:8082
+#   Mailpit:     http://localhost:8083
+#   S3 Mock:     http://localhost:8081
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/dev/Dockerfile
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html:cached
+    depends_on:
+      db:
+        condition: service_healthy
+      s3filestore:
+        condition: service_started
+    environment:
+      - DB_HOSTNAME=db
+      - DB_DATABASE=adamrms
+      - DB_USERNAME=adamrms
+      - DB_PASSWORD=adamrms_dev
+      - DB_PORT=3306
+      - DEV_MODE=true
+      - ROOT_URL=http://localhost:8080
+      - CORS_ALLOWED_ORIGIN=http://localhost:8080
+      - CONFIG_ROOTURL=http://localhost:8080
+      - CONFIG_PROJECT_NAME=AdamRMS Dev
+      - CONFIG_TIMEZONE=Europe/Berlin
+      - CONFIG_AWS_S3_KEY=key-id-of-top-secret-key
+      - CONFIG_AWS_S3_SECRET=topsecretkeydonottellanyone
+      - CONFIG_AWS_S3_BUCKET=localtestingbucket
+      - CONFIG_AWS_S3_BROWSER_ENDPOINT=http://localhost:8081/localtestingbucket
+      - CONFIG_AWS_S3_SERVER_ENDPOINT=http://s3filestore:9090/localtestingbucket
+      - CONFIG_AWS_S3_ENDPOINT_PATHSTYLE=Enabled
+      - CONFIG_AWS_S3_REGION=dev-east-1
+      - CONFIG_AWS_CLOUDFRONT_ENDPOINT=http://localhost:8081/localtestingbucket
+      - CONFIG_EMAILS_ENABLED=Enabled
+      - CONFIG_EMAILS_PROVIDER=SMTP
+      - CONFIG_EMAILS_FROMEMAIL=adamrms@localhost.dev
+      - CONFIG_EMAILS_SMTP_SERVER=mailpit
+      - CONFIG_EMAILS_SMTP_PORT=1025
+
+  db:
+    image: mysql:8.0
+    command: --default-authentication-plugin=mysql_native_password --innodb-thread-concurrency=0 --sort_buffer_size=512K --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    environment:
+      - MYSQL_DATABASE=adamrms
+      - MYSQL_USER=adamrms
+      - MYSQL_PASSWORD=adamrms_dev
+      - MYSQL_ROOT_PASSWORD=root_dev
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  s3filestore:
+    image: adobe/s3mock:3.5.2
+    ports:
+      - "8081:9090"
+    environment:
+      - initialBuckets=localtestingbucket
+      - retainFilesOnExit=true
+      - root=/s3files
+    volumes:
+      - s3_data:/s3files
+
+  phpmyadmin:
+    image: phpmyadmin:5-apache
+    depends_on:
+      - db
+    ports:
+      - "8082:80"
+    environment:
+      - PMA_HOST=db
+      - PMA_USER=adamrms
+      - PMA_PASSWORD=adamrms_dev
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8083:8025"
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
+volumes:
+  db_data:
+  s3_data:
