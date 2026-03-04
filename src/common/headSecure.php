@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/head.php';
+require_once __DIR__ . '/../services/CsrfService.php';
 require_once __DIR__ . '/../assets/widgets/statsWidgets.php'; //Stats on homepage etc.
 
 //THIS IS DUPLICATED SOMEWHAT IN API HEAD SECURE AS SECURITY IS HANDLED SLIGHTLY DIFFERENTLY ON THE API END
@@ -22,6 +23,7 @@ if (!$CONFIG['DEV']) {
 $PAGEDATA['AUTH'] = $AUTH;
 $PAGEDATA['USERDATA'] = $AUTH->data;
 $PAGEDATA['USERDATA']['users_email_md5'] = md5($PAGEDATA['USERDATA']['users_email']);
+$PAGEDATA['CSRF_TOKEN'] = CsrfService::generateToken();
 
 $DBLIB->insert("analyticsEvents", [
     "analyticsEvents_timestamp" => date("Y-m-d H:i:s"),

@@ -215,7 +215,7 @@ class DsgvoService
             'action' => $action,
             'performed_by' => $userId,
             'details' => $details,
-            'ip_address' => $_SERVER['REMOTE_ADDR'] ?? null,
+            'ip_address' => self::getClientIp(),
             'created_at' => date('Y-m-d H:i:s'),
         ]);
     }
@@ -255,6 +255,25 @@ class DsgvoService
                 HAVING last_activity IS NOT NULL AND last_activity < ?
                 ORDER BY last_activity ASC";
         return $this->db->rawQuery($sql, [$instanceId, $instanceId, $cutoffDate]) ?: [];
+    }
+
+    /**
+     * Ermittelt die echte Client-IP (Cloudflare, Proxy, direkt)
+     */
+    private static function getClientIp(): ?string
+    {
+        // Cloudflare
+        if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
+            return filter_var($_SERVER['HTTP_CF_CONNECTING_IP'], FILTER_VALIDATE_IP) ?: null;
+        }
+        // Standard-Proxy
+        if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+            $ip = trim($ips[0]); // Erste IP = Client
+            return filter_var($ip, FILTER_VALIDATE_IP) ?: null;
+        }
+        // Direkte Verbindung
+        return filter_var($_SERVER['REMOTE_ADDR'] ?? '', FILTER_VALIDATE_IP) ?: null;
     }
 
     /**

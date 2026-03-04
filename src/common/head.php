@@ -177,10 +177,19 @@ $PAGEDATA['MAINTENANCEJOBPRIORITIES'] = $GLOBALS['MAINTENANCEJOBPRIORITIES'];
 // Include Twig Extensions
 require_once __DIR__ . '/libs/twigExtensions.php';
 
-// Try to open up a session cookie
+// Try to open up a session cookie (secure defaults)
 try {
-    session_set_cookie_params(43200); //12hours
-    session_start(); //Open up the session
+    $isSecure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+        || (isset($_SERVER['HTTP_CF_VISITOR']) && strpos($_SERVER['HTTP_CF_VISITOR'], '"https"') !== false);
+    session_set_cookie_params([
+        'lifetime' => 43200, // 12 hours
+        'path' => '/',
+        'secure' => $isSecure,
+        'httponly' => true,
+        'samesite' => 'Strict',
+    ]);
+    session_start();
 } catch (Exception $e) {
     //Do Nothing
 }

@@ -3,9 +3,23 @@ header('Content-type: application/json');
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
-header("Access-Control-Allow-Origin: *");
+// CORS: Only allow requests from the configured root URL (not wildcard)
+$allowedOrigin = rtrim(getenv('CORS_ALLOWED_ORIGIN') ?: getenv('ROOT_URL') ?: '', '/');
+if ($allowedOrigin && isset($_SERVER['HTTP_ORIGIN'])) {
+    // Support multiple origins separated by comma
+    $allowedOrigins = array_map('trim', explode(',', $allowedOrigin));
+    if (in_array($_SERVER['HTTP_ORIGIN'], $allowedOrigins, true)) {
+        header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
+        header("Access-Control-Allow-Credentials: true");
+    }
+} elseif ($allowedOrigin) {
+    // No Origin header (same-origin request) — allow the primary origin
+    $primaryOrigin = explode(',', $allowedOrigin)[0];
+    header("Access-Control-Allow-Origin: " . trim($primaryOrigin));
+    header("Access-Control-Allow-Credentials: true");
+}
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With, X-CSRF-Token");
 //Copy the payload over to get&post to maintain compatibility between the app and the frontend
 $dataPayload = json_decode(file_get_contents('php://input'));
 $dataPayload = (array) $dataPayload;

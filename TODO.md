@@ -11,7 +11,7 @@
 - [x] KUR-Logik in DocumentRenderer — `src/services/DocumentRenderer.php`
 - [x] Pflichthinweis "Gemäß § 19 UStG..." auf Rechnungen — `DocumentRenderer.php`
 - [x] Umsatzgrenze-Tracking/Warnung — `src/business/euer.php` + `euer.twig`
-- [ ] KUR-Einstellung in Business-Settings-UI (Toggle)
+- [x] KUR-Einstellung in Business-Settings-UI (Toggle) — `src/instances/instances_germanSettings.twig`
 - [ ] Automatische E-Mail-Warnung bei Annäherung an Umsatzgrenze (80%, 90%, 100%)
 - [ ] KUR-Übergangslogik: Automatischer Wechsel zur Regelbesteuerung bei Überschreitung
 
@@ -22,9 +22,9 @@
 - [x] Steuersatz und Steuerbetrag getrennt — `DocumentRenderer.php`
 - [x] Netto-/MwSt-/Bruttobetrag getrennt — `DocumentRenderer.php`
 - [x] KUR-Hinweis auf Steuerbefreiung — `DocumentRenderer.php`
-- [ ] Leistungszeitraum/Lieferdatum auf Rechnung
+- [x] Leistungszeitraum/Lieferdatum auf Rechnung — `DocumentRenderer.php` + `document_de.twig`
 - [ ] Aufbewahrungspflicht (10 Jahre) - automatische Archivierung
-- [ ] Unveränderbarkeit der Rechnung nach Erstellung (Dokument-Locking)
+- [x] Unveränderbarkeit der Rechnung nach Erstellung (Dokument-Locking) — `DocumentRenderer.php`: GoBD-Sperre bei Duplikat
 - [ ] Lückenlose Nummernkreise sicherstellen (keine gelöschten Nummern)
 - [ ] Verfahrensdokumentation (GoBD-Pflicht) als generiertes PDF
 
@@ -159,27 +159,27 @@
 ## Sicherheit & Robustheit
 
 ### KRITISCH - Sofort beheben!
-- [ ] **CORS Wildcard entfernen** — `src/api/apiHead.php` Zeile 6: `Access-Control-Allow-Origin: *` erlaubt JEDEM Cross-Origin-Zugriff auf alle APIs! → Auf eigene Domain beschränken
-- [ ] **CSRF-Token-Schutz** für alle POST-Endpunkte (aktuell KEIN Token in der gesamten API!)
-- [ ] **Partner-Code unsicher** — `PartnerService.php:318`: `md5($instanceId . time())` ist vorhersagbar → `random_bytes(16)` oder `bin2hex(random_bytes(8))` verwenden
-- [ ] **DSGVO IP-Logging falsch** — `DsgvoService.php:218`: Nutzt `$_SERVER['REMOTE_ADDR']` statt Cloudflare/Proxy-Header → `HTTP_CF_CONNECTING_IP` / `HTTP_X_FORWARDED_FOR` prüfen
+- [x] **CORS Wildcard entfernen** — `src/api/apiHead.php`: Jetzt dynamische Origin-Prüfung via `CORS_ALLOWED_ORIGIN` env var
+- [x] **CSRF-Token-Schutz** — `CsrfService.php` + Integration in `apiHeadSecure.php` + Meta-Tag + ajaxcall Header
+- [x] **Partner-Code sicher** — `PartnerService.php`: `bin2hex(random_bytes(4))` + Kollisionsprüfung
+- [x] **DSGVO IP-Logging gefixt** — `DsgvoService.php`: `getClientIp()` mit Cloudflare/Proxy-Support
 
 ### API-Sicherheit
-- [ ] Rate-Limiting für Login und API-Endpunkte (Brute-Force-Schutz)
+- [x] Rate-Limiting für Login und API-Endpunkte — `RateLimitService.php` + DB-Migration + Login-Integration
 - [ ] Input-Sanitization: htmlspecialchars/strip_tags für alle User-Inputs
 - [ ] Content-Security-Policy (CSP) Header setzen
 - [ ] X-Frame-Options Header (Clickjacking-Schutz)
 - [ ] Prepared Statements in allen rawQuery()-Aufrufen prüfen
 - [ ] API-Antworten: keine internen Fehler-Details an Client leaken
-- [ ] **Partner-API: Keine Input-Validierung** — `accept.php`, `invite.php`, `equipment.php`, `generateCode.php`, `request.php`: 0 Aufrufe von intval/filter_input!
-- [ ] **JSON-Decoding unsicher** — `partner/request.php:9`: `json_decode()` ohne `json_last_error()` Prüfung
-- [ ] **Datumsformate nicht validiert** — `partner/equipment.php`, `partner/request.php`: Daten werden ungeprüft an DB weitergereicht
+- [x] **Partner-API: Input-Validierung** — `accept.php`, `invite.php`, `equipment.php`, `request.php`: filter_var, preg_match, json_last_error
+- [x] **JSON-Decoding sicher** — `partner/request.php`: `json_last_error()` Prüfung hinzugefügt
+- [x] **Datumsformate validiert** — `partner/equipment.php`, `partner/request.php`: YYYY-MM-DD Regex + strtotime-Prüfung
 - [ ] **Equipment-IDs nicht geprüft** — `PartnerService.php:246`: `assetTypes_id` wird nicht validiert ob es zur Partner-Instance gehört
-- [ ] **Rate-Limiting für Partner-Code-Generierung** — `partner/generateCode.php`: Unbegrenzte Code-Erzeugung möglich
-- [ ] **Account-Enumeration** — `PartnerService.php:33-37`: Verschiedene Fehler-Antworten verraten ob Instance existiert → einheitliche Fehlermeldung
+- [x] **Rate-Limiting für Partner-Code-Generierung** — `partner/generateCode.php`: Max 5 pro Stunde
+- [x] **Account-Enumeration gefixt** — `partner/invite.php`: Einheitliche Fehlermeldung
 
 ### Session & Auth
-- [ ] Session-Cookie: HttpOnly + Secure + SameSite=Strict setzen — `head.php:182` setzt nur Dauer (12h)
+- [x] Session-Cookie: HttpOnly + Secure + SameSite=Strict — `head.php`: session_set_cookie_params mit Array-Syntax
 - [ ] Session-Regeneration nach Login (Session-Fixation verhindern)
 - [ ] Passwort-Policy erzwingen (Mindestlänge, Komplexität)
 - [ ] Account-Lockout nach X fehlgeschlagenen Login-Versuchen
@@ -320,8 +320,8 @@
 
 | Bereich                    | Umgesetzt | Offen | Fortschritt |
 |----------------------------|-----------|-------|-------------|
-| Phase 1 - KUR              | 4/7       | 3     | 57%         |
-| Phase 1 - GoBD             | 6/11      | 5     | 55%         |
+| Phase 1 - KUR              | 5/7       | 2     | 71%         |
+| Phase 1 - GoBD             | 8/11      | 3     | 73%         |
 | Phase 1 - ZUGFeRD          | 1/5       | 4     | 20%         |
 | Phase 1 - DSGVO            | 6/10      | 4     | 60%         |
 | Phase 1 - DB & Lokalisierung | 10/10   | 0     | 100%        |
@@ -332,9 +332,9 @@
 | Phase 3 - Reporting        | 4/11      | 7     | 36%         |
 | Phase 3 - Logistik         | 3/8       | 5     | 38%         |
 | Phase 3 - Code-Qualität    | 0/8       | 8     | 0%          |
-| Sicherheit - KRITISCH      | 0/4       | 4     | 0%          |
-| Sicherheit - API           | 0/12      | 12    | 0%          |
-| Sicherheit - Session/Auth  | 0/6       | 6     | 0%          |
+| Sicherheit - KRITISCH      | 4/4       | 0     | 100%        |
+| Sicherheit - API           | 7/12      | 5     | 58%         |
+| Sicherheit - Session/Auth  | 1/6       | 5     | 17%         |
 | Sicherheit - Datenbank     | 0/5       | 5     | 0%          |
 | Sicherheit - Dateien       | 0/3       | 3     | 0%          |
 | Sicherheit - DSGVO         | 0/3       | 3     | 0%          |
@@ -349,7 +349,7 @@
 | Extra - Integrationen      | 0/6       | 6     | 0%          |
 | Extra - Dokumentation      | 3/7       | 4     | 43%         |
 | Extra - DevOps             | 0/8       | 8     | 0%          |
-| **GESAMT**                  | **72/236**| **164**| **31%**    |
+| **GESAMT**                  | **86/236**| **150**| **36%**    |
 
 ---
 
@@ -389,4 +389,4 @@
 
 ---
 
-*Zuletzt aktualisiert: 01.03.2026*
+*Zuletzt aktualisiert: 04.03.2026*

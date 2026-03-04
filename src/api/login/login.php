@@ -1,11 +1,19 @@
 <?php
 require_once 'loginAjaxHead.php';
+require_once __DIR__ . '/../../services/RateLimitService.php';
 use \Firebase\JWT\JWT;
 if (isset($_POST['formInput']) and isset($_POST['password'])) {
 	$input = trim(strtolower($GLOBALS['bCMS']->sanitizeString($_POST['formInput'])));
     $password = $GLOBALS['bCMS']->sanitizeString($_POST['password']);
 	if ($input == "" || $password == "") finish(false, ["code" => null, "message" => "No data specified"]);
 	else {
+        // IP-basiertes Rate-Limiting (zusaetzlich zum bestehenden Account-basiertem Schutz)
+        $rateLimiter = new RateLimitService($DBLIB);
+        $clientIp = $_SERVER["HTTP_CF_CONNECTING_IP"] ?? (isset($_SERVER["HTTP_X_FORWARDED_FOR"]) ? trim(explode(",", $_SERVER["HTTP_X_FORWARDED_FOR"])[0]) : $_SERVER["REMOTE_ADDR"]);
+        if (!$rateLimiter->isAllowed('login', $clientIp)) {
+            $rateLimiter->recordAttempt('login', $clientIp, false);
+            finish(false, ["code" => null, "message" => "Too many login attempts from this IP address. Please try again later."]);
+        }
         if (filter_var($input, FILTER_VALIDATE_EMAIL)) $DBLIB->where ("users_email", $input);
         else $DBLIB->where ("users_username", $input);
         $DBLIB->where("users_password", NULL, "IS NOT"); //To cover oauth users
@@ -34,10 +42,18 @@ if (isset($_POST['formInput']) and isset($_POST['password'])) {
             "loginAttempts_successful" => ($successful ? '1' : '0')
         ]);
 
-        if ($bruteforceattempt) finish(false, ["code" => null, "message" => "Sorry - you've tried too many times to login - please try again in 5 minutes"]);
-        elseif (!$successful) finish(false, ["code" => null, "message" => "Username, email or password incorrect"]);
+        if ($bruteforceattempt) {
+            $rateLimiter->recordAttempt('login', $clientIp, false);
+            finish(false, ["code" => null, "message" => "Sorry - you've tried too many times to login - please try again in 5 minutes"]);
+        }
+        elseif (!$successful) {
+            $rateLimiter->recordAttempt('login', $clientIp, false);
+            finish(false, ["code" => null, "message" => "Username, email or password incorrect"]);
+        }
         elseif ($user['users_suspended'] != '0') finish(false, ["code" => null, "message" => "User account is suspended"]);
         else {
+            $rateLimiter->recordAttempt('login', $clientIp, true);
+            $rateLimiter->resetOnSuccess('login', $clientIp);
             if (!$_SESSION['return'] and isset($_SESSION['app-oauth'])) {
                 $token = $GLOBALS['AUTH']->generateToken($user['users_userid'], false, "App OAuth", "app-v1");
                 $jwt = $GLOBALS['AUTH']->issueJWT($token, $user['users_userid'], "app-v1");

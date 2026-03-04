@@ -315,7 +315,13 @@ class PartnerService
      */
     public function generatePartnerCode(int $instanceId): string
     {
-        $code = strtoupper(substr(md5($instanceId . time()), 0, 8));
+        // Kryptographisch sicherer Partner-Code
+        $code = strtoupper(bin2hex(random_bytes(4))); // 8 hex Zeichen
+        // Kollisionspruefung
+        $this->db->where('instances_partnerCode', $code);
+        if ($this->db->getOne('instances')) {
+            return $this->generatePartnerCode($instanceId); // Retry bei Kollision
+        }
         $this->db->where('instances_id', $instanceId);
         $this->db->update('instances', ['instances_partnerCode' => $code]);
         return $code;

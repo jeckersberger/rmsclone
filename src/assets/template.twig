@@ -7,6 +7,9 @@
 		</title>
 
 		<meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+		{% if CSRF_TOKEN is defined and CSRF_TOKEN %}
+		<meta name="csrf-token" content="{{ CSRF_TOKEN }}">
+		{% endif %}
 
 		<!-- CSS SECTION-->
 		<!--Include fonts-->
@@ -125,11 +128,14 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
                 if (reloadIfError == null) {
                     reloadIfError = true;
                 }
+                // CSRF-Token aus Meta-Tag lesen
+                var csrfToken = $('meta[name="csrf-token"]').attr('content') || '';
                 $.ajax({
                     url: "{{ CONFIG.ROOTURL }}/api/" + path,
                     type: "POST",
                     data: senddata,
                     cache: false,
+                    headers: { 'X-CSRF-Token': csrfToken },
                     success: function (result, status, data) {
                     if (result.result) {
                         if (typeof callback === "function") {

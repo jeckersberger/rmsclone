@@ -1,9 +1,15 @@
 <?php
 require_once __DIR__ . '/apiHead.php';
+require_once __DIR__ . '/../services/CsrfService.php';
 
 if (!$GLOBALS['AUTH']->login) {
     if ($CONFIG['DEV']) finish(false,["message"=>"AUTH FAIL - " . $GLOBALS['AUTH']->debug]);
     else finish(false,["code" => "AUTH", "message"=>"AUTH FAIL"]);
+}
+
+// CSRF-Token-Validierung fuer alle POST-Requests (nicht fuer JWT/App-Auth)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_SERVER['HTTP_AUTHORIZATION'])) {
+    CsrfService::enforce();
 }
 if (!$CONFIG['DEV']) {
     Sentry\configureScope(function (Sentry\State\Scope $scope): void {

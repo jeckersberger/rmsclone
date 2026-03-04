@@ -21,6 +21,22 @@ class DocumentRenderer {
    *  - Im Voraus vereinbarte Entgeltminderungen (Rabatte, Skonto)
    */
   public static function renderAndStore($db, int $instanceId, int $projectId, string $type, string $templateKey, array $opts, int $userId) {
+    // 0) GoBD-Unveraenderbarkeit: Pruefen ob bereits eine Rechnung fuer dieses Projekt existiert
+    if ($type === 'invoice' && empty($opts['force_regenerate'])) {
+        $db->where('instances_id', $instanceId);
+        $db->where('projects_id', $projectId);
+        $db->where('type', 'invoice');
+        $existing = $db->getOne('document_exports', ['doc_number', 'generated_at']);
+        if ($existing) {
+            throw new \RuntimeException(
+                'GoBD-Sperre: Fuer dieses Projekt existiert bereits Rechnung ' . $existing['doc_number']
+                . ' vom ' . date('d.m.Y', strtotime($existing['generated_at']))
+                . '. Rechnungen duerfen nach Erstellung nicht veraendert werden. '
+                . 'Erstellen Sie stattdessen eine Stornorechnung (Gutschrift) und dann eine neue Rechnung.'
+            );
+        }
+    }
+
     // 1) Stammdaten
     $business = BusinessRepo::getSettings($db, $instanceId);
     $project  = ProjectRepo::getWithFinance($db, $instanceId, $projectId);
