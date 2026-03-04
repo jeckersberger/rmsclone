@@ -288,7 +288,8 @@
 
 ### Integrationen
 - [ ] Google Calendar / Outlook Sync (bidirektional, nicht nur ICS-Export)
-- [ ] Stripe/PayPal Zahlungslinks auf Rechnungen
+- [ ] Stripe/PayPal Zahlungslinks auf Rechnungen optional
+- [ ] Überweisungs QR Code mit allen wichtigen Daten auf der Rechnung 
 - [ ] Versand-Integration (DHL, DPD) für Equipment-Lieferung
 - [ ] Buchhaltungs-API (lexoffice, sevDesk, FastBill)
 - [ ] Webhook-System für externe Integrationen
