@@ -20,29 +20,42 @@ RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-av
     && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
 # Apache: AllowOverride All + PassEnv fuer Docker-Umgebungsvariablen
-RUN echo '<Directory /var/www/html/src>\n\
-    Options Indexes FollowSymLinks\n\
-    AllowOverride All\n\
-    Require all granted\n\
-</Directory>\n\
-\n\
-# Docker env vars an PHP/Apache durchreichen\n\
-PassEnv DB_HOSTNAME\n\
-PassEnv DB_USERNAME\n\
-PassEnv DB_PASSWORD\n\
-PassEnv DB_DATABASE\n\
-PassEnv DB_PORT\n\
-PassEnv DEV_MODE\n\
-PassEnv CONFIG_ROOTURL\n\
-PassEnv CONFIG_AUTH_JWTKey\n\
-PassEnv CORS_ALLOWED_ORIGIN\n\
-PassEnv S3_ENDPOINT\n\
-PassEnv S3_BUCKET\n\
-PassEnv S3_KEY\n\
-PassEnv S3_SECRET\n\
-PassEnv S3_REGION\n\
-PassEnv MAIL_HOST\n\
-PassEnv MAIL_PORT' > /etc/apache2/conf-available/adamrms.conf \
+RUN printf '%s\n' \
+    '<Directory /var/www/html/src>' \
+    '    Options Indexes FollowSymLinks' \
+    '    AllowOverride All' \
+    '    Require all granted' \
+    '</Directory>' \
+    '' \
+    '# Docker env vars an PHP/Apache durchreichen' \
+    'PassEnv DB_HOSTNAME' \
+    'PassEnv DB_USERNAME' \
+    'PassEnv DB_PASSWORD' \
+    'PassEnv DB_DATABASE' \
+    'PassEnv DB_PORT' \
+    'PassEnv DEV_MODE' \
+    'PassEnv ROOT_URL' \
+    'PassEnv CORS_ALLOWED_ORIGIN' \
+    'PassEnv CONFIG_ROOTURL' \
+    'PassEnv CONFIG_PROJECT_NAME' \
+    'PassEnv CONFIG_TIMEZONE' \
+    'PassEnv CONFIG_AUTH_JWTKey' \
+    'PassEnv CONFIG_SIGNUP_ENABLED' \
+    'PassEnv CONFIG_AWS_S3_KEY' \
+    'PassEnv CONFIG_AWS_S3_SECRET' \
+    'PassEnv CONFIG_AWS_S3_BUCKET' \
+    'PassEnv CONFIG_AWS_S3_BROWSER_ENDPOINT' \
+    'PassEnv CONFIG_AWS_S3_SERVER_ENDPOINT' \
+    'PassEnv CONFIG_AWS_S3_ENDPOINT_PATHSTYLE' \
+    'PassEnv CONFIG_AWS_S3_REGION' \
+    'PassEnv CONFIG_AWS_CLOUDFRONT_ENDPOINT' \
+    'PassEnv CONFIG_EMAILS_ENABLED' \
+    'PassEnv CONFIG_EMAILS_PROVIDER' \
+    'PassEnv CONFIG_EMAILS_FROMEMAIL' \
+    'PassEnv CONFIG_EMAILS_FROM_EMAIL' \
+    'PassEnv CONFIG_EMAILS_SMTP_SERVER' \
+    'PassEnv CONFIG_EMAILS_SMTP_PORT' \
+    > /etc/apache2/conf-available/adamrms.conf \
     && a2enconf adamrms
 
 # PHP Konfiguration fuer Entwicklung
