@@ -10,7 +10,7 @@
  */
 use Phinx\Migration\AbstractMigration;
 
-class AddForeignKeysToNewTables extends AbstractMigration
+class AddForeignKeys extends AbstractMigration
 {
     public function up()
     {

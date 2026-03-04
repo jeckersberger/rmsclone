@@ -35,6 +35,7 @@ services:
       - CONFIG_PROJECT_NAME=AdamRMS Dev
       - CONFIG_TIMEZONE=Europe/Berlin
       - LOCAL_STORAGE_PATH=/var/www/html/storage
+      - CONFIG_FILES_ENABLED=Enabled
       - CONFIG_EMAILS_ENABLED=Enabled
       - CONFIG_EMAILS_PROVIDER=SMTP
       - CONFIG_EMAILS_FROMEMAIL=adamrms@localhost.dev
