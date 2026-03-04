@@ -1,0 +1,177 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-user"></i> Kundenhistorie: {{ client.clients_name }}</h3>
+                <div class="card-tools">
+                    <a href="{{ CONFIG.ROOTURL }}/project/list.php" class="btn btn-sm btn-default"><i class="fas fa-arrow-left"></i> Zurueck</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ══════ ZUSAMMENFASSUNG ══════ #}
+<div class="row">
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-info">
+            <div class="inner">
+                <h3>{{ summary.project_count }}</h3>
+                <p>Projekte</p>
+            </div>
+            <div class="icon"><i class="fas fa-project-diagram"></i></div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-success">
+            <div class="inner">
+                <h3>{{ summary.total_revenue|numberDe }} &euro;</h3>
+                <p>Gesamtumsatz</p>
+            </div>
+            <div class="icon"><i class="fas fa-euro-sign"></i></div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-primary">
+            <div class="inner">
+                <h3>{{ summary.total_paid|numberDe }} &euro;</h3>
+                <p>Bezahlt</p>
+            </div>
+            <div class="icon"><i class="fas fa-check-circle"></i></div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-{{ summary.total_outstanding > 0 ? 'warning' : 'secondary' }}">
+            <div class="inner">
+                <h3>{{ summary.total_outstanding|numberDe }} &euro;</h3>
+                <p>Offen</p>
+            </div>
+            <div class="icon"><i class="fas fa-clock"></i></div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    {# ══════ STAMMDATEN ══════ #}
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-address-card"></i> Stammdaten</h3></div>
+            <div class="card-body">
+                <strong>{{ client.clients_name }}</strong><br>
+                {% if client.clients_address %}{{ client.clients_address|nl2br }}<br>{% endif %}
+                {% if client.clients_email %}<i class="fas fa-envelope"></i> {{ client.clients_email }}<br>{% endif %}
+                {% if client.clients_phone %}<i class="fas fa-phone"></i> {{ client.clients_phone }}<br>{% endif %}
+                {% if client.clients_customerNumber %}<br><small class="text-muted">Kunden-Nr.: {{ client.clients_customerNumber }}</small>{% endif %}
+                {% if client.clients_vatId %}<br><small class="text-muted">USt-IdNr.: {{ client.clients_vatId }}</small>{% endif %}
+                {% if client.clients_paymentTermDays %}<br><small class="text-muted">Zahlungsziel: {{ client.clients_paymentTermDays }} Tage</small>{% endif %}
+            </div>
+        </div>
+
+        {# ── Ansprechpartner ── #}
+        {% if contacts|length > 0 %}
+        <div class="card">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-users"></i> Ansprechpartner</h3></div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-striped mb-0">
+                    <tbody>
+                    {% for c in contacts %}
+                        <tr>
+                            <td>
+                                <strong>{{ c.contact_name }}</strong>
+                                {% if c.contact_role %}<br><small class="text-muted">{{ c.contact_role }}</small>{% endif %}
+                                {% if c.contact_email %}<br><small><i class="fas fa-envelope"></i> {{ c.contact_email }}</small>{% endif %}
+                                {% if c.contact_phone %}<br><small><i class="fas fa-phone"></i> {{ c.contact_phone }}</small>{% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {# ══════ PROJEKTE ══════ #}
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-project-diagram"></i> Projekte ({{ projects|length }})</h3></div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-striped table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Projekt</th>
+                            <th>Zeitraum</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for p in projects %}
+                        <tr style="cursor:pointer" onclick="window.location='{{ CONFIG.ROOTURL }}/project/index.php?id={{ p.projects_id }}'">
+                            <td>
+                                {{ p.projects_name }}
+                                {% if p.projects_archived %}<span class="badge badge-secondary">Archiv</span>{% endif %}
+                            </td>
+                            <td>
+                                {{ p.projects_dates_use_start|dateDe }} &ndash; {{ p.projects_dates_use_end|dateDe }}
+                            </td>
+                            <td>
+                                <span class="badge" style="background:{{ p.projectsStatuses_backgroundColour }};color:{{ p.projectsStatuses_foregroundColour }}">
+                                    {{ p.projectsStatuses_name }}
+                                </span>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="3" class="text-muted text-center">Keine Projekte vorhanden</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {# ══════ DOKUMENTE ══════ #}
+        {% if documents|length > 0 %}
+        <div class="card">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-file-invoice"></i> Dokumente</h3></div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th>Nummer</th>
+                            <th>Typ</th>
+                            <th>Datum</th>
+                            <th class="text-right">Betrag</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for d in documents %}
+                        <tr>
+                            <td>{{ d.doc_number }}</td>
+                            <td>
+                                {% if d.doc_type == 'invoice' %}Rechnung
+                                {% elseif d.doc_type == 'quote' %}Angebot
+                                {% elseif d.doc_type == 'credit_note' %}Gutschrift
+                                {% elseif d.doc_type == 'delivery_note' %}Lieferschein
+                                {% else %}{{ d.doc_type }}{% endif %}
+                            </td>
+                            <td>{{ d.created_at|dateDe }}</td>
+                            <td class="text-right">{{ d.gross_amount|numberDe }} &euro;</td>
+                            <td>
+                                {% if d.status == 'paid' %}<span class="badge badge-success">Bezahlt</span>
+                                {% elseif d.status == 'overdue' %}<span class="badge badge-danger">Ueberfaellig</span>
+                                {% elseif d.status == 'sent' %}<span class="badge badge-info">Gesendet</span>
+                                {% elseif d.status == 'draft' %}<span class="badge badge-secondary">Entwurf</span>
+                                {% else %}<span class="badge badge-default">{{ d.status }}</span>{% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

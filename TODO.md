@@ -67,7 +67,7 @@
 - [x] Angebot → Auftrag → Rechnung Workflow — `src/services/DocumentLifecycleService.php`
 - [x] Dokumentenstatus-Tracking (erstellt, gesendet, angenommen, abgelehnt) — `DocumentLifecycleService`
 - [x] Quick-Convert Buttons (Angebot → AB → Rechnung) — `src/project/project_documents.twig`
-- [ ] Angebots-Vorlagen mit Textbausteinen
+- [x] Angebots-Vorlagen mit Textbausteinen — `text_blocks` Tabelle + API + `src/business/textblocks.php`
 - [ ] Angebots-Gültigkeit (Ablaufdatum)
 - [ ] Angebots-Versionen
 - [ ] PDF-Vorschau vor dem Versand
@@ -89,7 +89,7 @@
 - [ ] Sammelrechnung (mehrere Projekte → eine Rechnung)
 - [ ] Reverse-Charge-Verfahren für EU-Auslandsgeschäfte
 - [ ] Teilzahlungs-Tracking auf Rechnungsebene
-- [ ] Cron-Automatisierung für wiederkehrende Projekte (Scheduler fehlt!)
+- [x] Cron-Automatisierung für wiederkehrende Projekte — `src/cron/recurring-projects.php`
 - [ ] Wiederkehrende Projekte: Verfügbarkeits-Check vor Auto-Erstellung
 
 ### 6.2.3 Buchhaltungsanbindung
@@ -109,7 +109,7 @@
 - [x] Kundenspezifische Preise — `src/services/CustomerPricingService.php`
 - [ ] Ansprechpartner (mehrere pro Kunde)
 - [ ] Kundenkategorien / Tags
-- [ ] Kundenhistorie (alle Projekte, Angebote, Rechnungen) - Übersichtsseite
+- [x] Kundenhistorie (alle Projekte, Angebote, Rechnungen) — `src/business/client-history.php` + `client-history.twig`
 - [ ] Kommunikationsprotokoll
 - [ ] Kreditlimit
 - [ ] Kunden-Duplikate erkennen und zusammenführen (Merge)
@@ -140,7 +140,7 @@
 - [x] Check-in/Check-out mit Zustandsprotokoll — `src/services/DamageReportService.php`
 - [ ] Transportplanung (Fahrzeuge, Routen, Fahrer)
 - [ ] Multi-Lager/Standortverwaltung
-- [ ] Lieferschein-Nummer über SequenceService statt rand() generieren
+- [x] Lieferschein-Nummer über SequenceService — `DeliveryNoteService.php`: `SequenceService::next()` statt `rand()`
 - [ ] GPS-Tracking Integration für Transportfahrzeuge
 - [ ] Rückgabe-Erinnerungen automatisch versenden (1 Tag vorher)
 
@@ -180,14 +180,14 @@
 
 ### Session & Auth
 - [x] Session-Cookie: HttpOnly + Secure + SameSite=Strict — `head.php`: session_set_cookie_params mit Array-Syntax
-- [ ] Session-Regeneration nach Login (Session-Fixation verhindern)
+- [x] Session-Regeneration nach Login — `login.php`: `session_regenerate_id(true)` nach Erfolg
 - [ ] Passwort-Policy erzwingen (Mindestlänge, Komplexität)
-- [ ] Account-Lockout nach X fehlgeschlagenen Login-Versuchen
+- [x] Account-Lockout nach 15 Fehlversuchen (30 Min) — `login.php`: Temporäre Sperre + Meldung
 - [ ] Zwei-Faktor-Authentifizierung (2FA/TOTP)
 - [ ] Login-Protokoll (IP, Zeitpunkt, Erfolg/Fehler)
 
 ### Datenbank-Sicherheit
-- [ ] Foreign Keys für alle neuen Tabellen (dsgvo_log, deposits, partner_links, etc.)
+- [x] Foreign Keys für alle neuen Tabellen — `20260304110000_add_foreign_keys.php` (16 Tabellen)
 - [ ] Verschlüsselung sensibler Daten at-rest (IBAN, Steuernummer)
 - [ ] Automatische Datenbank-Backups (mysqldump Cronjob)
 - [ ] DB-Benutzer mit minimalen Rechten (kein DROP/ALTER in Produktion)
@@ -325,17 +325,17 @@
 | Phase 1 - ZUGFeRD          | 1/5       | 4     | 20%         |
 | Phase 1 - DSGVO            | 6/10      | 4     | 60%         |
 | Phase 1 - DB & Lokalisierung | 10/10   | 0     | 100%        |
-| Phase 2 - Angebotswesen    | 3/8       | 5     | 38%         |
-| Phase 2 - Rechnungswesen   | 5/15      | 10    | 33%         |
+| Phase 2 - Angebotswesen    | 4/8       | 4     | 50%         |
+| Phase 2 - Rechnungswesen   | 6/15      | 9     | 40%         |
 | Phase 2 - Buchhaltung      | 2/8       | 6     | 25%         |
-| Phase 2 - Kunden           | 4/13      | 9     | 31%         |
+| Phase 2 - Kunden           | 5/13      | 8     | 38%         |
 | Phase 3 - Reporting        | 4/11      | 7     | 36%         |
-| Phase 3 - Logistik         | 3/8       | 5     | 38%         |
+| Phase 3 - Logistik         | 4/8       | 4     | 50%         |
 | Phase 3 - Code-Qualität    | 0/8       | 8     | 0%          |
 | Sicherheit - KRITISCH      | 4/4       | 0     | 100%        |
 | Sicherheit - API           | 7/12      | 5     | 58%         |
-| Sicherheit - Session/Auth  | 1/6       | 5     | 17%         |
-| Sicherheit - Datenbank     | 0/5       | 5     | 0%          |
+| Sicherheit - Session/Auth  | 3/6       | 3     | 50%         |
+| Sicherheit - Datenbank     | 1/5       | 4     | 20%         |
 | Sicherheit - Dateien       | 0/3       | 3     | 0%          |
 | Sicherheit - DSGVO         | 0/3       | 3     | 0%          |
 | Extra - Dashboard/Nav      | 4/8       | 4     | 50%         |
@@ -349,7 +349,7 @@
 | Extra - Integrationen      | 0/6       | 6     | 0%          |
 | Extra - Dokumentation      | 3/7       | 4     | 43%         |
 | Extra - DevOps             | 0/8       | 8     | 0%          |
-| **GESAMT**                  | **86/236**| **150**| **36%**    |
+| **GESAMT**                  | **95/236**| **141**| **40%**    |
 
 ---
 

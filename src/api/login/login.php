@@ -22,12 +22,26 @@ if (isset($_POST['formInput']) and isset($_POST['password'])) {
         elseif ($user['users_password'] != hash($user['users_hash'], $user['users_salty1'] . $password . $user['users_salty2'])) $successful = false;
         else $successful = true;
 
+        // Account-basierter Brute-Force-Schutz (5 Minuten Fenster)
         $DBLIB->where ("loginAttempts_timestamp >= '" . date('Y-m-d G:i:s', strtotime('-5 minutes')) . "'");
         $DBLIB->where ("loginAttempts_successful",0);
         $DBLIB->where ("loginAttempts_textEntered", $input);
         $previousattempts = $DBLIB->getValue("loginAttempts", "count(*)");
-        if ($previousattempts > 6) $bruteforceattempt = true; //Only log it as a brute force if they get it wrong
-        else $bruteforceattempt = false;
+        $bruteforceattempt = ($previousattempts > 6);
+
+        // Account-Lockout: Nach 15 Fehlversuchen in 30 Minuten wird der Account gesperrt
+        $DBLIB->where("loginAttempts_timestamp >= '" . date('Y-m-d G:i:s', strtotime('-30 minutes')) . "'");
+        $DBLIB->where("loginAttempts_successful", 0);
+        $DBLIB->where("loginAttempts_textEntered", $input);
+        $lockoutAttempts = $DBLIB->getValue("loginAttempts", "count(*)");
+        if ($lockoutAttempts >= 15) {
+            // Temporaerer Lockout - Account fuer 30 Minuten gesperrt
+            if ($user && $user['users_suspended'] == '0') {
+                $DBLIB->where('users_userid', $user['users_userid']);
+                $DBLIB->update('users', ['users_suspended' => 2]); // 2 = temp lockout (vs 1 = admin suspended)
+            }
+            finish(false, ["code" => "LOCKOUT", "message" => "Account temporarily locked due to too many failed attempts. Please try again in 30 minutes or reset your password."]);
+        }
 
         if (isset($_SERVER["HTTP_CF_CONNECTING_IP"])) $ipAddress = $_SERVER["HTTP_CF_CONNECTING_IP"];
         elseif(isset($_SERVER["HTTP_X_FORWARDED_FOR"])) $ipAddress = array_shift(explode(",", $_SERVER["HTTP_X_FORWARDED_FOR"]));
@@ -54,6 +68,14 @@ if (isset($_POST['formInput']) and isset($_POST['password'])) {
         else {
             $rateLimiter->recordAttempt('login', $clientIp, true);
             $rateLimiter->resetOnSuccess('login', $clientIp);
+            // Session-Regeneration: Neue Session-ID nach Login (verhindert Session-Fixation)
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                $returnUrl = $_SESSION['return'] ?? null;
+                $appOauth = $_SESSION['app-oauth'] ?? null;
+                session_regenerate_id(true);
+                if ($returnUrl) $_SESSION['return'] = $returnUrl;
+                if ($appOauth) $_SESSION['app-oauth'] = $appOauth;
+            }
             if (!$_SESSION['return'] and isset($_SESSION['app-oauth'])) {
                 $token = $GLOBALS['AUTH']->generateToken($user['users_userid'], false, "App OAuth", "app-v1");
                 $jwt = $GLOBALS['AUTH']->issueJWT($token, $user['users_userid'], "app-v1");

@@ -58,8 +58,8 @@ class DeliveryNoteService
             $categories[$cat][] = $a;
         }
 
-        // Generate delivery note number
-        $noteNumber = 'LS-' . date('Y') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
+        // Generate delivery note number via SequenceService (fortlaufend, GoBD-konform)
+        $noteNumber = SequenceService::next($this->db, $instanceId, 'delivery_note');
 
         return [
             'note_number' => $noteNumber,
