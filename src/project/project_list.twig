@@ -11,7 +11,7 @@
             {% endif %}
             <div class="card-tools">
                 <form class="input-group input-group-sm"  method="GET">
-                    <input type="text" name="q" class="form-control" placeholder="Search" value="{{ search }}" />
+                    <input type="text" name="q" class="form-control" placeholder="Suche" value="{{ search }}" />
                     <div class="input-group-append">
                         <button type="submit" class="btn btn-default"><i class="fa fa-search" title="Search"></i></button>
                         {% if "PROJECTS:CREATE"|instancePermissions %}<a type="button" class="btn btn-default" href="{{ CONFIG.ROOTURL }}/project/new.php" title="Neues Projekt hinzufügen"><i class="fa fa-plus"></i></a>{% endif %}

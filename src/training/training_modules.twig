@@ -175,9 +175,9 @@
                                     <span class="input-group-text">Type</span>
                                 </div>
                                 <select name="modules_type" class="form-control" value="{{ module.modules_type }}">
-                                    <option value="1" {{ module.modules_type == 1 ? 'selected' }}>Online: Users complete the module online, entirely by themselves</option>
-                                    <option value="2" {{ module.modules_type == 2 ? 'selected' }}>Hybrid: Users complete the module online, and are then certified by an administrator</option>
-                                    <option value="3" {{ module.modules_type == 3 ? 'selected' }}>Physical: Users cannot complete the module themselves - they are certified by an administrator</option>
+                                    <option value="1" {{ module.modules_type == 1 ? 'selected' }}>Online: Benutzer absolvieren das Modul vollstaendig online</option>
+                                    <option value="2" {{ module.modules_type == 2 ? 'selected' }}>Hybrid: Benutzer absolvieren das Modul online und werden dann von einem Administrator zertifiziert</option>
+                                    <option value="3" {{ module.modules_type == 3 ? 'selected' }}>Praesenz: Benutzer koennen das Modul nicht selbst absolvieren - sie werden von einem Administrator zertifiziert</option>
                                 </select>
                             </div>
                             <hr/>
@@ -210,8 +210,8 @@
                         </form>
                     </div>
                     <div class="modal-footer justify-content-between">
-                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                        <button type="button" class="btn btn-primary saveEditForm" data-id="{{ module.modules_id }}">Save</button>
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Schliessen</button>
+                        <button type="button" class="btn btn-primary saveEditForm" data-id="{{ module.modules_id }}">Speichern</button>
                     </div>
                 </div>
             </div>

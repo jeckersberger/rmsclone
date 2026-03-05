@@ -7,7 +7,7 @@
 				<ul class="nav nav-pills">
 					<li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/navigation.php"><i class="fas fa-arrow-left"></i> Back to Settings</span></a></li>
 					{% if "ASSETS:ASSET_CATEGORIES:VIEW"|instancePermissions %}
-                    <li class="nav-item"><a class="nav-link active" href="{{CONFIG.ROOTURL}}/instances/customCategories.php">Asset Categories</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="{{CONFIG.ROOTURL}}/instances/customCategories.php">Asset-Kategorien</a></li>
                     {% endif %}
                     {% if "BUSINESS:BUSINESS_SETTINGS:VIEW"|instancePermissions %}
 					<li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/configuration/barcodes.php">Barcodes</a></li>
@@ -88,8 +88,8 @@
                                                     </form>
                                                 </div>
                                                 <div class="modal-footer justify-content-between">
-                                                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                                                    <button type="button" class="btn btn-primary saveEditGroup-button" data-id="{{ group.assetCategoriesGroups_id }}">Save changes</button>
+                                                    <button type="button" class="btn btn-default" data-dismiss="modal">Schliessen</button>
+                                                    <button type="button" class="btn btn-primary saveEditGroup-button" data-id="{{ group.assetCategoriesGroups_id }}">Aenderungen speichern</button>
                                                 </div>
                                             </div>
                                         </div>
@@ -161,8 +161,8 @@
                                                     </form>
                                                 </div>
                                                 <div class="modal-footer justify-content-between">
-                                                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                                                    <button type="button" class="btn btn-primary saveEdit-button" data-id="{{ category.assetCategories_id }}">Save changes</button>
+                                                    <button type="button" class="btn btn-default" data-dismiss="modal">Schliessen</button>
+                                                    <button type="button" class="btn btn-primary saveEdit-button" data-id="{{ category.assetCategories_id }}">Aenderungen speichern</button>
                                                 </div>
                                             </div>
                                         </div>
@@ -213,7 +213,7 @@
                     </form>
                 </div>
                 <div class="modal-footer justify-content-between">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Schliessen</button>
                     <button type="button" class="btn btn-primary" id="saveNewCategory">Create</button>
                 </div>
             </div>
@@ -245,7 +245,7 @@
                     </form>
                 </div>
                 <div class="modal-footer justify-content-between">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Schliessen</button>
                     <button type="button" class="btn btn-primary" id="saveNewCategoryGroup">Create</button>
                 </div>
             </div>

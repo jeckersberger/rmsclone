@@ -13,14 +13,14 @@
     <div class="card">
         <div class="card-header">
             <h3 class="card-title">
-                Edit {{ PAGE.cmsPages_name }}
+                {{ PAGE.cmsPages_name }} bearbeiten
             </h3>
             <div class="card-tools pull-right">
                 <div class="btn-group  btn-group-sm" role="group">
-                    <button type="button" class="btn btn-default btn-sm" id="addNewCard" title="Add new Card">Add Card</button>
-                    <a type="button" class="btn btn-default btn-sm" title="Viewing Stats" href="{{ CONFIG.ROOTURL }}/cms/stats.php?p={{ PAGE.cmsPages_id }}"><i class="far fa-chart-bar"></i></a>
-                    <button type="button" class="btn btn-default btn-sm" title="Edit History" data-toggle="modal" data-target="#revisionHistoryModal"><i class="fas fa-history"></i></button>
-                    <button type="button" class="btn btn-success btn-sm" id="masterSave" title="Save"><i class="fas fa-save"></i></button>
+                    <button type="button" class="btn btn-default btn-sm" id="addNewCard" title="Neue Karte hinzufuegen">Karte hinzufuegen</button>
+                    <a type="button" class="btn btn-default btn-sm" title="Statistiken anzeigen" href="{{ CONFIG.ROOTURL }}/cms/stats.php?p={{ PAGE.cmsPages_id }}"><i class="far fa-chart-bar"></i></a>
+                    <button type="button" class="btn btn-default btn-sm" title="Aenderungsverlauf" data-toggle="modal" data-target="#revisionHistoryModal"><i class="fas fa-history"></i></button>
+                    <button type="button" class="btn btn-success btn-sm" id="masterSave" title="Speichern"><i class="fas fa-save"></i></button>
                 </div>
             </div>
         </div>
@@ -33,7 +33,7 @@
         {% endif %}
     </div>
     {% for card in [ {'type': 'custom' }, {'type': 'calendar' }, {'type': 'myCalendar'}, {'type': 'inventoryTotal' }, {'type': 'storageUsage' }, {'type': 'userCount' }, {'type': 'maintenanceOutstanding' }, {'type': 'myMaintenance' } ] %}
-        {% set card = card|merge({"width": 4 , "title": "Untitled Card"}) %}
+        {% set card = card|merge({"width": 4 , "title": "Neue Karte"}) %}
         <div style="display:none;" class="templateCard" data-type="{{ card.type ?: "custom" }}">
             {% embed 'cms/cms_edit_card.twig' with {'card': card } %}{% endembed %}
         </div>
@@ -43,8 +43,8 @@
             <div class="modal-content">
                 <form id="editCardForm">
                     <div class="modal-header">
-                        <h4 class="modal-title">Edit Card Content</h4>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <h4 class="modal-title">Karteninhalt bearbeiten</h4>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Schliessen">
                             <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
@@ -61,8 +61,8 @@
                         <div class="summernote" id="summernote"></div>
                     </div>
                     <div class="modal-footer justify-content-between">
-                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                        <button type="submit" class="btn btn-success">Save</button>
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Schliessen</button>
+                        <button type="submit" class="btn btn-success">Speichern</button>
                     </div>
                 </form>
             </div>
@@ -73,37 +73,37 @@
             <div class="modal-content">
                 <form id="editConfigForm">
                     <div class="modal-header">
-                        <h4 class="modal-title">Edit Card Configuration</h4>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <h4 class="modal-title">Kartenkonfiguration bearbeiten</h4>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Schliessen">
                             <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
                     <div class="modal-body">
                         <input type="hidden" name="index" value="" />
                         <div class="form-group">
-                            <label>Card Title</label>
+                            <label>Kartentitel</label>
                             <input class="form-control" name="title" placeholder="Drum Revolve Key Entry Tips" />
                         </div>
                         <div class="form-group">
-                            <label>Color</label>
+                            <label>Farbe</label>
                             <select class="form-control select2bs4" name="style">
-                                <option>None</option>
+                                <option>Keine</option>
                                 {% for style in possibleCardStyles %}
                                     <option value="{{ style }}">{{ style|title }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Style</label>
+                            <label>Stil</label>
                             <select class="form-control select2bs4" name="outline">
-                                <option value="true">Color as Card Accent</option>
-                                <option value="false">Color as Card Top Background</option>
+                                <option value="true">Farbe als Kartenakzent</option>
+                                <option value="false">Farbe als Kartenhintergrund</option>
                             </select>
                         </div>
                     </div>
                     <div class="modal-footer justify-content-between">
-                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                        <button type="submit" class="btn btn-success">Save</button>
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Schliessen</button>
+                        <button type="submit" class="btn btn-success">Speichern</button>
                     </div>
                 </form>
             </div>
@@ -114,8 +114,8 @@
             <div class="modal-content">
                 <form id="editConfigForm">
                     <div class="modal-header">
-                        <h4 class="modal-title">Page Revision History</h4>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <h4 class="modal-title">Seitenversionen</h4>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Schliessen">
                             <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
@@ -127,13 +127,13 @@
                                         #
                                     </th>
                                     <th>
-                                        User
+                                        Benutzer
                                     </th>
                                     <th>
-                                        Timestamp
+                                        Zeitstempel
                                     </th>
                                     <th>
-                                        Comment
+                                        Kommentar
                                     </th>
                                     <th></th>
                                 </tr>
@@ -155,8 +155,8 @@
                                     </td>
                                     <td>
                                         <div class="btn-group btn-group-sm" role="group">
-                                            <a type="button" class="btn btn-default btn-sm" title="Preview" href="{{ CONFIG.ROOTURL }}/cms/?p={{ PAGE.cmsPages_id }}&r={{ draft.cmsPagesDrafts_id }}" target="_blank"><i class="fas fa-external-link-alt"></i></a>
-                                            <button type="button" class="btn btn-warning btn-sm restoreRevisionButton" data-id="{{ draft.cmsPagesDrafts_id }}" title="Rollback to this change"><i class="fas fa-history"></i></button>
+                                            <a type="button" class="btn btn-default btn-sm" title="Vorschau" href="{{ CONFIG.ROOTURL }}/cms/?p={{ PAGE.cmsPages_id }}&r={{ draft.cmsPagesDrafts_id }}" target="_blank"><i class="fas fa-external-link-alt"></i></a>
+                                            <button type="button" class="btn btn-warning btn-sm restoreRevisionButton" data-id="{{ draft.cmsPagesDrafts_id }}" title="Auf diese Version zuruecksetzen"><i class="fas fa-history"></i></button>
                                         </div>
                                     </td>
                                 </tr>
@@ -165,7 +165,7 @@
                         </table>
                     </div>
                     <div class="modal-footer justify-content-between">
-                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Schliessen</button>
                     </div>
                 </form>
             </div>
@@ -219,14 +219,14 @@
             $(document).on("click",".delete",function(event) {
                 var cell = gs.$getCellOfElement(event.target);
                 bootbox.confirm({
-                    message: "Are you sure you wish to delete this card?",
+                    message: "Sind Sie sicher, dass Sie diese Karte loeschen moechten?",
                     buttons: {
                         confirm: {
-                            label: 'Yes',
+                            label: 'Ja',
                             className: 'btn-success'
                         },
                         cancel: {
-                            label: 'Cancel',
+                            label: 'Abbrechen',
                             className: 'btn-default'
                         }
                     },
@@ -355,39 +355,39 @@
             });
             $(document).on("click","#addNewCard",function(event) {
                 bootbox.prompt({
-                    title: "Card Type",
+                    title: "Kartentyp",
                     inputType: "select",
                     inputOptions: [
                     {
-                        text: "Custom Card",
+                        text: "Benutzerdefiniert",
                         value: "custom",
                     },
                     {
-                        text: "Calendar",
+                        text: "Kalender",
                         value: "calendar",
                     },
                     {
-                        text: "User's Calendar",
+                        text: "Mein Kalender",
                         value: "myCalendar"
                     },
                     {
-                        text: "Stats: Assets Total Value",
+                        text: "Statistik: Inventar-Gesamtwert",
                         value: "inventoryTotal",
                     },
                     {
-                        text: "Stats: Number of Users on {{ CONFIG.PROJECT_NAME }}",
+                        text: "Statistik: Anzahl Benutzer auf {{ CONFIG.PROJECT_NAME }}",
                         value: "userCount",
                     },
                     {
-                        text: "Stats: Maintenance Jobs Outstanding",
+                        text: "Statistik: Offene Wartungsauftraege",
                         value: "maintenanceOutstanding",
                     },
                     {
-                        text: "Stats: My Maintenance Jobs",
+                        text: "Statistik: Meine Wartungsauftraege",
                         value: "myMaintenance",
                     },
                     {
-                        text: "Stats: Storage Usage on {{ CONFIG.PROJECT_NAME }}",
+                        text: "Statistik: Speicherverbrauch auf {{ CONFIG.PROJECT_NAME }}",
                         value: "storageUsage",
                     }
                     ],
@@ -402,14 +402,14 @@
             $(document).on("click",".restoreRevisionButton[data-id]",function(event) {
                 var change = $(this).data("id");
                 bootbox.confirm({
-                    message: "Are you sure you wish to restore the page to this point?",
+                    message: "Sind Sie sicher, dass Sie die Seite auf diese Version zuruecksetzen moechten?",
                     buttons: {
                         confirm: {
-                            label: 'Yes',
+                            label: 'Ja',
                             className: 'btn-success'
                         },
                         cancel: {
-                            label: 'Cancel',
+                            label: 'Abbrechen',
                             className: 'btn-default'
                         }
                     },
@@ -427,7 +427,7 @@
                 ajaxcall("cms/editPageContent.php", {"pageData": data,"cmsPages_id":"{{ PAGE.cmsPages_id }}","changelog":changelog}, function (response) {
                     //Add to revision list
                     lastSaveData = data;
-                    $("#revisionTableBody").prepend('<tr><td>v' + response.response.revision + '</td><td>{{ USERDATA.users_name1 ~ " " ~ USERDATA.users_name2 }}</td><td><i>Just now</i></td><td>' + changelog + '</td><td><div class="btn-group btn-group-sm" role="group"><a type="button" class="btn btn-default btn-sm" title="Preview" href="{{ CONFIG.ROOTURL }}/cms/?p={{ PAGE.cmsPages_id }}&r=' + response.response.revisionID + '" target="_blank"><i class="fas fa-external-link-alt"></i></a><button type="button" class="btn btn-warning btn-sm restoreRevisionButton" data-id="' + response.response.revisionID + '" title="Rollback to this change"><i class="fas fa-history"></i></button></div></td></tr>');
+                    $("#revisionTableBody").prepend('<tr><td>v' + response.response.revision + '</td><td>{{ USERDATA.users_name1 ~ " " ~ USERDATA.users_name2 }}</td><td><i>Gerade eben</i></td><td>' + changelog + '</td><td><div class="btn-group btn-group-sm" role="group"><a type="button" class="btn btn-default btn-sm" title="Vorschau" href="{{ CONFIG.ROOTURL }}/cms/?p={{ PAGE.cmsPages_id }}&r=' + response.response.revisionID + '" target="_blank"><i class="fas fa-external-link-alt"></i></a><button type="button" class="btn btn-warning btn-sm restoreRevisionButton" data-id="' + response.response.revisionID + '" title="Auf diese Version zuruecksetzen"><i class="fas fa-history"></i></button></div></td></tr>');
                 });
             }
             function generateSave() {
@@ -477,14 +477,14 @@
             window.addEventListener("beforeunload", function(event) {
                 if (JSON.stringify(lastSaveData) !== JSON.stringify(generateSave())) { //Quick and dirty object comparison
                     event.preventDefault();
-                    event.returnValue = "You have unsaved changes - are you sure you wish to exit?";
+                    event.returnValue = "Sie haben ungespeicherte Aenderungen - Seite wirklich verlassen?";
                 } else {
                     delete event['returnValue'];
                 }
             });
             $(document).on("click","#masterSave",function(event) {
                 var saveData = generateSave();
-                bootbox.prompt("Please enter a comment about this revision", function(result) {
+                bootbox.prompt("Bitte geben Sie einen Kommentar zu dieser Aenderung ein", function(result) {
                     if (result && result.length > 0) {
                         uploadSave(saveData,result);
                     }

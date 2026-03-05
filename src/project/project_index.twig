@@ -134,7 +134,7 @@
                                             <h3 class="card-title">{{ project.projectsTypes_name }}</h3>
                                             <div class="card-tools">
                                                 {% if project.projectsTypes_config_assets == 1 and project.projects_dates_deliver_start and project.projects_archived != 1 and "PROJECTS:PROJECT_ASSETS:CREATE:ASSIGN_ALL_BUSINESS_ASSETS"|instancePermissions %}
-                                                    <button type="button" class="btn btn-tool" title="Add all assets to Project" id="addAllAssetsToProject"><i class="fas fa-dolly"></i></button>
+                                                    <button type="button" class="btn btn-tool" title="Alle Assets zum Projekt hinzufuegen" id="addAllAssetsToProject"><i class="fas fa-dolly"></i></button>
                                                 {% endif %}
                                             </div>
                                         </div>
@@ -259,15 +259,15 @@
                                                                     <span class="input-group-text">Days</span>
                                                                     <input type="number" min="0" step="1" max="256" value="{{ FINANCIALS['priceMaths']["days"] }}" class="form-control float-right" required id="financeDurationMathsDays">
                                                                     <div class="input-group-append">
-                                                                        <button class="btn btn-default" type="button" id="financeDurationMathsSave">Save</button>
+                                                                        <button class="btn btn-default" type="button" id="financeDurationMathsSave">Speichern</button>
                                                                     </div>
                                                                 </div>
                                                                 {% if project.projects_dates_use_start %}
                                                                 <div style="width: 100%;text-align: right;">
                                                                     {% if project.projects_dates_finances_days is same as(null) and project.projects_dates_finances_weeks is same as (null) %}
-                                                                        Project duration is currently based on project dates
+                                                                        Projektdauer basiert aktuell auf den Projektdaten
                                                                     {% else %}
-                                                                     <a href="#" id="copyProjectDatesToFinanceDurationMaths">Sync to Project Dates ({{ FINANCIALS['priceMaths']["calendarDays"] }} day{{ FINANCIALS['priceMaths']["calendarDays"] == 1 ? '' : 's' }})</a>
+                                                                     <a href="#" id="copyProjectDatesToFinanceDurationMaths">Mit Projektdaten synchronisieren ({{ FINANCIALS['priceMaths']["calendarDays"] }} day{{ FINANCIALS['priceMaths']["calendarDays"] == 1 ? '' : 's' }})</a>
                                                                     {% endif %}
                                                                 </div>
                                                                 {% endif %}
@@ -279,7 +279,7 @@
                                                     </div>
                                                     <br/>
                                                     {% if project.projects_parent_project_id and project.projects_status_follow_parent %}
-                                                    <div class="alert alert-info mb-1"><p>This sub-project is following the status of its parent project</p></div> 
+                                                    <div class="alert alert-info mb-1"><p>Dieses Unterprojekt folgt dem Status des uebergeordneten Projekts</p></div> 
                                                     {% endif %}
                                                     <div class="alert" style="background-color: {{ project.projectsStatuses_backgroundColour }}; color: {{ project.projectsStatuses_foregroundColour }};">
                                                         <h5><b>Status: </b>{{ project.projectsStatuses_name }}</h5>
@@ -290,26 +290,26 @@
                                         </div>
                                         <div class="card-footer">
                                             <div class="btn-group float-right">
-                                                <button type="button" class="btn btn-default quickAddCommentButton">New Comment</button>
+                                                <button type="button" class="btn btn-default quickAddCommentButton">Neuer Kommentar</button>
                                                 {% if "PROJECTS:EDIT:STATUS"|instancePermissions and not( project.projects_parent_project_id and project.projects_status_follow_parent) %}
-                                                    <button type="button" class="btn btn-secondary" id="editProjectStatus">Change Status</button>
+                                                    <button type="button" class="btn btn-secondary" id="editProjectStatus">Status aendern</button>
                                                 {% endif %}
                                                 <button type="button" class="btn btn-default dropdown-toggle dropdown-icon" data-toggle="dropdown">
                                                     <span class="sr-only">Toggle Dropdown</span>
                                                     <div class="dropdown-menu" role="menu">
                                                         {% if "PROJECTS:CREATE"|instancePermissions %}
                                                             {% if project.subProjects == null %}
-                                                                <a class="dropdown-item" id="assignParentProject">Assign Parent Project</a>
+                                                                <a class="dropdown-item" id="assignParentProject">Uebergeordnetes Projekt zuweisen</a>
                                                             {% endif %}
                                                             {% if project.projects_parent_project_id == null %}
                                                                 {% if canCreateSubProjects %}
-                                                                    <a class="dropdown-item" id="newSubProject">New Sub-Project</a>
+                                                                    <a class="dropdown-item" id="newSubProject">Neues Unterprojekt</a>
                                                                 {% endif %}
                                                             {% else %}
                                                                 {% if project.projects_status_follow_parent %}
-                                                                    <a class="dropdown-item" id="stopFollowParent">Stop Following Parent Status</a>
+                                                                    <a class="dropdown-item" id="stopFollowParent">Status nicht mehr folgen</a>
                                                                 {% else %}
-                                                                    <a class="dropdown-item" id="followParent">Follow Parent Status</a>
+                                                                    <a class="dropdown-item" id="followParent">Uebergeordnetem Status folgen</a>
                                                                 {% endif %}
                                                             {% endif %}
                                                             {% if project.projects_parent_project_id == null or project.subProjects == null %}
@@ -317,25 +317,25 @@
                                                             {% endif %}
                                                         {% endif %}
                                                         {% if "PROJECTS:EDIT:NAME"|instancePermissions %}
-                                                            <a class="dropdown-item" id="editProjectName" href="#">Edit Name</a>
+                                                            <a class="dropdown-item" id="editProjectName" href="#">Name bearbeiten</a>
                                                         {% endif %}
                                                         {% if "PROJECTS:EDIT:DESCRIPTION_AND_SUB_PROJECTS"|instancePermissions %}
-                                                            <a class="dropdown-item" id="editProjectDescription" href="#">Edit Description</a>
+                                                            <a class="dropdown-item" id="editProjectDescription" href="#">Beschreibung bearbeiten</a>
                                                         {% endif %}
                                                         {% if "PROJECTS:EDIT:NAME"|instancePermissions or "PROJECTS:EDIT:DESCRIPTION_AND_SUB_PROJECTS"|instancePermissions%}
                                                             <div class="dropdown-divider"></div>
                                                         {% endif %}
                                                         {% if "PROJECTS:EDIT:PROJECT_TYPE"|instancePermissions and potentialProjectTypes|length > 1 %}
-                                                            <a class="dropdown-item" id="editProjectType" href="#">Change Project Type</a>
+                                                            <a class="dropdown-item" id="editProjectType" href="#">Projekttyp aendern</a>
                                                         {% endif %}
                                                         {% if "PROJECTS:ARCHIVE"|instancePermissions %}
                                                             {% if project.projects_archived == 1 %}
-                                                                <a class="dropdown-item" id="archiveProject" href="#">Remove from Archive</a>
+                                                                <a class="dropdown-item" id="archiveProject" href="#">Aus Archiv wiederherstellen</a>
                                                             {% else %}
-                                                                <a class="dropdown-item" id="archiveProject" href="#">Archive</a>
+                                                                <a class="dropdown-item" id="archiveProject" href="#">Archivieren</a>
                                                             {% endif %}
                                                         {% endif %}
-                                                        {% if "PROJECTS:DELETE"|instancePermissions %}<a class="dropdown-item" id="deleteProject" href="#">Delete</a>{% endif %}
+                                                        {% if "PROJECTS:DELETE"|instancePermissions %}<a class="dropdown-item" id="deleteProject" href="#">Loeschen</a>{% endif %}
                                                         {% if "PROJECTS:CREATE"|instancePermissions %}
                                                             <div class="dropdown-divider"></div>
                                                             <a class="dropdown-item" id="cloneProject" href="#"><i class="fas fa-copy"></i> {{ t('clone_project') }}</a>
@@ -350,9 +350,9 @@
                                     {% if project.auditLog|length > 0 %}
                                         <div class="card">
                                             <div class="card-header">
-                                                <h3 class="card-title">Comments</h3>
+                                                <h3 class="card-title">Kommentare</h3>
                                                 <div class="card-tools">
-                                                    <button type="button" class="btn btn-tool quickAddCommentButton" title="New Project comment" >
+                                                    <button type="button" class="btn btn-tool quickAddCommentButton" title="Neuer Projektkommentar" >
                                                         <i class="fas fa-plus"></i></button>
                                                 </div>
                                             </div>
@@ -516,7 +516,7 @@
                 </form>
             </div>
             <div class="modal-footer justify-content-between">
-                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-default" data-dismiss="modal">Schliessen</button>
                 <button type="button" class="btn btn-primary" id="newPaymentModal-button">Save changes</button>
             </div>
         </div>
@@ -569,14 +569,14 @@
                                 <input class="form-control" type="text" name="crewAssignments_role" minlength="2" required placeholder="Head Flyman">
                             </div>
                             <div class="input-group">
-                                <div class="input-group-prepend"><span class="input-group-text">Comment</span></div>
+                                <div class="input-group-prepend"><span class="input-group-text">Kommentar</span></div>
                                 <textarea class="form-control" rows="3" name="crewAssignments_comment" placeholder="Making own way to venue - bringing key to operate drum revolve. Designated FirstAider"></textarea>
                             </div>
                         </form>
                     </div>
                     <div class="modal-footer justify-content-between">
-                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                        <button type="button" class="btn btn-primary" id="addCrewModal-button">Add</button>
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Schliessen</button>
+                        <button type="button" class="btn btn-primary" id="addCrewModal-button">Hinzufuegen</button>
                     </div>
                 </div>
             </div>
@@ -596,7 +596,7 @@
                         <pre>{% for crew in project.crewAssignments  %}{% if crew.users_email != null %}{{ crew.users_name1 }} {{ crew.users_name2 }} &lt;{{ crew.users_email }}&gt;,{% endif %}{% endfor %}</pre>
                     </div>
                     <div class="modal-footer justify-content-between">
-                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Schliessen</button>
                         <a href="mailto:?subject={{ project.projects_name }}&bcc={% for crew in project.crewAssignments  %}{% if crew.users_email != null %}{{ crew.users_email }},{% endif %}{% endfor %}" type="button" class="btn btn-primary">Launch Email Client</a>
                     </div>
                 </div>

@@ -24,7 +24,7 @@
                         {% if includeArchived %}
                             <a href="?" type="button" class="btn btn-default btn-sm">View Published Pages</a>
                         {% else %}
-                            <a href="?archive=1" type="button" class="btn btn-default  btn-sm">View Archived Pages</a>
+                            <a href="?archive=1" type="button" class="btn btn-default  btn-sm">Archivierte Seiten anzeigen</a>
                         {% endif %}
                         <button type="button" class="btn btn-default btn-sm" data-toggle="modal" data-target="#editModalNEW"><i class="fa fa-plus"></i></button>
                     </div>
@@ -94,9 +94,9 @@
                                             <a href="{{ CONFIG.ROOTURL }}/cms/edit.php?p={{ page.cmsPages_id }}" type="button" class="btn btn-default btn-sm"><i class="fas fa-edit"></i></a>
                                             <button type="button" class="btn btn-secondary btn-sm" data-toggle="modal" data-target="#editModal{{ page.cmsPages_id }}"><i class="fas fa-cog"></i></button>
                                             {% if page.cmsPages_archived == 0 %}
-                                            <button type="button" class="btn btn-danger btn-sm archiveButton" title="Archive"  data-id="{{ page.cmsPages_id }}"><i class="fas fa-archive"></i></button>
+                                            <button type="button" class="btn btn-danger btn-sm archiveButton" title="Archivieren"  data-id="{{ page.cmsPages_id }}"><i class="fas fa-archive"></i></button>
                                             {% else %}
-                                                <button type="button" class="btn btn-success btn-sm unArchiveButton" title="Remove from Archive" data-id="{{ page.cmsPages_id }}"><i class="fas fa-archive"></i></button>
+                                                <button type="button" class="btn btn-success btn-sm unArchiveButton" title="Aus Archiv wiederherstellen" data-id="{{ page.cmsPages_id }}"><i class="fas fa-archive"></i></button>
                                             {% endif %}
                                         {% endif %}
                                     </div>
@@ -147,9 +147,9 @@
                                                 <a href="{{ CONFIG.ROOTURL }}/cms/edit.php?p={{ page.cmsPages_id }}" type="button" class="d-none d-sm-block btn btn-default btn-sm"><i class="fas fa-edit"></i></a>
                                                 <button type="button" class="btn btn-secondary btn-sm" data-toggle="modal" data-target="#editModal{{ page.cmsPages_id }}"><i class="fas fa-cog"></i></button>
                                                 {% if page.cmsPages_archived == 0 %}
-                                                    <button type="button" class="btn btn-danger btn-sm archiveButton" title="Archive"  data-id="{{ page.cmsPages_id }}"><i class="fas fa-archive"></i></button>
+                                                    <button type="button" class="btn btn-danger btn-sm archiveButton" title="Archivieren"  data-id="{{ page.cmsPages_id }}"><i class="fas fa-archive"></i></button>
                                                 {% else %}
-                                                    <button type="button" class="btn btn-success btn-sm unArchiveButton" title="Remove from Archive" data-id="{{ page.cmsPages_id }}"><i class="fas fa-archive"></i></button>
+                                                    <button type="button" class="btn btn-success btn-sm unArchiveButton" title="Aus Archiv wiederherstellen" data-id="{{ page.cmsPages_id }}"><i class="fas fa-archive"></i></button>
                                                 {% endif %}
                                             {% endif %}
                                         </div>
@@ -232,8 +232,8 @@
                                     </div>
                                 </div>
                                 <div class="modal-footer justify-content-between">
-                                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                                    <button type="submit" class="btn btn-primary saveEdit">Save</button>
+                                    <button type="button" class="btn btn-default" data-dismiss="modal">Schliessen</button>
+                                    <button type="submit" class="btn btn-primary saveEdit">Speichern</button>
                                 </div>
                             </div>
                         </form>

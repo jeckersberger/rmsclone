@@ -8,7 +8,7 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <select class="form-control" multiple="multiple" placeholder="Select assets to print barcodes for" id="assetSearch" lines>
+                        <select class="form-control" multiple="multiple" placeholder="Assets fuer Barcode-Druck auswaehlen" id="assetSearch" lines>
                             {% for asset in preFetch %}
                                 <option value="{{asset.assets_id}}" selected="selected">{{ asset.assets_tag|aTag }} | {{ asset.assetTypes_name}} ({{ asset.manufacturers_name }})</option>
                             {% endfor %}
