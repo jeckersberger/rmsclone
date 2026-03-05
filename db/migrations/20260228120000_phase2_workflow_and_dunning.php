@@ -12,7 +12,8 @@ class Phase2WorkflowAndDunning extends AbstractMigration
         // ═══════ 1) ANGEBOT → AUFTRAG → RECHNUNG WORKFLOW ═══════
         // Document lifecycle tracking
         if (!$this->hasTable('document_lifecycle')) {
-            $this->table('document_lifecycle', ['id' => 'id', 'engine' => 'InnoDB'])
+            $this->table('document_lifecycle', ['id' => false, 'primary_key' => ['id'], 'engine' => 'InnoDB'])
+                ->addColumn('id', 'integer', ['identity' => true, 'signed' => true])
                 ->addColumn('instances_id', 'integer')
                 ->addColumn('projects_id', 'integer')
                 ->addColumn('doc_type', 'string', ['limit' => 20, 'comment' => 'quote, order_confirmation, invoice, credit_note, cancellation'])
@@ -43,7 +44,8 @@ class Phase2WorkflowAndDunning extends AbstractMigration
 
         // Status history for documents
         if (!$this->hasTable('document_status_history')) {
-            $this->table('document_status_history', ['id' => 'id', 'engine' => 'InnoDB'])
+            $this->table('document_status_history', ['id' => false, 'primary_key' => ['id'], 'engine' => 'InnoDB'])
+                ->addColumn('id', 'integer', ['identity' => true, 'signed' => true])
                 ->addColumn('document_lifecycle_id', 'integer')
                 ->addColumn('old_status', 'string', ['limit' => 30, 'null' => true])
                 ->addColumn('new_status', 'string', ['limit' => 30])
@@ -56,7 +58,8 @@ class Phase2WorkflowAndDunning extends AbstractMigration
 
         // ═══════ 2) MAHNWESEN (DUNNING) ═══════
         if (!$this->hasTable('dunning_levels')) {
-            $this->table('dunning_levels', ['id' => 'id', 'engine' => 'InnoDB'])
+            $this->table('dunning_levels', ['id' => false, 'primary_key' => ['id'], 'engine' => 'InnoDB'])
+                ->addColumn('id', 'integer', ['identity' => true, 'signed' => true])
                 ->addColumn('instances_id', 'integer')
                 ->addColumn('level', 'integer', ['comment' => '0=Zahlungserinnerung, 1=1. Mahnung, 2=2. Mahnung, 3=3. Mahnung'])
                 ->addColumn('name', 'string', ['limit' => 100, 'comment' => 'e.g. Zahlungserinnerung, 1. Mahnung'])
@@ -72,7 +75,8 @@ class Phase2WorkflowAndDunning extends AbstractMigration
         }
 
         if (!$this->hasTable('dunning_history')) {
-            $this->table('dunning_history', ['id' => 'id', 'engine' => 'InnoDB'])
+            $this->table('dunning_history', ['id' => false, 'primary_key' => ['id'], 'engine' => 'InnoDB'])
+                ->addColumn('id', 'integer', ['identity' => true, 'signed' => true])
                 ->addColumn('instances_id', 'integer')
                 ->addColumn('document_lifecycle_id', 'integer', ['comment' => 'The overdue invoice'])
                 ->addColumn('dunning_level_id', 'integer')
@@ -113,7 +117,8 @@ class Phase2WorkflowAndDunning extends AbstractMigration
         // ═══════ 4) ERWEITERTE KUNDENVERWALTUNG ═══════
         // Contact persons (multiple per client)
         if (!$this->hasTable('client_contacts')) {
-            $this->table('client_contacts', ['id' => 'id', 'engine' => 'InnoDB'])
+            $this->table('client_contacts', ['id' => false, 'primary_key' => ['id'], 'engine' => 'InnoDB'])
+                ->addColumn('id', 'integer', ['identity' => true, 'signed' => true])
                 ->addColumn('clients_id', 'integer')
                 ->addColumn('contact_name', 'string', ['limit' => 255])
                 ->addColumn('contact_role', 'string', ['limit' => 100, 'null' => true, 'comment' => 'Funktion/Position'])
@@ -131,7 +136,8 @@ class Phase2WorkflowAndDunning extends AbstractMigration
 
         // Client tags
         if (!$this->hasTable('client_tags')) {
-            $this->table('client_tags', ['id' => 'id', 'engine' => 'InnoDB'])
+            $this->table('client_tags', ['id' => false, 'primary_key' => ['id'], 'engine' => 'InnoDB'])
+                ->addColumn('id', 'integer', ['identity' => true, 'signed' => true])
                 ->addColumn('instances_id', 'integer')
                 ->addColumn('tag_name', 'string', ['limit' => 100])
                 ->addColumn('tag_color', 'string', ['limit' => 7, 'default' => '#007bff'])
@@ -157,7 +163,8 @@ class Phase2WorkflowAndDunning extends AbstractMigration
         // ═══════ 5) VERFUEGBARKEITSKALENDER + KOLLISIONSERKENNUNG ═══════
         // Asset availability blocks (manual blocks like maintenance, reserved, etc.)
         if (!$this->hasTable('asset_availability_blocks')) {
-            $this->table('asset_availability_blocks', ['id' => 'id', 'engine' => 'InnoDB'])
+            $this->table('asset_availability_blocks', ['id' => false, 'primary_key' => ['id'], 'engine' => 'InnoDB'])
+                ->addColumn('id', 'integer', ['identity' => true, 'signed' => true])
                 ->addColumn('assets_id', 'integer')
                 ->addColumn('instances_id', 'integer')
                 ->addColumn('block_type', 'string', ['limit' => 30, 'comment' => 'maintenance, reserved, unavailable, other'])
@@ -174,7 +181,8 @@ class Phase2WorkflowAndDunning extends AbstractMigration
 
         // ═══════ 6) DATEV EXPORT ═══════
         if (!$this->hasTable('datev_exports')) {
-            $this->table('datev_exports', ['id' => 'id', 'engine' => 'InnoDB'])
+            $this->table('datev_exports', ['id' => false, 'primary_key' => ['id'], 'engine' => 'InnoDB'])
+                ->addColumn('id', 'integer', ['identity' => true, 'signed' => true])
                 ->addColumn('instances_id', 'integer')
                 ->addColumn('export_type', 'string', ['limit' => 30, 'comment' => 'buchungen, stammdaten'])
                 ->addColumn('period_from', 'date')
@@ -190,7 +198,8 @@ class Phase2WorkflowAndDunning extends AbstractMigration
 
         // DATEV account mapping
         if (!$this->hasTable('datev_account_mapping')) {
-            $this->table('datev_account_mapping', ['id' => 'id', 'engine' => 'InnoDB'])
+            $this->table('datev_account_mapping', ['id' => false, 'primary_key' => ['id'], 'engine' => 'InnoDB'])
+                ->addColumn('id', 'integer', ['identity' => true, 'signed' => true])
                 ->addColumn('instances_id', 'integer')
                 ->addColumn('account_type', 'string', ['limit' => 50, 'comment' => 'revenue, expense_equipment, expense_staff, expense_subhire, receivable, bank, vat_collected, vat_paid'])
                 ->addColumn('account_number', 'string', ['limit' => 10, 'comment' => 'DATEV Kontonummer (SKR03/SKR04)'])
@@ -214,7 +223,8 @@ class Phase2WorkflowAndDunning extends AbstractMigration
 
         // ═══════ 7) EUER (Einnahmenueberschussrechnung) ═══════
         if (!$this->hasTable('euer_categories')) {
-            $this->table('euer_categories', ['id' => 'id', 'engine' => 'InnoDB'])
+            $this->table('euer_categories', ['id' => false, 'primary_key' => ['id'], 'engine' => 'InnoDB'])
+                ->addColumn('id', 'integer', ['identity' => true, 'signed' => true])
                 ->addColumn('instances_id', 'integer')
                 ->addColumn('category_type', 'string', ['limit' => 20, 'comment' => 'income, expense'])
                 ->addColumn('euer_line', 'string', ['limit' => 10, 'comment' => 'EUeR Formular-Zeile (z.B. 14, 51)'])
@@ -226,7 +236,8 @@ class Phase2WorkflowAndDunning extends AbstractMigration
         }
 
         if (!$this->hasTable('euer_bookings')) {
-            $this->table('euer_bookings', ['id' => 'id', 'engine' => 'InnoDB'])
+            $this->table('euer_bookings', ['id' => false, 'primary_key' => ['id'], 'engine' => 'InnoDB'])
+                ->addColumn('id', 'integer', ['identity' => true, 'signed' => true])
                 ->addColumn('instances_id', 'integer')
                 ->addColumn('euer_categories_id', 'integer')
                 ->addColumn('booking_date', 'date')

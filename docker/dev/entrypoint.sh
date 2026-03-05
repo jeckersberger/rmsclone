@@ -3,6 +3,9 @@ set -e
 
 echo "=== AdamRMS Dev Environment ==="
 
+# Git safe.directory setzen (Docker volume hat anderen Owner)
+git config --global --add safe.directory /var/www/html 2>/dev/null || true
+
 # Storage-Verzeichnis erstellen
 STORAGE_DIR="${LOCAL_STORAGE_PATH:-/var/www/html/storage}"
 mkdir -p "$STORAGE_DIR/uploads"

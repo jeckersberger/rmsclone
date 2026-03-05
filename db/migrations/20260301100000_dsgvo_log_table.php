@@ -10,7 +10,8 @@ class DsgvoLogTable extends AbstractMigration
     public function up()
     {
         if (!$this->hasTable('dsgvo_log')) {
-            $this->table('dsgvo_log', ['id' => 'id', 'engine' => 'InnoDB'])
+            $this->table('dsgvo_log', ['id' => false, 'primary_key' => ['id'], 'engine' => 'InnoDB'])
+                ->addColumn('id', 'integer', ['identity' => true, 'signed' => true])
                 ->addColumn('instances_id', 'integer')
                 ->addColumn('clients_id', 'integer')
                 ->addColumn('action', 'string', ['limit' => 50, 'comment' => 'data_export, deletion_request, partial_anonymization, full_anonymization'])

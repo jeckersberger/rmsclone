@@ -13,7 +13,8 @@ class QuoteTemplatesAndTextBlocks extends AbstractMigration
     {
         // Textbausteine (wiederverwendbare Absaetze)
         if (!$this->hasTable('text_blocks')) {
-            $this->table('text_blocks', ['id' => 'id', 'engine' => 'InnoDB'])
+            $this->table('text_blocks', ['id' => false, 'primary_key' => ['id'], 'engine' => 'InnoDB'])
+                ->addColumn('id', 'integer', ['identity' => true, 'signed' => true])
                 ->addColumn('instances_id', 'integer')
                 ->addColumn('category', 'string', ['limit' => 50, 'comment' => 'greeting, scope, terms, closing, note, custom'])
                 ->addColumn('title', 'string', ['limit' => 150, 'comment' => 'Interner Name des Bausteins'])

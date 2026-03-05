@@ -11,7 +11,8 @@ class Phase3ZugferdReportsLogistics extends AbstractMigration
     {
         // ═══════ 1) PACKLISTEN & LOGISTIK ═══════
         if (!$this->hasTable('packing_lists')) {
-            $this->table('packing_lists', ['id' => 'id', 'engine' => 'InnoDB'])
+            $this->table('packing_lists', ['id' => false, 'primary_key' => ['id'], 'engine' => 'InnoDB'])
+                ->addColumn('id', 'integer', ['identity' => true, 'signed' => true])
                 ->addColumn('instances_id', 'integer')
                 ->addColumn('projects_id', 'integer')
                 ->addColumn('list_number', 'string', ['limit' => 50])
@@ -33,7 +34,8 @@ class Phase3ZugferdReportsLogistics extends AbstractMigration
         }
 
         if (!$this->hasTable('packing_list_items')) {
-            $this->table('packing_list_items', ['id' => 'id', 'engine' => 'InnoDB'])
+            $this->table('packing_list_items', ['id' => false, 'primary_key' => ['id'], 'engine' => 'InnoDB'])
+                ->addColumn('id', 'integer', ['identity' => true, 'signed' => true])
                 ->addColumn('packing_lists_id', 'integer')
                 ->addColumn('assets_id', 'integer', ['null' => true])
                 ->addColumn('assetsAssignments_id', 'integer', ['null' => true])
@@ -52,7 +54,8 @@ class Phase3ZugferdReportsLogistics extends AbstractMigration
 
         // ═══════ 2) WIEDERKEHRENDE RECHNUNGEN ═══════
         if (!$this->hasTable('recurring_invoices')) {
-            $this->table('recurring_invoices', ['id' => 'id', 'engine' => 'InnoDB'])
+            $this->table('recurring_invoices', ['id' => false, 'primary_key' => ['id'], 'engine' => 'InnoDB'])
+                ->addColumn('id', 'integer', ['identity' => true, 'signed' => true])
                 ->addColumn('instances_id', 'integer')
                 ->addColumn('clients_id', 'integer')
                 ->addColumn('projects_id', 'integer', ['null' => true])
@@ -78,7 +81,8 @@ class Phase3ZugferdReportsLogistics extends AbstractMigration
 
         // ═══════ 3) CHECK-IN / CHECK-OUT MIT ZUSTANDSPROTOKOLL ═══════
         if (!$this->hasTable('asset_checkinout')) {
-            $this->table('asset_checkinout', ['id' => 'id', 'engine' => 'InnoDB'])
+            $this->table('asset_checkinout', ['id' => false, 'primary_key' => ['id'], 'engine' => 'InnoDB'])
+                ->addColumn('id', 'integer', ['identity' => true, 'signed' => true])
                 ->addColumn('instances_id', 'integer')
                 ->addColumn('assets_id', 'integer')
                 ->addColumn('projects_id', 'integer')
@@ -99,7 +103,8 @@ class Phase3ZugferdReportsLogistics extends AbstractMigration
         // ═══════ 4) REPORTS / DASHBOARDS ═══════
         // Saved report configurations
         if (!$this->hasTable('saved_reports')) {
-            $this->table('saved_reports', ['id' => 'id', 'engine' => 'InnoDB'])
+            $this->table('saved_reports', ['id' => false, 'primary_key' => ['id'], 'engine' => 'InnoDB'])
+                ->addColumn('id', 'integer', ['identity' => true, 'signed' => true])
                 ->addColumn('instances_id', 'integer')
                 ->addColumn('report_type', 'string', ['limit' => 50, 'comment' => 'revenue, utilization, outstanding, forecast, euer'])
                 ->addColumn('name', 'string', ['limit' => 255])
