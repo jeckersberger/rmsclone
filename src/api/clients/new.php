@@ -3,9 +3,25 @@ require_once __DIR__ . '/../apiHeadSecure.php';
 
 if (!$AUTH->instancePermissionCheck("CLIENTS:CREATE") or !isset($_POST['clients_name'])) die("404");
 
+// Automatische Kundennummer generieren
+$instanceId = $AUTH->data['instance']['instances_id'];
+$DBLIB->where("instances_id", $instanceId);
+$DBLIB->where("clients_customerNumber IS NOT NULL");
+$DBLIB->orderBy("clients_customerNumber", "DESC");
+$lastClient = $DBLIB->getOne("clients", ["clients_customerNumber"]);
+$nextNumber = 1;
+if ($lastClient && $lastClient['clients_customerNumber']) {
+    $match = [];
+    if (preg_match('/(\d+)$/', $lastClient['clients_customerNumber'], $match)) {
+        $nextNumber = intval($match[1]) + 1;
+    }
+}
+$customerNumber = 'KD-' . sprintf('%04d', $nextNumber);
+
 $client = $DBLIB->insert("clients", [
     "clients_name" => $_POST['clients_name'],
-    "instances_id" => $AUTH->data['instance']['instances_id'],
+    "clients_customerNumber" => $customerNumber,
+    "instances_id" => $instanceId,
 ]);
 if (!$client) finish(false, ["code" => "CREATE-CLIENT-FAIL", "message"=> "Could not create new client"]);
 

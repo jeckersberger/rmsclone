@@ -89,6 +89,22 @@ final class GermanBusinessFields extends AbstractMigration
                 'null' => true,
                 'comment' => 'Individuelles Zahlungsziel (NULL = Firmen-Standard)'
             ]],
+            'clients_deliveryAddress' => ['type' => 'text', 'opts' => [
+                'null' => true,
+                'comment' => 'Lieferadresse (falls abweichend von Rechnungsadresse)'
+            ]],
+            'clients_deliveryContact' => ['type' => 'string', 'opts' => [
+                'limit' => 255, 'null' => true,
+                'comment' => 'Ansprechpartner fuer Lieferung'
+            ]],
+            'clients_deliveryPhone' => ['type' => 'string', 'opts' => [
+                'limit' => 50, 'null' => true,
+                'comment' => 'Telefon fuer Lieferung'
+            ]],
+            'clients_deliveryNotes' => ['type' => 'text', 'opts' => [
+                'null' => true,
+                'comment' => 'Lieferhinweise (Zufahrt, Anlieferungszeiten, etc.)'
+            ]],
         ];
 
         foreach ($clientCols as $colName => $def) {

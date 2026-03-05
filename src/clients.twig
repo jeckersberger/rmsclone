@@ -151,6 +151,24 @@
                                                                 <input type="number" min="0" class="form-control" name="clients_paymentTermDays" value="{{ client.clients_paymentTermDays }}" placeholder="Standard verwenden">
                                                             </div>
                                                             <hr>
+                                                            <h6><i class="fas fa-truck"></i> Lieferadresse</h6>
+                                                            <div class="input-group" style="margin-bottom: 5px;">
+                                                                <div class="input-group-prepend"><span class="input-group-text">Lieferadresse</span></div>
+                                                                <textarea class="form-control" rows="3" name="clients_deliveryAddress" placeholder="Falls abweichend von Rechnungsadresse">{{ client.clients_deliveryAddress }}</textarea>
+                                                            </div>
+                                                            <div class="input-group" style="margin-bottom: 5px;">
+                                                                <div class="input-group-prepend"><span class="input-group-text">Ansprechpartner</span></div>
+                                                                <input type="text" class="form-control" name="clients_deliveryContact" value="{{ client.clients_deliveryContact }}">
+                                                            </div>
+                                                            <div class="input-group" style="margin-bottom: 5px;">
+                                                                <div class="input-group-prepend"><span class="input-group-text">Telefon Lieferung</span></div>
+                                                                <input type="text" class="form-control" name="clients_deliveryPhone" value="{{ client.clients_deliveryPhone }}">
+                                                            </div>
+                                                            <div class="input-group" style="margin-bottom: 5px;">
+                                                                <div class="input-group-prepend"><span class="input-group-text">Lieferhinweise</span></div>
+                                                                <textarea class="form-control" rows="2" name="clients_deliveryNotes" placeholder="Zufahrt, Anlieferungszeiten, etc.">{{ client.clients_deliveryNotes }}</textarea>
+                                                            </div>
+                                                            <hr>
                                                             <div class="input-group" style="margin-bottom: 5px;">
                                                                 <div class="input-group-prepend"><span class="input-group-text">{{ t('client_notes') }}</span></div>
                                                                 <textarea class="form-control" rows="3" name="clients_notes"  placeholder="">{{ client.clients_notes }}</textarea>
