@@ -10,7 +10,7 @@
                     {% if "PROJECTS:PROJECT_CREW:VIEW:EMAIL_CREW"|instancePermissions and project.crewAssignments|length > 0 %}
                         <button type="button" class="btn btn-default btn-small" data-toggle="modal" data-target="#emailCrewModal">Team per E-Mail benachrichtigen</button>
                     {% endif %}
-<a href="{{ CONFIG.LINKS_USERGUIDEURL }}projects/crew/" target="_blank" type="button" class="btn btn-info btn-small">Help</a>
+<a href="{{ CONFIG.LINKS_USERGUIDEURL }}projects/crew/" target="_blank" type="button" class="btn btn-info btn-small">Hilfe</a>
 
                 </div>
             </div>
@@ -50,7 +50,7 @@
                             {% endif %}
                             <div class="tools">
                                 {% if "PROJECTS:PROJECT_CREW:EDIT"|instancePermissions %}
-                                    <i class="far fa-edit editCrewAssignment" data-assignment="{{ crew.crewAssignments_id }}" data-role="{{crew.crewAssignments_role|escape('html_attr')}}" data-comment="{{crew.crewAssignments_comment|escape('html_attr')}}" title="Edit"></i>
+                                    <i class="far fa-edit editCrewAssignment" data-assignment="{{ crew.crewAssignments_id }}" data-role="{{crew.crewAssignments_role|escape('html_attr')}}" data-comment="{{crew.crewAssignments_comment|escape('html_attr')}}" title="Bearbeiten"></i>
                                     <i class="far fa-comment editCrewAssignmentComment" data-assignment="{{ crew.crewAssignments_id }}" data-comment="{{crew.crewAssignments_comment|escape('html_attr')}}" title="Kommentar bearbeiten"></i>
                                     <i class="fas fa-trash deleteCrewAssignment" data-assignment="{{ crew.crewAssignments_id }}" title="Teammitglied entfernen"></i>
                                 {% endif %}
@@ -86,28 +86,28 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-12">
-                            <h5>Description</h5>
+                            <h5>Beschreibung</h5>
                             <p>{{ role.projectsVacantRoles_description }}</p>
-                            <h5>Person Specification</h5>
+                            <h5>Anforderungsprofil</h5>
                             <p>{{ role.projectsVacantRoles_personSpecification }}</p>
                             {% if role.projectsVacantRoles_deadline %}
                                 <p>
-                                    <strong>Deadline: </strong>
+                                    <strong>Bewerbungsfrist: </strong>
                                     {{ role.projectsVacantRoles_deadline|date("d M Y h:ia") }}
                                 </p>
                             {% endif %}
                             <p>
-                                <strong>Places Remaining: </strong>
+                                <strong>Plaetze verfuegbar: </strong>
                                 {{ role.projectsVacantRoles_slots - role.projectsVacantRoles_slotsFilled }}
                             </p>
                             <div class="project-actions text-center">
                                 <div class="btn-group">
                                     <a type="button" class="btn btn-default btn-sm" href="{{CONFIG.ROOTURL}}/project/crew/vacancy.php?id={{ role.projectsVacantRoles_id }}&from=project">
-                                        More Info and
+                                        Mehr Info und
                                         {% if role.projectsVacantRoles_firstComeFirstServed %}
-                                        Sign Up
+                                        Eintragen
                                         {% else %}
-                                        Apply
+                                        Bewerben
                                         {% endif %}
                                     </a>
                                 </div>

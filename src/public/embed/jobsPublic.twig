@@ -6,21 +6,21 @@
             <thead>
             <tr>
                 <th style="width: 15%;">
-                    Project
+                    Projekt
                 </th>
                 {% if showClients %}
                 <th style="width: 15%; min-width:150px;">
-                    Project Client
+                    Auftraggeber
                 </th>
                 {% endif %}
                 <th style="width: 10%; min-width:200px;">
-                    Project Dates
+                    Projektdaten
                 </th>
                 <th>
-                    Role Name
+                    Rolle
                 </th>
                 <th style="width: 10%;">
-                    Deadline
+                    Bewerbungsfrist
                 </th>
                 <th style="width: 300px">
                 </th>
@@ -64,9 +64,9 @@
                             <button type="button" class="btn btn-secondary btn-sm" data-toggle="modal" data-target="#infoModal{{ role.projectsVacantRoles_id }}">Mehr Info</button>
                             <a type="button" class="btn btn-success btn-sm" target="_blank" href="{{CONFIG.ROOTURL}}/project/crew/vacancies.php">
                                 {% if role.projectsVacantRoles_firstComeFirstServed %}
-                                Login to Sign Up
+                                Anmelden zum Eintragen
                                 {% else %}
-                                Login to Apply
+                                Anmelden zum Bewerben
                                 {% endif %}
                             </a>
                         </div>
@@ -131,19 +131,19 @@
                             {{ role.projectsVacantRoles_description }}
                         </p>
                         <p>
-                            <strong>Project Dates: </strong>
+                            <strong>Projektdaten: </strong>
                             {{role.projects_dates_use_start ? role.projects_dates_use_start|date("d M Y h:ia") }}
                             {{role.projects_dates_use_start and role.projects_dates_use_end ? " - " }} 
                             {{role.projects_dates_use_end ? role.projects_dates_use_end|date("d M Y h:ia") }}
                         </p>
                         {% if role.projectsVacantRoles_deadline %}
                             <p>
-                                <strong>Deadline: </strong>
+                                <strong>Bewerbungsfrist: </strong>
                                 {{ role.projectsVacantRoles_deadline|date("d M Y h:ia") }}
                             </p>
                         {% endif %}
                         <p>
-                            <strong>Places Remaining: </strong>
+                            <strong>Plaetze verfuegbar: </strong>
                             {{ role.projectsVacantRoles_slots - role.projectsVacantRoles_slotsFilled }}
                         </p>
                         <div class="project-actions text-center">
@@ -151,9 +151,9 @@
                                 <button type="button" class="btn btn-secondary btn-sm" data-toggle="modal" data-target="#infoModal{{ role.projectsVacantRoles_id }}">Mehr Info</button>
                                 <a type="button" class="btn btn-success btn-sm" target="_blank" href="{{CONFIG.ROOTURL}}/project/crew/vacancies.php">
                                     {% if role.projectsVacantRoles_firstComeFirstServed %}
-                                    Login to Sign Up
+                                    Anmelden zum Eintragen
                                     {% else %}
-                                    Login to Apply
+                                    Anmelden zum Bewerben
                                     {% endif %}
                                 </a>
                             </div>

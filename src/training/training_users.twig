@@ -8,7 +8,7 @@
                         {% if search|length > 0 %}
                             Suchergebnisse fuer Benutzer <b>{{ search }}</b>
                         {% else %}
-                            Users
+                            Benutzer
                         {% endif %}
                     </h3>
                     <div class="card-tools pull-right">
@@ -68,7 +68,7 @@
                                         <td>
                                             {% for module in user.userModulesCertifications %}
                                                 {% if module.userModulesCertifications_revoked == 1 %}
-                                                REVOKED -
+                                                WIDERRUFEN -
                                                 {% endif %}
                                                 <b>{{ module.users_name1 }} {{ module.users_name2 }}</b> ({{ module.userModulesCertifications_timestamp|date("d M Y h:ia") }}): {{ module.userModulesCertifications_approvedComment }}
                                                 <br/>

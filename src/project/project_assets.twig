@@ -1,7 +1,7 @@
 {% if project.projectsStatuses_assetsReleased %} 
     <div class="alert alert-danger">
-        <h5>Assets not locked - assets are released</h5>
-        Assets assigned to this project are not exclusive (because of its status) and can be assigned to other projects that clash with this one. Update project status before confirming with client
+        <h5>Assets nicht gesperrt - Assets sind freigegeben</h5>
+        Assets in diesem Projekt sind nicht exklusiv (aufgrund des Status) und koennen anderen kollidierenden Projekten zugewiesen werden. Aktualisieren Sie den Projektstatus vor der Kundenbestaetigung
     </div>
 {% endif %}
 {% for assetAssignment in FINANCIALS.assetsAssigned %}
@@ -181,7 +181,7 @@
             var selected = getSelected();
             if (selected.length > 0) {
                 bootbox.prompt({
-                    title: "Set Comment",
+                    title: "Kommentar setzen",
                     message: "This will override any existing comments set in this project for the assets selected",
                     inputType: 'text',
                     callback: function (result) {
@@ -203,7 +203,7 @@
             var selected = getSelected();
             if (selected.length > 0) {
                 bootbox.prompt({
-                    title: "Set Custom Price",
+                    title: "Preis anpassen",
                     message: "This will override the automatic calculation of the hire cost normally based on the length of the project and instead fix it to value set here<br/>Setting a custom price of 0 will remove any custom prices set<br/><br/>This will override any existing custom prices set in this project for the assets selected",
                     inputType: 'number',
                     min: 0,
@@ -227,7 +227,7 @@
             var selected = getSelected();
             if (selected.length > 0) {
                 bootbox.prompt({
-                    title: "Set Discount",
+                    title: "Rabatt setzen",
                     message: "Discounts the selected assets by a percentage.<br /><br />E.g. Inputting 20 would multiply the price by 0.8, inputting 100 would set the price to 0, or inputting 0 would be full price.<br />This will override any existing discounts set in this project for the assets selected.",
                     inputType: 'number',
                     min: 0,
@@ -252,7 +252,7 @@
             var selected = getSelected();
             if (selected.length > 0) {
                 bootbox.confirm({
-                    message: "Are you sure you wish to remove these assets from the project? This will have billing implications",
+                    message: "Sind Sie sicher, dass Sie diese Assets vom Projekt entfernen moechten? Dies hat Auswirkungen auf die Abrechnung",
                     buttons: {
                         cancel: {
                             label: 'No',
@@ -303,7 +303,7 @@
                             })
                         )
                         bootbox.prompt({
-                            title: "Swap Asset",
+                            title: "Asset tauschen",
                             message: "Replace asset with: ",
                             inputType: 'select',
                             inputOptions: alternatives,
