@@ -20,11 +20,11 @@
 
                     <ul class="list-group list-group-unbordered mb-3">
                         <li class="list-group-item">
-                            <b>Crew Roles</b> <a href="#roles" data-toggle="tab"
+                            <b>Teamrollen</b> <a href="#roles" data-toggle="tab"
                                     class="float-right">{{ user.crewAssignments|length }}</a>
                         </li>
                         <li class="list-group-item">
-                            <b>Projects Managed</b> <a href="#projects" data-toggle="tab"
+                            <b>Verwaltete Projekte</b> <a href="#projects" data-toggle="tab"
                                     class="float-right">{{ user.projectManagement|length }}</a>
                         </li>
                         {% if user.users_social_facebook != "" %}
@@ -78,18 +78,18 @@
                 <div class="card-header p-2">
                     <ul class="nav nav-pills">
                         {% if user.users_userid == USERDATA.users_userid or "USERS:EDIT"|serverPermissions %}
-                            <li class="nav-item"><a class="nav-link" href="#account" data-toggle="tab">Account Settings</a></li>
-                            <li class="nav-item"><a class="nav-link" href="#notifications" data-toggle="tab">Notifications</a></li>
-                            <li class="nav-item"><a class="nav-link" href="#profilepicture" data-toggle="tab">Profile Picture</a></li>
+                            <li class="nav-item"><a class="nav-link" href="#account" data-toggle="tab">Kontoeinstellungen</a></li>
+                            <li class="nav-item"><a class="nav-link" href="#notifications" data-toggle="tab">Benachrichtigungen</a></li>
+                            <li class="nav-item"><a class="nav-link" href="#profilepicture" data-toggle="tab">Profilbild</a></li>
                         {% endif %}
                         {% if user.users_userid == USERDATA.users_userid %}
-                            <li class="nav-item"><a class="nav-link" href="#passwordsocial" data-toggle="tab">Password & Sign-in</a></li>
+                            <li class="nav-item"><a class="nav-link" href="#passwordsocial" data-toggle="tab">Passwort & Anmeldung</a></li>
                         {% endif %}
                         {% if (16|serverPermissions and user.users_userid == USERDATA.users_userid) or "USERS:EDIT"|serverPermissions %}
-                            <li class="nav-item"><a class="nav-link" href="#positions" data-toggle="tab">{{ CONFIG.PROJECT_NAME }} Positions</a></li>
+                            <li class="nav-item"><a class="nav-link" href="#positions" data-toggle="tab">{{ CONFIG.PROJECT_NAME }} Positionen</a></li>
                         {% endif %}
-                        {% if user.crewAssignments|length > 0 %}<li class="nav-item"><a class="nav-link" href="#roles" data-toggle="tab">Crew Roles</a></li>{% endif %}
-                        {% if user.projectManagement|length > 0 %}<li class="nav-item"><a class="nav-link" href="#projects" data-toggle="tab">Projects Managed</a></li>{% endif %}
+                        {% if user.crewAssignments|length > 0 %}<li class="nav-item"><a class="nav-link" href="#roles" data-toggle="tab">Teamrollen</a></li>{% endif %}
+                        {% if user.projectManagement|length > 0 %}<li class="nav-item"><a class="nav-link" href="#projects" data-toggle="tab">Verwaltete Projekte</a></li>{% endif %}
                         {% if user.users_userid == USERDATA.users_userid %}
                         <li class="nav-item"><a class="nav-link" href="#export" data-toggle="tab">{{ t('calendar') }}</a></li>
                         <li class="nav-item"><a class="nav-link" href="#dsgvo" data-toggle="tab">{{ t('privacy_policy') }}</a></li>
@@ -103,22 +103,22 @@
                             <div class="tab-pane p-3" id="account">
                                 <form id="account-form">
                                     <div class="form-group">
-                                        <label for="username">Username:</label>
+                                        <label for="username">Benutzername:</label>
                                         <input type="username" class="form-control" name="users_username" required  value="{{user['users_username']}}" />
                                     </div>
                                     <div class="form-group">
-                                        <label>First Name:</label>
+                                        <label>Vorname:</label>
                                         <input type="text" class="form-control" name="users_name1" required value="{{user['users_name1']}}" />
                                     </div>
                                     <div class="form-group">
-                                        <label>Last Name:</label>
+                                        <label>Nachname:</label>
                                         <input type="text" class="form-control" name="users_name2" required  value="{{user['users_name2']}}" />
                                     </div>
                                     <div class="form-group">
-                                        <label>Email address:</label>
+                                        <label>E-Mail-Adresse:</label>
                                         <input type="email" class="form-control" name="users_email" required value="{{user['users_email']}}" />
                                     </div>
-                                    <p>Share links to your social media profiles to be displayed on your user profile page</p>
+                                    <p>Teilen Sie Links zu Ihren Social-Media-Profilen, die auf Ihrer Benutzerprofilseite angezeigt werden</p>
                                     <label>Facebook</label>
                                     <div class="input-group">
                                         <div class="input-group-prepend">
@@ -154,7 +154,7 @@
                                         <input type="text" class="form-control" name="users_social_snapchat" value="{{ user.users_social_snapchat }}">
                                     </div><br/>
                                     <input type="hidden" name="users_userid" value="{{ user.users_userid }}" />
-                                    <button type="submit" class="btn btn-default">Save</button>
+                                    <button type="submit" class="btn btn-default">Speichern</button>
                                 </form>
                                 <script>
                                     $(document).ready(function() {
@@ -170,7 +170,7 @@
                                 <table class="table table-striped">
                                     <thead>
                                     <tr>
-                                        <th><button type="button" id="save-notification-settings" class="btn btn-success btn-sm">Save</button></th>
+                                        <th><button type="button" id="save-notification-settings" class="btn btn-success btn-sm">Speichern</button></th>
                                         {% for method in NOTIFICATIONTYPES.METHODS %}
                                             <th>{{method}}</th>
                                         {% endfor %}
@@ -242,23 +242,23 @@
                         {% endif %}
                         {% if user.users_userid == USERDATA.users_userid %}
                         <div class="tab-pane p-3" id="passwordsocial">
-                            <h2>Password</h2>
+                            <h2>Passwort</h2>
                             <div class="form-group">
-                                <label for="username">Current Password</label>
-                                <input type="password" placeholder="Current Password" class="form-control" id="current_pass" />
+                                <label for="username">Aktuelles Passwort</label>
+                                <input type="password" placeholder="Aktuelles Passwort" class="form-control" id="current_pass" />
                             </div>
                             <div class="form-group">
-                                <label for="username">New Password</label>
-                                <input type="password" placeholder="New Password" class="form-control" id="passnew" /><br/>
-                                <input type="password" placeholder="Confirm New Password" class="form-control" id="passconf" />
+                                <label for="username">Neues Passwort</label>
+                                <input type="password" placeholder="Neues Passwort" class="form-control" id="passnew" /><br/>
+                                <input type="password" placeholder="Neues Passwort bestätigen" class="form-control" id="passconf" />
                             </div>
-                            <button id="save-password-settings" class="btn btn-default">Change Password</button>
+                            <button id="save-password-settings" class="btn btn-default">Passwort ändern</button>
                             <script>
                                 $(document).ready(function() {
                                     $('#save-password-settings').on('click', function() {
                                         if ($('#passnew').val() != $('#passconf').val()) {
-                                            bootbox.alert("Sorry - Your new password's don't match!");
-                                        } else if ($("#passnew").val().length < 6) bootbox.alert("Sorry - Your password is too short!");
+                                            bootbox.alert("Die neuen Passwörter stimmen nicht überein!");
+                                        } else if ($("#passnew").val().length < 6) bootbox.alert("Das Passwort ist zu kurz!");
                                         else {
                                             ajaxcall("account/changePass.php", {
                                                 "users_userid": "{{ user.users_userid }}",
@@ -272,11 +272,11 @@
                                 });
                             </script>
                             <hr/>
-                            <h2>Authentication Providers</h2>
+                            <h2>Authentifizierungsanbieter</h2>
                             {% if googleAuthAvailable %}
                                 <h4>Google</h4>
                                 {% if user.users_oauth_googleid %}
-                                    <button class="btn btn-danger" id="disconnectOAuthGoogle"><i class="fab fa-google"></i> Disconnect Google Account</button>
+                                    <button class="btn btn-danger" id="disconnectOAuthGoogle"><i class="fab fa-google"></i> Google-Konto trennen</button>
                                     <script>
                                         $(document).ready(function() {
                                             $('#disconnectOAuthGoogle').on('click', function() {
@@ -290,13 +290,13 @@
                                         });
                                     </script>
                                 {% else %}
-                                    <a href="{{ CONFIG.ROOTURL }}/api/account/oauth-link/google.php" class="btn btn-default"><i class="fab fa-google"></i> Link to Google Account</a>
+                                    <a href="{{ CONFIG.ROOTURL }}/api/account/oauth-link/google.php" class="btn btn-default"><i class="fab fa-google"></i> Mit Google-Konto verknüpfen</a>
                                 {% endif %}
                             {% endif %}
                             {% if microsoftAuthAvailable %}
                                 <h4>Microsoft</h4>
                                 {% if user.users_oauth_microsoftid %}
-                                    <button class="btn btn-danger" id="disconnectOAuthMicrosoft"><i class="fab fa-microsoft"></i> Disconnect Microsoft Account</button>
+                                    <button class="btn btn-danger" id="disconnectOAuthMicrosoft"><i class="fab fa-microsoft"></i> Microsoft-Konto trennen</button>
                                     <script>
                                         $(document).ready(function() {
                                             $('#disconnectOAuthMicrosoft').on('click', function() {
@@ -310,7 +310,7 @@
                                         });
                                     </script>
                                 {% else %}
-                                    <a href="{{ CONFIG.ROOTURL }}/api/account/oauth-link/microsoft.php" class="btn btn-default"><i class="fab fa-microsoft"></i> Link to Microsoft Account</a>
+                                    <a href="{{ CONFIG.ROOTURL }}/api/account/oauth-link/microsoft.php" class="btn btn-default"><i class="fab fa-microsoft"></i> Mit Microsoft-Konto verknüpfen</a>
                                 {% endif %}
                             {% endif %}
                         </div>
@@ -320,9 +320,9 @@
                             <table class="table" border="0" style="overflow-x: scroll;">
                                 <thead>
                                 <tr>
-                                    <th>Title</th>
-                                    <th>From</th>
-                                    <th>To</th>
+                                    <th>Titel</th>
+                                    <th>Von</th>
+                                    <th>Bis</th>
                                     {% if user.users_userid != USERDATA.users_userid and "PERMISSIONS:EDIT:USER_POSITION"|serverPermissions %}
                                         <th></th>
                                     {% endif %}
@@ -380,7 +380,7 @@
                                     </tr>
                                     {% endfor %}
                                 {% if user.users_userid != USERDATA.users_userid and "PERMISSIONS:EDIT:USER_POSITION"|serverPermissions %}
-                                    <tr><td colspan="999" style="font-weight: bold;">Add position</td></tr>
+                                    <tr><td colspan="999" style="font-weight: bold;">Position hinzufügen</td></tr>
                                     <tr>
                                         <td>
                                             <div class="form-group">
@@ -432,14 +432,14 @@
                                         $('.deletePermissionEdit').on('click', function() {
                                             thispositonid = $(this).data("positionid");
                                             bootbox.confirm({
-                                                message: "Are you sure you wish to delete this position record? <br/> Positions should be normally kept as an important matter of record - if this user has now left the position please instead set the end date as appropriate",
+                                                message: "Sind Sie sicher, dass Sie diesen Positionseintrag löschen möchten? <br/> Positionen sollten normalerweise als wichtige Aufzeichnung aufbewahrt werden - wenn der Benutzer die Position verlassen hat, setzen Sie bitte stattdessen das Enddatum entsprechend.",
                                                 buttons: {
                                                     confirm: {
-                                                        label: 'Yes',
+                                                        label: 'Ja',
                                                         className: 'btn-success'
                                                     },
                                                     cancel: {
-                                                        label: 'No',
+                                                        label: 'Nein',
                                                         className: 'btn-danger'
                                                     }
                                                 },
@@ -466,9 +466,9 @@
                         <div class="tab-pane table-responsive p-0" id="roles" style="height: 600px;">
                             <table class="table table-head-fixed">
                                 <tr>
-                                    <th>Project</th>
+                                    <th>Projekt</th>
                                     <th></th>
-                                    <th>Role</th>
+                                    <th>Rolle</th>
                                 </tr>
                                 {% for project in user.crewAssignments %}
                                     <tr>
@@ -488,7 +488,7 @@
                         <div class="tab-pane table-responsive p-0" id="projects" style="height: 600px;">
                             <table class="table table-head-fixed">
                                 <tr>
-                                    <th>Project</th>
+                                    <th>Projekt</th>
                                     <th></th>
                                 </tr>
                                 {% for project in user.projectManagement %}
@@ -515,35 +515,34 @@
                             <br/>
                             <h2>Google Calendar</h2>
                             <ol>
-                                <li>Copy the URL at the top.</li>
-                                <li><a href="https://calendar.google.com" target="_blank">Open Google Calendar</a>,
-                                    click the <em>+</em> above <em>My calendars</em> and choose <em>From URL</em>.
+                                <li>Kopieren Sie die URL oben.</li>
+                                <li><a href="https://calendar.google.com" target="_blank">Öffnen Sie Google Calendar</a>,
+                                    klicken Sie auf das <em>+</em> über <em>Meine Kalender</em> und wählen Sie <em>Per URL</em>.
                                 </li>
-                                <li>Paste the URL into the field named <em>URL of calendar</em> that appears and click
-                                    <em>Add calendar</em>.
+                                <li>Fügen Sie die URL in das Feld <em>URL des Kalenders</em> ein und klicken Sie auf
+                                    <em>Kalender hinzufügen</em>.
                                 </li>
-                                <li>After a few seconds, it should appear in your calendar. If it does not, try
-                                    reloading Google Calendar.
+                                <li>Nach wenigen Sekunden sollte der Kalender erscheinen. Falls nicht, laden Sie
+                                    Google Calendar neu.
                                 </li>
                             </ol>
-                            <h2>Apple Calendar</h2>
+                            <h2>Apple Kalender</h2>
                             <ol>
-                                <li>Copy the URL at the top.</li>
-                                <li>In Apple Calendar, click the <em>File</em> menu and choose <em>New Calendar
-                                        Subscription…</em>.
+                                <li>Kopieren Sie die URL oben.</li>
+                                <li>Klicken Sie in Apple Kalender auf das Menü <em>Ablage</em> und wählen Sie <em>Neues Kalenderabonnement…</em>.
                                 </li>
-                                <li>Paste the URL into the dialog that appears and click <em>Subscribe</em>.</li>
-                                <li>A window with settings of the calendar subscription will appear. Set <em>Auto-refresh</em>
-                                    to <em>Every hour</em> to keep your calendar up to date and click <em>OK</em>.
+                                <li>Fügen Sie die URL in das Dialogfeld ein und klicken Sie auf <em>Abonnieren</em>.</li>
+                                <li>Ein Fenster mit den Einstellungen des Kalenderabonnements erscheint. Setzen Sie <em>Automatisch aktualisieren</em>
+                                    auf <em>Stündlich</em>, um Ihren Kalender aktuell zu halten, und klicken Sie auf <em>OK</em>.
                                 </li>
                             </ol>
                             <h2>Outlook</h2>
                             <ol>
-                                <li>Copy the URL at the top.</li>
-                                <li>In Outlook, click <em>Open Calendar</em> and choose <em>From Internet…</em>.</li>
-                                <li>Paste the URL into the Outlook dialog that appears and click <em>OK</em>.</li>
-                                <li>After a few seconds, Outlook will ask if the internet calendar should be added.
-                                    Click <em>Yes</em>.
+                                <li>Kopieren Sie die URL oben.</li>
+                                <li>Klicken Sie in Outlook auf <em>Kalender öffnen</em> und wählen Sie <em>Aus dem Internet…</em>.</li>
+                                <li>Fügen Sie die URL in das Outlook-Dialogfeld ein und klicken Sie auf <em>OK</em>.</li>
+                                <li>Nach wenigen Sekunden fragt Outlook, ob der Internetkalender hinzugefügt werden soll.
+                                    Klicken Sie auf <em>Ja</em>.
                                 </li>
                             </ol>
                         </div>

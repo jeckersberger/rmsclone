@@ -32,7 +32,7 @@
                                     <a href="?archive" type="button" class="btn btn-default">{{ t('archive') }}</a>
                                 {% endif %}
                             </div>
-                            <input type="text" name="q" class="form-control" placeholder="Search" value="{{ search }}" />
+                            <input type="text" name="q" class="form-control" placeholder="Suche" value="{{ search }}" />
                             <div class="input-group-append">
                                 <button type="submit" class="btn btn-default"><i class="fa fa-search"></i></button>
                                 {% if "CLIENTS:CREATE"|instancePermissions %}
@@ -171,7 +171,7 @@
                             </tbody>
                         </table>
                     {% else %}
-                        <center><p style="margin: 10px;"><i>No results</i><br/><a href="?">Remove any filters</a></p></center>
+                        <center><p style="margin: 10px;"><i>Keine Ergebnisse</i><br/><a href="?">Filter entfernen</a></p></center>
                     {% endif %}
                 </div>
                 <div class="overlay" id="loadingoverlay">
@@ -207,7 +207,7 @@
                 $("#loadingoverlay").hide();
                 {% if "CLIENTS:CREATE"|instancePermissions %}
                 $("#newClientButton").click(function () {
-                    bootbox.prompt("Enter Client Name", function (result) {
+                    bootbox.prompt("Kundenname eingeben", function (result) {
                         if (result) {
                             ajaxcall("clients/new.php", {"clients_name": result}, function (data) {
                                 location.reload();
@@ -226,15 +226,15 @@
                 $(".archiveButton").click(function () {
                 var id = $(this).data("id");
                 bootbox.confirm({
-                    title: "Are you sure you want to archive this client?",
-                    message: "This will not delete the client, but will prevent it from being used in new projects.",
+                    title: "Sind Sie sicher, dass Sie diesen Kunden archivieren möchten?",
+                    message: "Der Kunde wird nicht gelöscht, kann aber nicht mehr in neuen Projekten verwendet werden.",
                     buttons: {
                         confirm: {
-                            label: 'Yes',
+                            label: 'Ja',
                             className: 'btn-danger'
                         },
                         cancel: {
-                            label: 'No',
+                            label: 'Nein',
                             className: 'btn-success'
                         }
                     },
@@ -250,14 +250,14 @@
             $(".unarchiveButton").click(function () {
                 var id = $(this).data("id");
                 bootbox.confirm({
-                    message: "Are you sure you want to restore this client?",
+                    message: "Sind Sie sicher, dass Sie diesen Kunden wiederherstellen möchten?",
                     buttons: {
                         confirm: {
-                            label: 'Yes',
+                            label: 'Ja',
                             className: 'btn-danger'
                         },
                         cancel: {
-                            label: 'No',
+                            label: 'Nein',
                             className: 'btn-success'
                         }
                     },

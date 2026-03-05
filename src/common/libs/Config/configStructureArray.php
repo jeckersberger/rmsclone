@@ -594,260 +594,43 @@ $configStructureArray = [
     "form" => [
       "type" => "select",
       "default" => function () {
-        return "Disabled";
+        return "Enabled";
       },
-      "name" => "File storage enabled",
-      "group" => "File Storage",
-      "description" => "Whether AWS S3 file storage is enabled or disabled. If disabled, AdamRMS will not allow users to upload files.",
+      "name" => "Dateispeicher aktiviert",
+      "group" => "Dateispeicher",
+      "description" => "Ob der lokale Dateispeicher aktiviert oder deaktiviert ist. Bei Deaktivierung können Benutzer keine Dateien hochladen.",
       "required" => false,
       "maxlength" => 8,
       "minlength" => 7,
       "options" => ["Enabled", "Disabled"],
       "verifyMatch" => function ($value, $options) {
-        return ["valid" => in_array($value, $options), "value" => $value, "error" => in_array($value, $options) ? '' : "Invalid option selected"];
+        return ["valid" => in_array($value, $options), "value" => $value, "error" => in_array($value, $options) ? '' : "Ungültige Auswahl"];
       }
     ],
     "specialRequest" => false,
-    "default" => "Disabled",
-    "envFallback" => false,
+    "default" => "Enabled",
+    "envFallback" => "CONFIG_FILES_ENABLED",
   ],
-  "AWS_S3_KEY" => [
+  "LOCAL_STORAGE_PATH" => [
     "form" => [
       "type" => "text",
       "default" => function () {
-        return getenv('bCMS__AWS_SERVER_KEY');
+        return "/var/www/html/storage";
       },
-      "name" => "AWS Server Key",
-      "group" => "File Storage",
-      "description" => "The AWS server key.",
+      "name" => "Lokaler Speicherpfad",
+      "group" => "Dateispeicher",
+      "description" => "Der Dateisystempfad, in dem hochgeladene Dateien gespeichert werden. Stellen Sie sicher, dass dieser Pfad vom Webserver beschreibbar ist.",
       "required" => false,
       "maxlength" => 255,
-      "minlength" => 0,
+      "minlength" => 1,
       "options" => [],
       "verifyMatch" => function ($value, $options) {
-        return ["valid" => true, "value" => $value, "error" => ''];
+        return ["valid" => true, "value" => rtrim($value, '/'), "error" => ''];
       }
     ],
     "specialRequest" => true,
-    "default" => false,
-    "envFallback" => "CONFIG_AWS_S3_KEY",
-  ],
-
-  "AWS_S3_SECRET" => [
-    "form" => [
-      "type" => "text",
-      "default" => function () {
-        return null;
-      },
-      "name" => "AWS Server Secret Key",
-      "group" => "File Storage",
-      "description" => "The AWS server secret key.",
-      "required" => false,
-      "maxlength" => 2000,
-      "minlength" => 0,
-      "options" => [],
-      "verifyMatch" => function ($value, $options) {
-        return ["valid" => true, "value" => $value, "error" => ''];
-      }
-    ],
-    "specialRequest" => true,
-    "default" => false,
-    "envFallback" => "CONFIG_AWS_S3_SECRET",
-  ],
-
-  "AWS_S3_BUCKET" => [
-    "form" => [
-      "type" => "text",
-      "default" => function () {
-        return null;
-      },
-      "name" => "AWS S3 Bucket Name",
-      "group" => "File Storage",
-      "description" => "The AWS S3 bucket name.",
-      "required" => false,
-      "maxlength" => 255,
-      "minlength" => 0,
-      "options" => [],
-      "verifyMatch" => function ($value, $options) {
-        return ["valid" => true, "value" => $value, "error" => ''];
-      }
-    ],
-    "specialRequest" => true,
-    "default" => false,
-    "envFallback" => "CONFIG_AWS_S3_BUCKET",
-  ],
-
-  "AWS_S3_BROWSER_ENDPOINT" => [
-    "form" => [
-      "type" => "text",
-      "default" => function () {
-        return "https://s3.us-east-1.amazonaws.com";
-      },
-      "name" => "AWS S3 Bucket Browser Endpoint",
-      "group" => "File Storage",
-      "description" => "The AWS S3 bucket endpoint, which must be accessible over the internet for user browsers to upload files",
-      "required" => false,
-      "maxlength" => 255,
-      "minlength" => 0,
-      "options" => [],
-      "verifyMatch" => function ($value, $options) {
-        return ["valid" => true, "value" => $value, "error" => ''];
-      }
-    ],
-    "specialRequest" => true,
-    "default" => "https://s3.us-east-1.amazonaws.com",
-    "envFallback" => "CONFIG_AWS_S3_BROWSER_ENDPOINT",
-  ],
-  "AWS_S3_SERVER_ENDPOINT" => [
-    "form" => [
-      "type" => "text",
-      "default" => function () {
-        return "https://s3.us-east-1.amazonaws.com";
-      },
-      "name" => "AWS S3 Bucket Server Endpoint",
-      "group" => "File Storage",
-      "description" => "The AWS S3 bucket endpoint for the server to use to upload files - this is almost certainly the same as the above, except in some very specific circumstances such as running in docker containers.",
-      "required" => false,
-      "maxlength" => 255,
-      "minlength" => 0,
-      "options" => [],
-      "verifyMatch" => function ($value, $options) {
-        return ["valid" => true, "value" => $value, "error" => ''];
-      }
-    ],
-    "specialRequest" => true,
-    "default" => "https://s3.us-east-1.amazonaws.com",
-    "envFallback" => "CONFIG_AWS_S3_SERVER_ENDPOINT",
-  ],
-  "AWS_S3_ENDPOINT_PATHSTYLE" => [
-    "form" => [
-      "type" => "select",
-      "default" => function () {
-        return "Disabled";
-      },
-      "name" => "Should path-style requests be sent to the upload endpoint?",
-      "group" => "File Storage",
-      "description" => "This should be disabled for almost all providers",
-      "required" => false,
-      "maxlength" => 8,
-      "minlength" => 7,
-      "options" => ["Enabled", "Disabled"],
-      "verifyMatch" => function ($value, $options) {
-        return ["valid" => in_array($value, $options), "value" => $value, "error" => in_array($value, $options) ? '' : "Invalid option selected"];
-      }
-    ],
-    "specialRequest" => true,
-    "default" => "Disabled",
-    "envFallback" => "CONFIG_AWS_S3_ENDPOINT_PATHSTYLE",
-  ],
-
-  "AWS_S3_REGION" => [
-    "form" => [
-      "type" => "text",
-      "default" => function () {
-        return "us-east-1";
-      },
-      "name" => "AWS S3 Bucket Region",
-      "group" => "File Storage",
-      "description" => "The AWS S3 bucket region.",
-      "required" => false,
-      "maxlength" => 255,
-      "minlength" => 0,
-      "options" => [],
-      "verifyMatch" => function ($value, $options) {
-        return ["valid" => true, "value" => $value, "error" => ''];
-      }
-    ],
-    "specialRequest" => true,
-    "default" => "us-east-1",
-    "envFallback" => "CONFIG_AWS_S3_REGION",
-  ],
-  "AWS_CLOUDFRONT_ENABLED" => [
-    "form" => [
-      "type" => "select",
-      "default" => function () {
-        return "Disabled";
-      },
-      "name" => "AWS CloudFront Enabled",
-      "group" => "File Storage",
-      "description" => "Whether AWS CloudFront is enabled.",
-      "required" => false,
-      "maxlength" => 8,
-      "minlength" => 7,
-      "options" => ["Enabled", "Disabled"],
-      "verifyMatch" => function ($value, $options) {
-        return ["valid" => in_array($value, $options), "value" => $value, "error" => in_array($value, $options) ? '' : "Invalid option selected"];
-      }
-    ],
-    "specialRequest" => true,
-    "default" => "Disabled",
-    "envFallback" => false,
-  ],
-
-  "AWS_CLOUDFRONT_PRIVATEKEY" => [
-    "form" => [
-      "type" => "text",
-      "default" => function () {
-        return null;
-      },
-      "name" => "AWS CloudFront Private Key",
-      "group" => "File Storage",
-      "description" => "The AWS CloudFront private key.",
-      "required" => false,
-      "maxlength" => 2000,
-      "minlength" => 0,
-      "options" => [],
-      "verifyMatch" => function ($value, $options) {
-        return ["valid" => true, "value" => str_replace('\n', "\n", str_replace('"', '', $value)), "error" => ''];
-      }
-    ],
-    "specialRequest" => true,
-    "default" => false,
-    "envFallback" => false,
-  ],
-
-  "AWS_CLOUDFRONT_KEYPAIRID" => [
-    "form" => [
-      "type" => "text",
-      "default" => function () {
-        return null;
-      },
-      "name" => "AWS CloudFront Key Pair ID",
-      "group" => "File Storage",
-      "description" => "The AWS CloudFront key pair ID.",
-      "required" => false,
-      "maxlength" => 255,
-      "minlength" => 0,
-      "options" => [],
-      "verifyMatch" => function ($value, $options) {
-        return ["valid" => true, "value" => $value, "error" => ''];
-      }
-    ],
-    "specialRequest" => true,
-    "default" => false,
-    "envFallback" => false,
-  ],
-
-  "AWS_CLOUDFRONT_ENDPOINT" => [
-    "form" => [
-      "type" => "text",
-      "default" => function () {
-        return null;
-      },
-      "name" => "AWS S3 CDN Endpoint",
-      "group" => "File Storage",
-      "description" => "The AWS S3 CDN endpoint. This is the URL that users will access the files from: it may be cloudfront, or it may be s3/an alternative.",
-      "required" => false,
-      "maxlength" => 255,
-      "minlength" => 0,
-      "options" => [],
-      "verifyMatch" => function ($value, $options) {
-        return ["valid" => true, "value" => $value, "error" => ''];
-      }
-    ],
-    "specialRequest" => true,
-    "default" => false,
-    "envFallback" => "CONFIG_AWS_CLOUDFRONT_ENDPOINT",
+    "default" => "/var/www/html/storage",
+    "envFallback" => "LOCAL_STORAGE_PATH",
   ],
   "NEW_INSTANCE_ENABLED" => [
     "form" => [

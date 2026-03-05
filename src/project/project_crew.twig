@@ -2,13 +2,13 @@
     <div class="col">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h3 class="card-title">Crew</h3>
+                <h3 class="card-title">Team</h3>
                     <div class="btn-group ml-auto">
                     {% if "PROJECTS:PROJECT_CREW:CREATE"|instancePermissions %}
-                        <button type="button" class="btn btn-default btn-small" data-toggle="modal" data-target="#addCrewModal">Add Crew</button>
+                        <button type="button" class="btn btn-default btn-small" data-toggle="modal" data-target="#addCrewModal">Team hinzufügen</button>
                     {% endif %}
                     {% if "PROJECTS:PROJECT_CREW:VIEW:EMAIL_CREW"|instancePermissions and project.crewAssignments|length > 0 %}
-                        <button type="button" class="btn btn-default btn-small" data-toggle="modal" data-target="#emailCrewModal">Email Crew</button>
+                        <button type="button" class="btn btn-default btn-small" data-toggle="modal" data-target="#emailCrewModal">Team per E-Mail benachrichtigen</button>
                     {% endif %}
 <a href="{{ CONFIG.LINKS_USERGUIDEURL }}projects/crew/" target="_blank" type="button" class="btn btn-info btn-small">Help</a>
 
@@ -32,7 +32,7 @@
                                 <span class="text">
                                     {{crew.crewAssignments_role}} -
                                     {% if crew.users_userid is null and crew.crewAssignments_personName is null %}
-                                        <i>Vacant</i>
+                                        <i>Vakant</i>
                                     {% elseif crew.users_name1 %}
                                         {% if "BUSINESS:USERS:VIEW:INDIVIDUAL_USER"|instancePermissions %}
                                             <a href="{{ CONFIG.ROOTURL }}/user.php?id={{ crew.users_userid }}">
@@ -51,8 +51,8 @@
                             <div class="tools">
                                 {% if "PROJECTS:PROJECT_CREW:EDIT"|instancePermissions %}
                                     <i class="far fa-edit editCrewAssignment" data-assignment="{{ crew.crewAssignments_id }}" data-role="{{crew.crewAssignments_role|escape('html_attr')}}" data-comment="{{crew.crewAssignments_comment|escape('html_attr')}}" title="Edit"></i>
-                                    <i class="far fa-comment editCrewAssignmentComment" data-assignment="{{ crew.crewAssignments_id }}" data-comment="{{crew.crewAssignments_comment|escape('html_attr')}}" title="Edit comment"></i>
-                                    <i class="fas fa-trash deleteCrewAssignment" data-assignment="{{ crew.crewAssignments_id }}" title="Delete crew"></i>
+                                    <i class="far fa-comment editCrewAssignmentComment" data-assignment="{{ crew.crewAssignments_id }}" data-comment="{{crew.crewAssignments_comment|escape('html_attr')}}" title="Kommentar bearbeiten"></i>
+                                    <i class="fas fa-trash deleteCrewAssignment" data-assignment="{{ crew.crewAssignments_id }}" title="Teammitglied entfernen"></i>
                                 {% endif %}
                             </div>
                         </li>
@@ -64,9 +64,9 @@
     <div class="col">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h3 class="card-title">Crew Role Vacancies</h3>
+                <h3 class="card-title">Offene Teamrollen</h3>
                 {% if "PROJECTS:PROJECT_CREW:EDIT:CREW_RECRUITMENT"|instancePermissions %}
-                <a href="{{ CONFIG.ROOTURL }}/project/crew/vacantCrew.php?id={{ project.projects_id }}" type="button" class="btn btn-secondary btn-sm ml-auto">Manage</a>
+                <a href="{{ CONFIG.ROOTURL }}/project/crew/vacantCrew.php?id={{ project.projects_id }}" type="button" class="btn btn-secondary btn-sm ml-auto">Verwalten</a>
                 {% endif %}
             </div>
         </div>
@@ -74,7 +74,7 @@
             <div class="alert alert-info">
                 <p class="my-auto">
                     <i class="fas fa-info-circle"></i> 
-                    There are currently no crew vacancies for this project.
+                    Derzeit gibt es keine offenen Teamrollen für dieses Projekt.
                 </p>
             </div>
         {% endif %}

@@ -8,14 +8,14 @@
                 <div class="card-header">
                     <h3 class="card-title">
                         {% if search|length > 0 %}
-                            Search results for manufacturers matching <b>{{ search }}</b>
+                            Suchergebnisse für Hersteller <b>{{ search }}</b>
                         {% else %}
-                            Manufacturers
+                            Hersteller
                         {% endif %}
                     </h3>
                     <div class="card-tools pull-right">
                         <form class="input-group input-group-sm" style="width: 150px;" method="GET">
-                            <input type="text" name="q" class="form-control" placeholder="Search" value="{{ search }}" />
+                            <input type="text" name="q" class="form-control" placeholder="Suche" value="{{ search }}" />
                             <div class="input-group-append">
                                 <button type="submit" class="btn btn-default"><i class="fa fa-search"></i></button>
                                 {% if "ASSETS:MANUFACTURERS:CREATE"|instancePermissions %}
@@ -40,7 +40,7 @@
                             </tbody>
                         </table>
                     {% else %}
-                        <center><p style="margin: 10px;"><i>No results</i><br/><a href="?">Remove any filters</a></p></center>
+                        <center><p style="margin: 10px;"><i>Keine Ergebnisse</i><br/><a href="?">Filter entfernen</a></p></center>
                     {% endif %}
                 </div>
                 <div class="overlay" id="loadingoverlay">
@@ -53,7 +53,7 @@
                 $("#loadingoverlay").hide();
                 {% if "ASSETS:MANUFACTURERS:CREATE"|instancePermissions %}
                 $("#newManufacturerButton").click(function () {
-                    bootbox.prompt("Enter Manufacturer Name", function (result) {
+                    bootbox.prompt("Herstellernamen eingeben", function (result) {
                         if (result) {
                             ajaxcall("manufacturer/new.php", {"manufacturers_name": result}, function (data) {
                                 location.reload();
