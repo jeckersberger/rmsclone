@@ -1,0 +1,186 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+<div class="row">
+    <div class="col-md-12 col-lg-8 offset-lg-2">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-download mr-2"></i>System-Update</h3>
+                <div class="card-tools">
+                    <span class="badge badge-info" id="currentBranch">--</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="statusArea">
+                    <div class="text-center py-4">
+                        <i class="fas fa-sync fa-spin fa-2x text-muted"></i>
+                        <p class="mt-2 text-muted">Prüfe auf Updates...</p>
+                    </div>
+                </div>
+
+                <div id="upToDate" style="display:none;">
+                    <div class="text-center py-4">
+                        <i class="fas fa-check-circle fa-3x text-success"></i>
+                        <h5 class="mt-3">System ist aktuell</h5>
+                        <p class="text-muted">
+                            Aktuelle Version: <code id="currentCommitOk">--</code>
+                        </p>
+                    </div>
+                </div>
+
+                <div id="updateAvailable" style="display:none;">
+                    <div class="callout callout-info">
+                        <h5><i class="fas fa-info-circle mr-1"></i> Update verfügbar</h5>
+                        <p>
+                            Aktuell: <code id="currentCommitUpdate">--</code> &rarr;
+                            Neu: <code id="remoteCommit">--</code>
+                            (<span id="commitCount">0</span> neue Commits)
+                        </p>
+                    </div>
+
+                    <h6>Neue Änderungen:</h6>
+                    <div class="card card-outline card-secondary">
+                        <div class="card-body p-0">
+                            <ul class="list-group list-group-flush" id="commitList"></ul>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary btn-block mt-3" id="pullButton">
+                        <i class="fas fa-download mr-1"></i> Update jetzt installieren
+                    </button>
+                </div>
+
+                <div id="updateRunning" style="display:none;">
+                    <div class="text-center py-4">
+                        <i class="fas fa-cog fa-spin fa-2x text-primary"></i>
+                        <h5 class="mt-3">Update wird installiert...</h5>
+                        <p class="text-muted">Bitte warten und die Seite nicht verlassen.</p>
+                    </div>
+                </div>
+
+                <div id="updateSuccess" style="display:none;">
+                    <div class="text-center py-4">
+                        <i class="fas fa-check-circle fa-3x text-success"></i>
+                        <h5 class="mt-3">Update erfolgreich!</h5>
+                        <p class="text-muted">
+                            Neue Version: <code id="newCommit">--</code>
+                        </p>
+                        <pre class="text-left mt-3 p-3 bg-light" id="pullOutput" style="max-height: 200px; overflow-y: auto; font-size: 0.85em;"></pre>
+                        <button class="btn btn-default mt-3" onclick="location.reload();">
+                            <i class="fas fa-redo mr-1"></i> Seite neu laden
+                        </button>
+                    </div>
+                </div>
+
+                <div id="updateError" style="display:none;">
+                    <div class="text-center py-4">
+                        <i class="fas fa-exclamation-triangle fa-3x text-danger"></i>
+                        <h5 class="mt-3">Update fehlgeschlagen</h5>
+                        <p class="text-danger" id="errorMessage"></p>
+                        <button class="btn btn-default mt-3" onclick="location.reload();">
+                            <i class="fas fa-redo mr-1"></i> Erneut versuchen
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer text-muted text-sm">
+                <i class="fas fa-info-circle mr-1"></i>
+                Updates werden aus dem <code>main</code>-Branch gezogen. Lokale Änderungen werden automatisch gesichert (git stash).
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-history mr-2"></i>Letzte Commits</h3>
+                <div class="card-tools">
+                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush" id="recentCommits">
+                    <li class="list-group-item text-center text-muted py-3">
+                        <i class="fas fa-sync fa-spin"></i> Lade...
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    checkForUpdates();
+
+    function checkForUpdates() {
+        ajaxcall("server/update.php", {"action": "check"}, function(data) {
+            var r = data.response;
+            $("#statusArea").hide();
+            $("#currentBranch").text(r.currentBranch);
+
+            if (r.updateAvailable) {
+                $("#currentCommitUpdate").text(r.currentCommit);
+                $("#remoteCommit").text(r.remoteCommit);
+                $("#commitCount").text(r.commitCount);
+
+                var list = $("#commitList");
+                list.empty();
+                for (var i = 0; i < r.newCommits.length; i++) {
+                    var parts = r.newCommits[i].split(' ');
+                    var hash = parts.shift();
+                    var msg = parts.join(' ');
+                    list.append(
+                        '<li class="list-group-item">' +
+                            '<code class="mr-2">' + hash + '</code>' +
+                            '<span>' + $('<span>').text(msg).html() + '</span>' +
+                        '</li>'
+                    );
+                }
+                $("#updateAvailable").show();
+            } else {
+                $("#currentCommitOk").text(r.currentCommit);
+                $("#upToDate").show();
+            }
+
+            loadRecentCommits();
+        }, false);
+    }
+
+    function loadRecentCommits() {
+        $.ajax({
+            url: "{{ CONFIG.ROOTURL }}/api/server/update.php",
+            type: "POST",
+            headers: { 'X-CSRF-Token': $('meta[name="csrf-token"]').attr('content') || '' },
+            data: {"action": "check"},
+            success: function() {
+                // We already have the data, just show recent commits from git log
+            }
+        });
+    }
+
+    $("#pullButton").click(function() {
+        bootbox.confirm({
+            title: "Update installieren?",
+            message: "Das System wird aus dem <code>main</code>-Branch aktualisiert. Lokale Änderungen werden vorher gesichert.",
+            buttons: {
+                confirm: { label: 'Update starten', className: 'btn-primary' },
+                cancel: { label: 'Abbrechen', className: 'btn-default' }
+            },
+            callback: function(result) {
+                if (result) {
+                    $("#updateAvailable").hide();
+                    $("#updateRunning").show();
+
+                    ajaxcall("server/update.php", {"action": "pull"}, function(data) {
+                        $("#updateRunning").hide();
+                        $("#newCommit").text(data.response.newCommit);
+                        $("#pullOutput").text(data.response.output);
+                        $("#updateSuccess").show();
+                    }, false);
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -765,6 +765,15 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 												</p>
 											</a>
 										</li>
+										<li class="nav-item">
+											<a href="{{ CONFIG.ROOTURL }}/server/update.php" class="nav-link">
+												<i class="nav-icon fas fa-download"></i>
+												<p>
+													System-Update
+													<span class="right badge badge-danger">Serverweit</span>
+												</p>
+											</a>
+										</li>
 									{% endif %}
 									{% if "USERS:VIEW"|serverPermissions %}
 										<li class="nav-item">
