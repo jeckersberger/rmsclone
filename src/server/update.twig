@@ -37,6 +37,8 @@
                         </p>
                     </div>
 
+                    <div id="updateWarnings"></div>
+
                     <h6>Neue Änderungen:</h6>
                     <div class="card card-outline card-secondary">
                         <div class="card-body p-0">
@@ -52,20 +54,26 @@
                 <div id="updateRunning" style="display:none;">
                     <div class="text-center py-4">
                         <i class="fas fa-cog fa-spin fa-2x text-primary"></i>
-                        <h5 class="mt-3">Update wird installiert...</h5>
-                        <p class="text-muted">Bitte warten und die Seite nicht verlassen.</p>
+                        <h5 class="mt-3" id="updateRunningTitle">Update wird installiert...</h5>
+                        <p class="text-muted" id="updateRunningSubtitle">Bitte warten und die Seite nicht verlassen.</p>
+                        <div class="mt-3" id="updateSteps"></div>
                     </div>
                 </div>
 
                 <div id="updateSuccess" style="display:none;">
                     <div class="text-center py-4">
                         <i class="fas fa-check-circle fa-3x text-success"></i>
-                        <h5 class="mt-3">Update erfolgreich!</h5>
+                        <h5 class="mt-3">Update erfolgreich installiert & Anwendung neu gestartet!</h5>
                         <p class="text-muted">
                             Neue Version: <code id="newCommit">--</code>
                         </p>
-                        <pre class="text-left mt-3 p-3 bg-light" id="pullOutput" style="max-height: 200px; overflow-y: auto; font-size: 0.85em;"></pre>
-                        <button class="btn btn-default mt-3" onclick="location.reload();">
+                    </div>
+                    <div class="mt-3">
+                        <h6>Durchgeführte Schritte:</h6>
+                        <ul class="list-group" id="stepResults"></ul>
+                    </div>
+                    <div class="text-center mt-3">
+                        <button class="btn btn-primary" onclick="location.reload();">
                             <i class="fas fa-redo mr-1"></i> Seite neu laden
                         </button>
                     </div>
@@ -84,25 +92,7 @@
             </div>
             <div class="card-footer text-muted text-sm">
                 <i class="fas fa-info-circle mr-1"></i>
-                Updates werden aus dem <code>main</code>-Branch gezogen. Lokale Änderungen werden automatisch gesichert (git stash).
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title"><i class="fas fa-history mr-2"></i>Letzte Commits</h3>
-                <div class="card-tools">
-                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                        <i class="fas fa-minus"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="card-body p-0">
-                <ul class="list-group list-group-flush" id="recentCommits">
-                    <li class="list-group-item text-center text-muted py-3">
-                        <i class="fas fa-sync fa-spin"></i> Lade...
-                    </li>
-                </ul>
+                Das Update zieht Änderungen aus dem <code>main</code>-Branch, führt Composer-Install, Datenbank-Migrationen und einen Apache-Neustart automatisch durch.
             </div>
         </div>
     </div>
@@ -123,6 +113,18 @@ $(document).ready(function() {
                 $("#remoteCommit").text(r.remoteCommit);
                 $("#commitCount").text(r.commitCount);
 
+                // Show warnings for migrations/composer changes
+                var warnings = '';
+                if (r.hasMigrations) {
+                    warnings += '<div class="callout callout-warning"><i class="fas fa-database mr-1"></i> Dieses Update enthält <b>Datenbank-Migrationen</b>. Diese werden automatisch ausgeführt.</div>';
+                }
+                if (r.hasComposerChanges) {
+                    warnings += '<div class="callout callout-warning"><i class="fas fa-box mr-1"></i> Dieses Update enthält <b>Abhängigkeits-Änderungen</b> (composer.lock). Composer install wird automatisch ausgeführt.</div>';
+                }
+                if (warnings) {
+                    $("#updateWarnings").html(warnings);
+                }
+
                 var list = $("#commitList");
                 list.empty();
                 for (var i = 0; i < r.newCommits.length; i++) {
@@ -141,29 +143,30 @@ $(document).ready(function() {
                 $("#currentCommitOk").text(r.currentCommit);
                 $("#upToDate").show();
             }
-
-            loadRecentCommits();
         }, false);
     }
 
-    function loadRecentCommits() {
-        $.ajax({
-            url: "{{ CONFIG.ROOTURL }}/api/server/update.php",
-            type: "POST",
-            headers: { 'X-CSRF-Token': $('meta[name="csrf-token"]').attr('content') || '' },
-            data: {"action": "check"},
-            success: function() {
-                // We already have the data, just show recent commits from git log
-            }
-        });
+    function showStep(text, icon) {
+        $("#updateSteps").append(
+            '<div class="text-muted text-sm mb-1"><i class="fas ' + icon + ' mr-1"></i> ' + text + '</div>'
+        );
     }
 
     $("#pullButton").click(function() {
         bootbox.confirm({
             title: "Update installieren?",
-            message: "Das System wird aus dem <code>main</code>-Branch aktualisiert. Lokale Änderungen werden vorher gesichert.",
+            message: "Das System wird aus dem <code>main</code>-Branch aktualisiert.<br><br>" +
+                     "<b>Folgende Schritte werden automatisch durchgeführt:</b>" +
+                     "<ol class='mt-2'>" +
+                     "<li>Lokale Änderungen sichern (git stash)</li>" +
+                     "<li>Neue Version herunterladen (git pull)</li>" +
+                     "<li>PHP-Abhängigkeiten aktualisieren (composer install)</li>" +
+                     "<li>Datenbank-Migrationen ausführen</li>" +
+                     "<li>Caches leeren (OPcache & Twig)</li>" +
+                     "<li>Apache neu starten</li>" +
+                     "</ol>",
             buttons: {
-                confirm: { label: 'Update starten', className: 'btn-primary' },
+                confirm: { label: '<i class="fas fa-download mr-1"></i> Update starten', className: 'btn-primary' },
                 cancel: { label: 'Abbrechen', className: 'btn-default' }
             },
             callback: function(result) {
@@ -171,11 +174,50 @@ $(document).ready(function() {
                     $("#updateAvailable").hide();
                     $("#updateRunning").show();
 
+                    showStep("Lokale Änderungen werden gesichert...", "fa-archive");
+                    showStep("Code wird heruntergeladen...", "fa-download");
+
                     ajaxcall("server/update.php", {"action": "pull"}, function(data) {
-                        $("#updateRunning").hide();
-                        $("#newCommit").text(data.response.newCommit);
-                        $("#pullOutput").text(data.response.output);
-                        $("#updateSuccess").show();
+                        var r = data.response;
+
+                        // Show pull results
+                        showStep("Code aktualisiert auf " + r.newCommit, "fa-check text-success");
+                        showStep("Abhängigkeiten & Migrationen abgeschlossen", "fa-check text-success");
+                        showStep("Caches geleert", "fa-check text-success");
+
+                        // Now restart Apache
+                        $("#updateRunningTitle").text("Anwendung wird neu gestartet...");
+                        $("#updateRunningSubtitle").text("Apache wird neu geladen...");
+                        showStep("Apache Neustart wird ausgelöst...", "fa-sync fa-spin");
+
+                        ajaxcall("server/update.php", {"action": "restart"}, function(restartData) {
+                            $("#updateRunning").hide();
+                            $("#newCommit").text(r.newCommit);
+
+                            // Show step results
+                            var stepList = $("#stepResults");
+                            if (r.steps) {
+                                for (var i = 0; i < r.steps.length; i++) {
+                                    var isOk = r.steps[i].indexOf("OK") !== -1 ||
+                                               r.steps[i].indexOf("geleert") !== -1 ||
+                                               r.steps[i].indexOf("Already") !== -1;
+                                    stepList.append(
+                                        '<li class="list-group-item">' +
+                                            '<i class="fas ' + (isOk ? 'fa-check-circle text-success' : 'fa-info-circle text-info') + ' mr-2"></i>' +
+                                            '<span>' + $('<span>').text(r.steps[i]).html() + '</span>' +
+                                        '</li>'
+                                    );
+                                }
+                            }
+                            stepList.append(
+                                '<li class="list-group-item">' +
+                                    '<i class="fas fa-check-circle text-success mr-2"></i>' +
+                                    '<span>Apache neu gestartet</span>' +
+                                '</li>'
+                            );
+
+                            $("#updateSuccess").show();
+                        }, false);
                     }, false);
                 }
             }
