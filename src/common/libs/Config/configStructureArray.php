@@ -274,7 +274,7 @@ $configStructureArray = [
       }
     ],
     "specialRequest" => true,
-    "default" => "<br/>AdamRMS is a fully-featured asset, project and rental management platform for Theatre, AV & Broadcast. To find out more about what it could do for your business, visit <a href=\"https://adam-rms.com\">adam-rms.com</a>.",
+    "default" => "",
     "envFallback" => false,
   ],
   "IMAP_ENABLED" => [
@@ -649,10 +649,10 @@ $configStructureArray = [
     "form" => [
       "type" => "text",
       "default" => function () {
-        return "AdamRMS";
+        return "rmsclone";
       },
-      "name" => "Whitelabel project name override",
-      "description" => "What do you call AdamRMS within your organisation?",
+      "name" => "Projekt-Name",
+      "description" => "Der Name Ihrer Installation (wird im Browser-Tab und in E-Mails angezeigt).",
       "group" => "Customisation",
       "required" => false,
       "maxlength" => 20,
@@ -665,14 +665,14 @@ $configStructureArray = [
       }
     ],
     "specialRequest" => false,
-    "default" => "AdamRMS",
+    "default" => "rmsclone",
     "envFallback" => "CONFIG_PROJECT_NAME",
   ],
   "LINKS_USERGUIDEURL" => [
     "form" => [
       "type" => "url",
       "default" => function () {
-        return "https://adam-rms.com/docs/v1/user-guide/";
+        return "";
       },
       "name" => "User guide URL",
       "group" => "Customisation",
@@ -688,14 +688,14 @@ $configStructureArray = [
       }
     ],
     "specialRequest" => false,
-    "default" => "https://adam-rms.com/docs/v1/user-guide/",
+    "default" => "",
     "envFallback" => false,
   ],
   "LINKS_SUPPORTURL" => [
     "form" => [
       "type" => "url",
       "default" => function () {
-        return "https://adam-rms.com/support/";
+        return "";
       },
       "name" => "Support URL",
       "group" => "Customisation",
@@ -711,7 +711,7 @@ $configStructureArray = [
       }
     ],
     "specialRequest" => false,
-    "default" => "https://adam-rms.com/support/",
+    "default" => "",
     "envFallback" => false,
   ],
   "LINKS_TERMSOFSERVICEURL" => [
