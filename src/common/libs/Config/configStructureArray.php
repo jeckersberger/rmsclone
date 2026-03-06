@@ -277,6 +277,174 @@ $configStructureArray = [
     "default" => "<br/>AdamRMS is a fully-featured asset, project and rental management platform for Theatre, AV & Broadcast. To find out more about what it could do for your business, visit <a href=\"https://adam-rms.com\">adam-rms.com</a>.",
     "envFallback" => false,
   ],
+  "IMAP_ENABLED" => [
+    "form" => [
+      "type" => "select",
+      "default" => function () {
+        return "Disabled";
+      },
+      "name" => "E-Mail Empfang (IMAP)",
+      "group" => "Email",
+      "description" => "Sollen eingehende E-Mails ueber IMAP abgerufen werden? Wenn aktiviert, muessen die IMAP-Zugangsdaten unten konfiguriert werden.",
+      "required" => false,
+      "maxlength" => 255,
+      "minlength" => 5,
+      "options" => ["Enabled", "Disabled"],
+      "verifyMatch" => function ($value, $options) {
+        return ["valid" => in_array($value, $options), "value" => $value, "error" => in_array($value, $options) ? '' : "Invalid option selected"];
+      }
+    ],
+    "specialRequest" => false,
+    "default" => "Disabled",
+    "envFallback" => "CONFIG_IMAP_ENABLED",
+  ],
+  "IMAP_SERVER" => [
+    "form" => [
+      "type" => "text",
+      "default" => function () {
+        return "imap.example.com";
+      },
+      "name" => "IMAP Server",
+      "group" => "Email",
+      "description" => "Der IMAP-Server zum Abrufen eingehender E-Mails (z.B. imap.example.com). Die Zugangsdaten werden in der Datenbank gespeichert.",
+      "required" => false,
+      "maxlength" => 255,
+      "minlength" => 0,
+      "options" => [],
+      "verifyMatch" => function ($value, $options) {
+        return ["valid" => true, "value" => $value, "error" => null];
+      }
+    ],
+    "specialRequest" => true,
+    "default" => false,
+    "envFallback" => "CONFIG_IMAP_SERVER",
+  ],
+  "IMAP_PORT" => [
+    "form" => [
+      "type" => "number",
+      "default" => function () {
+        return 993;
+      },
+      "name" => "IMAP Port",
+      "group" => "Email",
+      "description" => "Der Port fuer die IMAP-Verbindung. Standard: 993 (SSL) oder 143 (ohne SSL).",
+      "required" => false,
+      "maxlength" => 255,
+      "minlength" => 0,
+      "options" => [],
+      "verifyMatch" => function ($value, $options) {
+        return ["valid" => true, "value" => $value, "error" => null];
+      }
+    ],
+    "specialRequest" => true,
+    "default" => 993,
+    "envFallback" => "CONFIG_IMAP_PORT",
+  ],
+  "IMAP_ENCRYPTION" => [
+    "form" => [
+      "type" => "select",
+      "default" => function () {
+        return "SSL";
+      },
+      "name" => "IMAP Verschluesselung",
+      "group" => "Email",
+      "description" => "Verschluesselungstyp fuer die IMAP-Verbindung.",
+      "required" => false,
+      "maxlength" => 255,
+      "minlength" => 0,
+      "options" => ["None", "SSL", "TLS"],
+      "verifyMatch" => function ($value, $options) {
+        return ["valid" => in_array($value, $options), "value" => $value, "error" => in_array($value, $options) ? '' : "Invalid option selected"];
+      }
+    ],
+    "specialRequest" => true,
+    "default" => "SSL",
+    "envFallback" => false,
+  ],
+  "IMAP_USERNAME" => [
+    "form" => [
+      "type" => "text",
+      "default" => function () {
+        return "user@example.com";
+      },
+      "name" => "IMAP Benutzername",
+      "group" => "Email",
+      "description" => "Der Benutzername fuer die IMAP-Anmeldung (meistens die E-Mail-Adresse).",
+      "required" => false,
+      "maxlength" => 255,
+      "minlength" => 0,
+      "options" => [],
+      "verifyMatch" => function ($value, $options) {
+        return ["valid" => true, "value" => $value, "error" => null];
+      }
+    ],
+    "specialRequest" => true,
+    "default" => false,
+    "envFallback" => false,
+  ],
+  "IMAP_PASSWORD" => [
+    "form" => [
+      "type" => "secret",
+      "default" => function () {
+        return "";
+      },
+      "name" => "IMAP Passwort",
+      "group" => "Email",
+      "description" => "Das Passwort fuer die IMAP-Anmeldung.",
+      "required" => false,
+      "maxlength" => 255,
+      "minlength" => 0,
+      "options" => [],
+      "verifyMatch" => function ($value, $options) {
+        return ["valid" => true, "value" => $value, "error" => null];
+      }
+    ],
+    "specialRequest" => true,
+    "default" => false,
+    "envFallback" => false,
+  ],
+  "IMAP_FOLDER" => [
+    "form" => [
+      "type" => "text",
+      "default" => function () {
+        return "INBOX";
+      },
+      "name" => "IMAP Ordner",
+      "group" => "Email",
+      "description" => "Welcher Ordner soll abgerufen werden? Standard ist INBOX.",
+      "required" => false,
+      "maxlength" => 255,
+      "minlength" => 0,
+      "options" => [],
+      "verifyMatch" => function ($value, $options) {
+        return ["valid" => true, "value" => $value, "error" => null];
+      }
+    ],
+    "specialRequest" => true,
+    "default" => "INBOX",
+    "envFallback" => false,
+  ],
+  "IMAP_PROCESS_ATTACHMENTS" => [
+    "form" => [
+      "type" => "select",
+      "default" => function () {
+        return "Enabled";
+      },
+      "name" => "IMAP Anhaenge speichern",
+      "group" => "Email",
+      "description" => "Sollen E-Mail-Anhaenge (z.B. PDF-Rechnungen) automatisch heruntergeladen und gespeichert werden?",
+      "required" => false,
+      "maxlength" => 255,
+      "minlength" => 5,
+      "options" => ["Enabled", "Disabled"],
+      "verifyMatch" => function ($value, $options) {
+        return ["valid" => in_array($value, $options), "value" => $value, "error" => in_array($value, $options) ? '' : "Invalid option selected"];
+      }
+    ],
+    "specialRequest" => true,
+    "default" => "Enabled",
+    "envFallback" => false,
+  ],
   "ERRORS_PROVIDERS_SENTRY" => [
     "form" => [
       "type" => "secret",
