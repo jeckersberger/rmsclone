@@ -1,7 +1,7 @@
 <?php
 /** KI-Nutzungsstatistiken abrufen */
 require_once __DIR__ . '/../apiHeadSecure.php';
-if (!$AUTH->instancePermissionCheck("BUSINESS:BUSINESS_SETTINGS:VIEW")) finish(false, ["code" => "PERMISSIONS"]);
+if (!$AUTH->instancePermissionCheck("AI:SETTINGS") && !$AUTH->instancePermissionCheck("BUSINESS:BUSINESS_SETTINGS:VIEW")) finish(false, ["code" => "PERMISSIONS"]);
 
 require_once __DIR__ . '/../../services/ClaudeService.php';
 

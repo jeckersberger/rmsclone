@@ -4,7 +4,7 @@
  * Einfacher CSV-Download: Einnahmen, Ausgaben, Kunden, EUER-Zusammenfassung
  */
 require_once __DIR__ . '/../apiHeadSecure.php';
-if (!$AUTH->instancePermissionCheck("BUSINESS:BUSINESS_SETTINGS:VIEW")) finish(false, ["code" => "PERMISSIONS"]);
+if (!$AUTH->instancePermissionCheck("DATEV:EXPORT") && !$AUTH->instancePermissionCheck("BUSINESS:BUSINESS_SETTINGS:VIEW")) finish(false, ["code" => "PERMISSIONS"]);
 
 $instanceId = $AUTH->data['instance']['instances_id'];
 $exportType = $_REQUEST['type'] ?? 'einnahmen';

@@ -6,7 +6,7 @@
  *   id - emailAttachment_id
  */
 require_once __DIR__ . '/../apiHeadSecure.php';
-if (!$AUTH->instancePermissionCheck("USERS:VIEW:MAILINGS")) finish(false, ["code" => "PERMISSIONS"]);
+if (!$AUTH->instancePermissionCheck("EMAIL_INBOX:VIEW:ATTACHMENTS") && !$AUTH->instancePermissionCheck("USERS:VIEW:MAILINGS")) finish(false, ["code" => "PERMISSIONS"]);
 
 $instanceId = $AUTH->data['instance']['instances_id'];
 $attachmentId = (int)($_GET['id'] ?? 0);

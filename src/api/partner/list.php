@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../apiHeadSecure.php';
-if (!$AUTH->instancePermissionCheck("BUSINESS:BUSINESS_SETTINGS:VIEW")) finish(false, ["code" => "PERMISSIONS"]);
+if (!$AUTH->instancePermissionCheck("PARTNERS:VIEW") && !$AUTH->instancePermissionCheck("BUSINESS:BUSINESS_SETTINGS:VIEW")) finish(false, ["code" => "PERMISSIONS"]);
 
 $svc = new PartnerService($DBLIB);
 $partnerships = $svc->getPartnerships($AUTH->data['instance']['instances_id']);

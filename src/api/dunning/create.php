@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../apiHeadSecure.php';
-if (!$AUTH->instancePermissionCheck("PROJECTS:PROJECT_PAYMENTS:CREATE")) finish(false, ["code" => "PERMISSIONS"]);
+if (!$AUTH->instancePermissionCheck("DUNNING:CREATE") && !$AUTH->instancePermissionCheck("PROJECTS:PROJECT_PAYMENTS:CREATE")) finish(false, ["code" => "PERMISSIONS"]);
 
 $instanceId = $AUTH->data['instance']['instances_id'];
 $docLifecycleId = (int)($_POST['document_lifecycle_id'] ?? 0);

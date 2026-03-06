@@ -7,7 +7,7 @@
  *   project_id - projects_id (oder 0 zum Entfernen)
  */
 require_once __DIR__ . '/../apiHeadSecure.php';
-if (!$AUTH->instancePermissionCheck("PROJECTS:VIEW")) finish(false, ["code" => "PERMISSIONS"]);
+if (!$AUTH->instancePermissionCheck("EMAIL_INBOX:EDIT") && !$AUTH->instancePermissionCheck("PROJECTS:VIEW")) finish(false, ["code" => "PERMISSIONS"]);
 
 $instanceId = $AUTH->data['instance']['instances_id'];
 $emailId = (int)($_POST['id'] ?? 0);

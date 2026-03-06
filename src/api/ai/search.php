@@ -6,7 +6,7 @@
  * Claude wandelt das in SQL-Filter um und gibt passende Ergebnisse zurueck.
  */
 require_once __DIR__ . '/../apiHeadSecure.php';
-if (!$AUTH->instancePermissionCheck("PROJECTS:VIEW")) finish(false, ["code" => "PERMISSIONS"]);
+if (!$AUTH->instancePermissionCheck("AI:VIEW") && !$AUTH->instancePermissionCheck("PROJECTS:VIEW")) finish(false, ["code" => "PERMISSIONS"]);
 
 require_once __DIR__ . '/../../services/ClaudeService.php';
 

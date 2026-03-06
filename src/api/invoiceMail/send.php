@@ -3,7 +3,7 @@
  * Rechnung/Angebot per E-Mail an Kunden versenden
  */
 require_once __DIR__ . '/../apiHeadSecure.php';
-if (!$AUTH->instancePermissionCheck("PROJECTS:VIEW")) finish(false, ["code" => "PERMISSIONS"]);
+if (!$AUTH->instancePermissionCheck("EMAIL_OUTBOX:SEND") && !$AUTH->instancePermissionCheck("PROJECTS:VIEW")) finish(false, ["code" => "PERMISSIONS"]);
 
 $instanceId = $AUTH->data['instance']['instances_id'];
 $projectId = (int)($_POST['project_id'] ?? 0);

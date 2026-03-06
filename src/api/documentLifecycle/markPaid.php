@@ -5,7 +5,7 @@
  * POST: doc_id, amount, reference (optional), partial (optional, 0|1)
  */
 require_once __DIR__ . '/../apiHeadSecure.php';
-if (!$AUTH->instancePermissionCheck("PROJECTS:PROJECT_PAYMENTS:CREATE")) finish(false, ["code" => "PERMISSIONS"]);
+if (!$AUTH->instancePermissionCheck("DOCUMENTS:EDIT") && !$AUTH->instancePermissionCheck("PROJECTS:PROJECT_PAYMENTS:CREATE")) finish(false, ["code" => "PERMISSIONS"]);
 
 $docId = (int)($_POST['doc_id'] ?? 0);
 $amount = (float)str_replace(',', '.', $_POST['amount'] ?? '0');

@@ -5,7 +5,7 @@
  * Erstellt professionelle E-Mail-Texte fuer Angebote, Rechnungen, Mahnungen etc.
  */
 require_once __DIR__ . '/../apiHeadSecure.php';
-if (!$AUTH->instancePermissionCheck("PROJECTS:VIEW")) finish(false, ["code" => "PERMISSIONS"]);
+if (!$AUTH->instancePermissionCheck("AI:VIEW") && !$AUTH->instancePermissionCheck("PROJECTS:VIEW")) finish(false, ["code" => "PERMISSIONS"]);
 
 require_once __DIR__ . '/../../services/ClaudeService.php';
 require_once __DIR__ . '/../../services/BusinessRepo.php';

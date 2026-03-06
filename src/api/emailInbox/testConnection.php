@@ -12,7 +12,7 @@
 require_once __DIR__ . '/../apiHeadSecure.php';
 require_once __DIR__ . '/../../services/ImapMailService.php';
 
-if (!$AUTH->instancePermissionCheck("INSTANCES:EDIT")) finish(false, ["code" => "PERMISSIONS"]);
+if (!$AUTH->instancePermissionCheck("EMAIL_INBOX:SETTINGS") && !$AUTH->instancePermissionCheck("INSTANCES:EDIT")) finish(false, ["code" => "PERMISSIONS"]);
 
 $instanceId = $AUTH->data['instance']['instances_id'];
 

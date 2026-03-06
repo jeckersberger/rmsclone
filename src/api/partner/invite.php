@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../apiHeadSecure.php';
-if (!$AUTH->instancePermissionCheck("BUSINESS:BUSINESS_SETTINGS:EDIT")) finish(false, ["code" => "PERMISSIONS"]);
+if (!$AUTH->instancePermissionCheck("PARTNERS:CREATE") && !$AUTH->instancePermissionCheck("BUSINESS:BUSINESS_SETTINGS:EDIT")) finish(false, ["code" => "PERMISSIONS"]);
 
 $partnerCode = trim($_POST['partner_code'] ?? '');
 if (!$partnerCode || !preg_match('/^[A-Fa-f0-9]{6,16}$/', $partnerCode)) {
