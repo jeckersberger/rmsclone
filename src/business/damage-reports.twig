@@ -24,6 +24,7 @@
                 <div class="form-group">
                     <label>{{ t('description') }}</label>
                     <textarea class="form-control" id="damageDescription" rows="3" placeholder="{{ t('damage_description_placeholder') }}"></textarea>
+                    <button class="btn btn-xs btn-outline-info mt-1" id="aiDamageDescBtn"><i class="fas fa-robot"></i> KI-Beschreibung generieren</button>
                 </div>
                 <div class="form-group">
                     <label>{{ t('repair_estimate') }} (&euro;)</label>
@@ -183,6 +184,29 @@ $(document).ready(function() {
         var id = $(this).data('id');
         var status = $(this).data('status');
         ajaxcall('damage/updateStatus.php', {report_id: id, status: status}, function() { loadReports(); });
+    });
+
+    // AI damage description
+    $('#aiDamageDescBtn').on('click', function() {
+        var tag = $('#damageAssetTag').val().trim();
+        var severity = $('#damageSeverity').val();
+        var existing = $('#damageDescription').val().trim();
+        if (!tag) { bootbox.alert('Bitte zuerst ein Asset-Tag eingeben.'); return; }
+        var btn = $(this);
+        btn.html('<i class="fas fa-spinner fa-spin"></i> Generiere...').prop('disabled', true);
+        ajaxcall('ai/damageReport.php', {
+            asset_tag: tag,
+            severity: severity,
+            notes: existing
+        }, function(data) {
+            btn.html('<i class="fas fa-robot"></i> KI-Beschreibung generieren').prop('disabled', false);
+            if (data.response && data.response.description) {
+                $('#damageDescription').val(data.response.description);
+            }
+        }, function() {
+            btn.html('<i class="fas fa-robot"></i> KI-Beschreibung generieren').prop('disabled', false);
+            bootbox.alert('KI-Beschreibung konnte nicht generiert werden.');
+        });
     });
 });
 </script>

@@ -48,22 +48,24 @@ if (!$sent) {
     finish(false, ["code" => "SEND_FAILED", "message" => "E-Mail konnte nicht gesendet werden"]);
 }
 
+// Absender-Daten aus Instanz
+$fromEmail = $AUTH->data['instance']['instances_email'] ?? '';
+$fromName = $AUTH->data['instance']['instances_name'] ?? '';
+
 // In Sent-Tabelle speichern
 $DBLIB->insert('emailSent', [
-    'instances_id' => $instanceId,
-    'emailSent_to' => $to,
+    'users_userid' => $userId,
+    'emailSent_toEmail' => $to,
     'emailSent_toName' => $toName,
     'emailSent_subject' => $subject,
-    'emailSent_body' => $body,
-    'emailSent_date' => date('Y-m-d H:i:s'),
-    'emailSent_sentBy' => $userId,
-    'emailReceived_id' => $replyToId > 0 ? $replyToId : null,
+    'emailSent_html' => $body,
+    'emailSent_fromEmail' => $fromEmail,
+    'emailSent_fromName' => $fromName,
 ]);
 
 // Falls Antwort: Original als beantwortet markieren
 if ($replyToId > 0) {
     $DBLIB->where('emailReceived_id', $replyToId);
-    $DBLIB->where('instances_id', $instanceId);
     $DBLIB->update('emailReceived', ['emailReceived_replied' => 1]);
 }
 

@@ -112,7 +112,9 @@
             <div class="card-header">
                 <h3 class="card-title"><i class="fas fa-inbox"></i> Posteingang</h3>
                 <div class="card-tools">
+                    {% if "EMAIL_INBOX:EDIT"|instancePermissions %}
                     <button class="btn btn-sm btn-primary" onclick="openCompose()"><i class="fas fa-pen"></i> Neue E-Mail</button>
+                    {% endif %}
                     <button class="btn btn-sm btn-outline-secondary" onclick="loadEmails(currentPage)" title="Aktualisieren"><i class="fas fa-sync"></i></button>
                 </div>
             </div>
