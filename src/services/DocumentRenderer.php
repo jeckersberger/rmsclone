@@ -97,8 +97,10 @@ class DocumentRenderer {
     ];
 
     // 10) Try custom template first, fall back to built-in
-    $tpl = $db->fetchRow("SELECT * FROM document_templates WHERE instances_id=? AND type=? AND `key`=?",
-      [$instanceId, $type, $templateKey]);
+    $db->where('instances_id', $instanceId);
+    $db->where('type', $type);
+    $db->where('key', $templateKey);
+    $tpl = $db->getOne('document_templates');
 
     if ($tpl) {
       $twig = new TwigEnv(new ArrayLoader(['tpl' => $tpl['twig_html']]), ['cache'=>false,'autoescape'=>false]);
