@@ -22,7 +22,17 @@ $DBLIB->where("instances_id",$AUTH->data['instance']["instances_id"]);
 if (isset($array['instances_skontoRate'])) $array['instances_skontoRate'] = max(0, min(100, (float)str_replace(',', '.', $array['instances_skontoRate'])));
 if (isset($array['instances_skontoDays'])) $array['instances_skontoDays'] = max(0, (int)$array['instances_skontoDays']);
 
-$result = $DBLIB->update("instances", array_intersect_key( $array, array_flip( ["instances_name","instances_address","instances_phone","instances_email","instances_website","instances_weekStartDates","instances_logo","instances_emailHeader","instances_termsAndPayment", "instances_quoteTerms", "instances_cableColours", "instances_taxNumber","instances_vatId","instances_kurEnabled","instances_vatRate","instances_bankName","instances_bankIban","instances_bankBic","instances_paymentTermDays","instances_skontoRate","instances_skontoDays","instances_courtOfJurisdiction","instances_ceoName","instances_companyRegNumber","instances_locale"] ) ));
+// Sanitise AI fields
+if (isset($array['instances_aiEnabled'])) $array['instances_aiEnabled'] = ($array['instances_aiEnabled'] == '1' || $array['instances_aiEnabled'] === 'on') ? 1 : 0;
+$aiFeatureToggles = ['instances_aiFeatureInvoiceScan','instances_aiFeatureSearch','instances_aiFeatureEmailDraft',
+    'instances_aiFeatureQuoteAssist','instances_aiFeatureProjectSummary','instances_aiFeatureExpenseCategory',
+    'instances_aiFeatureContractAnalysis','instances_aiFeaturePriceSuggestion','instances_aiFeatureDamageReport'];
+foreach ($aiFeatureToggles as $toggle) {
+    if (isset($array[$toggle])) $array[$toggle] = ($array[$toggle] == '1' || $array[$toggle] === 'on') ? 1 : 0;
+}
+if (isset($array['instances_aiApiKey'])) $array['instances_aiApiKey'] = trim($array['instances_aiApiKey']);
+
+$result = $DBLIB->update("instances", array_intersect_key( $array, array_flip( ["instances_name","instances_address","instances_phone","instances_email","instances_website","instances_weekStartDates","instances_logo","instances_emailHeader","instances_termsAndPayment", "instances_quoteTerms", "instances_cableColours", "instances_taxNumber","instances_vatId","instances_kurEnabled","instances_vatRate","instances_bankName","instances_bankIban","instances_bankBic","instances_paymentTermDays","instances_skontoRate","instances_skontoDays","instances_courtOfJurisdiction","instances_ceoName","instances_companyRegNumber","instances_locale","instances_aiEnabled","instances_aiApiKey","instances_aiModel","instances_aiFeatureInvoiceScan","instances_aiFeatureSearch","instances_aiFeatureEmailDraft","instances_aiFeatureQuoteAssist","instances_aiFeatureProjectSummary","instances_aiFeatureExpenseCategory","instances_aiFeatureContractAnalysis","instances_aiFeaturePriceSuggestion","instances_aiFeatureDamageReport"] ) ));
 echo $DBLIB->getLastError();
 if (!$result) finish(false, ["code" => "UPDATE-FAIL", "message"=> "Could not update instance"]);
 else {

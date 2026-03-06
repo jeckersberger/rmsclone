@@ -1,0 +1,240 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+			<div class="card-header">
+				<ul class="nav nav-pills">
+					<li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/navigation.php"><i class="fas fa-arrow-left"></i> Einstellungen</a></li>
+					<li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/billing.php">Abrechnung</a></li>
+					<li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/settings.php">Grundeinstellungen</a></li>
+					{% if CONFIG.FILES_ENABLED == "Enabled" and USERDATA.instance.instances_storageEnabled == 1 %}
+					<li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/configuration/logo.php">Logo</a></li>
+                    {% endif %}
+					<li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/germanSettings.php">Geschaeftsdaten</a></li>
+					<li class="nav-item"><a class="nav-link active" href="{{CONFIG.ROOTURL}}/instances/aiSettings.php">KI-Einstellungen</a></li>
+				</ul>
+			</div>
+		</div>
+    </div>
+</div>
+
+{# ── KI Global ── #}
+<div class="row">
+    <div class="col-12 col-md-8 offset-md-2">
+        <div class="card">
+            <form id="aiGlobalSettings">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-robot"></i> KI-Konfiguration</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" id="aiEnabledToggle" name="instances_aiEnabled"
+                                   {{ USERDATA.instance.instances_aiEnabled == 1 ? 'checked' : '' }}>
+                            <label class="custom-control-label" for="aiEnabledToggle"><b>KI-Features aktivieren</b></label>
+                        </div>
+                        <small class="form-text text-muted">Aktiviert KI-gestuetzte Funktionen. Benoetigt einen Claude API-Key.</small>
+                    </div>
+
+                    <div id="aiConfigSection" style="{{ USERDATA.instance.instances_aiEnabled != 1 ? 'display:none' : '' }}">
+                        <div class="form-group">
+                            <label>Claude API-Key</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" name="instances_aiApiKey" id="aiApiKey"
+                                       value="{{ USERDATA.instance.instances_aiApiKey }}"
+                                       placeholder="sk-ant-...">
+                                <div class="input-group-append">
+                                    <button type="button" class="btn btn-outline-secondary" id="toggleKeyVisibility">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <small class="form-text text-muted">
+                                API-Key von <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a>.
+                                Wird sicher gespeichert. Kosten: ca. 1-2 EUR/Monat bei normaler Nutzung.
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Standard-Modell</label>
+                            <select class="form-control" name="instances_aiModel" style="max-width:350px;">
+                                <option value="claude-haiku-4-5-20251001" {{ USERDATA.instance.instances_aiModel == 'claude-haiku-4-5-20251001' ? 'selected' : '' }}>
+                                    Haiku 4.5 (schnell + guenstig)
+                                </option>
+                                <option value="claude-sonnet-4-6" {{ USERDATA.instance.instances_aiModel == 'claude-sonnet-4-6' ? 'selected' : '' }}>
+                                    Sonnet 4.6 (praeziser, teurer)
+                                </option>
+                            </select>
+                            <small class="form-text text-muted">Haiku reicht fuer die meisten Aufgaben voellig aus.</small>
+                        </div>
+
+                        <hr>
+                        <h6><i class="fas fa-sliders-h"></i> Features einzeln aktivieren</h6>
+                        <p class="text-muted small">Deaktivierte Features werden in der Oberflaeche ausgeblendet und erzeugen keine API-Kosten.</p>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="custom-control custom-switch mb-2">
+                                    <input type="checkbox" class="custom-control-input ai-feature-toggle" id="feat_invoiceScan" name="instances_aiFeatureInvoiceScan"
+                                           {{ USERDATA.instance.instances_aiFeatureInvoiceScan != 0 ? 'checked' : '' }}>
+                                    <label class="custom-control-label" for="feat_invoiceScan">
+                                        <i class="fas fa-file-invoice text-primary"></i> PDF-Rechnungen auslesen
+                                    </label>
+                                </div>
+                                <div class="custom-control custom-switch mb-2">
+                                    <input type="checkbox" class="custom-control-input ai-feature-toggle" id="feat_search" name="instances_aiFeatureSearch"
+                                           {{ USERDATA.instance.instances_aiFeatureSearch != 0 ? 'checked' : '' }}>
+                                    <label class="custom-control-label" for="feat_search">
+                                        <i class="fas fa-search text-success"></i> Intelligente Suche
+                                    </label>
+                                </div>
+                                <div class="custom-control custom-switch mb-2">
+                                    <input type="checkbox" class="custom-control-input ai-feature-toggle" id="feat_emailDraft" name="instances_aiFeatureEmailDraft"
+                                           {{ USERDATA.instance.instances_aiFeatureEmailDraft != 0 ? 'checked' : '' }}>
+                                    <label class="custom-control-label" for="feat_emailDraft">
+                                        <i class="fas fa-envelope text-info"></i> E-Mail-Entwuerfe
+                                    </label>
+                                </div>
+                                <div class="custom-control custom-switch mb-2">
+                                    <input type="checkbox" class="custom-control-input ai-feature-toggle" id="feat_quoteAssist" name="instances_aiFeatureQuoteAssist"
+                                           {{ USERDATA.instance.instances_aiFeatureQuoteAssist != 0 ? 'checked' : '' }}>
+                                    <label class="custom-control-label" for="feat_quoteAssist">
+                                        <i class="fas fa-magic text-warning"></i> Angebots-Assistent
+                                    </label>
+                                </div>
+                                <div class="custom-control custom-switch mb-2">
+                                    <input type="checkbox" class="custom-control-input ai-feature-toggle" id="feat_projectSummary" name="instances_aiFeatureProjectSummary"
+                                           {{ USERDATA.instance.instances_aiFeatureProjectSummary != 0 ? 'checked' : '' }}>
+                                    <label class="custom-control-label" for="feat_projectSummary">
+                                        <i class="fas fa-clipboard-list text-secondary"></i> Projekt-Zusammenfassungen
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="custom-control custom-switch mb-2">
+                                    <input type="checkbox" class="custom-control-input ai-feature-toggle" id="feat_expenseCategory" name="instances_aiFeatureExpenseCategory"
+                                           {{ USERDATA.instance.instances_aiFeatureExpenseCategory != 0 ? 'checked' : '' }}>
+                                    <label class="custom-control-label" for="feat_expenseCategory">
+                                        <i class="fas fa-tags text-danger"></i> Ausgaben-Kategorisierung
+                                    </label>
+                                </div>
+                                <div class="custom-control custom-switch mb-2">
+                                    <input type="checkbox" class="custom-control-input ai-feature-toggle" id="feat_contractAnalysis" name="instances_aiFeatureContractAnalysis"
+                                           {{ USERDATA.instance.instances_aiFeatureContractAnalysis != 0 ? 'checked' : '' }}>
+                                    <label class="custom-control-label" for="feat_contractAnalysis">
+                                        <i class="fas fa-file-contract text-dark"></i> Vertragsanalyse
+                                    </label>
+                                </div>
+                                <div class="custom-control custom-switch mb-2">
+                                    <input type="checkbox" class="custom-control-input ai-feature-toggle" id="feat_priceSuggestion" name="instances_aiFeaturePriceSuggestion"
+                                           {{ USERDATA.instance.instances_aiFeaturePriceSuggestion != 0 ? 'checked' : '' }}>
+                                    <label class="custom-control-label" for="feat_priceSuggestion">
+                                        <i class="fas fa-chart-line text-success"></i> Preisvorschlaege
+                                    </label>
+                                </div>
+                                <div class="custom-control custom-switch mb-2">
+                                    <input type="checkbox" class="custom-control-input ai-feature-toggle" id="feat_damageReport" name="instances_aiFeatureDamageReport"
+                                           {{ USERDATA.instance.instances_aiFeatureDamageReport != 0 ? 'checked' : '' }}>
+                                    <label class="custom-control-label" for="feat_damageReport">
+                                        <i class="fas fa-camera text-danger"></i> Schadensbericht aus Foto
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    {% if "BUSINESS:BUSINESS_SETTINGS:EDIT"|instancePermissions %}
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Speichern</button>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# ── Nutzungsstatistik ── #}
+<div class="row" id="aiUsageSection" style="{{ USERDATA.instance.instances_aiEnabled != 1 ? 'display:none' : '' }}">
+    <div class="col-12 col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-chart-bar"></i> KI-Nutzung diesen Monat</h3>
+            </div>
+            <div class="card-body" id="aiUsageBody">
+                <div class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> Lade...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    $('#aiEnabledToggle').change(function() {
+        $('#aiConfigSection').toggle(this.checked);
+        $('#aiUsageSection').toggle(this.checked);
+    });
+
+    $('#toggleKeyVisibility').click(function() {
+        var input = $('#aiApiKey');
+        if (input.attr('type') === 'password') {
+            input.attr('type', 'text');
+            $(this).html('<i class="fas fa-eye-slash"></i>');
+        } else {
+            input.attr('type', 'password');
+            $(this).html('<i class="fas fa-eye"></i>');
+        }
+    });
+
+    {% if "BUSINESS:BUSINESS_SETTINGS:EDIT"|instancePermissions %}
+    $('#aiGlobalSettings').on('submit', function(e) {
+        e.preventDefault();
+        var formData = $(this).serializeArray();
+
+        // Handle unchecked checkboxes
+        var checkboxes = ['instances_aiEnabled', 'instances_aiFeatureInvoiceScan', 'instances_aiFeatureSearch',
+            'instances_aiFeatureEmailDraft', 'instances_aiFeatureQuoteAssist', 'instances_aiFeatureProjectSummary',
+            'instances_aiFeatureExpenseCategory', 'instances_aiFeatureContractAnalysis',
+            'instances_aiFeaturePriceSuggestion', 'instances_aiFeatureDamageReport'];
+        checkboxes.forEach(function(name) {
+            var found = false;
+            for (var i = 0; i < formData.length; i++) {
+                if (formData[i].name === name) { formData[i].value = '1'; found = true; }
+            }
+            if (!found) formData.push({name: name, value: '0'});
+        });
+
+        ajaxcall("instances/editInstance.php", {formData: formData}, function() {
+            location.reload();
+        }, false);
+    });
+    {% endif %}
+
+    // Load usage stats
+    if ($('#aiEnabledToggle').is(':checked')) {
+        ajaxcall('ai/usage.php', {}, function(data) {
+            if (!data.response) { $('#aiUsageBody').html('<p class="text-muted">Keine Daten</p>'); return; }
+            var stats = data.response;
+            var html = '<div class="row">';
+            html += '<div class="col-4 text-center"><h3>' + stats.total_calls + '</h3><small class="text-muted">API-Aufrufe</small></div>';
+            html += '<div class="col-4 text-center"><h3>$' + parseFloat(stats.total_cost_usd).toFixed(4) + '</h3><small class="text-muted">Geschaetzte Kosten (USD)</small></div>';
+            html += '<div class="col-4 text-center"><h3>~' + (parseFloat(stats.total_cost_usd) * 0.92).toFixed(2) + ' EUR</h3><small class="text-muted">Geschaetzte Kosten (EUR)</small></div>';
+            html += '</div>';
+            if (stats.by_feature && stats.by_feature.length > 0) {
+                html += '<hr><table class="table table-sm"><thead><tr><th>Feature</th><th>Aufrufe</th><th>Tokens</th><th>Kosten</th></tr></thead><tbody>';
+                var labels = {invoice_scan:'PDF auslesen',search:'Suche',email_draft:'E-Mail',quote_assist:'Angebot',
+                    project_summary:'Zusammenfassung',expense_category:'Kategorisierung',contract_analysis:'Vertrag',
+                    price_suggestion:'Preise',damage_report:'Schaden'};
+                stats.by_feature.forEach(function(f) {
+                    html += '<tr><td>' + (labels[f.feature] || f.feature) + '</td><td>' + f.calls + '</td>';
+                    html += '<td>' + (parseInt(f.total_input)+parseInt(f.total_output)) + '</td>';
+                    html += '<td>$' + parseFloat(f.total_cost).toFixed(4) + '</td></tr>';
+                });
+                html += '</tbody></table>';
+            }
+            $('#aiUsageBody').html(html);
+        }, false);
+    }
+});
+</script>
+{% endblock %}
