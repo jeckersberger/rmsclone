@@ -1,8 +1,15 @@
 <?php
 require_once __DIR__ . '/../../apiHead.php';
 
-\Stripe\Stripe::setApiKey($CONFIGCLASS->get('STRIPE_KEY'));
-$stripe = new \Stripe\StripeClient($CONFIGCLASS->get('STRIPE_KEY'));
+$stripeKey = $CONFIGCLASS->get('STRIPE_KEY');
+if (!$stripeKey || strlen($stripeKey) === 0) {
+    http_response_code(503);
+    echo 'Stripe billing not configured.';
+    exit();
+}
+
+\Stripe\Stripe::setApiKey($stripeKey);
+$stripe = new \Stripe\StripeClient($stripeKey);
 
 function handleWebhook($subscription)  // contains a \Stripe\Subscription
 {
