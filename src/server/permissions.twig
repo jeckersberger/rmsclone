@@ -5,7 +5,7 @@
 		<div class="col-lg-6 offset-lg-3 col-md-12">
 			<div class="alert alert-warning alert-dismissible">
 				<h5><i class="icon fas fa-info"></i> Server-Wide Configuration</h5>
-				You are modifying settings and configuration that affect the whole of the {{ CONFIG.PROJECT_NAME }} Server, including all businesses (instances) running on it. Please be careful when making changes here.
+				Sie aendern Einstellungen, die den gesamten {{ CONFIG.PROJECT_NAME }}-Server betreffen, einschliesslich aller darauf laufenden Betriebe (Instanzen). Bitte seien Sie vorsichtig.
 			</div>
 		</div>
 	</div>
@@ -102,7 +102,7 @@ $(document).ready(function() {
 					$("#loading").hide();
                     location.reload();
 				} else {
-					bootbox.alert(result + "Sorry - Operation could not be completed! Please try again!", function() {
+					bootbox.alert(result + "Vorgang konnte nicht abgeschlossen werden! Bitte versuchen Sie es erneut!", function() {
 						location.reload();
 					});
 				}

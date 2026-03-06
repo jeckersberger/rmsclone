@@ -5,7 +5,7 @@
             var id = $(this).data("s3fileid");
             var filename = $(this).data("s3filename");
             bootbox.prompt({
-                title: "Edit file name",
+                title: "Dateiname bearbeiten",
                 inputType: 'textarea',
                 value: filename,
                 callback: function (result) {
@@ -25,14 +25,14 @@
         $(".deleteFile").click(function () {
             var id = $(this).data("s3fileid");
             bootbox.confirm({
-                message: "Are you sure you wish to delete this file?",
+                message: "Sind Sie sicher, dass Sie diese Datei loeschen moechten?",
                 buttons: {
                     confirm: {
-                        label: 'Yes',
+                        label: 'Ja',
                         className: 'btn-success'
                     },
                     cancel: {
-                        label: 'Cancel',
+                        label: 'Abbrechen',
                         className: 'btn-default'
                     }
                 },
@@ -52,24 +52,24 @@
         {% if "FILES:FILE_ATTACHMENTS:EDIT:SHARING_SETTINGS"|instancePermissions %}
         function showShareKeyDialog(file,shareKey) {
             bootbox.dialog({
-                title: 'Shared File',
-                message: '<p>This file has been shared, which makes it visible to everyone on the web - be careful when publishing private or sensitive information.</p><div class="input-group"><input type="text" class="form-control" value="' + "{{ CONFIG.ROOTURL }}/api/file/?r&f=" + file + "&key=" + shareKey + '" disabled><span class="input-group-btn"><button class="btn btn-default copybutton" type="button" title="Copy to Clipboard">Copy</button></span></div>',
+                title: 'Geteilte Datei',
+                message: '<p>This file has been shared, which makes it fuer jeden im Internet sichtbar - Seien Sie vorsichtig beim Veroeffentlichen privater oder sensibler Informationen.</p><div class="input-group"><input type="text" class="form-control" value="' + "{{ CONFIG.ROOTURL }}/api/file/?r&f=" + file + "&key=" + shareKey + '" disabled><span class="input-group-btn"><button class="btn btn-default copybutton" type="button" title="Copy to Clipboard">Copy</button></span></div>',
                 size: 'large',
                 buttons: {
                     disableshare: {
-                        label: "Disable Sharing for this File",
+                        label: "Freigabe fuer diese Datei deaktivieren",
                         className: 'btn-danger',
                         callback: function(){
                             ajaxcall("file/removeShare.php", {
                                 "s3files_id": file
                             }, function (data) {
                                 $(".shareFile[data-s3fileid=" + file + "]").data("s3filesharekey","");
-                                bootbox.alert("Sharing for this file is now disabled");
+                                bootbox.alert("Die Freigabe fuer diese Datei ist jetzt deaktiviert");
                             });
                         }
                     },
                     regenerateshare: {
-                        label: "Generate replacement share link",
+                        label: "Neuen Freigabelink generieren",
                         className: 'btn-warning',
                         callback: function(){
                             ajaxcall("file/share.php", {
@@ -81,7 +81,7 @@
                         }
                     },
                     ok: {
-                        label: "Close",
+                        label: "Schliessen",
                         className: 'btn-default',
                         callback: function(){
                             return true;
@@ -97,15 +97,15 @@
                 showShareKeyDialog(id,shareKey);
             } else {
                 bootbox.confirm({
-                    title: "Share File?",
-                    message: "Are you sure you wish to share this file - it will be accessible to anyone with the link",
+                    title: "Datei freigeben?",
+                    message: "Sind Sie sicher, dass Sie diese Datei freigeben moechten? Sie ist dann fuer jeden mit dem Link zugaenglich",
                     buttons: {
                         confirm: {
-                            label: 'Share File',
+                            label: 'Datei freigeben',
                             className: 'btn-warning'
                         },
                         cancel: {
-                            label: 'Cancel',
+                            label: 'Abbrechen',
                             className: 'btn-default'
                         }
                     },

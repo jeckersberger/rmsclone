@@ -39,7 +39,7 @@
                         //Checking on the form completed
                         //value.name =
                     } else {
-                        uppy.info(`Please specify an image credit`, 'error')
+                        uppy.info(`Bitte geben Sie eine Bildquelle an`, 'error')
                         return false;
                     }
                     {% endif %}
@@ -103,7 +103,7 @@
                 {{ thisElementID }}.reset();
             {% endif %}
         }).on('upload-error', (file, error, response) => {
-            bootbox.alert("Sorry - Upload encountered a problem", function () {
+            bootbox.alert("Upload-Fehler aufgetreten", function () {
                 location.reload();
             });
         })

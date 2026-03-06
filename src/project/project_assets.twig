@@ -182,7 +182,7 @@
             if (selected.length > 0) {
                 bootbox.prompt({
                     title: "Kommentar setzen",
-                    message: "This will override any existing comments set in this project for the assets selected",
+                    message: "Dies ueberschreibt alle bestehenden Kommentare fuer die ausgewaehlten Assets",
                     inputType: 'text',
                     callback: function (result) {
                         if (result) {
@@ -204,7 +204,7 @@
             if (selected.length > 0) {
                 bootbox.prompt({
                     title: "Preis anpassen",
-                    message: "This will override the automatic calculation of the hire cost normally based on the length of the project and instead fix it to value set here<br/>Setting a custom price of 0 will remove any custom prices set<br/><br/>This will override any existing custom prices set in this project for the assets selected",
+                    message: "Dies ueberschreibt die automatische Berechnung der Mietkosten normally based on the length of the project and instead fix it to value set here<br/>Setting a custom price of 0 will remove any custom prices set<br/><br/>This will override any existing custom prices set in this project for the assets selected",
                     inputType: 'number',
                     min: 0,
                     step: 0.01,
@@ -228,7 +228,7 @@
             if (selected.length > 0) {
                 bootbox.prompt({
                     title: "Rabatt setzen",
-                    message: "Discounts the selected assets by a percentage.<br /><br />E.g. Inputting 20 would multiply the price by 0.8, inputting 100 would set the price to 0, or inputting 0 would be full price.<br />This will override any existing discounts set in this project for the assets selected.",
+                    message: "Rabattiert die ausgewaehlten Assets um einen Prozentsatz.<br /><br />E.g. Inputting 20 would multiply the price by 0.8, inputting 100 would set the price to 0, or inputting 0 would be full price.<br />This will override any existing discounts set in this project for the assets selected.",
                     inputType: 'number',
                     min: 0,
                     max: 100,
@@ -304,7 +304,7 @@
                         )
                         bootbox.prompt({
                             title: "Asset tauschen",
-                            message: "Replace asset with: ",
+                            message: "Asset ersetzen durch: ",
                             inputType: 'select',
                             inputOptions: alternatives,
                             callback: function (result) {

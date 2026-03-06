@@ -322,14 +322,14 @@
                     var instanceId = $(this).data("instanceid");
                     $("#loadingoverlay").show();
                     bootbox.confirm({
-                        message: "Are you sure you wish to soft-delete this instance? The instance can be restored.",
+                        message: "Sind Sie sicher, dass Sie diese Instanz loeschen moechten? Die Instanz kann wiederhergestellt werden.",
                         buttons: {
                             confirm: {
-                                label: 'Yes',
+                                label: 'Ja',
                                 className: 'btn-danger'
                             },
                             cancel: {
-                                label: 'No',
+                                label: 'Nein',
                                 className: 'btn-success'
                             }
                         },
@@ -357,14 +357,14 @@
                     var instanceId = $(this).data("instanceid");
                     $("#loadingoverlay").show();
                     bootbox.confirm({
-                        message: "Are you sure you wish to hard-delete this instance? This is a permanent action and cannot be undone, there is no option to restore this instance.",
+                        message: "Sind Sie sicher, dass Sie diese Instanz endgueltig loeschen moechten? Diese Aktion kann nicht rueckgaengig gemacht werden.",
                         buttons: {
                             confirm: {
-                                label: 'Yes',
+                                label: 'Ja',
                                 className: 'btn-danger'
                             },
                             cancel: {
-                                label: 'No',
+                                label: 'Nein',
                                 className: 'btn-success'
                             }
                         },

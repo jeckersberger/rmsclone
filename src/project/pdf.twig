@@ -536,11 +536,11 @@
                             setTimeout(() => {window.close()}, 100)
                         });
                     } else {
-                        alert("Error loading PDF");
+                        alert("Fehler beim Laden der PDF");
                     }
                 };
                 oReq.onerror = function(error) {
-                    alert("Error creating invoice");
+                    alert("Fehler beim Erstellen der Rechnung");
                 }
                 oReq.send(formData);
             });

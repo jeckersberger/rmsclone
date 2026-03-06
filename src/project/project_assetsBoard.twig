@@ -256,7 +256,7 @@
                 error: function (jqXHR, textStatus, errorThrown) {
                     console.log(jqXHR, textStatus, errorThrown);
                     console.log("Connection Error");
-                    bootbox.alert('Sorry we couldn\'t connect to the internet - please check your connection', function () {
+                    bootbox.alert('Verbindungsfehler - bitte pruefen Sie Ihre Internetverbindung', function () {
                         location.reload();
                     });
                 }
