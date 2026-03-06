@@ -1,0 +1,232 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+
+{# Filter & Suche #}
+<div class="row">
+    <div class="col-12">
+        <div class="card collapsed-card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-filter"></i> Filter</h3>
+                <div class="card-tools">
+                    <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Suche</label>
+                            <input type="text" class="form-control" id="filterSearch" placeholder="Betreff, Empfaenger...">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>Von</label>
+                            <input type="date" class="form-control" id="filterFrom">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>Bis</label>
+                            <input type="date" class="form-control" id="filterTo">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label>&nbsp;</label>
+                            <button class="btn btn-primary btn-block" onclick="loadSent(1)"><i class="fas fa-search"></i> Filtern</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# E-Mail Liste #}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-paper-plane"></i> Gesendete E-Mails</h3>
+                <div class="card-tools">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="loadSent(currentPage)" title="Aktualisieren"><i class="fas fa-sync"></i></button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="overlay" id="loadingOverlay"><i class="fas fa-sync fa-spin fa-3x"></i></div>
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped">
+                        <thead>
+                            <tr>
+                                <th style="width: 200px">Empfaenger</th>
+                                <th>Betreff</th>
+                                <th style="width: 200px">Von</th>
+                                <th style="width: 150px">Gesendet</th>
+                                <th style="width: 80px">Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody id="emailList">
+                            <tr><td colspan="5" class="text-center text-muted p-4">Laden...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer clearfix">
+                <div class="float-left text-muted" id="paginationInfo">-</div>
+                <ul class="pagination pagination-sm m-0 float-right" id="pagination"></ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# E-Mail Detail Modal #}
+<div class="modal fade" id="sentDetailModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="sentDetailSubject">E-Mail</h5>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Von:</strong> <span id="sentDetailFrom"></span>
+                    </div>
+                    <div class="col-md-6 text-right">
+                        <strong>Gesendet:</strong> <span id="sentDetailDate"></span>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>An:</strong> <span id="sentDetailTo"></span>
+                    </div>
+                </div>
+                <hr>
+                <div id="sentDetailBody" style="max-height: 500px; overflow-y: auto;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Schliessen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+var currentPage = 1;
+
+$(document).ready(function() {
+    loadSent(1);
+
+    $('#filterSearch').on('keypress', function(e) {
+        if (e.which === 13) loadSent(1);
+    });
+});
+
+function loadSent(page) {
+    currentPage = page;
+    $('#loadingOverlay').show();
+
+    var params = { page: page, limit: 25 };
+    var search = $('#filterSearch').val();
+    var from = $('#filterFrom').val();
+    var to = $('#filterTo').val();
+
+    if (search) params.search = search;
+    if (from) params.from = from;
+    if (to) params.to = to;
+
+    $.get('{{ CONFIG.ROOTURL }}/api/emailSent/list.php', params, function(resp) {
+        $('#loadingOverlay').hide();
+        if (!resp.result) {
+            $('#emailList').html('<tr><td colspan="5" class="text-center text-danger p-4">Fehler beim Laden.</td></tr>');
+            return;
+        }
+
+        var emails = resp.response.emails;
+        var pag = resp.response.pagination;
+
+        var html = '';
+        if (emails.length === 0) {
+            html = '<tr><td colspan="5" class="text-center text-muted p-4">Keine gesendeten E-Mails gefunden.</td></tr>';
+        }
+
+        for (var i = 0; i < emails.length; i++) {
+            var e = emails[i];
+            var date = new Date(e.emailSent_sent);
+            var dateStr = date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+            html += '<tr style="cursor:pointer;" onclick="viewSent(' + e.emailSent_id + ')">';
+            html += '<td>' + escHtml(e.emailSent_toName || e.emailSent_toEmail) + '</td>';
+            html += '<td>' + escHtml(e.emailSent_subject || '(Kein Betreff)') + '</td>';
+            html += '<td>' + escHtml(e.emailSent_fromName || e.emailSent_fromEmail) + '</td>';
+            html += '<td>' + dateStr + '</td>';
+            html += '<td><button class="btn btn-xs btn-outline-primary" onclick="event.stopPropagation(); viewSent(' + e.emailSent_id + ')"><i class="fas fa-eye"></i></button></td>';
+            html += '</tr>';
+        }
+
+        $('#emailList').html(html);
+
+        // Paginierung
+        var pagHtml = '';
+        var totalPages = pag.pages;
+        if (totalPages > 1) {
+            if (page > 1) pagHtml += '<li class="page-item"><a class="page-link" href="#" onclick="loadSent(' + (page-1) + '); return false;">&laquo;</a></li>';
+            var startP = Math.max(1, page - 3);
+            var endP = Math.min(totalPages, page + 3);
+            for (var p = startP; p <= endP; p++) {
+                pagHtml += '<li class="page-item ' + (p === page ? 'active' : '') + '"><a class="page-link" href="#" onclick="loadSent(' + p + '); return false;">' + p + '</a></li>';
+            }
+            if (page < totalPages) pagHtml += '<li class="page-item"><a class="page-link" href="#" onclick="loadSent(' + (page+1) + '); return false;">&raquo;</a></li>';
+        }
+        $('#pagination').html(pagHtml);
+        $('#paginationInfo').text('Seite ' + pag.page + ' von ' + Math.max(1, totalPages) + ' (' + pag.total + ' E-Mails)');
+
+    }).fail(function() {
+        $('#loadingOverlay').hide();
+        $('#emailList').html('<tr><td colspan="5" class="text-center text-danger p-4">Verbindungsfehler.</td></tr>');
+    });
+}
+
+function viewSent(id) {
+    $.get('{{ CONFIG.ROOTURL }}/api/emailSent/view.php', { id: id }, function(resp) {
+        if (!resp.result) {
+            bootbox.alert('E-Mail konnte nicht geladen werden.');
+            return;
+        }
+
+        var email = resp.response.email;
+        $('#sentDetailSubject').text(email.emailSent_subject || '(Kein Betreff)');
+        $('#sentDetailFrom').html(escHtml(email.emailSent_fromName) + ' &lt;' + escHtml(email.emailSent_fromEmail) + '&gt;');
+        $('#sentDetailTo').html(escHtml(email.emailSent_toName) + ' &lt;' + escHtml(email.emailSent_toEmail) + '&gt;');
+        var date = new Date(email.emailSent_sent);
+        $('#sentDetailDate').text(date.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }));
+
+        // HTML Body
+        if (email.emailSent_html) {
+            var iframe = '<iframe id="sentIframe" style="width:100%; border:none; min-height:300px;" sandbox="allow-same-origin"></iframe>';
+            $('#sentDetailBody').html(iframe);
+            var doc = document.getElementById('sentIframe').contentWindow.document;
+            doc.open();
+            doc.write('<html><head><style>body{font-family:Arial,sans-serif;font-size:14px;color:#333;}</style></head><body>' + email.emailSent_html + '</body></html>');
+            doc.close();
+            setTimeout(function() {
+                var h = doc.body.scrollHeight;
+                $('#sentIframe').height(Math.min(h + 30, 500));
+            }, 200);
+        } else {
+            $('#sentDetailBody').html('<p class="text-muted">Kein Inhalt vorhanden.</p>');
+        }
+
+        $('#sentDetailModal').modal('show');
+    });
+}
+
+function escHtml(str) {
+    if (!str) return '';
+    return $('<div/>').text(str).html();
+}
+</script>
+{% endblock %}

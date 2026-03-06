@@ -589,7 +589,33 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 									</li>
 									{% endif %}
 
-									{# ===== FINANZEN ===== #}
+									{# ===== E-MAIL ===== #}
+								{% if "EMAIL_INBOX:VIEW"|instancePermissions or "USERS:VIEW:MAILINGS"|instancePermissions %}
+								<li class="nav-item has-treeview">
+									<a href="#" class="nav-link">
+										<i class="nav-icon fas fa-envelope"></i>
+										<p>E-Mail<i class="fas fa-angle-left right"></i></p>
+									</a>
+									<ul class="nav nav-treeview">
+										<li class="nav-item">
+											<a href="{{ CONFIG.ROOTURL }}/email/inbox.php" class="nav-link">
+												<i class="nav-icon fas fa-inbox"></i>
+												<p>Posteingang</p>
+											</a>
+										</li>
+										{% if "EMAIL_OUTBOX:VIEW"|instancePermissions or "USERS:VIEW:MAILINGS"|instancePermissions %}
+										<li class="nav-item">
+											<a href="{{ CONFIG.ROOTURL }}/email/sent.php" class="nav-link">
+												<i class="nav-icon fas fa-paper-plane"></i>
+												<p>Gesendet</p>
+											</a>
+										</li>
+										{% endif %}
+									</ul>
+								</li>
+								{% endif %}
+
+								{# ===== FINANZEN ===== #}
 									{% if "FINANCE:PAYMENTS_LEDGER:VIEW"|instancePermissions or "BUSINESS:BUSINESS_STATS:VIEW"|instancePermissions or "BUSINESS:BUSINESS_SETTINGS:VIEW"|instancePermissions %}
 									<li class="nav-item has-treeview">
 										<a href="#" class="nav-link">
