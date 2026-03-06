@@ -1,0 +1,243 @@
+{% extends "assets/template.twig" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-envelope-open-text mr-1"></i> E-Mail Postfach (IMAP)</h3>
+            </div>
+            <div class="card-body">
+                <p>Konfigurieren Sie hier die IMAP-Zugangsdaten, um eingehende E-Mails automatisch abzurufen. Jede Firma kann ihren eigenen Mailserver anbinden.</p>
+
+                <form id="imapSettingsForm">
+                    <div class="form-group">
+                        <label>IMAP aktivieren</label>
+                        <select class="form-control" name="IMAP_ENABLED" id="imapEnabled">
+                            <option value="Disabled">Deaktiviert</option>
+                            <option value="Enabled">Aktiviert</option>
+                        </select>
+                    </div>
+
+                    <div id="imapFields">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="form-group">
+                                    <label>IMAP Server</label>
+                                    <input type="text" class="form-control" name="IMAP_SERVER" id="imapServer" placeholder="imap.example.com">
+                                    <small class="text-muted">z.B. mail.your-server.de (Hetzner), imap.gmail.com (Gmail), imap.ionos.de (IONOS)</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>Port</label>
+                                    <input type="number" class="form-control" name="IMAP_PORT" id="imapPort" value="993">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>Verschluesselung</label>
+                                    <select class="form-control" name="IMAP_ENCRYPTION" id="imapEncryption">
+                                        <option value="SSL" selected>SSL (empfohlen)</option>
+                                        <option value="TLS">TLS</option>
+                                        <option value="None">Keine</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="form-group">
+                                    <label>Benutzername</label>
+                                    <input type="text" class="form-control" name="IMAP_USERNAME" id="imapUsername" placeholder="ihre@email.de">
+                                    <small class="text-muted">Meistens die vollstaendige E-Mail-Adresse</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Passwort</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" name="IMAP_PASSWORD" id="imapPassword" placeholder="Passwort">
+                                        <div class="input-group-append">
+                                            <button type="button" class="btn btn-outline-secondary" id="togglePassword"><i class="fas fa-eye"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Ordner</label>
+                                    <input type="text" class="form-control" name="IMAP_FOLDER" id="imapFolder" value="INBOX">
+                                    <small class="text-muted">Standard: INBOX</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Anhaenge automatisch speichern</label>
+                            <select class="form-control" name="IMAP_PROCESS_ATTACHMENTS" id="imapAttachments">
+                                <option value="Enabled" selected>Ja - Anhaenge herunterladen und speichern</option>
+                                <option value="Disabled">Nein - Nur E-Mail-Text abrufen</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button type="button" class="btn btn-info" id="testConnection"><i class="fas fa-plug"></i> Verbindung testen</button>
+                        </div>
+                        <div class="col-md-6 text-right">
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Speichern</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4 col-md-12">
+        <div class="card" id="testResultCard" style="display:none;">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-check-circle mr-1"></i> Verbindungstest</h3>
+            </div>
+            <div class="card-body" id="testResultBody"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-info-circle mr-1"></i> Hinweise</h3>
+            </div>
+            <div class="card-body">
+                <h6>Bekannte Provider</h6>
+                <table class="table table-sm table-striped">
+                    <thead><tr><th>Provider</th><th>Server</th><th>Port</th></tr></thead>
+                    <tbody>
+                        <tr><td>Hetzner</td><td>mail.your-server.de</td><td>993</td></tr>
+                        <tr><td>Gmail</td><td>imap.gmail.com</td><td>993</td></tr>
+                        <tr><td>IONOS</td><td>imap.ionos.de</td><td>993</td></tr>
+                        <tr><td>Strato</td><td>imap.strato.de</td><td>993</td></tr>
+                        <tr><td>All-Inkl</td><td>imap.all-inkl.com</td><td>993</td></tr>
+                        <tr><td>Outlook</td><td>outlook.office365.com</td><td>993</td></tr>
+                    </tbody>
+                </table>
+                <hr>
+                <small class="text-muted">
+                    E-Mails werden alle 5 Minuten automatisch abgerufen (Cron-Job erforderlich).
+                    Zugangsdaten werden verschluesselt in der Datenbank gespeichert - nicht im Quellcode.
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Felder ein-/ausblenden
+    function toggleFields() {
+        if ($("#imapEnabled").val() === "Enabled") {
+            $("#imapFields").slideDown();
+        } else {
+            $("#imapFields").slideUp();
+        }
+    }
+    $("#imapEnabled").on("change", toggleFields);
+    toggleFields();
+
+    // Passwort anzeigen/verbergen
+    $("#togglePassword").on("click", function() {
+        var input = $("#imapPassword");
+        if (input.attr("type") === "password") {
+            input.attr("type", "text");
+            $(this).html('<i class="fas fa-eye-slash"></i>');
+        } else {
+            input.attr("type", "password");
+            $(this).html('<i class="fas fa-eye"></i>');
+        }
+    });
+
+    // Bestehende Werte laden
+    var configKeys = ['IMAP_ENABLED', 'IMAP_SERVER', 'IMAP_PORT', 'IMAP_ENCRYPTION', 'IMAP_USERNAME', 'IMAP_PASSWORD', 'IMAP_FOLDER', 'IMAP_PROCESS_ATTACHMENTS'];
+    {% for key, val in CONFIG %}
+        {% if key starts with 'IMAP_' %}
+            var field = document.querySelector('[name="{{ key }}"]');
+            if (field) field.value = "{{ val }}";
+        {% endif %}
+    {% endfor %}
+    toggleFields();
+
+    // Verbindung testen
+    $("#testConnection").on("click", function() {
+        var btn = $(this);
+        btn.prop("disabled", true).html('<i class="fas fa-spinner fa-spin"></i> Teste...');
+
+        $.ajax({
+            url: "{{CONFIG.ROOTURL}}/api/emailInbox/testConnection.php",
+            type: "POST",
+            data: {
+                server: $("#imapServer").val(),
+                port: $("#imapPort").val(),
+                encryption: $("#imapEncryption").val(),
+                username: $("#imapUsername").val(),
+                password: $("#imapPassword").val()
+            },
+            dataType: "json",
+            success: function(response) {
+                var card = $("#testResultCard").show();
+                if (response.result) {
+                    var r = response.response;
+                    $("#testResultBody").html(
+                        '<div class="alert alert-success"><i class="fas fa-check"></i> ' + r.message + '</div>' +
+                        '<p><strong>Postfach:</strong> ' + (r.mailbox || '-') + '</p>' +
+                        '<p><strong>Nachrichten:</strong> ' + r.totalMessages + '</p>' +
+                        '<p><strong>Neue:</strong> ' + r.recentMessages + '</p>'
+                    );
+                } else {
+                    $("#testResultBody").html(
+                        '<div class="alert alert-danger"><i class="fas fa-times"></i> ' + (response.error ? response.error.message : 'Verbindung fehlgeschlagen') + '</div>'
+                    );
+                }
+            },
+            error: function() {
+                $("#testResultCard").show();
+                $("#testResultBody").html('<div class="alert alert-danger">Netzwerkfehler</div>');
+            },
+            complete: function() {
+                btn.prop("disabled", false).html('<i class="fas fa-plug"></i> Verbindung testen');
+            }
+        });
+    });
+
+    // Speichern
+    $("#imapSettingsForm").on("submit", function(e) {
+        e.preventDefault();
+        var data = {};
+        $(this).serializeArray().forEach(function(field) {
+            data[field.name] = field.value;
+        });
+
+        $.ajax({
+            url: "{{CONFIG.ROOTURL}}/api/instances/saveImapConfig.php",
+            type: "POST",
+            data: data,
+            dataType: "json",
+            success: function(response) {
+                if (response.result) {
+                    bootbox.alert('<i class="fas fa-check text-success"></i> Einstellungen gespeichert! (' + response.response.saved + ' Felder)', function() {
+                        location.reload();
+                    });
+                } else {
+                    bootbox.alert("Fehler: " + (response.error ? response.error.message : "Unbekannt"));
+                }
+            },
+            error: function() {
+                bootbox.alert("Netzwerkfehler beim Speichern");
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

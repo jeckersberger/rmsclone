@@ -150,6 +150,57 @@
             </div>
         </div>
         {% endif %}
+        {% if ("EMAIL_INBOX:SETTINGS"|instancePermissions or "AI:SETTINGS"|instancePermissions or "DSGVO:VIEW"|instancePermissions) %}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Erweiterte Einstellungen</h2>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% if "EMAIL_INBOX:SETTINGS"|instancePermissions or "BUSINESS:BUSINESS_SETTINGS:EDIT"|instancePermissions %}
+        <div class="col-lg-3 col-6">
+            <div class="small-box bg-info">
+                <div class="inner">
+                    <h3>E-Mail Postfach</h3>
+                    <p>IMAP-Konfiguration fuer eingehende E-Mails</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-envelope-open-text"></i>
+                </div>
+                <a href="{{ CONFIG.ROOTURL }}/instances/emailSettings.php" class="small-box-footer">E-Mail konfigurieren <i class="fas fa-arrow-circle-right"></i></a>
+            </div>
+        </div>
+        {% endif %}
+        {% if "AI:SETTINGS"|instancePermissions or "BUSINESS:BUSINESS_SETTINGS:VIEW"|instancePermissions %}
+        <div class="col-lg-3 col-6">
+            <div class="small-box bg-info">
+                <div class="inner">
+                    <h3>KI-Einstellungen</h3>
+                    <p>Claude API und KI-Features konfigurieren</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <a href="{{ CONFIG.ROOTURL }}/instances/aiSettings.php" class="small-box-footer">KI konfigurieren <i class="fas fa-arrow-circle-right"></i></a>
+            </div>
+        </div>
+        {% endif %}
+        {% if "DSGVO:VIEW"|instancePermissions or "BUSINESS:BUSINESS_SETTINGS:VIEW"|instancePermissions %}
+        <div class="col-lg-3 col-6">
+            <div class="small-box bg-info">
+                <div class="inner">
+                    <h3>Datenschutz (DSGVO)</h3>
+                    <p>Verarbeitungsverzeichnis und Loeschfristen</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <a href="{{ CONFIG.ROOTURL }}/instances/dsgvo.php" class="small-box-footer">Datenschutz verwalten <i class="fas fa-arrow-circle-right"></i></a>
+            </div>
+        </div>
+        {% endif %}
         {% if ("BUSINESS:BUSINESS_SETTINGS:VIEW"|instancePermissions or "PROJECTS:PROJECT_TYPES:VIEW"|instancePermissions or "PROJECTS:PROJECT_STATUSES:VIEW"|instancePermissions) %}
         <div class="col-12">
             <div class="card">

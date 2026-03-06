@@ -27,11 +27,18 @@
 				<h3 class="card-title">Unternehmensberechtigungen</h3>
 				{% if "BUSINESS:ROLES_AND_PERMISSIONS:CREATE"|instancePermissions %}
 				<div class="card-tools pull-right">
+					<button type="button" class="btn btn-sm btn-success mr-2" id="applyRoleTemplates"><i class="fa fa-magic"></i> Standard-Rollen anlegen</button>
 					<button type="button" class="btn btn-tool" id="addNewInstancePosition"><i class="fa fa-plus"></i>
 					</button>
 				</div>
 				{% endif %}
 			</div>
+			{% if "BUSINESS:ROLES_AND_PERMISSIONS:CREATE"|instancePermissions %}
+			<div class="card-body pb-0 pt-2" id="roleTemplatesPanel" style="display:none; background:#f8f9fa; border-bottom:1px solid #dee2e6;">
+				<p class="mb-2"><strong>Rollenvorlagen:</strong> Legen Sie vordefinierte Rollen mit passenden Berechtigungen an. Bestehende Rollen werden nicht ueberschrieben.</p>
+				<div class="row mb-2" id="roleTemplatesList"></div>
+			</div>
+			{% endif %}
 			<div class="card-body table-responsive p-0" style="overflow-x: auto; height: 800px;">
 				<table class="table table-head-fixed" >
 					<thead>
@@ -179,6 +186,100 @@ $(document).ready(function() {
 						ajaxcall("permissions/newInstancePosition.php", {"name": result}, function() {
 							location.reload();
 						}, true);
+					}
+				});
+			});
+
+			// Rollenvorlagen
+			$("#applyRoleTemplates").on("click", function() {
+				var panel = $("#roleTemplatesPanel");
+				if (panel.is(":visible")) {
+					panel.slideUp();
+					return;
+				}
+
+				// Vorlagen laden
+				$.ajax({
+					url: "{{CONFIG.ROOTURL}}/api/permissions/roleTemplates.php",
+					type: "GET",
+					dataType: "json",
+					success: function(response) {
+						if (response.result && response.response.templates) {
+							var html = '';
+							var templates = response.response.templates;
+							for (var i = 0; i < templates.length; i++) {
+								var t = templates[i];
+								html += '<div class="col-lg-2 col-md-4 col-6 mb-2">';
+								html += '<div class="card card-outline card-primary h-100 mb-0">';
+								html += '<div class="card-body p-2 text-center">';
+								html += '<h6 class="mb-1">' + t.name + '</h6>';
+								html += '<small class="text-muted d-block mb-2">' + t.description + '</small>';
+								html += '<small class="badge badge-info mb-2">' + t.permissionCount + ' Berechtigungen</small><br>';
+								html += '<button class="btn btn-xs btn-outline-primary applyOneTemplate" data-key="' + t.key + '">Anlegen</button>';
+								html += '</div></div></div>';
+							}
+							html += '<div class="col-12 mb-2">';
+							html += '<button class="btn btn-sm btn-primary" id="applyAllTemplates"><i class="fa fa-check-double"></i> Alle Rollen anlegen</button>';
+							html += '</div>';
+							$("#roleTemplatesList").html(html);
+							panel.slideDown();
+						}
+					}
+				});
+			});
+
+			// Einzelne Vorlage anlegen
+			$(document).on("click", ".applyOneTemplate", function() {
+				var btn = $(this);
+				var key = btn.data("key");
+				btn.prop("disabled", true).text("...");
+				$.ajax({
+					url: "{{CONFIG.ROOTURL}}/api/permissions/applyRoleTemplates.php",
+					type: "POST",
+					data: { template: key },
+					dataType: "json",
+					success: function(response) {
+						if (response.result) {
+							btn.removeClass("btn-outline-primary").addClass("btn-success").html('<i class="fa fa-check"></i> Angelegt');
+							setTimeout(function() { location.reload(); }, 800);
+						} else {
+							btn.prop("disabled", false).text("Fehler");
+							bootbox.alert(response.error ? response.error.message : "Fehler beim Anlegen");
+						}
+					}
+				});
+			});
+
+			// Alle Vorlagen anlegen
+			$(document).on("click", "#applyAllTemplates", function() {
+				var btn = $(this);
+				bootbox.confirm({
+					title: "Alle Standard-Rollen anlegen?",
+					message: "Es werden 6 Rollenvorlagen angelegt: Administrator, Buchhaltung, Projektleiter, Lager/Technik, Mitarbeiter, Externer Zugang.<br><br>Bereits vorhandene Rollen mit gleichem Namen werden nicht ueberschrieben.",
+					buttons: {
+						confirm: { label: 'Ja, alle anlegen', className: 'btn-primary' },
+						cancel: { label: 'Abbrechen' }
+					},
+					callback: function(result) {
+						if (result) {
+							btn.prop("disabled", true).html('<i class="fa fa-spinner fa-spin"></i> Wird angelegt...');
+							$.ajax({
+								url: "{{CONFIG.ROOTURL}}/api/permissions/applyRoleTemplates.php",
+								type: "POST",
+								dataType: "json",
+								success: function(response) {
+									if (response.result) {
+										var r = response.response;
+										bootbox.alert(r.created + " Rollen angelegt, " + r.skipped + " uebersprungen.", function() {
+											location.reload();
+										});
+									} else {
+										btn.prop("disabled", false).html('<i class="fa fa-check-double"></i> Alle Rollen anlegen');
+										bootbox.alert("Fehler: " + (response.error ? response.error.message : "Unbekannt"));
+									}
+								}
+							});
+						}
 					}
 				});
 			});
