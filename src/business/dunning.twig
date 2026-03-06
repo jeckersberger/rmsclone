@@ -118,6 +118,7 @@ $(document).ready(function() {
                     html += '<td><span class="badge badge-' + (levelBadges[level] || 'secondary') + '">' + (levelLabels[level] || '-') + '</span></td>';
                     html += '<td>';
                     html += '<button class="btn btn-sm btn-warning createDunningBtn" data-id="' + inv.id + '" title="{{ t("create_dunning") }}"><i class="fas fa-envelope"></i></button> ';
+                    html += '<button class="btn btn-sm btn-info aiDunningBtn" data-id="' + inv.id + '" data-doc="' + (inv.doc_number || '') + '" data-client="' + (inv.clients_name || '') + '" data-amount="' + (inv.gross_amount || 0) + '" data-email="' + (inv.clients_email || '') + '" title="KI-Mahnung generieren"><i class="fas fa-robot"></i></button> ';
                     html += '<button class="btn btn-sm btn-success markPaidBtn" data-id="' + inv.id + '" title="{{ t("mark_paid") }}"><i class="fas fa-check"></i></button>';
                     html += '</td>';
                     html += '</tr>';
@@ -170,6 +171,71 @@ $(document).ready(function() {
                     }
                 }
             }
+        });
+    });
+
+    // AI Dunning - generate and preview AI draft
+    $(document).on('click', '.aiDunningBtn', function() {
+        var btn = $(this);
+        var docId = btn.data('id');
+        var docNumber = btn.data('doc');
+        var clientName = btn.data('client');
+        var amount = parseFloat(btn.data('amount') || 0).toFixed(2).replace('.', ',') + ' \u20AC';
+        var clientEmail = btn.data('email');
+
+        if (!clientEmail) {
+            bootbox.alert('{{ t("no_client_email") }}');
+            return;
+        }
+
+        btn.html('<i class="fas fa-spinner fa-spin"></i>').prop('disabled', true);
+
+        ajaxcall('ai/emailDraft.php', {
+            context: 'Zahlungserinnerung fuer Rechnung ' + docNumber + ', Kunde: ' + clientName + ', Betrag: ' + amount,
+            subject: 'Zahlungserinnerung - Rechnung ' + docNumber,
+            type: 'dunning'
+        }, function(data) {
+            btn.html('<i class="fas fa-robot"></i>').prop('disabled', false);
+            var draft = (data.response && data.response.draft) ? data.response.draft : '';
+
+            bootbox.dialog({
+                title: '<i class="fas fa-robot"></i> KI-Mahnung: ' + docNumber,
+                message: '<div class="form-group">' +
+                    '<label>An: <strong>' + clientEmail + '</strong> (' + clientName + ')</label>' +
+                    '</div>' +
+                    '<div class="form-group">' +
+                    '<label>Betreff</label>' +
+                    '<input type="text" class="form-control" id="aiDunningSubject" value="Zahlungserinnerung - Rechnung ' + docNumber + '">' +
+                    '</div>' +
+                    '<div class="form-group">' +
+                    '<label>Nachricht (kann bearbeitet werden)</label>' +
+                    '<textarea class="form-control" id="aiDunningBody" rows="10">' + draft + '</textarea>' +
+                    '</div>',
+                buttons: {
+                    cancel: { label: '{{ t("cancel") }}', className: 'btn-default' },
+                    send: {
+                        label: '<i class="fas fa-paper-plane"></i> Senden',
+                        className: 'btn-warning',
+                        callback: function() {
+                            ajaxcall('emailInbox/compose.php', {
+                                to: clientEmail,
+                                to_name: clientName,
+                                subject: $('#aiDunningSubject').val(),
+                                body: $('#aiDunningBody').val()
+                            }, function() {
+                                // Also create dunning entry
+                                ajaxcall('dunning/create.php', {doc_id: docId}, function() {
+                                    bootbox.alert('<i class="fas fa-check text-success"></i> Mahnung gesendet und protokolliert.');
+                                    loadDunning();
+                                });
+                            });
+                        }
+                    }
+                }
+            });
+        }, function() {
+            btn.html('<i class="fas fa-robot"></i>').prop('disabled', false);
+            bootbox.alert('KI-Entwurf konnte nicht generiert werden.');
         });
     });
 

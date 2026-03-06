@@ -83,6 +83,10 @@
 				</table>
 			</div>
 			<div class="card-footer">
+				<div class="btn-group float-left">
+					<button type="button" class="btn btn-outline-info btn-sm" id="btnAiProjectSummary" onclick="aiProjectSummary()" title="KI-Zusammenfassung"><i class="fas fa-robot"></i> Zusammenfassung</button>
+					<button type="button" class="btn btn-outline-success btn-sm" id="btnAiQuoteAssist" onclick="aiQuoteAssist()" title="KI-Angebot"><i class="fas fa-robot"></i> Angebot-Hilfe</button>
+				</div>
 				<div class="btn-group float-right">
 					<a href="{{ CONFIG.LINKS_USERGUIDEURL }}projects/finance" target="_blank" type="button" class="btn btn-info">{{ t('help') }}</a>
 
@@ -339,3 +343,36 @@
 		{% endif %}
 	</div>
 </div>
+<script>
+function aiProjectSummary() {
+    var btn = $('#btnAiProjectSummary');
+    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Generiere...');
+    ajaxcall('ai/projectSummary.php', { project_id: {{ project.projects_id }} }, function(data) {
+        btn.prop('disabled', false).html('<i class="fas fa-robot"></i> Zusammenfassung');
+        if (data.response && data.response.summary) {
+            bootbox.alert({
+                title: '<i class="fas fa-robot text-info"></i> KI-Zusammenfassung',
+                message: '<div style="white-space:pre-wrap;font-size:14px;">' + data.response.summary + '</div>'
+            });
+        }
+    }, function() {
+        btn.prop('disabled', false).html('<i class="fas fa-robot"></i> Zusammenfassung');
+    });
+}
+
+function aiQuoteAssist() {
+    var btn = $('#btnAiQuoteAssist');
+    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Generiere...');
+    ajaxcall('ai/quoteAssist.php', { project_id: {{ project.projects_id }} }, function(data) {
+        btn.prop('disabled', false).html('<i class="fas fa-robot"></i> Angebot-Hilfe');
+        if (data.response && data.response.suggestions) {
+            bootbox.alert({
+                title: '<i class="fas fa-robot text-info"></i> Angebotsvorschlag',
+                message: '<div style="white-space:pre-wrap;font-size:14px;">' + data.response.suggestions + '</div>'
+            });
+        }
+    }, function() {
+        btn.prop('disabled', false).html('<i class="fas fa-robot"></i> Angebot-Hilfe');
+    });
+}
+</script>
