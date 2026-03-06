@@ -20,4 +20,18 @@ if ($projectId) {
     ]) ?: [];
 }
 
+// Enrich with ZUGFeRD XML file IDs from document_exports
+foreach ($docs as &$d) {
+    if ($d['doc_type'] === 'invoice' && !empty($d['doc_number'])) {
+        $DBLIB->where('instances_id', $instanceId);
+        $DBLIB->where('doc_number', $d['doc_number']);
+        $DBLIB->where('zugferd_xml_s3files_id IS NOT NULL');
+        $export = $DBLIB->getOne('document_exports', ['zugferd_xml_s3files_id']);
+        $d['zugferd_s3files_id'] = $export ? $export['zugferd_xml_s3files_id'] : null;
+    } else {
+        $d['zugferd_s3files_id'] = null;
+    }
+}
+unset($d);
+
 finish(true, null, ["documents" => $docs]);

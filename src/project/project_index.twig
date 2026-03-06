@@ -794,6 +794,114 @@
                 }
             });
 
+            // Freigabelink erstellen
+            $('.btnCreateApprovalLink').on('click', function(e) {
+                e.preventDefault();
+                var s3id = $(this).data('s3id');
+                bootbox.dialog({
+                    title: '<i class="fas fa-share-alt"></i> Freigabelink erstellen',
+                    message: '<form id="approvalLinkForm">' +
+                        '<div class="form-group">' +
+                        '<label>Gueltigkeit (Tage)</label>' +
+                        '<input type="number" class="form-control" id="approvalValidityDays" value="30" min="1" max="365">' +
+                        '</div>' +
+                        '<div class="form-group">' +
+                        '<div class="custom-control custom-checkbox">' +
+                        '<input type="checkbox" class="custom-control-input" id="approvalSendEmail">' +
+                        '<label class="custom-control-label" for="approvalSendEmail">E-Mail an Kunden senden</label>' +
+                        '</div>' +
+                        '</div>' +
+                        '</form>',
+                    buttons: {
+                        cancel: { label: 'Abbrechen', className: 'btn-default' },
+                        confirm: {
+                            label: '<i class="fas fa-link"></i> Link erstellen',
+                            className: 'btn-success',
+                            callback: function() {
+                                ajaxcall("projects/createApprovalLink.php", {
+                                    id: "{{ project.projects_id }}",
+                                    doc_id: 0,
+                                    s3files_id: s3id,
+                                    validity_days: $('#approvalValidityDays').val(),
+                                    send_email: $('#approvalSendEmail').is(':checked') ? '1' : '0'
+                                }, function(data) {
+                                    if (data.result && data.response) {
+                                        bootbox.dialog({
+                                            title: '<i class="fas fa-check-circle text-success"></i> Freigabelink erstellt',
+                                            message: '<p>Der Link wurde erfolgreich erstellt:</p>' +
+                                                '<div class="input-group mb-3">' +
+                                                '<input type="text" class="form-control" id="approvalLinkUrl" value="' + data.response.url + '" readonly>' +
+                                                '<div class="input-group-append">' +
+                                                '<button class="btn btn-outline-primary" type="button" id="copyApprovalLink"><i class="fas fa-copy"></i></button>' +
+                                                '</div></div>' +
+                                                '<small class="text-muted">Gueltig bis: ' + data.response.expires_at + '</small>',
+                                            buttons: {
+                                                ok: { label: 'Schliessen', className: 'btn-primary' }
+                                            }
+                                        });
+                                        setTimeout(function() {
+                                            $('#copyApprovalLink').on('click', function() {
+                                                $('#approvalLinkUrl').select();
+                                                document.execCommand('copy');
+                                                $(this).html('<i class="fas fa-check"></i>');
+                                            });
+                                        }, 300);
+                                    }
+                                }, true);
+                                return true;
+                            }
+                        }
+                    }
+                });
+            });
+
+            // Freigabelinks laden
+            function loadApprovalLinks() {
+                ajaxcall('projects/listApprovalLinks.php', {id: '{{ project.projects_id }}'}, function(data) {
+                    if (!data.response || !data.response.links) return;
+                    var links = data.response.links;
+                    $('#approvalLinksCount').text(links.length);
+                    if (links.length === 0) {
+                        $('#approvalLinksBody').html('<tr><td colspan="7" class="text-center text-muted">Keine Freigabelinks vorhanden.</td></tr>');
+                        return;
+                    }
+                    var statusBadges = {pending: 'warning', accepted: 'success', rejected: 'danger', expired: 'secondary'};
+                    var statusLabels = {pending: 'Offen', accepted: 'Angenommen', rejected: 'Abgelehnt', expired: 'Abgelaufen'};
+                    var html = '';
+                    links.forEach(function(l) {
+                        html += '<tr>';
+                        html += '<td>' + (l.doc_number || '-') + '</td>';
+                        html += '<td>' + (l.client_name || '-') + '</td>';
+                        html += '<td><span class="badge badge-' + (statusBadges[l.status] || 'secondary') + '">' + (statusLabels[l.status] || l.status) + '</span></td>';
+                        html += '<td>' + (l.created_at ? l.created_at.substring(0,10) : '-') + '</td>';
+                        html += '<td>' + (l.expires_at ? l.expires_at.substring(0,10) : '-') + '</td>';
+                        html += '<td>';
+                        if (l.client_signature_name) html += '<em>' + l.client_signature_name + '</em>';
+                        if (l.client_comment) html += '<br><small class="text-muted">' + l.client_comment + '</small>';
+                        html += '</td>';
+                        html += '<td>';
+                        var linkUrl = '{{ CONFIG.ROOTURL }}/public/quote.php?token=' + l.token;
+                        html += '<button class="btn btn-xs btn-default copyLinkBtn" data-url="' + linkUrl + '" title="Link kopieren"><i class="fas fa-copy"></i></button>';
+                        html += '</td>';
+                        html += '</tr>';
+                    });
+                    $('#approvalLinksBody').html(html);
+                }, false);
+            }
+            loadApprovalLinks();
+
+            $(document).on('click', '.copyLinkBtn', function() {
+                var url = $(this).data('url');
+                var $temp = $('<input>');
+                $('body').append($temp);
+                $temp.val(url).select();
+                document.execCommand('copy');
+                $temp.remove();
+                $(this).html('<i class="fas fa-check"></i>');
+                var btn = $(this);
+                setTimeout(function() { btn.html('<i class="fas fa-copy"></i>'); }, 2000);
+            });
+
             // PDF generieren via Server-Side API
             $('#pdfGenerateBtn').on('click', function() {
                 var btn = $(this);

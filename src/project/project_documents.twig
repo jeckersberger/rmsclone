@@ -87,8 +87,11 @@ $(document).ready(function() {
                     html += '<td>';
                     html += '<div class="btn-group btn-group-sm">';
                     if (doc.s3files_id) {
-                        html += '<a href="{{ CONFIG.ROOTURL }}/api/projects/generateDocument.php?dl=' + doc.s3files_id + '" class="btn btn-default" title="{{ t("download") }}"><i class="fas fa-download"></i></a>';
+                        html += '<a href="{{ CONFIG.ROOTURL }}/api/file/?r=true&f=' + doc.s3files_id + '" class="btn btn-default" title="{{ t("download") }}"><i class="fas fa-download"></i></a>';
                         html += '<button class="btn btn-default docEmailBtn" data-s3id="' + doc.s3files_id + '" data-number="' + (doc.doc_number || '') + '" data-type="' + doc.doc_type + '" title="{{ t("send_email") }}"><i class="fas fa-envelope"></i></button>';
+                    }
+                    if (doc.zugferd_s3files_id) {
+                        html += '<a href="{{ CONFIG.ROOTURL }}/api/file/?r=true&f=' + doc.zugferd_s3files_id + '" class="btn btn-outline-info btn-sm" title="ZUGFeRD XML herunterladen"><i class="fas fa-file-code"></i> ZUGFeRD</a>';
                     }
                     html += '<button class="btn btn-default docStatusBtn" data-id="' + doc.id + '" data-type="' + doc.doc_type + '" data-status="' + doc.status + '" title="{{ t("change_status") }}"><i class="fas fa-exchange-alt"></i></button>';
                     if (doc.doc_type === 'quote' && doc.status === 'accepted') {

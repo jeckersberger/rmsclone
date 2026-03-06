@@ -139,6 +139,9 @@
 							</span>
 							<i class="fas fa-info-circle" data-toggle="popover" title="Dateidetails" data-content="Generated {{ file.s3files_meta_uploaded|date("d M Y G:i") }}. file size {{ file.s3files_meta_size|formatsize }}. file type {{ file.s3files_extension }}"></i>
 							<div class="tools">
+								<a href="#" class="btnCreateApprovalLink" data-s3id="{{ file.s3files_id }}" style="color: #495057; padding-right: 8px;" title="Freigabelink erstellen">
+									<i class="fas fa-share-alt"></i>
+								</a>
 								<a href="{{ file.s3files_id|s3URL }}" style="color: #495057;" target="_blank" title="Datei herunterladen">
 									<i class="fas fa-cloud-download-alt"></i>
 								</a>
@@ -194,6 +197,39 @@
 						Lieferschein erstellen
 					</button>
 				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+{# ══════ FREIGABELINKS ══════ #}
+<div class="row">
+	<div class="col-12">
+		<div class="card card-outline card-success collapsed-card">
+			<div class="card-header">
+				<h3 class="card-title"><i class="fas fa-share-alt"></i> Freigabelinks</h3>
+				<div class="card-tools">
+					<span class="badge badge-info" id="approvalLinksCount">-</span>
+					<button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+				</div>
+			</div>
+			<div class="card-body p-0">
+				<table class="table table-sm table-striped" id="approvalLinksTable">
+					<thead>
+						<tr>
+							<th>Dokument</th>
+							<th>Kunde</th>
+							<th>Status</th>
+							<th>Erstellt</th>
+							<th>Gueltig bis</th>
+							<th>Antwort</th>
+							<th></th>
+						</tr>
+					</thead>
+					<tbody id="approvalLinksBody">
+						<tr><td colspan="7" class="text-center text-muted">Wird geladen...</td></tr>
+					</tbody>
+				</table>
 			</div>
 		</div>
 	</div>

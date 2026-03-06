@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <title>Angebot {{ approval.doc_number }} - {{ instance.instances_name }}</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.0/css/bootstrap.min.css" integrity="sha512-P5MgMn1jBN01asBgU0z60Qk4QxiXo86+wlFahKrsQf37c9cro517WzVSPPV1tDKzhku2iJ2FVgL67wG03SGnNA==" crossorigin="anonymous"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" integrity="sha512-iBBXm8fW90+nuLcSKlbmrPcLa0OT92xO1BIsZ+ywDWZCvqsWgccV3gFoRBv0z+8dLJgyAHIhR35VZc2oM/gI1w==" crossorigin="anonymous"/>
+    <style>
+        body { background-color: #f4f6f9; padding: 20px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+        .quote-container { max-width: 900px; margin: 0 auto; }
+        .company-header { background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: white; border-radius: 8px 8px 0 0; padding: 25px 30px; }
+        .company-header h2 { margin: 0; font-weight: 300; }
+        .company-header .company-name { font-size: 1.8rem; font-weight: 600; }
+        .status-badge { font-size: 1.1rem; }
+        .card { border: none; box-shadow: 0 2px 12px rgba(0,0,0,0.08); border-radius: 8px; margin-bottom: 20px; }
+        .meta-table td { padding: 6px 12px; }
+        .meta-table .label-col { color: #888; width: 40%; }
+        .meta-table .value-col { font-weight: 600; }
+        .action-card { background: #f8f9fa; border: 2px dashed #dee2e6; border-radius: 8px; padding: 25px; text-align: center; }
+        .action-card.accepted { background: #d4edda; border-color: #28a745; }
+        .action-card.rejected { background: #f8d7da; border-color: #dc3545; }
+        .btn-accept { background: #27ae60; border-color: #27ae60; color: white; font-size: 1.1rem; padding: 12px 40px; }
+        .btn-accept:hover { background: #219a52; color: white; }
+        .btn-reject { background: #e74c3c; border-color: #e74c3c; color: white; font-size: 1.1rem; padding: 12px 40px; }
+        .btn-reject:hover { background: #c0392b; color: white; }
+        .signature-field { border: 2px solid #2c3e50; border-radius: 4px; padding: 10px; font-size: 1.2rem; font-style: italic; }
+        .pdf-embed { width: 100%; height: 600px; border: 1px solid #dee2e6; border-radius: 4px; }
+        .footer-info { font-size: 0.85rem; color: #999; text-align: center; padding: 20px; }
+    </style>
+</head>
+<body>
+    <div class="quote-container">
+
+        {# ══════ FIRMEN-HEADER ══════ #}
+        <div class="company-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="company-name">{{ instance.instances_name }}</div>
+                    {% if instance.instances_address %}
+                    <div style="opacity: 0.8; font-size: 0.9rem; margin-top: 4px;">{{ instance.instances_address|replace({"\n": " &middot; "})|raw }}</div>
+                    {% endif %}
+                </div>
+                <div>
+                    {% if approval.status == 'accepted' %}
+                        <span class="badge badge-success status-badge"><i class="fas fa-check-circle"></i> Angenommen</span>
+                    {% elseif approval.status == 'rejected' %}
+                        <span class="badge badge-danger status-badge"><i class="fas fa-times-circle"></i> Abgelehnt</span>
+                    {% else %}
+                        <span class="badge badge-warning status-badge"><i class="fas fa-clock"></i> Offen</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# ══════ ANGEBOTS-DETAILS ══════ #}
+        <div class="card" style="border-radius: 0 0 8px 8px; margin-top: 0;">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5 class="mb-3"><i class="fas fa-file-invoice"></i> Angebot {{ approval.doc_number }}</h5>
+                        <table class="meta-table">
+                            <tr>
+                                <td class="label-col">Kunde:</td>
+                                <td class="value-col">{{ approval.client_name }}</td>
+                            </tr>
+                            {% if project %}
+                            <tr>
+                                <td class="label-col">Projekt:</td>
+                                <td class="value-col">{{ project.projects_name }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                                <td class="label-col">Erstellt am:</td>
+                                <td class="value-col">{{ approval.created_at|date("d.m.Y") }}</td>
+                            </tr>
+                            {% if approval.expires_at %}
+                            <tr>
+                                <td class="label-col">Gueltig bis:</td>
+                                <td class="value-col">{{ approval.expires_at|date("d.m.Y") }}</td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        {% if docLifecycle %}
+                        <table class="meta-table">
+                            {% if docLifecycle.net_amount > 0 %}
+                            <tr>
+                                <td class="label-col">Nettobetrag:</td>
+                                <td class="value-col">{{ docLifecycle.net_amount|number_format(2, ',', '.') }} &euro;</td>
+                            </tr>
+                            {% endif %}
+                            {% if docLifecycle.gross_amount > 0 %}
+                            <tr>
+                                <td class="label-col">Bruttobetrag:</td>
+                                <td class="value-col" style="font-size: 1.2rem; color: #2c3e50;">{{ docLifecycle.gross_amount|number_format(2, ',', '.') }} &euro;</td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                        {% endif %}
+
+                        {% if pdfUrl %}
+                        <div class="mt-3">
+                            <a href="{{ pdfUrl }}" target="_blank" class="btn btn-outline-primary btn-block">
+                                <i class="fas fa-file-pdf"></i> Angebot als PDF herunterladen
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# ══════ PDF VORSCHAU ══════ #}
+        {% if pdfUrl %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-eye"></i> Angebotsvorschau</h5>
+            </div>
+            <div class="card-body p-0">
+                <iframe src="{{ pdfUrl }}" class="pdf-embed"></iframe>
+            </div>
+        </div>
+        {% endif %}
+
+        {# ══════ AKTIONS-BEREICH ══════ #}
+        {% if approval.status == 'pending' %}
+        <div class="action-card" id="actionCard">
+            <h4 class="mb-3"><i class="fas fa-handshake"></i> Angebot annehmen oder ablehnen</h4>
+            <p class="text-muted mb-4">Bitte pruefen Sie das Angebot und teilen Sie uns Ihre Entscheidung mit.</p>
+
+            <div class="form-group text-left" style="max-width: 500px; margin: 0 auto;">
+                <label><strong>Ihr Name (als Unterschrift)</strong></label>
+                <input type="text" class="form-control signature-field" id="signatureName" placeholder="Vor- und Nachname" required>
+            </div>
+
+            <div class="form-group text-left mt-3" style="max-width: 500px; margin: 0 auto;">
+                <label>Kommentar <small class="text-muted">(optional)</small></label>
+                <textarea class="form-control" id="clientComment" rows="3" placeholder="Anmerkungen zum Angebot..."></textarea>
+            </div>
+
+            <div class="mt-4">
+                <button class="btn btn-accept mr-3" id="btnAccept">
+                    <i class="fas fa-check"></i> Angebot annehmen
+                </button>
+                <button class="btn btn-reject" id="btnReject">
+                    <i class="fas fa-times"></i> Ablehnen
+                </button>
+            </div>
+        </div>
+
+        {% elseif approval.status == 'accepted' %}
+        <div class="action-card accepted">
+            <h4><i class="fas fa-check-circle text-success"></i> Angebot angenommen</h4>
+            <p class="mb-1">Angenommen am <strong>{{ approval.accepted_at|date("d.m.Y \\u\\m H:i \\U\\h\\r") }}</strong></p>
+            {% if approval.client_signature_name %}
+            <p class="mb-1">Unterschrift: <em>{{ approval.client_signature_name }}</em></p>
+            {% endif %}
+            {% if approval.client_comment %}
+            <p class="mt-2">Kommentar: {{ approval.client_comment }}</p>
+            {% endif %}
+        </div>
+
+        {% elseif approval.status == 'rejected' %}
+        <div class="action-card rejected">
+            <h4><i class="fas fa-times-circle text-danger"></i> Angebot abgelehnt</h4>
+            <p class="mb-1">Abgelehnt am <strong>{{ approval.rejected_at|date("d.m.Y \\u\\m H:i \\U\\h\\r") }}</strong></p>
+            {% if approval.client_comment %}
+            <p class="mt-2">Kommentar: {{ approval.client_comment }}</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {# ══════ KONTAKT-INFO ══════ #}
+        <div class="card mt-3">
+            <div class="card-body text-center">
+                <p class="mb-1"><strong>Fragen zum Angebot?</strong></p>
+                {% if instance.instances_email %}
+                <a href="mailto:{{ instance.instances_email }}"><i class="fas fa-envelope"></i> {{ instance.instances_email }}</a>
+                {% endif %}
+                {% if instance.instances_phone %}
+                &nbsp;&middot;&nbsp;
+                <a href="tel:{{ instance.instances_phone }}"><i class="fas fa-phone"></i> {{ instance.instances_phone }}</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="footer-info">
+            Dieses Angebot wurde mit {{ CONFIG.PROJECT_NAME }} erstellt.
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script>
+    $(document).ready(function() {
+        function submitDecision(action) {
+            var name = $('#signatureName').val().trim();
+            if (!name) {
+                alert('Bitte geben Sie Ihren Namen als Unterschrift ein.');
+                $('#signatureName').focus();
+                return;
+            }
+
+            var confirmMsg = action === 'accept'
+                ? 'Moechten Sie das Angebot {{ approval.doc_number }} verbindlich annehmen?'
+                : 'Moechten Sie das Angebot {{ approval.doc_number }} wirklich ablehnen?';
+
+            if (!confirm(confirmMsg)) return;
+
+            $.ajax({
+                url: '{{ CONFIG.ROOTURL }}/public/quote_respond.php',
+                method: 'POST',
+                data: {
+                    token: '{{ approval.token }}',
+                    action: action,
+                    signature_name: name,
+                    comment: $('#clientComment').val()
+                },
+                dataType: 'json',
+                success: function(data) {
+                    if (data.result) {
+                        location.reload();
+                    } else {
+                        alert(data.error ? data.error.message : 'Ein Fehler ist aufgetreten.');
+                    }
+                },
+                error: function() {
+                    alert('Verbindungsfehler. Bitte versuchen Sie es erneut.');
+                }
+            });
+        }
+
+        $('#btnAccept').click(function() { submitDecision('accept'); });
+        $('#btnReject').click(function() { submitDecision('reject'); });
+    });
+    </script>
+</body>
+</html>

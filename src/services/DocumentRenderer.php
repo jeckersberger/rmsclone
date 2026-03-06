@@ -140,11 +140,29 @@ class DocumentRenderer {
     $dompdf->render();
     $pdf = $dompdf->output();
 
+    // 11b) ZUGFeRD XML fuer Rechnungen generieren
+    $zugferdXml = null;
+    if ($type === 'invoice') {
+      require_once __DIR__ . '/ZugferdService.php';
+      $zugferdXml = ZugferdService::generateInvoiceXml(
+        $business, $client, $docData, $flatLines, $totals, $project
+      );
+    }
+
     // 12) Speichern als Projektdokument
     $fileType = ['invoice'=>20,'quote'=>21,'delivery_note'=>22][$type];
     $fileInfo = S3Files::storeProjectFile($db, $instanceId, $projectId, $fileType, [
       'name' => self::fileName($type, $docNumber), 'content'=>$pdf, 'extension'=>'pdf'
     ]);
+
+    // 12b) ZUGFeRD XML als separate Datei speichern
+    $zugferdFileId = null;
+    if ($zugferdXml) {
+      $zugferdFileInfo = S3Files::storeProjectFile($db, $instanceId, $projectId, $fileType, [
+        'name' => 'factur-x_' . $docNumber . '.xml', 'content' => $zugferdXml, 'extension' => 'xml'
+      ]);
+      $zugferdFileId = $zugferdFileInfo['s3files_id'] ?? null;
+    }
 
     // 13) Export protokollieren (unveraenderbar = GoBD)
     $db->insert('document_exports', [
@@ -152,9 +170,10 @@ class DocumentRenderer {
       'template_id'=>$tpl ? $tpl['id'] : 0,
       'doc_number'=>$docNumber,'language'=>'de-DE','currency'=>'EUR',
       'totals_json'=>json_encode($totals),'snapshot_json'=>json_encode(['lines'=>$flatLines,'categories'=>$categories,'doc'=>$docData]),
-      's3files_id'=>$fileInfo['s3files_id'],'generated_by'=>$userId
+      's3files_id'=>$fileInfo['s3files_id'],'generated_by'=>$userId,
+      'zugferd_xml_s3files_id'=>$zugferdFileId
     ]);
-    return ['doc_number'=>$docNumber,'s3files_id'=>$fileInfo['s3files_id']];
+    return ['doc_number'=>$docNumber,'s3files_id'=>$fileInfo['s3files_id'],'zugferd_s3files_id'=>$zugferdFileId];
   }
 
   private static function calcDays(DateTime $start, DateTime $end): int {
