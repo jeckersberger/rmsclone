@@ -1,0 +1,191 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-robot"></i> KI-Nutzung</h3>
+                <div class="card-tools">
+                    <select class="form-control form-control-sm" id="usageYear" style="width:auto;display:inline-block;">
+                        {% for y in range("now"|date("Y") - 2, "now"|date("Y")) %}
+                            <option value="{{ y }}" {{ y == "now"|date("Y") ? 'selected' : '' }}>{{ y }}</option>
+                        {% endfor %}
+                    </select>
+                    <select class="form-control form-control-sm" id="usageMonth" style="width:auto;display:inline-block;">
+                        {% for m in 1..12 %}
+                            <option value="{{ m }}" {{ m == "now"|date("n") ? 'selected' : '' }}>
+                                {% set monthNames = ['Januar','Februar','Maerz','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'] %}
+                                {{ monthNames[m-1] }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="overlay" id="usageLoading"><i class="fas fa-sync fa-spin fa-3x"></i></div>
+                <div class="row" id="usageKpis">
+                    <div class="col-md-3 col-6">
+                        <div class="info-box bg-info">
+                            <span class="info-box-icon"><i class="fas fa-comments"></i></span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">API-Aufrufe</span>
+                                <span class="info-box-number" id="kpiCalls">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="info-box bg-warning">
+                            <span class="info-box-icon"><i class="fas fa-coins"></i></span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Tokens gesamt</span>
+                                <span class="info-box-number" id="kpiTokens">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="info-box bg-success">
+                            <span class="info-box-icon"><i class="fas fa-check-circle"></i></span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Erfolgsrate</span>
+                                <span class="info-box-number" id="kpiSuccess">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="info-box bg-secondary">
+                            <span class="info-box-icon"><i class="fas fa-euro-sign"></i></span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Gesch. Kosten</span>
+                                <span class="info-box-number" id="kpiCost">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-chart-bar"></i> Nutzung nach Feature</h3>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            <th class="text-right">Aufrufe</th>
+                            <th class="text-right">Tokens</th>
+                        </tr>
+                    </thead>
+                    <tbody id="featureBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-list"></i> Letzte Aufrufe</h3>
+            </div>
+            <div class="card-body p-0" style="max-height:400px;overflow-y:auto;">
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>Datum</th>
+                            <th>Feature</th>
+                            <th class="text-right">Tokens</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recentBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    var featureLabels = {
+        'email_draft': 'E-Mail-Entwurf',
+        'email_categorize': 'E-Mail-Kategorisierung',
+        'project_summary': 'Projektzusammenfassung',
+        'quote_assist': 'Angebotshilfe',
+        'dunning': 'Mahnwesen',
+        'maintenance': 'Wartung',
+        'general': 'Allgemein'
+    };
+
+    function loadUsage() {
+        var year = $('#usageYear').val();
+        var month = $('#usageMonth').val();
+        $('#usageLoading').show();
+
+        ajaxcall('ai/usage.php', {year: year, month: month}, function(data) {
+            $('#usageLoading').hide();
+            if (!data.response) return;
+            var s = data.response;
+
+            // KPIs
+            $('#kpiCalls').text(s.total_calls || 0);
+            var totalTokens = (s.total_input_tokens || 0) + (s.total_output_tokens || 0);
+            $('#kpiTokens').text(formatNumber(totalTokens));
+            var successRate = s.total_calls > 0 ? Math.round(((s.successful_calls || 0) / s.total_calls) * 100) : 0;
+            $('#kpiSuccess').text(successRate + '%');
+            // Estimated cost: ~$3/MTok input, ~$15/MTok output (Sonnet pricing approx)
+            var estCost = ((s.total_input_tokens || 0) * 0.000003) + ((s.total_output_tokens || 0) * 0.000015);
+            $('#kpiCost').text(estCost.toFixed(2) + ' \u20AC');
+
+            // By feature
+            var byFeature = s.by_feature || {};
+            var fHtml = '';
+            if (Object.keys(byFeature).length === 0) {
+                fHtml = '<tr><td colspan="3" class="text-center text-muted">Keine Daten</td></tr>';
+            }
+            Object.keys(byFeature).forEach(function(key) {
+                var f = byFeature[key];
+                fHtml += '<tr>';
+                fHtml += '<td>' + (featureLabels[key] || key) + '</td>';
+                fHtml += '<td class="text-right">' + (f.calls || 0) + '</td>';
+                fHtml += '<td class="text-right">' + formatNumber(f.tokens || 0) + '</td>';
+                fHtml += '</tr>';
+            });
+            $('#featureBody').html(fHtml);
+
+            // Recent calls
+            var recent = s.recent || [];
+            var rHtml = '';
+            if (recent.length === 0) {
+                rHtml = '<tr><td colspan="4" class="text-center text-muted">Keine Aufrufe</td></tr>';
+            }
+            recent.forEach(function(r) {
+                var statusBadge = r.success ? 'success' : 'danger';
+                var statusText = r.success ? 'OK' : 'Fehler';
+                rHtml += '<tr>';
+                rHtml += '<td><small>' + (r.created_at || '') + '</small></td>';
+                rHtml += '<td>' + (featureLabels[r.feature] || r.feature || '-') + '</td>';
+                rHtml += '<td class="text-right">' + formatNumber((r.input_tokens || 0) + (r.output_tokens || 0)) + '</td>';
+                rHtml += '<td><span class="badge badge-' + statusBadge + '">' + statusText + '</span></td>';
+                rHtml += '</tr>';
+            });
+            $('#recentBody').html(rHtml);
+        }, function() {
+            $('#usageLoading').hide();
+        });
+    }
+
+    function formatNumber(n) {
+        if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+        if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+        return n.toString();
+    }
+
+    loadUsage();
+    $('#usageYear, #usageMonth').change(function() { loadUsage(); });
+});
+</script>
+{% endblock %}

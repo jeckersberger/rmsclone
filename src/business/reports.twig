@@ -65,6 +65,7 @@
                         <option value="month">{{ t('by_month') }}</option>
                         <option value="client">{{ t('by_client') }}</option>
                     </select>
+                    <button class="btn btn-sm btn-outline-success ml-1" id="exportRevenueBtn" title="CSV Export"><i class="fas fa-file-csv"></i></button>
                 </div>
             </div>
             <div class="card-body p-0">
@@ -96,6 +97,9 @@
         <div class="card">
             <div class="card-header">
                 <h3 class="card-title"><i class="fas fa-clock"></i> {{ t('outstanding_aging') }}</h3>
+                <div class="card-tools">
+                    <button class="btn btn-sm btn-outline-success" id="exportOutstandingBtn" title="CSV Export"><i class="fas fa-file-csv"></i></button>
+                </div>
             </div>
             <div class="card-body p-0">
                 <table class="table table-sm">
@@ -221,6 +225,34 @@ $(document).ready(function() {
     loadOutstanding();
 
     $('#revenueYear, #revenueGroupBy').change(function() { loadRevenue(); });
+
+    // CSV Export
+    function downloadCsv(type, extraParams) {
+        var params = $.extend({type: type}, extraParams || {});
+        ajaxcall('reports/export.php', params, function(data) {
+            if (!data.response || !data.response.csv) {
+                bootbox.alert('Export fehlgeschlagen.');
+                return;
+            }
+            var blob = new Blob([atob(data.response.csv)], {type: 'text/csv;charset=utf-8;'});
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = data.response.filename || 'export.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    }
+
+    $('#exportRevenueBtn').on('click', function() {
+        downloadCsv('revenue', {year: $('#revenueYear').val(), group_by: $('#revenueGroupBy').val()});
+    });
+
+    $('#exportOutstandingBtn').on('click', function() {
+        downloadCsv('outstanding');
+    });
 });
 </script>
 {% endblock %}

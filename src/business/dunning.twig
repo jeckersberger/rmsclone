@@ -5,6 +5,10 @@
         <div class="card">
             <div class="card-header">
                 <h3 class="card-title"><i class="fas fa-exclamation-triangle"></i> {{ t('dunning_overview') }}</h3>
+                <div class="card-tools">
+                    <a href="{{ CONFIG.ROOTURL }}/instances/configuration/dunning-levels.php" class="btn btn-sm btn-outline-secondary mr-1"><i class="fas fa-cog"></i> Mahnstufen</a>
+                    <button class="btn btn-sm btn-outline-success" id="exportDunningBtn"><i class="fas fa-file-csv"></i> CSV Export</button>
+                </div>
             </div>
             <div class="card-body">
                 <div class="row" id="dunningStats">
@@ -236,6 +240,19 @@ $(document).ready(function() {
         }, function() {
             btn.html('<i class="fas fa-robot"></i>').prop('disabled', false);
             bootbox.alert('KI-Entwurf konnte nicht generiert werden.');
+        });
+    });
+
+    // CSV Export
+    $('#exportDunningBtn').on('click', function() {
+        ajaxcall('reports/export.php', {type: 'dunning'}, function(data) {
+            if (!data.response || !data.response.csv) { bootbox.alert('Export fehlgeschlagen.'); return; }
+            var blob = new Blob([atob(data.response.csv)], {type: 'text/csv;charset=utf-8;'});
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url; a.download = data.response.filename || 'mahnungen.csv';
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         });
     });
 

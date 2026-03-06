@@ -1,0 +1,145 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <ul class="nav nav-pills">
+                    <li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/navigation.php"><i class="fas fa-arrow-left"></i> {{ t('back') }}</a></li>
+                    {% if "PROJECTS:PROJECT_TYPES:VIEW"|instancePermissions %}
+                    <li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/projectTypes.php">{{ t('project_types') }}</a></li>
+                    {% endif %}
+                    {% if "PROJECTS:PROJECT_STATUSES:VIEW"|instancePermissions %}
+                    <li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/projectStatuses.php">{{ t('project_statuses') }}</a></li>
+                    {% endif %}
+                    {% if "BUSINESS:BUSINESS_SETTINGS:VIEW"|instancePermissions %}
+                    <li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/configuration/asset-status.php">{{ t('asset_statuses') }}</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/configuration/invoices.php">{{ t('invoices') }}</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="{{CONFIG.ROOTURL}}/instances/configuration/dunning-levels.php">Mahnstufen</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/configuration/documentTemplates.php">Dokumentvorlagen</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-12 col-md-10 offset-md-1">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-exclamation-triangle"></i> Mahnstufen konfigurieren</h3>
+                <div class="card-tools">
+                    <button class="btn btn-sm btn-outline-secondary" id="resetDefaultsBtn"><i class="fas fa-undo"></i> Standardwerte</button>
+                    <button class="btn btn-sm btn-success" id="addLevelBtn"><i class="fas fa-plus"></i> Stufe hinzufuegen</button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="overlay" id="dunningLevelsLoading"><i class="fas fa-sync fa-spin fa-3x"></i></div>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th style="width:60px;">Stufe</th>
+                            <th>Bezeichnung</th>
+                            <th style="width:140px;">Tage nach Faelligkeit</th>
+                            <th style="width:120px;">Mahngebuehr</th>
+                            <th style="width:120px;">Verzugszins %</th>
+                            <th style="width:80px;">Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dunningLevelsBody"></tbody>
+                </table>
+            </div>
+            <div class="card-footer">
+                {% if "BUSINESS:BUSINESS_SETTINGS:EDIT"|instancePermissions %}
+                <button class="btn btn-primary" id="saveLevelsBtn"><i class="fas fa-save"></i> Speichern</button>
+                {% endif %}
+                <p class="text-muted mt-2 mb-0"><small><i class="fas fa-info-circle"></i> Die Mahnstufen bestimmen, wann und wie Mahnungen fuer ueberfaellige Rechnungen erstellt werden. Gebuehren und Zinsen werden automatisch berechnet.</small></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    function loadLevels() {
+        ajaxcall('dunning/saveLevels.php', {action: 'get'}, function(data) {
+            $('#dunningLevelsLoading').hide();
+            var levels = (data.response && data.response.levels) ? data.response.levels : [];
+            renderLevels(levels);
+        }, false);
+    }
+
+    function renderLevels(levels) {
+        var html = '';
+        if (levels.length === 0) {
+            html = '<tr><td colspan="6" class="text-center text-muted p-4">Keine Mahnstufen konfiguriert. Klicken Sie "Standardwerte" um die Standardkonfiguration zu laden.</td></tr>';
+        }
+        levels.forEach(function(lvl, idx) {
+            html += '<tr data-idx="' + idx + '">';
+            html += '<td><input type="number" class="form-control form-control-sm lvl-level" value="' + (lvl.level || 0) + '" min="0" max="10" style="width:60px;"></td>';
+            html += '<td><input type="text" class="form-control form-control-sm lvl-name" value="' + escHtml(lvl.name || '') + '"></td>';
+            html += '<td><input type="number" class="form-control form-control-sm lvl-days" value="' + (lvl.days_after_due || 0) + '" min="0"></td>';
+            html += '<td><div class="input-group input-group-sm"><input type="number" class="form-control lvl-fee" value="' + parseFloat(lvl.fee || 0).toFixed(2) + '" min="0" step="0.50"><div class="input-group-append"><span class="input-group-text">\u20AC</span></div></div></td>';
+            html += '<td><div class="input-group input-group-sm"><input type="number" class="form-control lvl-interest" value="' + parseFloat(lvl.interest_rate || 0).toFixed(2) + '" min="0" step="0.5"><div class="input-group-append"><span class="input-group-text">%</span></div></div></td>';
+            html += '<td><button class="btn btn-xs btn-danger removeLevelBtn"><i class="fas fa-trash"></i></button></td>';
+            html += '</tr>';
+        });
+        $('#dunningLevelsBody').html(html);
+    }
+
+    function escHtml(s) {
+        return $('<span>').text(s).html();
+    }
+
+    function collectLevels() {
+        var levels = [];
+        $('#dunningLevelsBody tr').each(function() {
+            var $r = $(this);
+            if ($r.find('.lvl-name').length === 0) return;
+            levels.push({
+                level: parseInt($r.find('.lvl-level').val()) || 0,
+                name: $r.find('.lvl-name').val(),
+                days_after_due: parseInt($r.find('.lvl-days').val()) || 0,
+                fee: parseFloat($r.find('.lvl-fee').val()) || 0,
+                interest_rate: parseFloat($r.find('.lvl-interest').val()) || 0
+            });
+        });
+        levels.sort(function(a, b) { return a.level - b.level; });
+        return levels;
+    }
+
+    $('#addLevelBtn').on('click', function() {
+        var levels = collectLevels();
+        var nextLevel = levels.length > 0 ? levels[levels.length - 1].level + 1 : 0;
+        var nextDays = levels.length > 0 ? levels[levels.length - 1].days_after_due + 14 : 7;
+        levels.push({level: nextLevel, name: '', days_after_due: nextDays, fee: 0, interest_rate: 0});
+        renderLevels(levels);
+    });
+
+    $(document).on('click', '.removeLevelBtn', function() {
+        $(this).closest('tr').remove();
+    });
+
+    $('#saveLevelsBtn').on('click', function() {
+        var levels = collectLevels();
+        ajaxcall('dunning/saveLevels.php', {action: 'save', levels: JSON.stringify(levels)}, function(data) {
+            if (data.result) {
+                bootbox.alert('<i class="fas fa-check text-success"></i> Mahnstufen gespeichert.');
+                loadLevels();
+            }
+        });
+    });
+
+    $('#resetDefaultsBtn').on('click', function() {
+        bootbox.confirm('Standardwerte wiederherstellen? Aktuelle Konfiguration wird ueberschrieben.', function(ok) {
+            if (!ok) return;
+            ajaxcall('dunning/saveLevels.php', {action: 'reset_defaults'}, function(data) {
+                if (data.result) loadLevels();
+            });
+        });
+    });
+
+    loadLevels();
+});
+</script>
+{% endblock %}
