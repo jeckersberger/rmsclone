@@ -138,6 +138,44 @@
     </div>
 </div>
 
+{# ── Ablaufende Angebote & Ausstehende Freigaben ── #}
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card card-outline card-danger collapsed-card" id="expiringQuotesCard" style="display:none;">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-hourglass-end"></i> Angebote laufen ab</h3>
+                <div class="card-tools">
+                    <span class="badge badge-danger" id="expiringQuotesCount"></span>
+                    <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-striped">
+                    <thead><tr><th>Angebot</th><th>Projekt</th><th>Kunde</th><th>Ablauf</th><th>Betrag</th></tr></thead>
+                    <tbody id="expiringQuotesBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card card-outline card-info collapsed-card" id="pendingApprovalsCard" style="display:none;">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-share-alt"></i> Ausstehende Freigaben</h3>
+                <div class="card-tools">
+                    <span class="badge badge-info" id="pendingApprovalsCount"></span>
+                    <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-striped">
+                    <thead><tr><th>Dokument</th><th>Kunde</th><th>Erstellt</th><th>Ablauf</th></tr></thead>
+                    <tbody id="pendingApprovalsBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
 {# ── Next 7 Days Timeline ── #}
 <div class="row">
     <div class="col-12">
@@ -327,6 +365,40 @@ $(document).ready(function() {
         }
         $('#weekProjectsBody').html(html);
         $('#weekLoading').hide();
+
+        // Expiring quotes
+        if (r.expiring_quotes && r.expiring_quotes.length > 0) {
+            html = '';
+            r.expiring_quotes.forEach(function(q) {
+                var badgeClass = q.days_left <= 2 ? 'danger' : 'warning';
+                html += '<tr>';
+                html += '<td>' + (q.doc_number || '-') + '</td>';
+                html += '<td><a href="{{ CONFIG.ROOTURL }}/project/?id=' + q.projects_id + '">' + (q.projects_name || '-') + '</a></td>';
+                html += '<td>' + (q.clients_name || '-') + '</td>';
+                html += '<td><span class="badge badge-' + badgeClass + '">' + q.days_left + ' Tage</span></td>';
+                html += '<td>' + formatMoney(q.gross_amount) + '</td>';
+                html += '</tr>';
+            });
+            $('#expiringQuotesBody').html(html);
+            $('#expiringQuotesCount').text(r.expiring_quotes.length);
+            $('#expiringQuotesCard').show().find('.collapsed-card').removeClass('collapsed-card');
+        }
+
+        // Pending approvals
+        if (r.pending_approvals && r.pending_approvals.length > 0) {
+            html = '';
+            r.pending_approvals.forEach(function(a) {
+                html += '<tr>';
+                html += '<td>' + (a.doc_number || '-') + '</td>';
+                html += '<td>' + (a.client_name || '-') + '</td>';
+                html += '<td>' + formatDate(a.created_at) + '</td>';
+                html += '<td>' + formatDate(a.expires_at) + '</td>';
+                html += '</tr>';
+            });
+            $('#pendingApprovalsBody').html(html);
+            $('#pendingApprovalsCount').text(r.pending_approvals.length);
+            $('#pendingApprovalsCard').show().find('.collapsed-card').removeClass('collapsed-card');
+        }
 
     }, false);
 });

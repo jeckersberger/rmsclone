@@ -311,6 +311,13 @@
       {% if business.instances_bankBic %}<tr><td class="label">BIC:</td><td>{{ business.instances_bankBic }}</td></tr>{% endif %}
       <tr><td class="label">Verwendungszweck:</td><td><strong>{{ doc.number }}</strong></td></tr>
     </table>
+    {% if doc.skonto_rate > 0 and doc.skonto_days > 0 %}
+    <p style="margin-top: 3mm; font-size: 8.5pt; color: #2c3e50;">
+      <strong>Skonto:</strong> Bei Zahlung innerhalb von {{ doc.skonto_days }} Tagen (bis {{ doc.skonto_date }})
+      gewaehren wir {{ doc.skonto_rate|numberDe }}% Skonto.
+      Rechnungsbetrag nach Skontoabzug: <strong>{{ totals.skonto_gross|numberDe }} &euro;</strong>
+    </p>
+    {% endif %}
   </div>
   {% endif %}
 

@@ -135,4 +135,44 @@ $DBLIB->where("projects.projects_archived", 0);
 $DBLIB->where("projects.clients_id IS NULL");
 $response['stats']['projects_no_client'] = $DBLIB->getValue("projects", "COUNT(*)");
 
+// ── 6. Expiring quotes (within 7 days) ──
+$sevenDaysOut = date('Y-m-d', strtotime('+7 days'));
+$DBLIB->where('dl.instances_id', $instanceId);
+$DBLIB->where('dl.doc_type', 'quote');
+$DBLIB->where('dl.status', 'sent');
+$DBLIB->where('dl.valid_until IS NOT NULL');
+$DBLIB->where('dl.valid_until', $sevenDaysOut, '<=');
+$DBLIB->where('dl.valid_until', $today, '>=');
+$DBLIB->join('projects p', 'dl.projects_id=p.projects_id', 'LEFT');
+$DBLIB->join('clients c', 'p.clients_id=c.clients_id', 'LEFT');
+$DBLIB->orderBy('dl.valid_until', 'ASC');
+$expiringQuotes = $DBLIB->get('document_lifecycle dl', null, [
+    'dl.id', 'dl.doc_number', 'dl.valid_until', 'dl.gross_amount',
+    'p.projects_id', 'p.projects_name', 'c.clients_name'
+]) ?: [];
+
+$response['expiring_quotes'] = [];
+foreach ($expiringQuotes as $q) {
+    $daysLeft = max(0, (int)((strtotime($q['valid_until']) - time()) / 86400));
+    $response['expiring_quotes'][] = [
+        'doc_number' => $q['doc_number'],
+        'projects_id' => $q['projects_id'],
+        'projects_name' => $q['projects_name'],
+        'clients_name' => $q['clients_name'],
+        'valid_until' => $q['valid_until'],
+        'days_left' => $daysLeft,
+        'gross_amount' => $q['gross_amount'],
+    ];
+}
+
+// ── 7. Pending approval links ──
+$DBLIB->where('instances_id', $instanceId);
+$DBLIB->where('status', 'pending');
+$DBLIB->where("(expires_at IS NULL OR expires_at >= '{$today}')");
+$DBLIB->orderBy('created_at', 'DESC');
+$pendingApprovals = $DBLIB->get('quote_approval_tokens', 5, [
+    'id', 'doc_number', 'client_name', 'created_at', 'expires_at', 'projects_id'
+]) ?: [];
+$response['pending_approvals'] = $pendingApprovals;
+
 finish(true, null, $response);

@@ -190,8 +190,16 @@ class ZugferdService
         // Payment terms
         $paymentTerms = self::addElement($xml, $settlement, 'ram:SpecifiedTradePaymentTerms');
         $paymentTermDays = $doc['payment_term_days'] ?? 14;
-        self::addElement($xml, $paymentTerms, 'ram:Description',
-            "Zahlbar innerhalb von {$paymentTermDays} Tagen ohne Abzug.");
+        $skontoRate = $doc['skonto_rate'] ?? 0;
+        $skontoDays = $doc['skonto_days'] ?? 0;
+        if ($skontoRate > 0 && $skontoDays > 0) {
+            self::addElement($xml, $paymentTerms, 'ram:Description',
+                "Zahlbar innerhalb von {$paymentTermDays} Tagen ohne Abzug. "
+                . "Bei Zahlung innerhalb von {$skontoDays} Tagen {$skontoRate}% Skonto.");
+        } else {
+            self::addElement($xml, $paymentTerms, 'ram:Description',
+                "Zahlbar innerhalb von {$paymentTermDays} Tagen ohne Abzug.");
+        }
         if (!empty($doc['due_date'])) {
             $dueDateDt = self::addElement($xml, $paymentTerms, 'ram:DueDateDateTime');
             $d = self::addElement($xml, $dueDateDt, 'udt:DateTimeString', self::formatDate($doc['due_date']));

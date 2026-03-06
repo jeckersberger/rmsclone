@@ -67,10 +67,27 @@ class DocumentRenderer {
     // 6) Nummer ziehen
     $docNumber = SequenceService::next($db, $instanceId, $type);
 
-    // 7) Faelligkeitsdatum berechnen
+    // 7) Faelligkeitsdatum und Skonto berechnen
     $paymentTermDays = (int)($client['clients_paymentTermDays'] ?? $business['instances_paymentTermDays'] ?? 14);
     $docDate = new DateTime();
     $dueDate = (clone $docDate)->modify("+{$paymentTermDays} days");
+
+    // Skonto nur wenn explizit fuer dieses Dokument aktiviert (nicht pauschal)
+    $skontoEnabled = !empty($opts['skonto_enabled']);
+    $skontoRate = $skontoEnabled ? (float)($opts['skonto_rate'] ?? $client['clients_skontoRate'] ?? $business['instances_skontoRate'] ?? 0) : 0;
+    $skontoDays = $skontoEnabled ? (int)($opts['skonto_days'] ?? $client['clients_skontoDays'] ?? $business['instances_skontoDays'] ?? 0) : 0;
+
+    $skontoAmount = 0;
+    $skontoDate = null;
+    if ($skontoEnabled && $skontoRate > 0 && $skontoDays > 0 && $type === 'invoice') {
+      $skontoAmount = round($totals['gross'] * $skontoRate / 100, 2);
+      $skontoDate = (clone $docDate)->modify("+{$skontoDays} days");
+      $totals['skonto_rate'] = $skontoRate;
+      $totals['skonto_days'] = $skontoDays;
+      $totals['skonto_amount'] = $skontoAmount;
+      $totals['skonto_gross'] = round($totals['gross'] - $skontoAmount, 2);
+      $totals['skonto_date'] = $skontoDate->format('d.m.Y');
+    }
 
     // 8) Leistungszeitraum
     $servicePeriodStart = new DateTime($project['projects_dateStart'] ?? $project['projects_dates_deliver_start'] ?? 'now');
@@ -94,6 +111,10 @@ class DocumentRenderer {
       'service_period_end'   => $servicePeriodEnd,
       'title'         => $typeLabels[$type]['title'] ?? $type,
       'number_label'  => $typeLabels[$type]['number_label'] ?? 'Dokumentnummer',
+      'skonto_rate'   => $skontoRate,
+      'skonto_days'   => $skontoDays,
+      'skonto_amount' => $skontoAmount,
+      'skonto_date'   => $skontoDate ? $skontoDate->format('d.m.Y') : null,
     ];
 
     // 10) Try custom template first, fall back to built-in

@@ -739,6 +739,35 @@
                         <input type="number" class="form-control" id="pdfDurationDays" value="0" min="0">
                     </div>
 
+                    {# Skonto (nur bei Rechnungen sichtbar) #}
+                    <div id="pdfSkontoSection" style="display:none;">
+                        <hr>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="pdfSkontoEnabled">
+                            <label class="form-check-label">
+                                <i class="fas fa-percentage"></i> <strong>Skonto gewaehren</strong>
+                            </label>
+                        </div>
+                        <div id="pdfSkontoFields" style="display:none; margin-left: 20px;">
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="form-group">
+                                        <label>Skonto-Satz (%)</label>
+                                        <input type="number" step="0.01" min="0" max="100" class="form-control" id="pdfSkontoRate"
+                                               value="{{ USERDATA.instance.instances_skontoRate ?? '0' }}">
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="form-group">
+                                        <label>Skontofrist (Tage)</label>
+                                        <input type="number" min="1" class="form-control" id="pdfSkontoDays"
+                                               value="{{ USERDATA.instance.instances_skontoDays ?? '0' }}">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <hr>
 
                     {# E-Mail-Versand #}
@@ -778,20 +807,30 @@
                 // Reset
                 $('#pdfGenerateStatus').hide();
                 $('#pdfGenerateBtn').prop('disabled', false).html('<i class="fas fa-file-pdf"></i> PDF erstellen');
+                $('#pdfSkontoEnabled').prop('checked', false);
+                $('#pdfSkontoFields').hide();
 
                 if ($(e.relatedTarget).data('delivery-note')) {
                     $("#pdfGenerateModal .modal-title").text("Lieferschein erstellen");
                     $('#pdfDocType').val("deliveryNote");
+                    $('#pdfSkontoSection').hide();
                     $('#pdfDraftBtn').attr('href', '{{CONFIG.ROOTURL}}/project/projectInvoice.php?id={{ project.projects_id }}&type=deliveryNote&draft=true&addresses=on&assets=on');
                 } else if ($(e.relatedTarget).data('quote')) {
                     $("#pdfGenerateModal .modal-title").text("Angebot erstellen");
                     $('#pdfDocType').val("quote");
+                    $('#pdfSkontoSection').hide();
                     $('#pdfDraftBtn').attr('href', '{{CONFIG.ROOTURL}}/project/projectInvoice.php?id={{ project.projects_id }}&type=quote&draft=true&addresses=on&finance=on&prices=on&assets=on&paymentTerms=on');
                 } else {
                     $("#pdfGenerateModal .modal-title").text("Rechnung erstellen");
                     $('#pdfDocType').val("invoice");
+                    $('#pdfSkontoSection').show();
                     $('#pdfDraftBtn').attr('href', '{{CONFIG.ROOTURL}}/project/projectInvoice.php?id={{ project.projects_id }}&type=invoice&draft=true&addresses=on&finance=on&prices=on&assets=on&paymentTerms=on');
                 }
+            });
+
+            // Skonto-Felder ein-/ausblenden
+            $('#pdfSkontoEnabled').change(function() {
+                $('#pdfSkontoFields').toggle(this.checked);
             });
 
             // Freigabelink erstellen
@@ -908,13 +947,20 @@
                 btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Wird erstellt...');
                 $('#pdfGenerateStatus').hide();
 
-                ajaxcall("projects/generateDocument.php", {
+                var postData = {
                     "id": "{{ project.projects_id }}",
                     "type": $('#pdfDocType').val(),
                     "discount_pct": $('#pdfDiscountPct').val() || 0,
                     "duration_days": $('#pdfDurationDays').val() || 0,
                     "send_email": $('#pdfSendEmail').is(':checked') ? '1' : '0'
-                }, function(data) {
+                };
+                if ($('#pdfSkontoEnabled').is(':checked')) {
+                    postData.skonto_enabled = '1';
+                    postData.skonto_rate = $('#pdfSkontoRate').val();
+                    postData.skonto_days = $('#pdfSkontoDays').val();
+                }
+
+                ajaxcall("projects/generateDocument.php", postData, function(data) {
                     btn.prop('disabled', false).html('<i class="fas fa-file-pdf"></i> PDF erstellen');
 
                     if (data.result && data.response) {

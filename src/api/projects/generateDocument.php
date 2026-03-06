@@ -46,12 +46,19 @@ $discountPct = (float)($_POST['discount_pct'] ?? 0);
 $durationDays = (int)($_POST['duration_days'] ?? 0);
 $sendEmail = !empty($_POST['send_email']);
 
+$skontoEnabled = !empty($_POST['skonto_enabled']);
+$skontoRate = isset($_POST['skonto_rate']) ? (float)$_POST['skonto_rate'] : null;
+$skontoDays = isset($_POST['skonto_days']) ? (int)$_POST['skonto_days'] : null;
+
 $options = [
     'discount_pct' => $discountPct,
     'duration_days' => $durationDays,
     'show_component_prices' => true,
     'set_group_prefix' => 'Set:',
+    'skonto_enabled' => $skontoEnabled,
 ];
+if ($skontoRate !== null) $options['skonto_rate'] = $skontoRate;
+if ($skontoDays !== null) $options['skonto_days'] = $skontoDays;
 
 try {
     // PDF generieren und speichern

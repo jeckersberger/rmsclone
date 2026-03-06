@@ -78,7 +78,7 @@ class DocumentLifecycleService
     /**
      * Convert a quote into an order confirmation or invoice
      */
-    public function convertDocument(int $sourceDocId, string $targetType, int $userId): ?int
+    public function convertDocument(int $sourceDocId, string $targetType, int $userId, array $extraOpts = []): ?int
     {
         $this->db->where('id', $sourceDocId);
         $sourceDoc = $this->db->getOne('document_lifecycle');
@@ -105,13 +105,14 @@ class DocumentLifecycleService
         $typeForRenderer = $targetType === 'order_confirmation' ? 'invoice' : $targetType;
         if ($targetType === 'credit_note') $typeForRenderer = 'invoice';
 
+        $renderOpts = array_merge(['discount_pct' => 0], $extraOpts);
         $result = DocumentRenderer::renderAndStore(
             $this->db,
             (int)$sourceDoc['instances_id'],
             (int)$sourceDoc['projects_id'],
             $typeForRenderer,
             'default',
-            ['discount_pct' => 0],
+            $renderOpts,
             $userId
         );
 

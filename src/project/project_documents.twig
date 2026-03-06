@@ -81,7 +81,13 @@ $(document).ready(function() {
                     html += '<td>' + (docTypeLabels[doc.doc_type] || doc.doc_type) + '</td>';
                     html += '<td><span class="badge badge-' + (statusBadges[doc.status] || 'secondary') + '">' + (statusLabels[doc.status] || doc.status) + '</span></td>';
                     html += '<td>' + formatMoney(doc.net_amount) + '</td>';
-                    html += '<td>' + formatMoney(doc.gross_amount) + '</td>';
+                    var grossCol = formatMoney(doc.gross_amount);
+                    if (doc.doc_type === 'invoice' && parseFloat(doc.paid_amount || 0) > 0 && doc.status !== 'paid') {
+                        var remaining = parseFloat(doc.gross_amount) - parseFloat(doc.paid_amount);
+                        grossCol += '<br><small class="text-success">Bezahlt: ' + formatMoney(doc.paid_amount) + '</small>';
+                        grossCol += '<br><small class="text-danger">Offen: ' + formatMoney(remaining) + '</small>';
+                    }
+                    html += '<td>' + grossCol + '</td>';
                     html += '<td>' + (doc.created_at ? doc.created_at.substring(0,10) : '-') + '</td>';
                     html += '<td>' + (doc.due_date || '-') + '</td>';
                     html += '<td>';
@@ -101,6 +107,9 @@ $(document).ready(function() {
                     }
                     if (doc.doc_type === 'order_confirmation') {
                         html += '<button class="btn btn-primary btn-sm docQuickConvertBtn" data-id="' + doc.id + '" data-target="invoice" title="{{ t("quick_convert_to_invoice") }}"><i class="fas fa-arrow-right"></i> {{ t("invoice") }}</button>';
+                    }
+                    if (doc.doc_type === 'invoice' && doc.status !== 'paid' && doc.status !== 'cancelled') {
+                        html += '<button class="btn btn-success btn-sm docMarkPaidBtn" data-id="' + doc.id + '" data-gross="' + doc.gross_amount + '" data-paid="' + (doc.paid_amount || 0) + '" title="Zahlung erfassen"><i class="fas fa-euro-sign"></i></button>';
                     }
                     if (doc.doc_type === 'quote' || doc.doc_type === 'order_confirmation' || doc.doc_type === 'invoice') {
                         html += '<button class="btn btn-default docConvertBtn" data-id="' + doc.id + '" data-type="' + doc.doc_type + '" title="{{ t("convert_document") }}"><i class="fas fa-arrow-right"></i></button>';
@@ -132,13 +141,66 @@ $(document).ready(function() {
                 {text: '{{ t("invoice") }}', value: 'invoice'}
             ],
             callback: function(docType) {
-                if (docType) {
-                    // Trigger the existing document generation
+                if (!docType) return;
+                if (docType === 'invoice') {
+                    showInvoiceOptionsDialog(docType);
+                } else {
                     window.location.href = '{{ CONFIG.ROOTURL }}/project/projectInvoice.php?id=' + projectId + '&type=' + (docType === 'order_confirmation' ? 'invoice' : docType);
                 }
             }
         });
     });
+
+    // Invoice creation dialog with Skonto option
+    function showInvoiceOptionsDialog(docType) {
+        var defaultSkontoRate = {{ USERDATA.instance.instances_skontoRate ?? 0 }};
+        var defaultSkontoDays = {{ USERDATA.instance.instances_skontoDays ?? 0 }};
+
+        bootbox.dialog({
+            title: '<i class="fas fa-file-invoice"></i> Rechnung erstellen',
+            message: '<form id="invoiceOptionsForm">' +
+                '<div class="form-group">' +
+                '<div class="custom-control custom-checkbox">' +
+                '<input type="checkbox" class="custom-control-input" id="skontoEnabled">' +
+                '<label class="custom-control-label" for="skontoEnabled"><strong>Skonto gewaehren</strong></label>' +
+                '</div>' +
+                '</div>' +
+                '<div id="skontoFields" style="display:none; margin-left: 20px;">' +
+                '<div class="row">' +
+                '<div class="col-6"><div class="form-group">' +
+                '<label>Skonto-Satz (%)</label>' +
+                '<input type="number" step="0.01" min="0" max="100" class="form-control" id="skontoRate" value="' + defaultSkontoRate + '">' +
+                '</div></div>' +
+                '<div class="col-6"><div class="form-group">' +
+                '<label>Skontofrist (Tage)</label>' +
+                '<input type="number" min="1" class="form-control" id="skontoDays" value="' + defaultSkontoDays + '">' +
+                '</div></div>' +
+                '</div>' +
+                '</div>' +
+                '</form>',
+            onShown: function() {
+                $('#skontoEnabled').change(function() {
+                    $('#skontoFields').toggle(this.checked);
+                });
+            },
+            buttons: {
+                cancel: { label: 'Abbrechen', className: 'btn-default' },
+                confirm: {
+                    label: '<i class="fas fa-file-invoice"></i> Rechnung erstellen',
+                    className: 'btn-primary',
+                    callback: function() {
+                        var url = '{{ CONFIG.ROOTURL }}/project/projectInvoice.php?id=' + projectId + '&type=invoice';
+                        if ($('#skontoEnabled').is(':checked')) {
+                            url += '&skonto_enabled=1';
+                            url += '&skonto_rate=' + encodeURIComponent($('#skontoRate').val());
+                            url += '&skonto_days=' + encodeURIComponent($('#skontoDays').val());
+                        }
+                        window.location.href = url;
+                    }
+                }
+            }
+        });
+    }
 
     // Change status
     $(document).on('click', '.docStatusBtn', function() {
@@ -201,10 +263,51 @@ $(document).ready(function() {
         var docId = $(this).data('id');
         var targetType = $(this).data('target');
         var btn = $(this);
-        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
-        ajaxcall('documentLifecycle/convert.php', {source_doc_id: docId, target_type: targetType}, function() {
-            loadDocuments();
-        });
+
+        // Bei Konvertierung zu Rechnung: Skonto-Option anbieten
+        if (targetType === 'invoice') {
+            var defaultSkontoRate = {{ USERDATA.instance.instances_skontoRate ?? 0 }};
+            var defaultSkontoDays = {{ USERDATA.instance.instances_skontoDays ?? 0 }};
+            bootbox.dialog({
+                title: '<i class="fas fa-file-invoice"></i> Rechnung erstellen',
+                message: '<div class="form-check mb-2">' +
+                    '<input class="form-check-input" type="checkbox" id="convSkontoEnabled">' +
+                    '<label class="form-check-label" for="convSkontoEnabled"><strong>Skonto gewaehren</strong></label>' +
+                    '</div>' +
+                    '<div id="convSkontoFields" style="display:none; margin-left: 20px;">' +
+                    '<div class="row">' +
+                    '<div class="col-6"><div class="form-group"><label>Skonto-Satz (%)</label>' +
+                    '<input type="number" step="0.01" min="0" max="100" class="form-control" id="convSkontoRate" value="' + defaultSkontoRate + '"></div></div>' +
+                    '<div class="col-6"><div class="form-group"><label>Skontofrist (Tage)</label>' +
+                    '<input type="number" min="1" class="form-control" id="convSkontoDays" value="' + defaultSkontoDays + '"></div></div>' +
+                    '</div></div>',
+                onShown: function() {
+                    $('#convSkontoEnabled').change(function() { $('#convSkontoFields').toggle(this.checked); });
+                },
+                buttons: {
+                    cancel: { label: 'Abbrechen', className: 'btn-default' },
+                    confirm: {
+                        label: '<i class="fas fa-arrow-right"></i> Rechnung erstellen',
+                        className: 'btn-primary',
+                        callback: function() {
+                            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+                            var params = {source_doc_id: docId, target_type: targetType};
+                            if ($('#convSkontoEnabled').is(':checked')) {
+                                params.skonto_enabled = '1';
+                                params.skonto_rate = $('#convSkontoRate').val();
+                                params.skonto_days = $('#convSkontoDays').val();
+                            }
+                            ajaxcall('documentLifecycle/convert.php', params, function() { loadDocuments(); });
+                        }
+                    }
+                }
+            });
+        } else {
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+            ajaxcall('documentLifecycle/convert.php', {source_doc_id: docId, target_type: targetType}, function() {
+                loadDocuments();
+            });
+        }
     });
 
     // Accept quote and convert to order confirmation in one click
@@ -242,6 +345,53 @@ $(document).ready(function() {
                         bootbox.alert(data.response ? data.response.message : '{{ t("email_sent_success") }}');
                         loadDocuments();
                     });
+                }
+            }
+        });
+    });
+
+    // Zahlung erfassen
+    $(document).on('click', '.docMarkPaidBtn', function() {
+        var docId = $(this).data('id');
+        var gross = parseFloat($(this).data('gross') || 0);
+        var alreadyPaid = parseFloat($(this).data('paid') || 0);
+        var remaining = (gross - alreadyPaid).toFixed(2);
+
+        bootbox.dialog({
+            title: '<i class="fas fa-euro-sign"></i> Zahlung erfassen',
+            message: '<form id="paymentForm">' +
+                '<p>Bruttobetrag: <strong>' + formatMoney(gross) + '</strong>' +
+                (alreadyPaid > 0 ? '<br>Bereits bezahlt: ' + formatMoney(alreadyPaid) + '<br>Offen: <strong>' + formatMoney(remaining) + '</strong>' : '') + '</p>' +
+                '<div class="form-group"><label>Zahlungsbetrag (EUR)</label>' +
+                '<input type="number" step="0.01" min="0.01" class="form-control" id="payAmount" value="' + remaining + '"></div>' +
+                '<div class="form-group"><label>Referenz <small class="text-muted">(optional)</small></label>' +
+                '<input type="text" class="form-control" id="payReference" placeholder="z.B. Ueberweisungsreferenz"></div>' +
+                '<div class="form-group"><div class="custom-control custom-checkbox">' +
+                '<input type="checkbox" class="custom-control-input" id="payPartial">' +
+                '<label class="custom-control-label" for="payPartial">Teilzahlung (Rechnung bleibt offen)</label>' +
+                '</div></div>' +
+                '</form>',
+            buttons: {
+                cancel: { label: 'Abbrechen', className: 'btn-default' },
+                confirm: {
+                    label: '<i class="fas fa-check"></i> Zahlung buchen',
+                    className: 'btn-success',
+                    callback: function() {
+                        ajaxcall('documentLifecycle/markPaid.php', {
+                            doc_id: docId,
+                            amount: $('#payAmount').val(),
+                            reference: $('#payReference').val(),
+                            partial: $('#payPartial').is(':checked') ? '1' : '0'
+                        }, function(data) {
+                            if (data.response) {
+                                var msg = data.response.fully_paid
+                                    ? 'Rechnung vollstaendig bezahlt!'
+                                    : 'Teilzahlung erfasst. Offen: ' + formatMoney(data.response.remaining);
+                                bootbox.alert(msg);
+                            }
+                            loadDocuments();
+                        });
+                    }
                 }
             }
         });
