@@ -989,6 +989,72 @@ $configStructureArray = [
     "default" => false,
     "envFallback" => false,
   ],
+  // ── Update-Einstellungen ──
+  "UPDATE_GIT_REMOTE" => [
+    "form" => [
+      "type" => "text",
+      "default" => function () {
+        return "origin";
+      },
+      "name" => "Git Remote Name",
+      "group" => "Updates",
+      "description" => "Name des Git-Remotes fuer Updates (Standard: origin). Aendern Sie dies nur, wenn Sie einen anderen Remote verwenden.",
+      "required" => true,
+      "maxlength" => 50,
+      "minlength" => 1,
+      "options" => [],
+      "verifyMatch" => function ($value, $options) {
+        $v = preg_match('/^[a-zA-Z0-9_-]+$/', $value);
+        return ["valid" => (bool)$v, "value" => $value, "error" => $v ? '' : 'Ungueltiger Remote-Name'];
+      }
+    ],
+    "specialRequest" => false,
+    "default" => "origin",
+    "envFallback" => "UPDATE_GIT_REMOTE",
+  ],
+  "UPDATE_GIT_BRANCH" => [
+    "form" => [
+      "type" => "text",
+      "default" => function () {
+        return "main";
+      },
+      "name" => "Git Branch",
+      "group" => "Updates",
+      "description" => "Branch von dem Updates bezogen werden (Standard: main).",
+      "required" => true,
+      "maxlength" => 100,
+      "minlength" => 1,
+      "options" => [],
+      "verifyMatch" => function ($value, $options) {
+        $v = preg_match('/^[a-zA-Z0-9_\.\/-]+$/', $value);
+        return ["valid" => (bool)$v, "value" => $value, "error" => $v ? '' : 'Ungueltiger Branch-Name'];
+      }
+    ],
+    "specialRequest" => false,
+    "default" => "main",
+    "envFallback" => "UPDATE_GIT_BRANCH",
+  ],
+  "UPDATE_AUTO_CHECK" => [
+    "form" => [
+      "type" => "select",
+      "default" => function () {
+        return "Enabled";
+      },
+      "name" => "Automatisch auf Updates pruefen",
+      "group" => "Updates",
+      "description" => "Wenn aktiviert, wird beim Laden der Admin-Seiten automatisch nach neuen Versionen gesucht und ein Hinweis angezeigt.",
+      "required" => false,
+      "maxlength" => 10,
+      "minlength" => 5,
+      "options" => ["Enabled", "Disabled"],
+      "verifyMatch" => function ($value, $options) {
+        return ["valid" => in_array($value, $options), "value" => $value, "error" => ''];
+      }
+    ],
+    "specialRequest" => false,
+    "default" => "Enabled",
+    "envFallback" => false,
+  ],
   "TELEMETRY_NANOID"  => [
     "form" => [
       "type" => "text",

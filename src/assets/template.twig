@@ -828,9 +828,9 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 												</a>
 											</li>
 											<li class="nav-item">
-												<a href="{{ CONFIG.ROOTURL }}/server/update.php" class="nav-link">
+												<a href="{{ CONFIG.ROOTURL }}/server/update.php" class="nav-link" id="navUpdateLink">
 													<i class="nav-icon fas fa-download"></i>
-													<p>System-Update</p>
+													<p>System-Update <span id="updateBadge" class="right badge badge-warning" style="display:none;">Neu</span></p>
 												</a>
 											</li>
 											{% endif %}
@@ -1065,5 +1065,29 @@ console.log("Welcome to    {{ CONFIG.PROJECT_NAME|escape("js") }}version    {{ V
 })();
 			</script>
 			{{ CONFIG.FOOTER_ANALYTICS|raw }}
+			{% if "CONFIG:SET"|serverPermissions and CONFIG.UPDATE_AUTO_CHECK != "Disabled" %}
+			<script>
+			(function() {
+				try {
+					var lastCheck = sessionStorage.getItem('updateCheckTime');
+					var now = Date.now();
+					if (lastCheck && (now - parseInt(lastCheck)) < 300000) {
+						var cached = sessionStorage.getItem('updateAvailable');
+						if (cached === '1') $('#updateBadge').show();
+						return;
+					}
+					$.post('{{ CONFIG.ROOTURL }}/api/server/update.php', {action: 'check'}, function(data) {
+						sessionStorage.setItem('updateCheckTime', now.toString());
+						if (data.result && data.response && data.response.updateAvailable) {
+							sessionStorage.setItem('updateAvailable', '1');
+							$('#updateBadge').show();
+						} else {
+							sessionStorage.setItem('updateAvailable', '0');
+						}
+					});
+				} catch(e) {}
+			})();
+			</script>
+			{% endif %}
 		</body>
 	</html>

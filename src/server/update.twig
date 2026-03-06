@@ -92,7 +92,9 @@
             </div>
             <div class="card-footer text-muted text-sm">
                 <i class="fas fa-info-circle mr-1"></i>
-                Das Update zieht Änderungen aus dem <code>main</code>-Branch, führt Composer-Install, Datenbank-Migrationen und einen Apache-Neustart automatisch durch.
+                Das Update zieht Aenderungen vom konfigurierten Git-Remote (<code>{{ CONFIG.UPDATE_GIT_REMOTE|default('origin') }}</code> / <code>{{ CONFIG.UPDATE_GIT_BRANCH|default('main') }}</code>), fuehrt Composer-Install, Datenbank-Migrationen und einen Apache-Neustart automatisch durch.
+                <br>
+                <small>Version: <code id="versionInfo">-</code> | Remote/Branch konfigurierbar unter Server-Admin &rarr; Konfiguration &rarr; Updates</small>
             </div>
         </div>
     </div>
@@ -107,6 +109,7 @@ $(document).ready(function() {
             var r = data.response;
             $("#statusArea").hide();
             $("#currentBranch").text(r.currentBranch);
+            if (r.currentVersion) $("#versionInfo").text(r.currentVersion + ' (' + r.currentCommit + ')');
 
             if (r.updateAvailable) {
                 $("#currentCommitUpdate").text(r.currentCommit);
@@ -155,7 +158,7 @@ $(document).ready(function() {
     $("#pullButton").click(function() {
         bootbox.confirm({
             title: "Update installieren?",
-            message: "Das System wird aus dem <code>main</code>-Branch aktualisiert.<br><br>" +
+            message: "Das System wird vom konfigurierten Git-Remote aktualisiert.<br><br>" +
                      "<b>Folgende Schritte werden automatisch durchgeführt:</b>" +
                      "<ol class='mt-2'>" +
                      "<li>Lokale Änderungen sichern (git stash)</li>" +

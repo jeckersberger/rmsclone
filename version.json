@@ -1,0 +1,7 @@
+{
+  "version": "1.0.0",
+  "build": "dev",
+  "channel": "stable",
+  "min_php": "8.1",
+  "min_mysql": "5.7"
+}
