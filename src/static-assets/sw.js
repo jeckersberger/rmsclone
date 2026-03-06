@@ -1,5 +1,5 @@
-// Service Worker for AdamRMS Mobile PWA
-const CACHE_NAME = 'rms-mobile-v1';
+// Service Worker for RMS Mobile PWA
+const CACHE_NAME = 'rms-mobile-v2';
 const PRECACHE_URLS = [
   '/mobile/',
   '/static-assets/css/adminlte.min.css',
@@ -23,15 +23,36 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  // Network-first for API calls
-  if (event.request.url.includes('/api/')) {
+  const url = new URL(event.request.url);
+
+  // Network-first for API calls and PHP pages
+  if (url.pathname.includes('/api/') || url.pathname.endsWith('.php')) {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match(event.request))
+      fetch(event.request)
+        .then(response => {
+          // Cache successful GET responses
+          if (event.request.method === 'GET' && response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
     );
     return;
   }
-  // Cache-first for static assets
+
+  // Cache-first for static assets (CSS, JS, images, fonts)
   event.respondWith(
-    caches.match(event.request).then(cached => cached || fetch(event.request))
+    caches.match(event.request).then(cached => {
+      if (cached) return cached;
+      return fetch(event.request).then(response => {
+        if (response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        }
+        return response;
+      });
+    })
   );
 });
