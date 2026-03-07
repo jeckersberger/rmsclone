@@ -8,7 +8,7 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <select class="form-control" multiple="multiple" placeholder="Assets fuer Barcode-Druck auswaehlen" id="assetSearch" lines>
+                        <select class="form-control" multiple="multiple" placeholder="Select assets to print barcodes for" id="assetSearch" lines>
                             {% for asset in preFetch %}
                                 <option value="{{asset.assets_id}}" selected="selected">{{ asset.assets_tag|aTag }} | {{ asset.assetTypes_name}} ({{ asset.manufacturers_name }})</option>
                             {% endfor %}
@@ -71,6 +71,10 @@
                                 </p>
                                 <button type="button" class="btn btn-default generateButton" data-type="table">Generate Table of Barcodes</button>
                                 <button type="button" class="btn btn-default generateButton" data-type="printout">Generate Sticker Printout</button>
+                                <hr/>
+                                <p><b>Label Printer</b></p>
+                                <button type="button" class="btn btn-primary labelPrinterButton" data-format="html"><i class="fas fa-print"></i> Print Labels (HTML)</button>
+                                <button type="button" class="btn btn-warning labelPrinterButton" data-format="zpl"><i class="fas fa-download"></i> Download ZPL (Zebra)</button>
                                 <hr/>
                                 <p>Sticker Printout Settings</p>
                                 <p class="text-sm">Tag
@@ -161,6 +165,7 @@
                 <div class="card-footer">
                     <div class="btn-group float-right">
                         <button type="button" class="btn btn-default generateButton" data-type="printout">Generate Sticker Printout</button>
+                        <button type="button" class="btn btn-primary labelPrinterButton" data-format="html"><i class="fas fa-print"></i> Label Printer</button>
                     </div>
                 </div>
             </div>
@@ -172,6 +177,16 @@
                 var assets = $("#assetSearch").val();
                 var groups = $("#assetGroups").val();
                 window.location="{{ CONFIG.ROOTURL }}/maintenance/barcodePrint.php?" + $('#settings').serialize() + "&ids=" + assets.join() + "&blanks=" + $("#blanksInput").val() + "&groups=" + groups.join() + "&type=" + $(this).data("type");
+            });
+
+            $(".labelPrinterButton").click(function () {
+                var assets = $("#assetSearch").val();
+                if (!assets || assets.length === 0) {
+                    alert("Please select at least one asset.");
+                    return;
+                }
+                var format = $(this).data("format");
+                window.open("{{ CONFIG.ROOTURL }}/mobile/labels.php?ids=" + assets.join(",") + "&format=" + format, "_blank");
             });
 
             $("#assetSearch").select2({

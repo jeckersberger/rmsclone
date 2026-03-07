@@ -1,24 +1,24 @@
 <?php
 /**
- * Label-Druckseite für Zebra-Drucker
+ * Label printing page for label printers (e.g. Zebra)
  *
- * Generiert:
- * 1. ZPL-Code für direkten Zebra-Druck (via Browser Print oder Raw-USB)
- * 2. Druckbare HTML-Labels mit QR-Codes als Fallback
+ * Generates:
+ * 1. ZPL code for direct Zebra printing (via Browser Print or Raw-USB)
+ * 2. Printable HTML labels with QR codes as fallback
  *
- * Parameter: ?ids=1,2,3 (kommagetrennte Asset-IDs)
- *            &format=zpl (optional: zpl oder html, default: html)
+ * Parameters: ?ids=1,2,3 (comma-separated asset IDs)
+ *             &format=zpl (optional: zpl or html, default: html)
  */
 require_once __DIR__ . '/../common/headSecure.php';
-if (!$AUTH->instancePermissionCheck("ASSETS:VIEW")) die('Keine Berechtigung');
+if (!$AUTH->instancePermissionCheck("ASSETS:VIEW")) die('No permission');
 
 $instanceId = $AUTH->data['instance']['instances_id'];
 $ids = array_filter(array_map('intval', explode(',', $_GET['ids'] ?? '')));
 $format = $_GET['format'] ?? 'html';
 
-if (empty($ids)) die('Keine Asset-IDs angegeben');
+if (empty($ids)) die('No asset IDs provided');
 
-// Assets laden
+// Load assets
 $assets = [];
 foreach ($ids as $id) {
     $DBLIB->where('a.assets_id', $id);
@@ -38,7 +38,7 @@ foreach ($ids as $id) {
 $businessName = $AUTH->data['instance']['instances_name'] ?? 'RMS';
 $baseUrl = $CONFIG['ROOTURL'];
 
-// ZPL-Ausgabe für Zebra-Drucker
+// ZPL output for Zebra label printers
 if ($format === 'zpl') {
     header('Content-Type: text/plain; charset=utf-8');
     header('Content-Disposition: attachment; filename="labels.zpl"');
@@ -51,16 +51,16 @@ if ($format === 'zpl') {
         $qrData = "{$baseUrl}/asset/?id={$a['assets_id']}";
         $barcode = $a['assets_barcode'] ?? $tag;
 
-        // ZPL Label (51mm x 25mm bei 203dpi = 408x203 dots)
+        // ZPL Label (51mm x 25mm at 203dpi = 408x203 dots)
         echo "^XA\n";
         echo "^CI28\n"; // UTF-8
-        echo "^PW408\n"; // Labelbreite
-        echo "^LL203\n"; // Labelhöhe
+        echo "^PW408\n"; // Label width
+        echo "^LL203\n"; // Label height
 
-        // QR-Code links
+        // QR code on the left
         echo "^FO10,10^BQN,2,4^FDMA,{$qrData}^FS\n";
 
-        // Text rechts neben QR
+        // Text to the right of QR
         echo "^FO140,10^A0N,22,22^FD{$tag}^FS\n";
         echo "^FO140,38^A0N,16,16^FD{$type}^FS\n";
         if ($manufacturer) {
@@ -70,12 +70,12 @@ if ($format === 'zpl') {
             echo "^FO140,76^A0N,14,14^FD{$category}^FS\n";
         }
 
-        // Barcode unten
+        // Barcode at bottom
         if ($barcode) {
             echo "^FO10,160^BY1,2,30^BCN,30,N,N^FD{$barcode}^FS\n";
         }
 
-        // Firmenname klein unten rechts
+        // Business name small bottom right
         echo "^FO300,180^A0N,12,12^FD{$businessName}^FS\n";
 
         echo "^XZ\n\n";
@@ -83,10 +83,10 @@ if ($format === 'zpl') {
     exit;
 }
 
-// HTML Label-Ausgabe (druckbar)
+// HTML label output (printable)
 $PAGEDATA['assets'] = $assets;
 $PAGEDATA['businessName'] = $businessName;
 $PAGEDATA['baseUrl'] = $baseUrl;
-$PAGEDATA['pageConfig'] = ['TITLE' => 'Labels drucken', 'NOMENU' => true, 'BREADCRUMB' => false];
+$PAGEDATA['pageConfig'] = ['TITLE' => 'Print Labels', 'NOMENU' => true, 'BREADCRUMB' => false];
 
 echo $TWIG->render('mobile/labels.twig', $PAGEDATA);

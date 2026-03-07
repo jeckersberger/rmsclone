@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Geraete-Etiketten</title>
+    <title>Asset Labels</title>
     <style>
         @page { size: 51mm 25mm; margin: 0; }
         @media print {
@@ -43,11 +43,11 @@
 <body>
     <div class="controls no-print">
         <h2><i class="fas fa-tag"></i> {{ assets|length }} Labels</h2>
-        <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> HTML drucken</button>
-        <button class="btn-zpl" onclick="downloadZPL()"><i class="fas fa-download"></i> ZPL fuer Zebra</button>
-        <button class="btn-back" onclick="history.back()"><i class="fas fa-arrow-left"></i> Zurück</button>
+        <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Print Labels (HTML)</button>
+        <button class="btn-zpl" onclick="downloadZPL()"><i class="fas fa-download"></i> Download ZPL (Zebra)</button>
+        <button class="btn-back" onclick="history.back()"><i class="fas fa-arrow-left"></i> Back</button>
         <p style="font-size:12px;margin-top:8px;opacity:0.7;">
-            Tipp: Für Zebra-Drucker die ZPL-Datei herunterladen und an den Drucker senden
+            Tip: For Zebra label printers, download the ZPL file and send it to the printer
         </p>
     </div>
 
@@ -55,7 +55,7 @@
         {% for a in assets %}
         <div class="label">
             <div class="qr">
-                {# QR-Code via Google Charts API (oder QR-Server) #}
+                {# QR code via QR server API #}
                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ (baseUrl ~ '/asset/?id=' ~ a.assets_id)|url_encode }}" alt="QR">
             </div>
             <div class="info">
