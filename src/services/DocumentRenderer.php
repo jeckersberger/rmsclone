@@ -52,8 +52,17 @@ class DocumentRenderer {
     $flatLines  = $lineData['_flat'];
     $categories = $lineData['_grouped'];
 
-    // 4) KUR aus Business-Settings
+    // 4) KUR aus Business-Settings (mit automatischer Uebergangslogik)
     $kurEnabled = (bool)($business['instances_kurEnabled'] ?? true);
+    // KUR-Uebergang: Wenn Uebergangsjahr erreicht, automatisch auf Regelbesteuerung wechseln
+    if ($kurEnabled && !empty($business['instances_kurTransitionYear'])) {
+      if ((int)date('Y') >= (int)$business['instances_kurTransitionYear']) {
+        $kurEnabled = false;
+        // KUR in DB deaktivieren (einmaliger automatischer Wechsel)
+        $db->where('instances_id', $instanceId);
+        $db->update('instances', ['instances_kurEnabled' => 0]);
+      }
+    }
     $vatRate = $kurEnabled ? 0 : (float)($business['instances_vatRate'] ?? 19.0);
 
     // 5) Summen + Rabatt + KUR/MwSt
@@ -173,11 +182,20 @@ class DocumentRenderer {
 
     // 11b) ZUGFeRD XML fuer Rechnungen generieren
     $zugferdXml = null;
+    $xrechnungXml = null;
     if ($type === 'invoice') {
       require_once __DIR__ . '/ZugferdService.php';
       $zugferdXml = ZugferdService::generateInvoiceXml(
         $business, $client, $docData, $flatLines, $totals, $project
       );
+
+      // XRechnung (UBL 2.1) zusaetzlich generieren wenn Leitweg-ID vorhanden
+      if (!empty($client['clients_leitwegId'])) {
+        require_once __DIR__ . '/XRechnungService.php';
+        $xrechnungXml = XRechnungService::generateInvoiceXml(
+          $business, $client, $docData, $flatLines, $totals, $project
+        );
+      }
     }
 
     // 11c) PDF/A-3b Konvertierung mit eingebettetem ZUGFeRD XML
@@ -206,16 +224,34 @@ class DocumentRenderer {
       $zugferdFileId = $zugferdFileInfo['s3files_id'] ?? null;
     }
 
+    // 12c) XRechnung XML separat speichern (fuer oeffentliche Auftraggeber)
+    $xrechnungFileId = null;
+    if ($xrechnungXml) {
+      $xrechnungFileInfo = S3Files::storeProjectFile($db, $instanceId, $projectId, $fileType, [
+        'name' => 'xrechnung_' . $docNumber . '.xml', 'content' => $xrechnungXml, 'extension' => 'xml'
+      ]);
+      $xrechnungFileId = $xrechnungFileInfo['s3files_id'] ?? null;
+    }
+
     // 13) Export protokollieren (unveraenderbar = GoBD)
+    // Aufbewahrungsfrist automatisch setzen (10 Jahre)
+    $retentionExpiresAt = date('Y-m-d H:i:s', strtotime('+10 years'));
     $db->insert('document_exports', [
       'instances_id'=>$instanceId,'projects_id'=>$projectId,'type'=>$type,
       'template_id'=>$tpl ? $tpl['id'] : 0,
       'doc_number'=>$docNumber,'language'=>'de-DE','currency'=>'EUR',
       'totals_json'=>json_encode($totals),'snapshot_json'=>json_encode(['lines'=>$flatLines,'categories'=>$categories,'doc'=>$docData]),
       's3files_id'=>$fileInfo['s3files_id'],'generated_by'=>$userId,
-      'zugferd_xml_s3files_id'=>$zugferdFileId
+      'zugferd_xml_s3files_id'=>$zugferdFileId,
+      'retention_expires_at'=>$retentionExpiresAt,
+      'archive_status'=>'active',
     ]);
-    return ['doc_number'=>$docNumber,'s3files_id'=>$fileInfo['s3files_id'],'zugferd_s3files_id'=>$zugferdFileId];
+    return [
+      'doc_number'=>$docNumber,
+      's3files_id'=>$fileInfo['s3files_id'],
+      'zugferd_s3files_id'=>$zugferdFileId,
+      'xrechnung_s3files_id'=>$xrechnungFileId,
+    ];
   }
 
   private static function calcDays(DateTime $start, DateTime $end): int {

@@ -1121,5 +1121,29 @@ console.log("Welcome to    {{ CONFIG.PROJECT_NAME|escape("js") }}version    {{ V
 			})();
 			</script>
 			{% endif %}
+		{# Cookie-Consent-Banner (DSGVO Art. 6 Abs. 1 lit. a) #}
+		{% if USERDATA is defined and USERDATA.instance is defined and USERDATA.instance.instances_cookieConsentEnabled is defined and USERDATA.instance.instances_cookieConsentEnabled %}
+		<div id="cookieConsentBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#2c3e50;color:#fff;padding:15px 20px;z-index:99999;box-shadow:0 -2px 10px rgba(0,0,0,0.3);">
+			<div style="max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+				<div style="flex:1;min-width:300px;">
+					<strong>Cookie-Einstellungen</strong>
+					<p style="margin:5px 0 0;font-size:13px;opacity:0.9;">
+						Wir verwenden Cookies, um die Funktionalitaet der Anwendung sicherzustellen.
+						{% if USERDATA.instance.instances_privacyPolicyUrl or USERDATA.instance.instances_privacyPolicyHtml %}
+						<a href="{{ CONFIG.ROOTURL }}/business/legal.php?page=privacy" style="color:#3498db;">Datenschutzerklaerung</a>
+						{% endif %}
+					</p>
+				</div>
+				<div style="display:flex;gap:8px;flex-wrap:wrap;">
+					<button onclick="cookieConsentAccept('necessary')" class="btn btn-outline-light btn-sm">Nur notwendige</button>
+					<button onclick="cookieConsentAccept('all')" class="btn btn-success btn-sm">Alle akzeptieren</button>
+				</div>
+			</div>
+		</div>
+		<script>
+		(function(){if(!localStorage.getItem('cookie_consent')){document.getElementById('cookieConsentBanner').style.display='block';}})();
+		function cookieConsentAccept(l){var c=['necessary'];if(l==='all')c.push('analytics','marketing');localStorage.setItem('cookie_consent',JSON.stringify({categories:c,date:new Date().toISOString()}));document.getElementById('cookieConsentBanner').style.display='none';if(typeof ajaxcall==='function'){ajaxcall('cookieConsent/save.php',{categories:c.join(',')},function(){},false);}}
+		</script>
+		{% endif %}
 		</body>
 	</html>
