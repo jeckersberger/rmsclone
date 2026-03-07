@@ -28,7 +28,7 @@ class DefaultUserSeeder extends AbstractSeed
                 "users_name2" => "UserL",
                 "users_userid" => 1,
                 "users_salty1" => "8smqAFD9",
-                "users_password" => "fa5a51baef12914c7f2e0e1176a030bf086d26edae298c25d5f84c90bc72ecd7",
+                "users_password" => "4ad073b595453bfbeb557c72c701f7f731fc11fb98b1b6e4c7c3b91f53555a71",
                 "users_salty2" => "uOhfrOCW",
                 "users_hash" => "sha256",
                 "users_email" => "test@example.com",
