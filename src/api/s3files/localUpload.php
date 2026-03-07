@@ -28,6 +28,18 @@ $type = isset($_POST['type']) ? $bCMS->sanitizeString($_POST['type']) : 'GENERAL
 $originalName = isset($_POST['originalName']) ? $bCMS->sanitizeString($_POST['originalName']) : $_FILES['file']['name'];
 
 $extension = strtolower(pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION));
+
+// Block dangerous file types that could lead to RCE
+$blockedExtensions = ['php', 'phtml', 'php3', 'php4', 'php5', 'php7', 'phps', 'phar', 'cgi', 'pl', 'py', 'sh', 'bash', 'exe', 'bat', 'cmd', 'com', 'htaccess', 'htpasswd', 'shtml'];
+if (in_array($extension, $blockedExtensions, true) || empty($extension)) {
+    finish(false, ["code" => null, "message" => "File type not allowed"]);
+}
+
+// Max file size: 64MB (matches PHP config)
+if ($_FILES['file']['size'] > 67108864) {
+    finish(false, ["code" => null, "message" => "File too large (max 64MB)"]);
+}
+
 $storagePath = "uploads/" . $type;
 $filename = time() . "-" . mt_rand(1000000000, 9999999999) . "." . $extension;
 

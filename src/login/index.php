@@ -12,7 +12,15 @@ $PAGEDATA['microsoftAuthAvailable'] = $CONFIGCLASS->get("AUTH_PROVIDERS_MICROSOF
 if (isset($_GET['app-oauth'])) {
 	$_SESSION['return'] = false;
 	if (isset($_GET['returnHost'])) {
-		$_SESSION['app-oauth'] = 'https://' . $_GET['returnHost'] . '/';
+		// Whitelist: only allow known app schemes and own domain
+		$returnHost = $_GET['returnHost'];
+		$allowedHosts = ['localhost', parse_url($CONFIG['ROOTURL'], PHP_URL_HOST)];
+		$parsed = parse_url('https://' . $returnHost);
+		if ($parsed && isset($parsed['host']) && in_array($parsed['host'], $allowedHosts, true)) {
+			$_SESSION['app-oauth'] = 'https://' . $returnHost . '/';
+		} else {
+			$_SESSION['app-oauth'] = "com.bstudios.adamrms://";
+		}
 	} else {
 		$_SESSION['app-oauth'] = "com.bstudios.adamrms://";
 	}

@@ -14,13 +14,17 @@ $DBLIB->join("assetTypes", "assets.assetTypes_id=assetTypes.assetTypes_id", "LEF
 $DBLIB->join("manufacturers", "manufacturers.manufacturers_id=assetTypes.manufacturers_id", "LEFT");
 $DBLIB->where("assets.assets_deleted", 0);
 $DBLIB->where("(assets.assets_endDate IS NULL OR assets.assets_endDate >= CURRENT_TIMESTAMP())");
-if ($job and $job['maintenanceJobs_assets'] != "") $DBLIB->where("(assets_id NOT IN (" . $job['maintenanceJobs_assets'] . "))");
+if ($job and $job['maintenanceJobs_assets'] != "") {
+    // Sanitize: only allow comma-separated integers
+    $assetIds = array_filter(array_map('intval', explode(',', $job['maintenanceJobs_assets'])));
+    if (!empty($assetIds)) {
+        $DBLIB->where("assets_id NOT IN (" . implode(',', $assetIds) . ")");
+    }
+}
 $DBLIB->where("assets.instances_id", $AUTH->data['instance']['instances_id']);
 if (isset($_POST['term']) and strlen($_POST['term']) > 0) {
-    $DBLIB->where("(
-		assets.assets_tag LIKE '%" . $bCMS->sanitizeString($_POST['term']) . "%'
-		OR assetTypes.assetTypes_name LIKE '%" . $bCMS->sanitizeString($_POST['term']) . "%'
-    )");
+    $term = $bCMS->sanitizeString($_POST['term']);
+    $DBLIB->where("(assets.assets_tag LIKE ? OR assetTypes.assetTypes_name LIKE ?)", ['%' . $term . '%', '%' . $term . '%']);
 }
 $assets = $DBLIB->get("assets", 15, ["assets.assets_id", "assetTypes.assetTypes_name", "assets.assets_tag", "manufacturers.manufacturers_name"]);
 if (!$assets) finish(false, ["code" => "LIST-ASSETS-FAIL", "message"=> "Could not search for assets"]);

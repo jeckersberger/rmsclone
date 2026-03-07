@@ -7,7 +7,21 @@ if ($CONFIG['FILES_ENABLED'] !== "Enabled") {
 if(isset($_FILES['file'])) {
     $temp_file_location = $_FILES['file']['tmp_name'];
     $extension = strtolower(pathinfo($_POST['filename'], PATHINFO_EXTENSION));
-    $storagePath = "uploads/" . $_POST['typename'];
+
+    // Block dangerous file types
+    $blockedExtensions = ['php', 'phtml', 'php3', 'php4', 'php5', 'php7', 'phps', 'phar', 'cgi', 'pl', 'py', 'sh', 'bash', 'exe', 'bat', 'cmd', 'com', 'htaccess', 'htpasswd', 'shtml'];
+    if (in_array($extension, $blockedExtensions, true) || empty($extension)) {
+        finish(false, ["code" => null, "message" => "File type not allowed"]);
+    }
+
+    // Max file size: 64MB
+    if ($_FILES['file']['size'] > 67108864) {
+        finish(false, ["code" => null, "message" => "File too large (max 64MB)"]);
+    }
+
+    // Sanitize typename to prevent path traversal
+    $typename = preg_replace('/[^a-zA-Z0-9_-]/', '', $_POST['typename'] ?? 'GENERAL');
+    $storagePath = "uploads/" . $typename;
     $filename = time() . "-" . mt_rand(1000000000, 9999999999) . "." . $extension;
 
     $storageRoot = getenv('LOCAL_STORAGE_PATH') ?: '/var/www/html/storage';
@@ -36,7 +50,6 @@ if(isset($_FILES['file'])) {
         "instances_id" => $AUTH->data['instance']['instances_id']
     ];
     $id = $DBLIB->insert("s3files",$fileData);
-    echo $DBLIB->getLastError();
     if (!$id) finish(false, ["code" => null, "message" => "Error"]);
     else finish(true, null, ["id" => $id, "resize" => false,"url" => $CONFIG['ROOTURL'] . '/api/file/?f=' . $id]);
 }
