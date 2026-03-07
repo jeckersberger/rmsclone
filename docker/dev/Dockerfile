@@ -49,6 +49,7 @@ RUN printf '%s\n' \
     'PassEnv CONFIG_EMAILS_SMTP_SERVER' \
     'PassEnv CONFIG_EMAILS_SMTP_PORT' \
     'PassEnv LOCAL_STORAGE_PATH' \
+    'PassEnv CONFIG_TELEMETRY_NANOID' \
     > /etc/apache2/conf-available/adamrms.conf \
     && a2enconf adamrms
 

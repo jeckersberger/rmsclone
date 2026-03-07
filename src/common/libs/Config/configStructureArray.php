@@ -6,9 +6,9 @@ $configStructureArray = [
       "default" => function () { // Default value for the text box
         return 'http://' . $_SERVER['HTTP_HOST'];
       },
-      "name" => "Root URL", // The name of the field to be shown to the user
-      "description" => "The URL of the site that is used as a point of reference for all links and emails. This is an important URL, because if it is misconfigured it will prevent you from logging in. It is probably https://yourdomain.com or https://yourdomain.com/adamrms or http://localhost:8080. It must not end in a trailing slash.", // A description of the field to be shown to the user
-      "group" => "General", // The group this field belongs to
+      "name" => "Basis-URL", // The name of the field to be shown to the user
+      "description" => "Die URL der Seite, die als Referenz fuer alle Links und E-Mails verwendet wird. Diese URL ist wichtig - bei falscher Konfiguration koennen Sie sich nicht mehr einloggen. Wahrscheinlich ist es https://ihredomain.de oder http://localhost:8080. Darf nicht mit einem Schraegstrich enden.", // A description of the field to be shown to the user
+      "group" => "Allgemein", // The group this field belongs to
       "required" => true, // Is this value required? Or can it be left blank
       "maxlength" => 255, // This is the maximum length of the string (if of string type)
       "minlength" => 10, // This is the minimum length of the string (if of string type)
@@ -29,9 +29,9 @@ $configStructureArray = [
       "default" => function () {
         return "Europe/London";
       },
-      "name" => "Timezone",
-      "group" => "General",
-      "description" => "The timezone to use for AdamRMS",
+      "name" => "Zeitzone",
+      "group" => "Allgemein",
+      "description" => "Die Zeitzone fuer das System",
       "required" => true,
       "maxlength" => 1000,
       "minlength" => 1,
@@ -50,9 +50,9 @@ $configStructureArray = [
       "default" => function () {
         return "Disabled";
       },
-      "name" => "Email sending",
-      "group" => "Email",
-      "description" => "Should AdamRMS send emails to users? If this is enabled then a provider must be setup below. Enabling this option will also require users to verify their email addresses on signup.",
+      "name" => "E-Mail-Versand",
+      "group" => "E-Mail",
+      "description" => "Soll das System E-Mails an Benutzer senden? Wenn aktiviert, muss unten ein Anbieter konfiguriert werden. Diese Option erfordert auch, dass Benutzer ihre E-Mail-Adresse bei der Registrierung bestaetigen.",
       "required" => false,
       "maxlength" => 255,
       "minlength" => 5,
@@ -71,9 +71,9 @@ $configStructureArray = [
       "default" => function () {
         return "Sendgrid";
       },
-      "name" => "Email provider",
-      "group" => "Email",
-      "description" => "Which provider should AdamRMS use to send emails to users? This option is ignored if email sending is disabled.",
+      "name" => "E-Mail-Anbieter",
+      "group" => "E-Mail",
+      "description" => "Welchen Anbieter soll das System fuer den E-Mail-Versand verwenden? Diese Option wird ignoriert, wenn der E-Mail-Versand deaktiviert ist.",
       "required" => false,
       "maxlength" => 255,
       "minlength" => 4,
@@ -92,9 +92,9 @@ $configStructureArray = [
       "default" => function () {
         return "adamrms@example.com";
       },
-      "name" => "From email address",
-      "group" => "Email",
-      "description" => "The email address to send emails from",
+      "name" => "Absender-E-Mail-Adresse",
+      "group" => "E-Mail",
+      "description" => "Die E-Mail-Adresse, von der E-Mails gesendet werden",
       "required" => false,
       "maxlength" => 255,
       "minlength" => 0,
@@ -115,9 +115,9 @@ $configStructureArray = [
       "default" => function () {
         return "";
       },
-      "name" => "Email Service API key",
-      "group" => "Email",
-      "description" => "If Sengrid, Mailgun or Postmark is selected above, the API key to use to send emails",
+      "name" => "E-Mail-Dienst API-Schluessel",
+      "group" => "E-Mail",
+      "description" => "Wenn Sendgrid, Mailgun oder Postmark oben ausgewaehlt wurde, der API-Schluessel fuer den E-Mail-Versand",
       "required" => false,
       "maxlength" => 255,
       "minlength" => 0,
@@ -136,9 +136,9 @@ $configStructureArray = [
       "default" => function () {
         return "";
       },
-      "name" => "Mailgun Server Location",
-      "group" => "Email",
-      "description" => "If Mailgun is selected above, whether to use the US or EU Mailgun servers",
+      "name" => "Mailgun Server-Standort",
+      "group" => "E-Mail",
+      "description" => "Wenn Mailgun oben ausgewaehlt wurde, ob US- oder EU-Mailgun-Server verwendet werden sollen",
       "required" => false,
       "maxlength" => 255,
       "minlength" => 0,
@@ -157,9 +157,9 @@ $configStructureArray = [
       "default" => function () {
         return "smtp.example.com";
       },
-      "name" => "SMTP server address",
-      "group" => "Email",
-      "description" => "If SMTP is selected above, the SMTP server to send emails from",
+      "name" => "SMTP-Serveradresse",
+      "group" => "E-Mail",
+      "description" => "Wenn SMTP oben ausgewaehlt wurde, der SMTP-Server fuer den E-Mail-Versand",
       "required" => false,
       "maxlength" => 255,
       "minlength" => 0,
@@ -178,9 +178,9 @@ $configStructureArray = [
       "default" => function () {
         return "user@example.com";
       },
-      "name" => "SMTP server username",
-      "group" => "Email",
-      "description" => "If SMTP is selected above, the username to connect to the SMTP server with",
+      "name" => "SMTP-Benutzername",
+      "group" => "E-Mail",
+      "description" => "Wenn SMTP oben ausgewaehlt wurde, der Benutzername fuer die Verbindung zum SMTP-Server",
       "required" => false,
       "maxlength" => 255,
       "minlength" => 0,
@@ -199,9 +199,9 @@ $configStructureArray = [
       "default" => function () {
         return "password";
       },
-      "name" => "SMTP server password",
-      "group" => "Email",
-      "description" => "If SMTP is selected above, the password to connect to the SMTP server with",
+      "name" => "SMTP-Passwort",
+      "group" => "E-Mail",
+      "description" => "Wenn SMTP oben ausgewaehlt wurde, das Passwort fuer die Verbindung zum SMTP-Server",
       "required" => false,
       "maxlength" => 255,
       "minlength" => 0,
@@ -220,9 +220,9 @@ $configStructureArray = [
       "default" => function () {
         return 465;
       },
-      "name" => "SMTP server port",
-      "group" => "Email",
-      "description" => "If SMTP is selected above, the port to connect to the SMTP server on",
+      "name" => "SMTP-Port",
+      "group" => "E-Mail",
+      "description" => "Wenn SMTP oben ausgewaehlt wurde, der Port fuer die Verbindung zum SMTP-Server",
       "required" => false,
       "maxlength" => 255,
       "minlength" => 0,
@@ -241,9 +241,9 @@ $configStructureArray = [
       "default" => function () {
         return "SSL";
       },
-      "name" => "SMTP encryption type",
-      "group" => "Email",
-      "description" => "If SMTP is selected above, the encryption type to use when connecting to the SMTP server",
+      "name" => "SMTP-Verschluesselung",
+      "group" => "E-Mail",
+      "description" => "Wenn SMTP oben ausgewaehlt wurde, der Verschluesselungstyp fuer die Verbindung zum SMTP-Server",
       "required" => false,
       "maxlength" => 255,
       "minlength" => 0,
@@ -262,9 +262,9 @@ $configStructureArray = [
       "default" => function () {
         return null;
       },
-      "name" => "Email Footer",
-      "group" => "Email",
-      "description" => "Footer for emails.",
+      "name" => "E-Mail-Fusszeile",
+      "group" => "E-Mail",
+      "description" => "Fusszeile fuer E-Mails.",
       "required" => false,
       "maxlength" => 65535,
       "minlength" => 0,
@@ -451,9 +451,9 @@ $configStructureArray = [
       "default" => function () {
         return "";
       },
-      "name" => "Sentry.io API key",
-      "group" => "Error Handling",
-      "description" => "The Sentry.io API key to use to send log errors to Sentry.io - this is normally only used if you are developing AdamRMS",
+      "name" => "Sentry.io API-Schluessel",
+      "group" => "Fehlerbehandlung",
+      "description" => "Der Sentry.io API-Schluessel zum Senden von Fehlerprotokollen - wird normalerweise nur fuer die Entwicklung benoetigt",
       "required" => false,
       "maxlength" => 255,
       "minlength" => 0,
@@ -472,9 +472,9 @@ $configStructureArray = [
       "default" => function () {
         return "Enabled";
       },
-      "name" => "User Signup",
-      "group" => "Security & Login",
-      "description" => "Can new users create an account? Disabling this means new users can't sign up themselves.",
+      "name" => "Benutzerregistrierung",
+      "group" => "Sicherheit & Anmeldung",
+      "description" => "Koennen sich neue Benutzer selbst registrieren? Bei Deaktivierung ist keine Selbstregistrierung moeglich.",
       "required" => true,
       "maxlength" => 255,
       "minlength" => 5,
@@ -493,9 +493,9 @@ $configStructureArray = [
       "default" => function () {
         return bin2hex(random_bytes(32));
       },
-      "name" => "JWT Key",
-      "group" => "Security & Login",
-      "description" => "The JWT key to use for signing JWTs. This should be a random value that you keep secret of 64 characters. If you are setting up AdamRMS for the first time, then the default generated value will be fine. Changing this later will invalidate all existing JWTs.",
+      "name" => "JWT-Schluessel",
+      "group" => "Sicherheit & Anmeldung",
+      "description" => "Der JWT-Schluessel zum Signieren von JWTs. Muss ein geheimer Zufallswert mit 64 Zeichen sein. Bei Ersteinrichtung ist der generierte Wert in Ordnung. Spaetere Aenderungen machen alle bestehenden JWTs ungueltig.",
       "required" => true,
       "maxlength" => 64,
       "minlength" => 64,
@@ -516,9 +516,9 @@ $configStructureArray = [
       "default" => function () {
         return "sha256";
       },
-      "name" => "Next password hashing algorithm",
-      "group" => "Security & Login",
-      "description" => "The hashing algorithm to use for new passwords. Changing this will not require users to change their passwords, but it will change the hashing algorithm the next time a given user changes their password.",
+      "name" => "Naechster Passwort-Hash-Algorithmus",
+      "group" => "Sicherheit & Anmeldung",
+      "description" => "Der Hash-Algorithmus fuer neue Passwoerter. Eine Aenderung erfordert keine Passwortaenderung durch Benutzer, aber der Algorithmus aendert sich beim naechsten Passwortwechsel.",
       "required" => false,
       "maxlength" => 6,
       "minlength" => 6,
@@ -537,9 +537,9 @@ $configStructureArray = [
       "default" => function () {
         return null;
       },
-      "name" => "Google Auth Key",
-      "group" => "Authentication",
-      "description" => "The ID key for Google authentication. When configuring Google authentication, set the redirect URIs to https://YOURROOTURL/login/oauth/google.php and https://YOURROOTURL/api/account/oauth-link/google.php",
+      "name" => "Google Auth Schluessel",
+      "group" => "Authentifizierung",
+      "description" => "Der ID-Schluessel fuer die Google-Authentifizierung. Bei der Konfiguration die Redirect-URIs auf https://IHREURL/login/oauth/google.php und https://IHREURL/api/account/oauth-link/google.php setzen.",
       "required" => false,
       "maxlength" => 100,
       "minlength" => 0,
@@ -559,9 +559,9 @@ $configStructureArray = [
       "default" => function () {
         return null;
       },
-      "name" => "Google Auth Secret",
-      "group" => "Authentication",
-      "description" => "The secret key for Google authentication.",
+      "name" => "Google Auth Geheimschluessel",
+      "group" => "Authentifizierung",
+      "description" => "Der geheime Schluessel fuer die Google-Authentifizierung.",
       "required" => false,
       "maxlength" => 100,
       "minlength" => 0,
@@ -581,9 +581,9 @@ $configStructureArray = [
       "default" => function () {
         return 'https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
       },
-      "name" => "Google Auth Scope",
-      "group" => "Authentication",
-      "description" => "The scope for Google authentication. You would only usually change this if you are developing AdamRMS.",
+      "name" => "Google Auth Bereich",
+      "group" => "Authentifizierung",
+      "description" => "Der Bereich fuer die Google-Authentifizierung. Normalerweise nur fuer Entwickler relevant.",
       "required" => false,
       "maxlength" => 255,
       "minlength" => 0,
@@ -602,9 +602,9 @@ $configStructureArray = [
       "default" => function () {
         return null;
       },
-      "name" => "Microsoft Auth App ID",
-      "group" => "Authentication",
-      "description" => "The App ID key for Microsoft authentication. When configuring Microsoft authentication, set the redirect URIs to https://YOURROOTURL/login/oauth/microsoft.php and https://YOURROOTURL/api/account/oauth-link/microsoft.php",
+      "name" => "Microsoft Auth App-ID",
+      "group" => "Authentifizierung",
+      "description" => "Die App-ID fuer die Microsoft-Authentifizierung. Bei der Konfiguration die Redirect-URIs auf https://IHREURL/login/oauth/microsoft.php und https://IHREURL/api/account/oauth-link/microsoft.php setzen.",
       "required" => false,
       "maxlength" => 100,
       "minlength" => 0,
@@ -624,9 +624,9 @@ $configStructureArray = [
       "default" => function () {
         return null;
       },
-      "name" => "Microsoft Auth Secret",
-      "group" => "Authentication",
-      "description" => "The secret key for Microsoft authentication.",
+      "name" => "Microsoft Auth Geheimschluessel",
+      "group" => "Authentifizierung",
+      "description" => "Der geheime Schluessel fuer die Microsoft-Authentifizierung.",
       "required" => false,
       "maxlength" => 100,
       "minlength" => 0,
@@ -647,7 +647,7 @@ $configStructureArray = [
       },
       "name" => "Projekt-Name",
       "description" => "Der Name Ihrer Installation (wird im Browser-Tab und in E-Mails angezeigt).",
-      "group" => "Customisation",
+      "group" => "Anpassung",
       "required" => false,
       "maxlength" => 20,
       "minlength" => 2,
@@ -668,9 +668,9 @@ $configStructureArray = [
       "default" => function () {
         return "";
       },
-      "name" => "User guide URL",
-      "group" => "Customisation",
-      "description" => "The URL of the user guide, which is linked to from the help buttons",
+      "name" => "Benutzerhandbuch-URL",
+      "group" => "Anpassung",
+      "description" => "Die URL des Benutzerhandbuchs, auf die von den Hilfe-Buttons verlinkt wird",
       "required" => false,
       "maxlength" => 255,
       "minlength" => 0,
@@ -691,9 +691,9 @@ $configStructureArray = [
       "default" => function () {
         return "";
       },
-      "name" => "Support URL",
-      "group" => "Customisation",
-      "description" => "The URL for links to the support page",
+      "name" => "Support-URL",
+      "group" => "Anpassung",
+      "description" => "Die URL fuer Links zur Support-Seite",
       "required" => false,
       "maxlength" => 255,
       "minlength" => 0,
@@ -714,9 +714,9 @@ $configStructureArray = [
       "default" => function () {
         return null;
       },
-      "name" => "Terms of service URL",
-      "group" => "Customisation",
-      "description" => "The URL to the terms of service page. This is linked to from the login page. If this is not set, the link will not be shown.",
+      "name" => "AGB-URL",
+      "group" => "Anpassung",
+      "description" => "Die URL zur Seite mit den Allgemeinen Geschaeftsbedingungen. Wird auf der Login-Seite verlinkt. Ohne Angabe wird der Link nicht angezeigt.",
       "required" => false,
       "maxlength" => 255,
       "minlength" => 0,
@@ -737,9 +737,9 @@ $configStructureArray = [
       "default" => function () {
         return null;
       },
-      "name" => "Analytics Tracking Links",
-      "group" => "Customisation",
-      "description" => "Code to insert into the footer of all pages, such as a Google Analytics tracking link",
+      "name" => "Analytics-Tracking-Code",
+      "group" => "Anpassung",
+      "description" => "Code, der in die Fusszeile aller Seiten eingefuegt wird, z.B. ein Google Analytics Tracking-Code",
       "required" => false,
       "maxlength" => 2000,
       "minlength" => 0,
@@ -800,9 +800,9 @@ $configStructureArray = [
       "default" => function () {
         return "Enabled";
       },
-      "name" => "Allow all users to create new instances",
-      "group" => "Billing",
-      "description" => "Controls whether users are allowed to create new instances themselves, or whether this must be done by an administrator. ",
+      "name" => "Allen Benutzern neue Instanzen erlauben",
+      "group" => "Abrechnung",
+      "description" => "Steuert, ob Benutzer selbst neue Instanzen erstellen duerfen, oder ob dies von einem Administrator erledigt werden muss.",
       "required" => false,
       "maxlength" => 8,
       "minlength" => 7,
@@ -821,9 +821,9 @@ $configStructureArray = [
       "default" => function () {
         return "Do not suspend";
       },
-      "name" => "Suspend new instances by default",
-      "group" => "Billing",
-      "description" => "When a new instance is created, whether it should be suspended by default. This can be used to prevent new instances from being created until they have been reviewed by an administrator, or have started a free trial",
+      "name" => "Neue Instanzen standardmaessig sperren",
+      "group" => "Abrechnung",
+      "description" => "Ob neue Instanzen standardmaessig gesperrt werden sollen. Damit koennen neue Instanzen erst nach Pruefung durch einen Administrator oder nach Start einer Testphase freigeschaltet werden.",
       "required" => false,
       "maxlength" => 20,
       "minlength" => 1,
@@ -842,9 +842,9 @@ $configStructureArray = [
       "default" => function () {
         return "other";
       },
-      "name" => "Reason for suspending new instances",
-      "group" => "Billing",
-      "description" => "When a new instance is suspended using the option above, what should AdamRMS prompt the user to do? It could prompt them to setup a plan, or to fix a billing issue using the stripe APIs, or to do something else using the text below.",
+      "name" => "Grund fuer die Sperrung neuer Instanzen",
+      "group" => "Abrechnung",
+      "description" => "Wenn eine neue Instanz ueber die obige Option gesperrt wird, was soll der Benutzer aufgefordert werden zu tun? Einen Plan einrichten, ein Abrechnungsproblem beheben, oder etwas anderes mit dem Text unten.",
       "required" => false,
       "maxlength" => 20,
       "minlength" => 1,
@@ -863,9 +863,9 @@ $configStructureArray = [
       "default" => function () {
         return "as no subscription has been chosen.";
       },
-      "name" => "Suspension reason for new instances",
-      "group" => "Billing",
-      "description" => "When a new instance is suspended using the option above, what reason should be given to the user? This can be used to explain why their instance is suspended, and what they need to do to get it unsuspended.",
+      "name" => "Sperrgrund fuer neue Instanzen",
+      "group" => "Abrechnung",
+      "description" => "Welcher Grund soll dem Benutzer bei Sperrung angezeigt werden? Kann erklaeren, warum die Instanz gesperrt ist und was getan werden muss.",
       "required" => false,
       "maxlength" => 180,
       "minlength" => 0,
@@ -884,9 +884,9 @@ $configStructureArray = [
       "default" => function () {
         return null;
       },
-      "name" => "Stripe Key",
-      "group" => "Billing",
-      "description" => "The stripe key to use for stripe billing support. Leave blank to disable stripe billing. Requires permissions for billing portal, prices, sessions and products.",
+      "name" => "Stripe-Schluessel",
+      "group" => "Abrechnung",
+      "description" => "Der Stripe-Schluessel fuer die Abrechnungsunterstuetzung. Leer lassen um Stripe-Abrechnung zu deaktivieren. Benoetigt Berechtigungen fuer Billing Portal, Preise, Sitzungen und Produkte.",
       "required" => false,
       "maxlength" => 255,
       "minlength" => 0,
@@ -905,9 +905,9 @@ $configStructureArray = [
       "default" => function () {
         return null;
       },
-      "name" => "Stripe Webhook secret",
-      "group" => "Billing",
-      "description" => "The secret key to use for stripe webhooks.",
+      "name" => "Stripe Webhook-Geheimschluessel",
+      "group" => "Abrechnung",
+      "description" => "Der geheime Schluessel fuer Stripe-Webhooks.",
       "required" => false,
       "maxlength" => 255,
       "minlength" => 0,
@@ -926,9 +926,9 @@ $configStructureArray = [
       "default" => function () {
         return "Standard";
       },
-      "name" => "Reduce Telemetry collected",
-      "group" => "Telemetry",
-      "description" => "What level of telemetry should be collected? When set to limited, this will reduce the amount of information about the installation sent to the Bithell Studios telemetry server, such as the number of assets on the server. More details: https://telemetry.bithell.studio/privacy-and-security",
+      "name" => "Telemetrie reduzieren",
+      "group" => "Telemetrie",
+      "description" => "Welches Telemetrie-Level soll erfasst werden? Bei 'Limited' werden weniger Informationen an den Telemetrie-Server gesendet. Weitere Details: https://telemetry.bithell.studio/privacy-and-security",
       "required" => false,
       "maxlength" => 10,
       "minlength" => 5,
@@ -947,9 +947,9 @@ $configStructureArray = [
       "default" => function () {
         return "Enabled";
       },
-      "name" => "Show this installation url in list of installations",
-      "group" => "Telemetry",
-      "description" => "Should the URL of this installation be shown in a table of installations on the telemetry server? If disabled, the installation is still counted in the public statistics, but its url and notes (set below) are not shown in the list of installations.",
+      "name" => "Installations-URL in Liste anzeigen",
+      "group" => "Telemetrie",
+      "description" => "Soll die URL dieser Installation in der Installationsliste des Telemetrie-Servers angezeigt werden? Bei Deaktivierung wird die Installation weiterhin gezaehlt, aber URL und Notizen werden nicht oeffentlich angezeigt.",
       "required" => false,
       "maxlength" => 10,
       "minlength" => 5,
@@ -968,9 +968,9 @@ $configStructureArray = [
       "default" => function () {
         return null;
       },
-      "name" => "Telemetry Installation Notes",
-      "group" => "Telemetry",
-      "description" => "A note to show on the public telemetry dashboard to associate with this installation. This could be the name of the main business. This is only shown publicly if the above option (show url) is enabled.",
+      "name" => "Telemetrie-Installationsnotizen",
+      "group" => "Telemetrie",
+      "description" => "Eine Notiz fuer das oeffentliche Telemetrie-Dashboard zu dieser Installation, z.B. der Firmenname. Wird nur oeffentlich angezeigt, wenn die obige Option (URL anzeigen) aktiviert ist.",
       "required" => false,
       "maxlength" => 255,
       "minlength" => 0,
@@ -1056,9 +1056,9 @@ $configStructureArray = [
         $client = new Hidehalo\Nanoid\Client();
         return $client->generateId(21);
       },
-      "name" => "Telemetry NanoID",
-      "group" => "Telemetry",
-      "description" => "ID to associate with this installation, used to identify this installation on the telemetry server. Changing this will create a new installation on the telemetry server. It is not expected that you'd need to change this. You can change the level of telemetry collected in the configuration menu under the \"Reduce Telemetry collected\" option. More details: https://telemetry.bithell.studio/privacy-and-security",
+      "name" => "Telemetrie-NanoID",
+      "group" => "Telemetrie",
+      "description" => "ID fuer diese Installation, wird zur Identifikation auf dem Telemetrie-Server verwendet. Eine Aenderung erstellt eine neue Installation auf dem Server. Normalerweise muss dies nicht geaendert werden.",
       "required" => true,
       "maxlength" => 21,
       "minlength" => 21,
@@ -1069,6 +1069,6 @@ $configStructureArray = [
     ],
     "specialRequest" => false, // Has to be false as it's generated, otherwise it wont generate
     "default" => false,
-    "envFallback" => false,
+    "envFallback" => "CONFIG_TELEMETRY_NANOID",
   ],
 ];
