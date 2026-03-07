@@ -36,7 +36,8 @@
     "phpmailer/phpmailer": "^6.9",
     "wildbit/postmark-php": "^6.0",
     "lasserafn/php-initial-avatar-generator": "^4.4",
-    "dompdf/dompdf": "^2.0"
+    "dompdf/dompdf": "^2.0",
+    "jejik/mt940": "^0.6.3"
   },
   "scripts": {},
   "license": "AGPL-3.0-only",
