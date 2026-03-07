@@ -18,6 +18,9 @@ $gitBranch = $CONFIGCLASS->get('UPDATE_GIT_BRANCH') ?: 'main';
 if (!preg_match('/^[a-zA-Z0-9_-]+$/', $gitRemote)) finish(false, ["message" => "Ungueltiger Git-Remote"]);
 if (!preg_match('/^[a-zA-Z0-9_.\/-]+$/', $gitBranch)) finish(false, ["message" => "Ungueltiger Git-Branch"]);
 
+// Git safe.directory setzen, da der Webserver-Benutzer nicht der Repository-Besitzer ist
+exec('git config --global --add safe.directory ' . escapeshellarg($appRoot) . ' 2>&1');
+
 if ($action === 'check') {
     // Fetch latest changes from remote without applying them
     $fetchOutput = [];

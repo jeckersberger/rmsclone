@@ -8,27 +8,7 @@
     </script>
 {% endblock %}
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-			<div class="card-header">
-				<ul class="nav nav-pills">
-					<li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/navigation.php"><i class="fas fa-arrow-left"></i> Zurück zu Einstellungen</span></a></li>
-					{% if "PROJECTS:PROJECT_TYPES:VIEW"|instancePermissions %}
-                    <li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/projectTypes.php">Projekttypen</a></li>
-                    {% endif %}
-					{% if "PROJECTS:PROJECT_STATUSES:VIEW"|instancePermissions %}
-					<li class="nav-item"><a class="nav-link active" href="{{CONFIG.ROOTURL}}/instances/projectStatuses.php">Projektstatus</a></li>
-                    {% endif %}
-					{% if "BUSINESS:BUSINESS_SETTINGS:VIEW"|instancePermissions %}
-					<li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/configuration/asset-status.php">Asset-Status</a></li>
-					<li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/configuration/invoices.php">Rechnungen</a></li>
-                    {% endif %}
-				</ul>
-			</div>
-		</div>
-    </div>
-</div>
+{% include 'instances/configuration/_settings_nav.twig' with { active: 'projectStatuses' } %}
 <div class="row">
     <div class="col-lg-12">
         <div class="card ">

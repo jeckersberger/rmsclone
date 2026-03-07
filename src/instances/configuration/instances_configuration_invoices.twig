@@ -1,28 +1,6 @@
 {% extends "assets/template.twig" %}
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-			<div class="card-header">
-				<ul class="nav nav-pills">
-					<li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/navigation.php"><i class="fas fa-arrow-left"></i> {{ t('back') }}</a></li>
-					{% if "PROJECTS:PROJECT_TYPES:VIEW"|instancePermissions %}
-                    <li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/projectTypes.php">{{ t('project_types') }}</a></li>
-                    {% endif %}
-					{% if "PROJECTS:PROJECT_STATUSES:VIEW"|instancePermissions %}
-					<li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/projectStatuses.php">{{ t('project_statuses') }}</a></li>
-                    {% endif %}
-					{% if "BUSINESS:BUSINESS_SETTINGS:VIEW"|instancePermissions %}
-					<li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/configuration/asset-status.php">{{ t('asset_statuses') }}</a></li>
-					<li class="nav-item"><a class="nav-link active" href="{{CONFIG.ROOTURL}}/instances/configuration/invoices.php">{{ t('invoices') }}</a></li>
-					<li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/configuration/dunning-levels.php">Mahnstufen</a></li>
-					<li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/configuration/documentTemplates.php">Dokumentvorlagen</a></li>
-                    {% endif %}
-				</ul>
-			</div>
-		</div>
-    </div>
-</div>
+{% include 'instances/configuration/_settings_nav.twig' with { active: 'invoices' } %}
 <div class="row">
     <div class="col-12 col-md-8 offset-md-2">
         <div class="card ">

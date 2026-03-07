@@ -1,32 +1,12 @@
 {% extends "assets/template.twig" %}
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-			<div class="card-header">
-				<ul class="nav nav-pills">
-					<li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/navigation.php"><i class="fas fa-arrow-left"></i> Back to Settings</span></a></li>
-					{% if "PROJECTS:PROJECT_TYPES:VIEW"|instancePermissions %}
-                    <li class="nav-item"><a class="nav-link active" href="{{CONFIG.ROOTURL}}/instances/projectTypes.php">Project Types</a></li>
-                    {% endif %}
-					{% if "PROJECTS:PROJECT_STATUSES:VIEW"|instancePermissions %}
-					<li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/projectStatuses.php">Project Statuses</a></li>
-                    {% endif %}
-					{% if "BUSINESS:BUSINESS_SETTINGS:VIEW"|instancePermissions %}
-					<li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/configuration/asset-status.php">Asset Statuses</a></li>
-					<li class="nav-item"><a class="nav-link" href="{{CONFIG.ROOTURL}}/instances/configuration/invoices.php">Invoices</a></li>
-                    {% endif %}
-				</ul>
-			</div>
-		</div>
-    </div>
-</div>
+{% include 'instances/configuration/_settings_nav.twig' with { active: 'projectTypes' } %}
 <div class="row">
     <div class="col-lg-12">
         <div class="card ">
             <div class="card-header">
                 <h3 class="card-title">
-                    Project Types
+                    Projekttypen
                 </h3>
                 <div class="card-tools pull-right">
                     <form class="input-group input-group-sm" method="GET">
@@ -91,7 +71,7 @@
             {% if "PROJECTS:PROJECT_TYPES:CREATE"|instancePermissions %}
             $("#addType").click(function () {
                 bootbox.prompt({
-                    title: "Add Project Type",
+                    title: "Projekttyp hinzufügen",
                     callback: function (result) {
                         if (result) {
                             var formData = [{"name": "projectsTypes_name", "value":result }];
@@ -115,7 +95,7 @@
             $(".editButton").click(function () {
                 var id = $(this).data("typeid");
                 bootbox.prompt({
-                    title: "Rename Project Type",
+                    title: "Projekttyp umbenennen",
                     value: $(this).data("value"),
                     callback: function (result) {
                         if (result) {
@@ -132,8 +112,8 @@
             $(".deleteButton").click(function () {
                 var id = $(this).data("typeid");
                 bootbox.confirm({
-                    title:"Are you sure?",
-                    message: "Deleting the type cannot be undone",
+                    title:"Sind Sie sicher?",
+                    message: "Das Löschen des Typs kann nicht rückgängig gemacht werden.",
                     buttons: {
                         confirm: {
                             label: 'Ja',
