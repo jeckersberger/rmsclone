@@ -6,6 +6,15 @@ echo "=== AdamRMS Dev Environment ==="
 # Git safe.directory setzen (Docker volume hat anderen Owner)
 git config --global --add safe.directory /var/www/html 2>/dev/null || true
 
+# Git Remote auf das eigene Repository setzen
+cd /var/www/html
+CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo "")
+TARGET_REMOTE="https://github.com/jeckersberger/rmsclone.git"
+if [ "$CURRENT_REMOTE" != "$TARGET_REMOTE" ]; then
+    git remote set-url origin "$TARGET_REMOTE" 2>/dev/null || git remote add origin "$TARGET_REMOTE" 2>/dev/null || true
+    echo "[Git] Remote origin -> $TARGET_REMOTE"
+fi
+
 # Storage-Verzeichnis erstellen
 STORAGE_DIR="${LOCAL_STORAGE_PATH:-/var/www/html/storage}"
 mkdir -p "$STORAGE_DIR/uploads"
