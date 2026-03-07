@@ -141,7 +141,6 @@
 - [ ] Transportplanung (Fahrzeuge, Routen, Fahrer)
 - [ ] Multi-Lager/Standortverwaltung
 - [x] Lieferschein-Nummer über SequenceService — `DeliveryNoteService.php`: `SequenceService::next()` statt `rand()`
-- [ ] GPS-Tracking Integration für Transportfahrzeuge
 - [ ] Rückgabe-Erinnerungen automatisch versenden (1 Tag vorher)
 
 ### Code-Qualität
@@ -213,8 +212,6 @@
 - [x] Globale Live-Schnellsuche — `src/api/search/quick.php` + Template-Integration
 - [x] Verfügbarkeitskalender — `src/business/availability.php` + `availability.twig`
 - [ ] Benachrichtigungs-Center (In-App Benachrichtigungen)
-- [ ] Tastaturkürzel für häufige Aktionen (z.B. N = neues Projekt)
-- [ ] Dashboard: Wetter-Widget für Outdoor-Events
 - [ ] Favoriten/Lesezeichen für häufig genutzte Seiten
 
 ### Projekt-Features
