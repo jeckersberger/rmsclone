@@ -549,6 +549,12 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 													<p>Scanner / RFID</p>
 												</a>
 											</li>
+											<li class="nav-item">
+												<a href="{{ CONFIG.ROOTURL}}/maintenance/barcodeGenerator.php" class="nav-link">
+													<i class="fas fa-qrcode nav-icon"></i>
+													<p>Barcodes generieren</p>
+												</a>
+											</li>
 											{% endif %}
 										</ul>
 									</li>
@@ -566,6 +572,12 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 												<a href="{{ CONFIG.ROOTURL }}/clients.php" class="nav-link">
 													<i class="nav-icon fas fa-address-book"></i>
 													<p>Kunden</p>
+												</a>
+											</li>
+											<li class="nav-item">
+												<a href="{{ CONFIG.ROOTURL }}/business/client-history.php" class="nav-link">
+													<i class="fas fa-history nav-icon"></i>
+													<p>Kundenhistorie</p>
 												</a>
 											</li>
 											{% endif %}
@@ -672,6 +684,12 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 												<a href="{{ CONFIG.ROOTURL }}/business/datev.php" class="nav-link">
 													<i class="nav-icon fas fa-file-csv"></i>
 													<p>Steuer-Export</p>
+												</a>
+											</li>
+											<li class="nav-item">
+												<a href="{{ CONFIG.ROOTURL }}/business/textblocks.php" class="nav-link">
+													<i class="nav-icon fas fa-align-left"></i>
+													<p>Textbausteine</p>
 												</a>
 											</li>
 											{% endif %}

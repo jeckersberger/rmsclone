@@ -1,6 +1,6 @@
 # AdamRMS - TODO Tracker
 # Basierend auf ANALYSE_UND_EMPFEHLUNGEN.md + zusätzliche Feature-Wünsche
-# Stand: 01.03.2026
+# Stand: 07.03.2026
 
 ---
 
@@ -95,10 +95,11 @@
 ### 6.2.3 Buchhaltungsanbindung
 - [x] DATEV-Export — `src/services/DatevExportService.php` + `src/business/datev.php`
 - [x] EÜR-Unterstützung — `src/business/euer.php` + `euer.twig`
+- [ ] EÜR-Kategorien (Einnahme-/Ausgabearten für EÜR-Formular)
 - [ ] SKR03/SKR04 Kontenzuordnung
 - [ ] BWA-Auswertung (Betriebswirtschaftliche Auswertung)
 - [ ] Export für lexoffice, sevDesk
-- [ ] Bankanbindung (FinTS/HBCI) für automatischen Zahlungsabgleich
+- [ ] Bankanbindung (FinTS/HBCI) für automatischen Zahlungsabgleich (langfristig/wiederkehrend mit KI-Zahlungsabgleich)
 - [ ] Umsatzsteuervoranmeldung (UStVA) vorbereiten (ELSTER-kompatibel)
 - [ ] Kassenbuch (für Bareinnahmen/Barausgaben)
 
@@ -211,6 +212,8 @@
 - [x] Dashboard-API (Projekte heute, überfällige Rückgaben, offene Posten) — `src/api/dashboard/overview.php`
 - [x] Globale Live-Schnellsuche — `src/api/search/quick.php` + Template-Integration
 - [x] Verfügbarkeitskalender — `src/business/availability.php` + `availability.twig`
+- [x] Navigation-Audit: Defekte Links behoben, verwaiste Seiten verlinkt — `template.twig`, `instances_navigation.twig`
+- [x] Label-Drucker-Integration (HTML + ZPL/Zebra) — `src/mobile/labels.php` + `labels.twig` + Buttons in `barcodeGenerator.twig`
 - [ ] Benachrichtigungs-Center (In-App Benachrichtigungen)
 - [ ] Favoriten/Lesezeichen für häufig genutzte Seiten
 
@@ -243,7 +246,7 @@
 - [x] Kautionsverwaltung — `src/services/DepositService.php` + API
 - [x] Versicherungsnachweis-Verwaltung — `src/services/InsuranceService.php`
 - [ ] Equipment-Fotos (mehrere Bilder pro Asset)
-- [ ] QR-Code auf Equipment-Label mit Link zur Asset-Seite
+- [x] QR-Code auf Equipment-Label mit Link zur Asset-Seite — `src/mobile/labels.php` + `labels.twig` (HTML + ZPL/Zebra Label-Drucker)
 - [ ] Seriennummern-Verwaltung
 - [ ] Handbücher/Datenblätter pro Asset-Typ hinterlegen
 - [ ] Abschreibungsrechner (AfA nach deutschem Steuerrecht)
@@ -324,7 +327,7 @@
 | Phase 1 - DB & Lokalisierung | 10/10   | 0     | 100%        |
 | Phase 2 - Angebotswesen    | 4/8       | 4     | 50%         |
 | Phase 2 - Rechnungswesen   | 6/15      | 9     | 40%         |
-| Phase 2 - Buchhaltung      | 2/8       | 6     | 25%         |
+| Phase 2 - Buchhaltung      | 2/9       | 7     | 22%         |
 | Phase 2 - Kunden           | 5/13      | 8     | 38%         |
 | Phase 3 - Reporting        | 4/11      | 7     | 36%         |
 | Phase 3 - Logistik         | 4/8       | 4     | 50%         |
@@ -335,10 +338,10 @@
 | Sicherheit - Datenbank     | 1/5       | 4     | 20%         |
 | Sicherheit - Dateien       | 0/3       | 3     | 0%          |
 | Sicherheit - DSGVO         | 0/3       | 3     | 0%          |
-| Extra - Dashboard/Nav      | 4/8       | 4     | 50%         |
+| Extra - Dashboard/Nav      | 6/10      | 4     | 60%         |
 | Extra - Projekte           | 2/8       | 6     | 25%         |
 | Extra - Multi-Business     | 5/9       | 4     | 56%         |
-| Extra - Equipment          | 6/13      | 7     | 46%         |
+| Extra - Equipment          | 7/13      | 6     | 54%         |
 | Extra - Finanzen           | 3/7       | 4     | 43%         |
 | Extra - Kommunikation      | 0/7       | 7     | 0%          |
 | Extra - RFID               | 1/5       | 4     | 20%         |
@@ -346,44 +349,46 @@
 | Extra - Integrationen      | 0/6       | 6     | 0%          |
 | Extra - Dokumentation      | 3/7       | 4     | 43%         |
 | Extra - DevOps             | 0/8       | 8     | 0%          |
-| **GESAMT**                  | **95/236**| **141**| **40%**    |
+| **GESAMT**                  | **98/240**| **142**| **41%**    |
 
 ---
 
 ## Priorisierte Empfehlung (nächste Schritte)
 
 ### SOFORT - Sicherheitslücken schließen (VOR Produktivbetrieb!)
-1. **CORS Wildcard entfernen** (`apiHead.php`: `Access-Control-Allow-Origin: *`)
-2. **CSRF-Token-Schutz** implementieren (kein einziger Endpoint hat Tokens!)
-3. **Partner-Code sicher machen** (`md5(time())` → `random_bytes()`)
-4. **Session-Cookie absichern** (HttpOnly + Secure + SameSite)
-5. **Input-Validierung in Partner-APIs** (aktuell 0 Validierung!)
-6. **IP-Logging in DSGVO-Service fixen** (Proxy-Header beachten)
+1. ~~**CORS Wildcard entfernen**~~ ✅ erledigt
+2. ~~**CSRF-Token-Schutz**~~ ✅ erledigt
+3. ~~**Partner-Code sicher machen**~~ ✅ erledigt
+4. ~~**Session-Cookie absichern**~~ ✅ erledigt
+5. ~~**Input-Validierung in Partner-APIs**~~ ✅ erledigt
+6. ~~**IP-Logging in DSGVO-Service fixen**~~ ✅ erledigt
 
 ### Sofort umsetzen (Blocker für legalen Betrieb)
-7. KUR-Toggle in Business-Settings-UI
-8. Leistungszeitraum auf Rechnungen (GoBD-Pflicht!)
-9. Unveränderbarkeit der Rechnung nach Erstellung (GoBD-Pflicht!)
-10. Rate-Limiting für Login (Brute-Force-Schutz)
+7. ~~KUR-Toggle in Business-Settings-UI~~ ✅ erledigt
+8. ~~Leistungszeitraum auf Rechnungen~~ ✅ erledigt
+9. ~~Unveränderbarkeit der Rechnung nach Erstellung~~ ✅ erledigt
+10. ~~Rate-Limiting für Login~~ ✅ erledigt
 
 ### Bald umsetzen (Komfort + Compliance)
 11. Automatischer Rechnungsversand per E-Mail
 12. Mahnbriefe als PDF generieren + versenden
-13. Lieferschein-Nummer über SequenceService (statt `rand()`)
-14. Kundenhistorie-Übersichtsseite
-15. Foreign Keys für neue Tabellen (Datenintegrität)
-16. Angebots-Vorlagen mit Textbausteinen
-17. Cron-Job für wiederkehrende Projekte
+13. ~~Lieferschein-Nummer über SequenceService~~ ✅ erledigt
+14. ~~Kundenhistorie-Übersichtsseite~~ ✅ erledigt
+15. ~~Foreign Keys für neue Tabellen~~ ✅ erledigt
+16. ~~Angebots-Vorlagen mit Textbausteinen~~ ✅ erledigt
+17. ~~Cron-Job für wiederkehrende Projekte~~ ✅ erledigt
+18. EÜR-Kategorien (Einnahme-/Ausgabearten)
+19. FinTS-Bankanbindung langfristig/wiederkehrend mit KI-Zahlungsabgleich
 
 ### Mittelfristig (Skalierung + Professionalisierung)
-18. ZUGFeRD/XRechnung implementieren (`horstoeko/zugferd` installieren)
-19. Teilrechnungen / Abschlagsrechnungen
-20. Unit Tests für kritische Services (PHPUnit)
-21. Kunden-Portal (Self-Service)
-22. Equipment-Auslastungsberichte
-23. Docker-Compose Produktions-Setup mit SSL
-24. 2-Faktor-Authentifizierung (TOTP)
+20. ZUGFeRD/XRechnung implementieren (`horstoeko/zugferd` installieren)
+21. Teilrechnungen / Abschlagsrechnungen
+22. Unit Tests für kritische Services (PHPUnit)
+23. Kunden-Portal (Self-Service)
+24. Equipment-Auslastungsberichte
+25. Docker-Compose Produktions-Setup mit SSL
+26. 2-Faktor-Authentifizierung (TOTP)
 
 ---
 
-*Zuletzt aktualisiert: 04.03.2026*
+*Zuletzt aktualisiert: 07.03.2026*
