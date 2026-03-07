@@ -659,6 +659,14 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 												</a>
 											</li>
 											{% endif %}
+											{% if "PROJECTS:PROJECT_PAYMENTS:CREATE"|instancePermissions %}
+											<li class="nav-item">
+												<a href="{{ CONFIG.ROOTURL }}/business/bank-import.php" class="nav-link">
+													<i class="nav-icon fas fa-university"></i>
+													<p>Bank-Import</p>
+												</a>
+											</li>
+											{% endif %}
 											{% if "BUSINESS:BUSINESS_SETTINGS:VIEW"|instancePermissions %}
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/business/datev.php" class="nav-link">

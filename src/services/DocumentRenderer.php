@@ -170,13 +170,24 @@ class DocumentRenderer {
       );
     }
 
+    // 11c) PDF/A-3b Konvertierung mit eingebettetem ZUGFeRD XML
+    if ($zugferdXml) {
+      require_once __DIR__ . '/PdfA3Converter.php';
+      $pdf = PdfA3Converter::convert($pdf, $zugferdXml, [
+        'title'      => $docData['title'] ?? 'Rechnung',
+        'author'     => $business['instances_name'] ?? '',
+        'doc_number' => $docNumber,
+        'date'       => $docDate->format('Y-m-d'),
+      ]);
+    }
+
     // 12) Speichern als Projektdokument
     $fileType = ['invoice'=>20,'quote'=>21,'delivery_note'=>22][$type];
     $fileInfo = S3Files::storeProjectFile($db, $instanceId, $projectId, $fileType, [
       'name' => self::fileName($type, $docNumber), 'content'=>$pdf, 'extension'=>'pdf'
     ]);
 
-    // 12b) ZUGFeRD XML als separate Datei speichern
+    // 12b) ZUGFeRD XML auch als separate Datei speichern (fuer Buchhaltungssoftware)
     $zugferdFileId = null;
     if ($zugferdXml) {
       $zugferdFileInfo = S3Files::storeProjectFile($db, $instanceId, $projectId, $fileType, [

@@ -7,7 +7,7 @@ require_once __DIR__ . '/../apiHeadSecure.php';
 if (!$AUTH->instancePermissionCheck("PROJECTS:PROJECT_PAYMENTS:CREATE")) finish(false, ["code" => "PERMISSIONS"]);
 
 $instanceId = (int)$AUTH->data['instance']['instances_id'];
-$sessionId = (int)($_GET['session_id'] ?? 0);
+$sessionId = (int)($_REQUEST['session_id'] ?? 0);
 
 if ($sessionId <= 0) finish(false, ["message" => "session_id erforderlich."]);
 

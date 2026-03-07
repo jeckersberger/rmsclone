@@ -1,0 +1,1044 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+
+{# ══════════════════════════════════════════════════════════ #}
+{#  TAB-NAVIGATION                                           #}
+{# ══════════════════════════════════════════════════════════ #}
+<div class="row">
+    <div class="col-12">
+        <div class="card card-primary card-outline card-tabs">
+            <div class="card-header p-0 pt-1">
+                <ul class="nav nav-tabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-toggle="tab" href="#tabImport">
+                            <i class="fas fa-file-upload"></i> Import
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-toggle="tab" href="#tabFints">
+                            <i class="fas fa-university"></i> FinTS/HBCI
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-toggle="tab" href="#tabAccounts">
+                            <i class="fas fa-piggy-bank"></i> Bankkonten
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-toggle="tab" href="#tabHistory">
+                            <i class="fas fa-history"></i> Verlauf
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ══════════════════════════════════════════════════════════ #}
+{#  TAB 1: DATEI-IMPORT                                      #}
+{# ══════════════════════════════════════════════════════════ #}
+<div class="tab-content">
+<div class="tab-pane fade show active" id="tabImport">
+
+{# Upload-Bereich #}
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card card-primary">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-file-upload"></i> Kontoauszug hochladen</h3>
+            </div>
+            <div class="card-body">
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label>Format</label>
+                        <select class="form-control" name="format" id="importFormat">
+                            <option value="mt940">MT940 (SWIFT)</option>
+                            <option value="camt053">CAMT.053 (ISO 20022 XML)</option>
+                            <option value="csv">CSV (mit Spalten-Mapping)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Bankkonto (optional)</label>
+                        <select class="form-control" name="account_id" id="importAccount">
+                            <option value="">-- Kein Konto zuordnen --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Datei</label>
+                        <div class="custom-file">
+                            <input type="file" class="custom-file-input" name="file" id="importFile" accept=".sta,.mt940,.txt,.xml,.csv">
+                            <label class="custom-file-label" for="importFile">Datei auswaehlen...</label>
+                        </div>
+                    </div>
+
+                    {# CSV-Mapping (nur bei CSV sichtbar) #}
+                    <div id="csvMappingSection" style="display:none;">
+                        <hr>
+                        <h5>CSV-Spalten-Mapping</h5>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group form-group-sm">
+                                    <label>Datum (Spalte)</label>
+                                    <input type="number" class="form-control form-control-sm" id="csvDate" value="0" min="0">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group form-group-sm">
+                                    <label>Betrag (Spalte)</label>
+                                    <input type="number" class="form-control form-control-sm" id="csvAmount" value="3" min="0">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group form-group-sm">
+                                    <label>Verwendungszweck (Spalte)</label>
+                                    <input type="number" class="form-control form-control-sm" id="csvReference" value="5" min="0">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group form-group-sm">
+                                    <label>Name Gegenkonto (Spalte)</label>
+                                    <input type="number" class="form-control form-control-sm" id="csvName" value="2" min="0">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group form-group-sm">
+                                    <label>Trennzeichen</label>
+                                    <select class="form-control form-control-sm" id="csvDelimiter">
+                                        <option value=";">Semikolon (;)</option>
+                                        <option value=",">Komma (,)</option>
+                                        <option value="&#9;">Tab</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group form-group-sm">
+                                    <label>Datumsformat</label>
+                                    <select class="form-control form-control-sm" id="csvDateFormat">
+                                        <option value="d.m.Y">TT.MM.JJJJ</option>
+                                        <option value="d/m/Y">TT/MM/JJJJ</option>
+                                        <option value="Y-m-d">JJJJ-MM-TT</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block" id="uploadBtn">
+                        <i class="fas fa-upload"></i> Importieren
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {# Import-Ergebnis #}
+    <div class="col-lg-6">
+        <div class="card" id="importResultCard" style="display:none;">
+            <div class="card-header bg-success">
+                <h3 class="card-title"><i class="fas fa-check-circle"></i> Import-Ergebnis</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-4 text-center">
+                        <h2 id="resultNew" class="text-primary">0</h2>
+                        <small>Neue Transaktionen</small>
+                    </div>
+                    <div class="col-4 text-center">
+                        <h2 id="resultMatched" class="text-success">0</h2>
+                        <small>Auto-gematcht</small>
+                    </div>
+                    <div class="col-4 text-center">
+                        <h2 id="resultDuplicates" class="text-muted">0</h2>
+                        <small>Duplikate</small>
+                    </div>
+                </div>
+                <hr>
+                <button class="btn btn-success btn-block" id="goToSessionBtn">
+                    <i class="fas fa-arrow-right"></i> Zuordnungen pruefen
+                </button>
+            </div>
+        </div>
+
+        <div class="card card-outline card-info">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-info-circle"></i> Unterstuetzte Formate</h3>
+            </div>
+            <div class="card-body">
+                <dl>
+                    <dt><i class="fas fa-file-code text-primary"></i> MT940 (SWIFT)</dt>
+                    <dd>Standard-Format aller deutschen Banken. Dateiendung: .sta, .mt940</dd>
+                    <dt class="mt-2"><i class="fas fa-file-code text-success"></i> CAMT.053 (ISO 20022)</dt>
+                    <dd>Modernes XML-Format. Wird von immer mehr Banken angeboten.</dd>
+                    <dt class="mt-2"><i class="fas fa-file-csv text-warning"></i> CSV</dt>
+                    <dd>Frei konfigurierbares Spalten-Mapping. Funktioniert mit jedem Export.</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Transaktions-Matching-Bereich ── #}
+<div class="row" id="matchingSection" style="display:none;">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-exchange-alt"></i> Transaktionen zuordnen</h3>
+                <div class="card-tools">
+                    <span class="badge badge-warning" id="matchUnmatched">0</span> offen
+                    <span class="badge badge-info ml-2" id="matchSuggested">0</span> vorgeschlagen
+                    <span class="badge badge-success ml-2" id="matchConfirmed">0</span> bestaetigt
+                    <button class="btn btn-sm btn-success ml-3" id="confirmAllBtn">
+                        <i class="fas fa-check-double"></i> Alle Vorschlaege bestaetigen
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="overlay" id="matchingLoading"><i class="fas fa-sync fa-spin fa-2x"></i></div>
+                <table class="table table-striped table-sm table-hover">
+                    <thead>
+                        <tr>
+                            <th style="width:90px;">Datum</th>
+                            <th>Gegenkonto</th>
+                            <th>Verwendungszweck</th>
+                            <th class="text-right" style="width:100px;">Betrag</th>
+                            <th style="width:180px;">Zuordnung</th>
+                            <th style="width:80px;">Konfidenz</th>
+                            <th style="width:140px;">Aktion</th>
+                        </tr>
+                    </thead>
+                    <tbody id="matchingBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+{# ══════════════════════════════════════════════════════════ #}
+{#  TAB 2: FinTS/HBCI DIREKT-ABRUF                          #}
+{# ══════════════════════════════════════════════════════════ #}
+<div class="tab-pane fade" id="tabFints">
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card card-primary">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-university"></i> FinTS-Kontoabruf</h3>
+            </div>
+            <div class="card-body">
+                <form id="fintsForm">
+                    <div class="form-group">
+                        <label>Bankkonto</label>
+                        <select class="form-control" id="fintsAccount" required>
+                            <option value="">-- Konto waehlen --</option>
+                        </select>
+                        <small class="text-muted">Nur Konten mit konfiguriertem FinTS-Zugang</small>
+                    </div>
+                    <div class="form-group">
+                        <label>PIN</label>
+                        <input type="password" class="form-control" id="fintsPin" required placeholder="Online-Banking PIN" autocomplete="off">
+                        <small class="text-muted">Wird nicht gespeichert - nur fuer diese Sitzung</small>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Von</label>
+                                <input type="date" class="form-control" id="fintsDateFrom">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Bis</label>
+                                <input type="date" class="form-control" id="fintsDateTo" value="{{ "now"|date("Y-m-d") }}">
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block" id="fintsFetchBtn">
+                        <i class="fas fa-download"></i> Umsaetze abrufen
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {# TAN-Dialog #}
+    <div class="col-lg-6">
+        <div class="card" id="tanCard" style="display:none;">
+            <div class="card-header bg-warning">
+                <h3 class="card-title"><i class="fas fa-shield-alt"></i> TAN-Eingabe</h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info" id="tanChallenge"></div>
+                <div id="tanImageContainer" style="display:none;" class="text-center mb-3">
+                    <img id="tanImage" class="img-fluid" style="max-width:250px;">
+                </div>
+                <div class="form-group">
+                    <label>TAN eingeben</label>
+                    <input type="text" class="form-control form-control-lg text-center" id="tanInput" placeholder="TAN" autocomplete="off" maxlength="10">
+                </div>
+                <button class="btn btn-warning btn-block" id="tanSubmitBtn">
+                    <i class="fas fa-check"></i> TAN bestaetigen
+                </button>
+                <small class="text-muted">TAN-Session laeuft in <span id="tanCountdown">300</span> Sekunden ab</small>
+            </div>
+        </div>
+
+        {# FinTS-Ergebnis #}
+        <div class="card" id="fintsResultCard" style="display:none;">
+            <div class="card-header bg-success">
+                <h3 class="card-title"><i class="fas fa-check-circle"></i> Abruf erfolgreich</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-3 text-center">
+                        <h2 id="fintsTotal" class="text-primary">0</h2>
+                        <small>Abgerufen</small>
+                    </div>
+                    <div class="col-3 text-center">
+                        <h2 id="fintsNew" class="text-success">0</h2>
+                        <small>Neu</small>
+                    </div>
+                    <div class="col-3 text-center">
+                        <h2 id="fintsMatched" class="text-info">0</h2>
+                        <small>Gematcht</small>
+                    </div>
+                    <div class="col-3 text-center">
+                        <h2 id="fintsDupes" class="text-muted">0</h2>
+                        <small>Duplikate</small>
+                    </div>
+                </div>
+                <hr>
+                <button class="btn btn-success btn-block" id="fintsGoToSessionBtn">
+                    <i class="fas fa-arrow-right"></i> Zuordnungen pruefen
+                </button>
+            </div>
+        </div>
+
+        {# FinTS-Status/Info #}
+        <div class="card card-outline card-info" id="fintsInfoCard">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-info-circle"></i> FinTS/HBCI</h3>
+            </div>
+            <div class="card-body">
+                <p>Direkter Kontoabruf ueber das FinTS-Protokoll. Unterstuetzt ~3.000 deutsche Banken.</p>
+                <ol>
+                    <li>Bankkonto unter "Bankkonten" anlegen</li>
+                    <li>FinTS-Zugangsdaten konfigurieren (BLZ, URL, Benutzer)</li>
+                    <li>PIN eingeben und Umsaetze abrufen</li>
+                    <li>TAN eingeben (SMS/photoTAN/pushTAN)</li>
+                </ol>
+                <p class="text-muted mb-0"><i class="fas fa-lock"></i> Die PIN wird nie gespeichert.</p>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+{# ══════════════════════════════════════════════════════════ #}
+{#  TAB 3: BANKKONTEN VERWALTEN                              #}
+{# ══════════════════════════════════════════════════════════ #}
+<div class="tab-pane fade" id="tabAccounts">
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-piggy-bank"></i> Bankkonten</h3>
+                <div class="card-tools">
+                    <button class="btn btn-sm btn-primary" id="addAccountBtn">
+                        <i class="fas fa-plus"></i> Neues Konto
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="overlay" id="accountsLoading"><i class="fas fa-sync fa-spin fa-2x"></i></div>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Kontoname</th>
+                            <th>IBAN</th>
+                            <th>Bank</th>
+                            <th>FinTS</th>
+                            <th>Letzte Sync</th>
+                            <th style="width:120px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="accountsBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {# Konto-Formular #}
+    <div class="col-lg-4">
+        <div class="card card-primary" id="accountFormCard">
+            <div class="card-header">
+                <h3 class="card-title" id="accountFormTitle">Neues Bankkonto</h3>
+            </div>
+            <div class="card-body">
+                <form id="accountForm">
+                    <input type="hidden" id="accountEditId" value="">
+                    <div class="form-group">
+                        <label>Kontoname *</label>
+                        <input type="text" class="form-control" id="accName" required placeholder="z.B. Sparkasse Geschaeftskonto">
+                    </div>
+                    <div class="form-group">
+                        <label>IBAN</label>
+                        <input type="text" class="form-control" id="accIban" placeholder="DE89 3704 0044 0532 0130 00" maxlength="34">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>BIC</label>
+                                <input type="text" class="form-control" id="accBic" maxlength="11">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Bankname</label>
+                                <input type="text" class="form-control" id="accBankName">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input type="checkbox" class="form-check-input" id="accDefault">
+                        <label class="form-check-label" for="accDefault">Standard-Konto</label>
+                    </div>
+
+                    <hr>
+                    <h5><i class="fas fa-university"></i> FinTS-Zugangsdaten</h5>
+                    <div class="form-group">
+                        <label>BLZ / Bank suchen</label>
+                        <input type="text" class="form-control" id="accFintsSearch" placeholder="z.B. Sparkasse oder 70050000">
+                        <div id="bankSearchResults" class="list-group mt-1" style="display:none; max-height:200px; overflow-y:auto;"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>FinTS-Server URL</label>
+                        <input type="text" class="form-control" id="accFintsUrl" placeholder="https://banking.sparkasse.de/fints30">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>BLZ</label>
+                                <input type="text" class="form-control" id="accFintsBlz" maxlength="8">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Benutzerkennung</label>
+                                <input type="text" class="form-control" id="accFintsUser" autocomplete="off">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input type="checkbox" class="form-check-input" id="accFintsEnabled">
+                        <label class="form-check-label" for="accFintsEnabled">FinTS aktivieren</label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block" id="saveAccountBtn">
+                        <i class="fas fa-save"></i> Speichern
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+{# ══════════════════════════════════════════════════════════ #}
+{#  TAB 4: VERLAUF                                           #}
+{# ══════════════════════════════════════════════════════════ #}
+<div class="tab-pane fade" id="tabHistory">
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-history"></i> Import-Verlauf</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="overlay" id="historyLoading"><i class="fas fa-sync fa-spin fa-2x"></i></div>
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th>Datum</th>
+                            <th>Quelle</th>
+                            <th>Konto</th>
+                            <th>Datei / Abruf</th>
+                            <th class="text-right">Transaktionen</th>
+                            <th class="text-right">Gematcht</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+</div>{# /tab-content #}
+
+{# ══════════════════════════════════════════════════════════ #}
+{#  MODAL: Rechnung suchen (fuer manuelles Matching)         #}
+{# ══════════════════════════════════════════════════════════ #}
+<div class="modal fade" id="searchInvoiceModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-search"></i> Rechnung zuordnen</h5>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="matchTxId">
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="invoiceSearch" placeholder="Rechnungsnummer, Kunde, Projekt...">
+                    <div class="input-group-append">
+                        <button class="btn btn-primary" id="searchInvoiceBtn"><i class="fas fa-search"></i></button>
+                    </div>
+                </div>
+                <table class="table table-sm table-hover" id="invoiceResults" style="display:none;">
+                    <thead>
+                        <tr>
+                            <th>Nr.</th>
+                            <th>Kunde</th>
+                            <th>Projekt</th>
+                            <th class="text-right">Offen</th>
+                            <th class="text-right">Gesamt</th>
+                            <th>Faellig</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoiceResultsBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ══════════════════════════════════════════════════════════ #}
+{#  JAVASCRIPT                                               #}
+{# ══════════════════════════════════════════════════════════ #}
+<script>
+$(document).ready(function() {
+    var currentSessionId = null;
+    var fintsSessionId = null;
+    var tanCountdownTimer = null;
+
+    // ═══ Hilfsfunktionen ═══
+    function formatMoney(v) {
+        var n = parseFloat(v || 0);
+        var cls = n >= 0 ? 'text-success' : 'text-danger';
+        return '<span class="' + cls + '">' + n.toFixed(2).replace('.', ',') + ' &euro;</span>';
+    }
+
+    function formatDate(d) {
+        if (!d) return '-';
+        var parts = d.split('-');
+        return parts[2] + '.' + parts[1] + '.' + parts[0];
+    }
+
+    function confidenceBadge(conf, method) {
+        if (!conf) return '';
+        var cls = conf >= 90 ? 'success' : (conf >= 70 ? 'info' : 'warning');
+        var label = method === 'manual' ? 'Manuell' : conf + '%';
+        return '<span class="badge badge-' + cls + '">' + label + '</span>';
+    }
+
+    function statusBadge(status) {
+        var map = {
+            'unmatched': '<span class="badge badge-warning">Offen</span>',
+            'suggested': '<span class="badge badge-info">Vorschlag</span>',
+            'confirmed': '<span class="badge badge-success">Bestaetigt</span>',
+            'ignored':   '<span class="badge badge-secondary">Ignoriert</span>'
+        };
+        return map[status] || status;
+    }
+
+    // ═══ Bankkonten laden ═══
+    function loadAccounts() {
+        ajaxcall('bankImport/accounts.php', null, function(data) {
+            var accounts = data.response.accounts || [];
+            var html = '';
+            var selectHtml = '<option value="">-- Kein Konto --</option>';
+            var fintsHtml = '<option value="">-- Konto waehlen --</option>';
+
+            accounts.forEach(function(a) {
+                var fintsStatus = a.fints_enabled == 1
+                    ? '<span class="badge badge-success">Aktiv</span>'
+                    : '<span class="badge badge-secondary">Aus</span>';
+                var lastSync = a.fints_last_sync ? formatDate(a.fints_last_sync.substring(0, 10)) : '-';
+
+                html += '<tr>';
+                html += '<td><strong>' + (a.account_name || '') + '</strong>';
+                if (a.is_default == 1) html += ' <span class="badge badge-primary">Standard</span>';
+                html += '</td>';
+                html += '<td><code>' + (a.iban || '-') + '</code></td>';
+                html += '<td>' + (a.bank_name || '-') + '</td>';
+                html += '<td>' + fintsStatus + '</td>';
+                html += '<td>' + lastSync + '</td>';
+                html += '<td>';
+                html += '<button class="btn btn-xs btn-outline-primary editAccountBtn" data-id="' + a.id + '"><i class="fas fa-edit"></i></button> ';
+                html += '<button class="btn btn-xs btn-outline-danger deleteAccountBtn" data-id="' + a.id + '"><i class="fas fa-trash"></i></button>';
+                html += '</td></tr>';
+
+                selectHtml += '<option value="' + a.id + '">' + a.account_name + (a.iban ? ' (' + a.iban + ')' : '') + '</option>';
+
+                if (a.fints_enabled == 1) {
+                    fintsHtml += '<option value="' + a.id + '">' + a.account_name + '</option>';
+                }
+            });
+
+            if (!html) html = '<tr><td colspan="6" class="text-center text-muted">Noch keine Bankkonten angelegt</td></tr>';
+
+            $('#accountsBody').html(html);
+            $('#importAccount').html(selectHtml);
+            $('#fintsAccount').html(fintsHtml);
+            $('#accountsLoading').hide();
+        }, false);
+    }
+
+    // ═══ Upload ═══
+    $('#importFormat').change(function() {
+        $('#csvMappingSection').toggle($(this).val() === 'csv');
+    });
+
+    $('#importFile').change(function() {
+        var name = this.files[0] ? this.files[0].name : 'Datei auswaehlen...';
+        $(this).next('.custom-file-label').text(name);
+    });
+
+    $('#uploadForm').submit(function(e) {
+        e.preventDefault();
+        var formData = new FormData();
+        formData.append('file', $('#importFile')[0].files[0]);
+        formData.append('format', $('#importFormat').val());
+        formData.append('account_id', $('#importAccount').val());
+
+        if ($('#importFormat').val() === 'csv') {
+            formData.append('csv_mapping', JSON.stringify({
+                date: parseInt($('#csvDate').val()),
+                amount: parseInt($('#csvAmount').val()),
+                reference: parseInt($('#csvReference').val()),
+                counterpart_name: parseInt($('#csvName').val()),
+                delimiter: $('#csvDelimiter').val(),
+                date_format: $('#csvDateFormat').val(),
+                decimal_separator: ',',
+                skip_rows: 1
+            }));
+        }
+
+        $('#uploadBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Importiere...');
+
+        var csrfToken = $('meta[name="csrf-token"]').attr('content') || '';
+        $.ajax({
+            url: '{{ CONFIG.ROOTURL }}/api/bankImport/upload.php',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: { 'X-CSRF-Token': csrfToken },
+            success: function(result) {
+                $('#uploadBtn').prop('disabled', false).html('<i class="fas fa-upload"></i> Importieren');
+                if (result.result) {
+                    var r = result.response;
+                    currentSessionId = r.session_id;
+                    $('#resultNew').text(r.transactions);
+                    $('#resultMatched').text(r.matched);
+                    $('#resultDuplicates').text(r.duplicates);
+                    $('#importResultCard').show();
+                } else {
+                    bootbox.alert('Fehler: ' + (result.error ? result.error.message : 'Unbekannt'));
+                }
+            },
+            error: function() {
+                $('#uploadBtn').prop('disabled', false).html('<i class="fas fa-upload"></i> Importieren');
+                bootbox.alert('Verbindungsfehler');
+            }
+        });
+    });
+
+    // ═══ Session-Transaktionen laden ═══
+    function loadSessionTransactions(sessionId) {
+        currentSessionId = sessionId;
+        $('#matchingSection').show();
+        $('#matchingLoading').show();
+
+        ajaxcall('bankImport/transactions.php', { session_id: sessionId }, function(data) {
+            var txs = data.response.transactions || [];
+            var stats = data.response.stats || {};
+            var html = '';
+
+            txs.forEach(function(tx) {
+                var amountClass = parseFloat(tx.amount) >= 0 ? 'text-success' : 'text-danger';
+                html += '<tr class="' + (tx.match_status === 'confirmed' ? 'table-success' : (tx.match_status === 'ignored' ? 'table-secondary' : '')) + '">';
+                html += '<td>' + formatDate(tx.transaction_date) + '</td>';
+                html += '<td>' + (tx.counterpart_name || '-') + '</td>';
+                html += '<td><small>' + (tx.reference || '').substring(0, 60) + '</small></td>';
+                html += '<td class="text-right ' + amountClass + '"><strong>' + parseFloat(tx.amount).toFixed(2).replace('.', ',') + '</strong></td>';
+
+                // Zuordnung
+                if (tx.doc_number) {
+                    html += '<td><a href="#">' + tx.doc_number + '</a><br><small>' + (tx.invoice_client || '') + '</small></td>';
+                } else {
+                    html += '<td class="text-muted">-</td>';
+                }
+
+                html += '<td>' + confidenceBadge(tx.match_confidence, tx.match_method) + '</td>';
+
+                // Aktionen
+                html += '<td>';
+                if (tx.match_status === 'unmatched') {
+                    html += '<button class="btn btn-xs btn-outline-primary matchBtn" data-id="' + tx.id + '" data-amount="' + tx.amount + '"><i class="fas fa-link"></i></button> ';
+                    html += '<button class="btn btn-xs btn-outline-secondary ignoreBtn" data-id="' + tx.id + '"><i class="fas fa-ban"></i></button>';
+                } else if (tx.match_status === 'suggested') {
+                    html += '<button class="btn btn-xs btn-success confirmBtn" data-id="' + tx.id + '"><i class="fas fa-check"></i></button> ';
+                    html += '<button class="btn btn-xs btn-outline-primary matchBtn" data-id="' + tx.id + '" data-amount="' + tx.amount + '"><i class="fas fa-edit"></i></button>';
+                } else {
+                    html += statusBadge(tx.match_status);
+                }
+                html += '</td></tr>';
+            });
+
+            if (!html) html = '<tr><td colspan="7" class="text-center text-muted">Keine Transaktionen</td></tr>';
+
+            $('#matchingBody').html(html);
+            $('#matchUnmatched').text(stats.unmatched || 0);
+            $('#matchSuggested').text(stats.suggested || 0);
+            $('#matchConfirmed').text(stats.confirmed || 0);
+            $('#matchingLoading').hide();
+
+            // Scroll zu Matching
+            $('html, body').animate({ scrollTop: $('#matchingSection').offset().top - 60 }, 300);
+        }, false);
+    }
+
+    $('#goToSessionBtn').click(function() { loadSessionTransactions(currentSessionId); });
+    $('#fintsGoToSessionBtn').click(function() {
+        // Zum Import-Tab wechseln und Session laden
+        $('a[href="#tabImport"]').tab('show');
+        loadSessionTransactions(currentSessionId);
+    });
+
+    // ═══ Einzelne Transaktion bestaetigen ═══
+    $(document).on('click', '.confirmBtn', function() {
+        var txId = $(this).data('id');
+        ajaxcall('bankImport/confirm.php', { transaction_id: txId }, function() {
+            loadSessionTransactions(currentSessionId);
+        });
+    });
+
+    // ═══ Alle bestaetigen ═══
+    $('#confirmAllBtn').click(function() {
+        if (!currentSessionId) return;
+        bootbox.confirm('Alle vorgeschlagenen Zuordnungen bestaetigen und Zahlungen verbuchen?', function(ok) {
+            if (!ok) return;
+            ajaxcall('bankImport/confirm.php', { session_id: currentSessionId }, function(data) {
+                var r = data.response;
+                bootbox.alert(r.confirmed + ' Zuordnungen bestaetigt' + (r.failed ? ', ' + r.failed + ' fehlgeschlagen' : ''));
+                loadSessionTransactions(currentSessionId);
+            });
+        });
+    });
+
+    // ═══ Ignorieren ═══
+    $(document).on('click', '.ignoreBtn', function() {
+        var txId = $(this).data('id');
+        ajaxcall('bankImport/ignore.php', { transaction_id: txId }, function() {
+            loadSessionTransactions(currentSessionId);
+        });
+    });
+
+    // ═══ Manuelles Matching ═══
+    $(document).on('click', '.matchBtn', function() {
+        $('#matchTxId').val($(this).data('id'));
+        $('#invoiceSearch').val('');
+        $('#invoiceResults').hide();
+        $('#searchInvoiceModal').modal('show');
+    });
+
+    $('#searchInvoiceBtn').click(function() {
+        ajaxcall('bankImport/searchInvoices.php', {
+            q: $('#invoiceSearch').val(),
+            amount: '' // Could pass tx amount for sorting
+        }, function(data) {
+            var invoices = data.response.invoices || data.response || [];
+            var html = '';
+            invoices.forEach(function(inv) {
+                html += '<tr>';
+                html += '<td><strong>' + (inv.doc_number || '') + '</strong></td>';
+                html += '<td>' + (inv.clients_name || '') + '</td>';
+                html += '<td>' + (inv.projects_name || '') + '</td>';
+                html += '<td class="text-right">' + parseFloat(inv.remaining || 0).toFixed(2).replace('.', ',') + '</td>';
+                html += '<td class="text-right">' + parseFloat(inv.gross_amount || 0).toFixed(2).replace('.', ',') + '</td>';
+                html += '<td>' + formatDate(inv.due_date) + '</td>';
+                html += '<td><button class="btn btn-sm btn-success selectInvoiceBtn" data-id="' + inv.id + '"><i class="fas fa-check"></i></button></td>';
+                html += '</tr>';
+            });
+            if (!html) html = '<tr><td colspan="7" class="text-center text-muted">Keine offenen Rechnungen gefunden</td></tr>';
+            $('#invoiceResultsBody').html(html);
+            $('#invoiceResults').show();
+        }, false);
+    });
+
+    $(document).on('click', '.selectInvoiceBtn', function() {
+        var docId = $(this).data('id');
+        var txId = $('#matchTxId').val();
+        ajaxcall('bankImport/match.php', { transaction_id: txId, document_lifecycle_id: docId }, function() {
+            $('#searchInvoiceModal').modal('hide');
+            loadSessionTransactions(currentSessionId);
+        });
+    });
+
+    // ═══ FinTS ═══
+    $('#fintsForm').submit(function(e) {
+        e.preventDefault();
+        var accountId = $('#fintsAccount').val();
+        var pin = $('#fintsPin').val();
+        if (!accountId || !pin) return;
+
+        $('#fintsFetchBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Verbinde...');
+
+        ajaxcall('bankImport/fintsConnect.php', {
+            account_id: accountId,
+            pin: pin,
+            action: 'fetch_transactions',
+            date_from: $('#fintsDateFrom').val(),
+            date_to: $('#fintsDateTo').val()
+        }, function(data) {
+            $('#fintsFetchBtn').prop('disabled', false).html('<i class="fas fa-download"></i> Umsaetze abrufen');
+            var r = data.response;
+            fintsSessionId = r.session_id;
+
+            if (r.needs_tan) {
+                // TAN-Dialog anzeigen
+                $('#tanChallenge').text(r.challenge || 'Bitte TAN eingeben');
+                if (r.challenge_image) {
+                    $('#tanImage').attr('src', 'data:image/png;base64,' + r.challenge_image);
+                    $('#tanImageContainer').show();
+                } else {
+                    $('#tanImageContainer').hide();
+                }
+                $('#tanCard').show();
+                $('#fintsInfoCard').hide();
+                $('#tanInput').val('').focus();
+                startTanCountdown();
+            } else {
+                // Direkt-Ergebnis
+                showFintsResult(r.result);
+            }
+        }, false);
+    });
+
+    $('#tanSubmitBtn').click(function() {
+        var tan = $('#tanInput').val();
+        var pin = $('#fintsPin').val();
+        if (!tan) return;
+
+        $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Pruefe...');
+
+        ajaxcall('bankImport/fintsSubmitTan.php', {
+            session_id: fintsSessionId,
+            tan: tan,
+            pin: pin
+        }, function(data) {
+            $('#tanSubmitBtn').prop('disabled', false).html('<i class="fas fa-check"></i> TAN bestaetigen');
+            var r = data.response;
+
+            if (r.needs_tan) {
+                $('#tanChallenge').text(r.challenge || 'Bitte weitere TAN eingeben');
+                $('#tanInput').val('').focus();
+            } else {
+                $('#tanCard').hide();
+                clearInterval(tanCountdownTimer);
+                showFintsResult(r.result);
+            }
+        }, false);
+    });
+
+    function showFintsResult(result) {
+        currentSessionId = result.import_session_id;
+        $('#fintsTotal').text(result.total_fetched);
+        $('#fintsNew').text(result.new_transactions);
+        $('#fintsMatched').text(result.auto_matched);
+        $('#fintsDupes').text(result.duplicates);
+        $('#fintsResultCard').show();
+        // PIN loeschen
+        $('#fintsPin').val('');
+    }
+
+    function startTanCountdown() {
+        var remaining = 300;
+        clearInterval(tanCountdownTimer);
+        tanCountdownTimer = setInterval(function() {
+            remaining--;
+            $('#tanCountdown').text(remaining);
+            if (remaining <= 0) {
+                clearInterval(tanCountdownTimer);
+                $('#tanCard').hide();
+                bootbox.alert('TAN-Session abgelaufen. Bitte erneut starten.');
+            }
+        }, 1000);
+    }
+
+    // ═══ Bankkonten CRUD ═══
+    $('#addAccountBtn').click(function() {
+        $('#accountEditId').val('');
+        $('#accountForm')[0].reset();
+        $('#accountFormTitle').text('Neues Bankkonto');
+    });
+
+    $('#accountForm').submit(function(e) {
+        e.preventDefault();
+        var editId = $('#accountEditId').val();
+        var data = {
+            account_name: $('#accName').val(),
+            iban: $('#accIban').val(),
+            bic: $('#accBic').val(),
+            bank_name: $('#accBankName').val(),
+            is_default: $('#accDefault').is(':checked') ? 1 : 0
+        };
+
+        // FinTS-Felder
+        if ($('#accFintsUrl').val()) {
+            data.fints_url = $('#accFintsUrl').val();
+            data.fints_blz = $('#accFintsBlz').val();
+            data.fints_username = $('#accFintsUser').val();
+            data.fints_enabled = $('#accFintsEnabled').is(':checked') ? 1 : 0;
+        }
+
+        if (editId) {
+            // Update - accounts.php erwartet PUT mit account_id
+            var csrfToken = $('meta[name="csrf-token"]').attr('content') || '';
+            data.account_id = editId;
+            $.ajax({
+                url: '{{ CONFIG.ROOTURL }}/api/bankImport/accounts.php',
+                type: 'PUT',
+                data: $.param(data),
+                headers: { 'X-CSRF-Token': csrfToken },
+                success: function() {
+                    loadAccounts();
+                    $('#accountForm')[0].reset();
+                    $('#accountEditId').val('');
+                    $('#accountFormTitle').text('Neues Bankkonto');
+                }
+            });
+
+            // FinTS separat konfigurieren
+            if (data.fints_url) {
+                ajaxcall('bankImport/fintsConfigure.php', {
+                    account_id: editId,
+                    fints_url: data.fints_url,
+                    fints_blz: data.fints_blz,
+                    fints_username: data.fints_username,
+                    fints_enabled: data.fints_enabled
+                }, function() {}, false);
+            }
+        } else {
+            ajaxcall('bankImport/accounts.php', data, function() {
+                loadAccounts();
+                $('#accountForm')[0].reset();
+            });
+        }
+    });
+
+    $(document).on('click', '.deleteAccountBtn', function() {
+        var id = $(this).data('id');
+        bootbox.confirm('Bankkonto wirklich loeschen?', function(ok) {
+            if (!ok) return;
+            var csrfToken = $('meta[name="csrf-token"]').attr('content') || '';
+            $.ajax({
+                url: '{{ CONFIG.ROOTURL }}/api/bankImport/accounts.php?account_id=' + id,
+                type: 'DELETE',
+                headers: { 'X-CSRF-Token': csrfToken },
+                success: function() { loadAccounts(); }
+            });
+        });
+    });
+
+    // ═══ Banksuche (fuer FinTS-Konfiguration) ═══
+    var searchTimeout = null;
+    $('#accFintsSearch').on('input', function() {
+        var q = $(this).val();
+        clearTimeout(searchTimeout);
+        if (q.length < 2) { $('#bankSearchResults').hide(); return; }
+
+        searchTimeout = setTimeout(function() {
+            var csrfToken = $('meta[name="csrf-token"]').attr('content') || '';
+            $.ajax({
+                url: '{{ CONFIG.ROOTURL }}/api/bankImport/fintsConfigure.php?query=' + encodeURIComponent(q),
+                type: 'GET',
+                headers: { 'X-CSRF-Token': csrfToken },
+                success: function(result) {
+                    if (!result.result) return;
+                    var banks = result.response.banks || [];
+                    var html = '';
+                    banks.forEach(function(b) {
+                        html += '<a href="#" class="list-group-item list-group-item-action bankSelectItem" data-url="' + b.url + '" data-blz="' + b.blz + '" data-name="' + b.name + '">';
+                        html += '<strong>' + b.name + '</strong> <small class="text-muted">BLZ: ' + b.blz + '</small>';
+                        html += '</a>';
+                    });
+                    if (!html) html = '<div class="list-group-item text-muted">Keine Treffer</div>';
+                    $('#bankSearchResults').html(html).show();
+                }
+            });
+        }, 300);
+    });
+
+    $(document).on('click', '.bankSelectItem', function(e) {
+        e.preventDefault();
+        $('#accFintsUrl').val($(this).data('url'));
+        $('#accFintsBlz').val($(this).data('blz'));
+        $('#accBankName').val($(this).data('name'));
+        $('#bankSearchResults').hide();
+        $('#accFintsSearch').val($(this).data('name'));
+    });
+
+    // ═══ Verlauf laden ═══
+    function loadHistory() {
+        ajaxcall('bankImport/sessions.php', null, function(data) {
+            var sessions = data.response.sessions || data.response || [];
+            var html = '';
+
+            sessions.forEach(function(s) {
+                var format = s.format === 'fints' ? '<span class="badge badge-primary">FinTS</span>' :
+                             '<span class="badge badge-secondary">' + (s.format || '').toUpperCase() + '</span>';
+                var status = s.confirmed == 1 ? '<span class="badge badge-success">Bestaetigt</span>' : '<span class="badge badge-warning">Offen</span>';
+
+                html += '<tr>';
+                html += '<td>' + formatDate((s.created_at || '').substring(0, 10)) + '</td>';
+                html += '<td>' + format + '</td>';
+                html += '<td>' + (s.account_name || '-') + '</td>';
+                html += '<td>' + (s.filename || '-') + '</td>';
+                html += '<td class="text-right">' + (s.transaction_count || 0) + '</td>';
+                html += '<td class="text-right">' + (s.matched_count || 0) + '</td>';
+                html += '<td>' + status + '</td>';
+                html += '<td><button class="btn btn-xs btn-outline-primary viewSessionBtn" data-id="' + s.id + '"><i class="fas fa-eye"></i></button></td>';
+                html += '</tr>';
+            });
+
+            if (!html) html = '<tr><td colspan="8" class="text-center text-muted">Noch keine Imports</td></tr>';
+            $('#historyBody').html(html);
+            $('#historyLoading').hide();
+        }, false);
+    }
+
+    $(document).on('click', '.viewSessionBtn', function() {
+        $('a[href="#tabImport"]').tab('show');
+        loadSessionTransactions($(this).data('id'));
+    });
+
+    // ═══ Init ═══
+    loadAccounts();
+    loadHistory();
+
+    // Tab-Wechsel: Daten nachladen
+    $('a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
+        if (e.target.hash === '#tabHistory') loadHistory();
+        if (e.target.hash === '#tabAccounts') loadAccounts();
+    });
+});
+</script>
+{% endblock %}
