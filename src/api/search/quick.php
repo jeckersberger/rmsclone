@@ -15,7 +15,7 @@ $results = [];
 if ($AUTH->instancePermissionCheck("PROJECTS:VIEW")) {
     $DBLIB->where("projects.instances_id", $instanceId);
     $DBLIB->where("projects.projects_deleted", 0);
-    $DBLIB->where("(projects.projects_name LIKE '%" . $DBLIB->escape($term) . "%')");
+    $DBLIB->where("(projects.projects_name LIKE ?)", ['%' . $DBLIB->escape($term) . '%']);
     $DBLIB->join("clients", "projects.clients_id=clients.clients_id", "LEFT");
     $DBLIB->orderBy("projects.projects_created", "DESC");
     $projects = $DBLIB->get("projects", 5, ["projects.projects_id", "projects.projects_name", "clients.clients_name"]);
@@ -35,7 +35,7 @@ if ($AUTH->instancePermissionCheck("PROJECTS:VIEW")) {
 if ($AUTH->instancePermissionCheck("CLIENTS:VIEW")) {
     $DBLIB->where("clients.instances_id", $instanceId);
     $DBLIB->where("clients.clients_deleted", 0);
-    $DBLIB->where("(clients.clients_name LIKE '%" . $DBLIB->escape($term) . "%' OR clients.clients_email LIKE '%" . $DBLIB->escape($term) . "%')");
+    $DBLIB->where("(clients.clients_name LIKE ? OR clients.clients_email LIKE ?)", ['%' . $DBLIB->escape($term) . '%', '%' . $DBLIB->escape($term) . '%']);
     $DBLIB->orderBy("clients.clients_name", "ASC");
     $clients = $DBLIB->get("clients", 5, ["clients.clients_id", "clients.clients_name", "clients.clients_email"]);
     foreach (($clients ?: []) as $c) {
@@ -54,7 +54,7 @@ if ($AUTH->instancePermissionCheck("CLIENTS:VIEW")) {
 $DBLIB->where("assets.instances_id", $instanceId);
 $DBLIB->where("assets.assets_deleted", 0);
 $DBLIB->join("assetTypes", "assets.assetTypes_id=assetTypes.assetTypes_id", "LEFT");
-$DBLIB->where("(assets.assets_tag LIKE '%" . $DBLIB->escape($term) . "%' OR assetTypes.assetTypes_name LIKE '%" . $DBLIB->escape($term) . "%')");
+$DBLIB->where("(assets.assets_tag LIKE ? OR assetTypes.assetTypes_name LIKE ?)", ['%' . $DBLIB->escape($term) . '%', '%' . $DBLIB->escape($term) . '%']);
 $DBLIB->orderBy("assetTypes.assetTypes_name", "ASC");
 $assets = $DBLIB->get("assets", 5, ["assets.assets_id", "assets.assets_tag", "assetTypes.assetTypes_name"]);
 foreach (($assets ?: []) as $a) {

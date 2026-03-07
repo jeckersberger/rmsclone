@@ -14,8 +14,9 @@ if (!$clientId || $clientId <= 0) finish(false, ["code" => "INVALID", "message" 
 
 $instanceId = $AUTH->data['instance']['instances_id'];
 
-// 1) Client-Stammdaten
+// 1) Client-Stammdaten (with instance isolation)
 $DBLIB->where('clients_id', $clientId);
+$DBLIB->where('instances_id', $instanceId);
 $client = $DBLIB->getOne('clients');
 if (!$client) finish(false, ["code" => "NOT_FOUND", "message" => "Client not found"]);
 

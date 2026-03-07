@@ -48,9 +48,12 @@ class DocumentLifecycleService
     /**
      * Change document status with validation
      */
-    public function changeStatus(int $docId, string $newStatus, int $userId, ?string $comment = null): bool
+    public function changeStatus(int $docId, string $newStatus, int $userId, ?string $comment = null, ?int $instanceId = null): bool
     {
         $this->db->where('id', $docId);
+        if ($instanceId !== null) {
+            $this->db->where('instances_id', $instanceId);
+        }
         $doc = $this->db->getOne('document_lifecycle');
         if (!$doc) return false;
 
@@ -78,9 +81,12 @@ class DocumentLifecycleService
     /**
      * Convert a quote into an order confirmation or invoice
      */
-    public function convertDocument(int $sourceDocId, string $targetType, int $userId, array $extraOpts = []): ?int
+    public function convertDocument(int $sourceDocId, string $targetType, int $userId, array $extraOpts = [], ?int $instanceId = null): ?int
     {
         $this->db->where('id', $sourceDocId);
+        if ($instanceId !== null) {
+            $this->db->where('instances_id', $instanceId);
+        }
         $sourceDoc = $this->db->getOne('document_lifecycle');
         if (!$sourceDoc) return null;
 
