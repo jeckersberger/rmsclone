@@ -21,8 +21,8 @@ final class CustomProjectStatus extends AbstractMigration
     {
         $originalStatuses = [
             0 => [
-                "projectsStatuses_name" => "Added to RMS",
-                "projectsStatuses_description" => "Default",
+                "projectsStatuses_name" => "Im RMS erfasst",
+                "projectsStatuses_description" => "Standard",
                 "projectsStatuses_foregroundColour" => "#000000",
                 "projectsStatuses_backgroundColour" => "#F5F5F5",
                 "projectsStatuses_rank" => 0,
@@ -30,8 +30,8 @@ final class CustomProjectStatus extends AbstractMigration
                 "projectsStatuses_class" => "info"
             ],
             1 => [
-                "projectsStatuses_name" => "Targeted",
-                "projectsStatuses_description" => "Being targeted as a lead",
+                "projectsStatuses_name" => "Anvisiert",
+                "projectsStatuses_description" => "Als Lead anvisiert",
                 "projectsStatuses_foregroundColour" => "#000000",
                 "projectsStatuses_backgroundColour" => "#F5F5F5",
                 "projectsStatuses_rank" => 1,
@@ -39,8 +39,8 @@ final class CustomProjectStatus extends AbstractMigration
                 "projectsStatuses_class" => "info"
             ],
             2 => [
-                "projectsStatuses_name" => "Quote Sent",
-                "projectsStatuses_description" => "Waiting for client confirmation",
+                "projectsStatuses_name" => "Angebot versendet",
+                "projectsStatuses_description" => "Warte auf Kundenbestätigung",
                 "projectsStatuses_foregroundColour" => "#000000",
                 "projectsStatuses_backgroundColour" => "#ffdd99",
                 "projectsStatuses_rank" => 2,
@@ -48,8 +48,8 @@ final class CustomProjectStatus extends AbstractMigration
                 "projectsStatuses_class" => "warning"
             ],
             3 => [
-                "projectsStatuses_name" => "Confirmed",
-                "projectsStatuses_description" => "Booked in with client",
+                "projectsStatuses_name" => "Bestätigt",
+                "projectsStatuses_description" => "Beim Kunden gebucht",
                 "projectsStatuses_foregroundColour" => "#ffffff",
                 "projectsStatuses_backgroundColour" => "#66ff66",
                 "projectsStatuses_rank" => 3,
@@ -57,8 +57,8 @@ final class CustomProjectStatus extends AbstractMigration
                 "projectsStatuses_class" => "success"
             ],
             4 => [
-                "projectsStatuses_name" => "Prep",
-                "projectsStatuses_description" => "Being prepared for dispatch" ,
+                "projectsStatuses_name" => "Vorbereitung",
+                "projectsStatuses_description" => "Wird für den Versand vorbereitet",
                 "projectsStatuses_foregroundColour" => "#000000",
                 "projectsStatuses_backgroundColour" => "#ffdd99",
                 "projectsStatuses_rank" => 4,
@@ -66,8 +66,8 @@ final class CustomProjectStatus extends AbstractMigration
                 "projectsStatuses_class" => "success"
             ],
             5 => [
-                "projectsStatuses_name" => "Dispatched",
-                "projectsStatuses_description" => "Sent to client" ,
+                "projectsStatuses_name" => "Versendet",
+                "projectsStatuses_description" => "An Kunden versendet",
                 "projectsStatuses_foregroundColour" => "#ffffff",
                 "projectsStatuses_backgroundColour" => "#66ff66",
                 "projectsStatuses_rank" => 5,
@@ -75,8 +75,8 @@ final class CustomProjectStatus extends AbstractMigration
                 "projectsStatuses_class" => "primary"
             ],
             6 => [
-                "projectsStatuses_name" => "Returned",
-                "projectsStatuses_description" => "Waiting to be checked in ",
+                "projectsStatuses_name" => "Zurückgekommen",
+                "projectsStatuses_description" => "Wartet auf Rücknahme",
                 "projectsStatuses_foregroundColour" => "#000000",
                 "projectsStatuses_backgroundColour" => "#ffdd99",
                 "projectsStatuses_rank" => 6,
@@ -84,8 +84,8 @@ final class CustomProjectStatus extends AbstractMigration
                 "projectsStatuses_class" => "primary"
             ],
             7 => [
-                "projectsStatuses_name" => "Closed",
-                "projectsStatuses_description" => "Pending move to Archive",
+                "projectsStatuses_name" => "Abgeschlossen",
+                "projectsStatuses_description" => "Wird archiviert",
                 "projectsStatuses_foregroundColour" => "#000000",
                 "projectsStatuses_backgroundColour" => "#F5F5F5",
                 "projectsStatuses_rank" => 7,
@@ -93,8 +93,8 @@ final class CustomProjectStatus extends AbstractMigration
                 "projectsStatuses_class" => "secondary"
             ],
             8 => [
-                "projectsStatuses_name" => "Cancelled",
-                "projectsStatuses_description" => "Project Cancelled",
+                "projectsStatuses_name" => "Storniert",
+                "projectsStatuses_description" => "Projekt storniert",
                 "projectsStatuses_foregroundColour" => "#000000",
                 "projectsStatuses_backgroundColour" => "#F5F5F5",
                 "projectsStatuses_rank" => 8,
@@ -102,8 +102,8 @@ final class CustomProjectStatus extends AbstractMigration
                 "projectsStatuses_class" => "danger"
             ],
             9 => [
-                "projectsStatuses_name" => "Lead Lost",
-                "projectsStatuses_description" => "Project Cancelled",
+                "projectsStatuses_name" => "Lead verloren",
+                "projectsStatuses_description" => "Projekt storniert",
                 "projectsStatuses_foregroundColour" => "#000000",
                 "projectsStatuses_backgroundColour" => "#F5F5F5",
                 "projectsStatuses_rank" => 9,
@@ -239,11 +239,11 @@ final class CustomProjectStatus extends AbstractMigration
         ])
         ->save();
         
-        $this->execute("UPDATE instanceActionsCategories SET instanceActionsCategories_name = 'Project Types & Statuses' WHERE instanceActionsCategories_id=14;");
+        $this->execute("UPDATE instanceActionsCategories SET instanceActionsCategories_name = 'Projekttypen & Status' WHERE instanceActionsCategories_id=14;");
 
         $this->table('instanceActions')->insert([
             'instanceActions_id' => 134,
-            'instanceActions_name' => 'View list of Project Statuses',
+            'instanceActions_name' => 'Projektstatus-Liste anzeigen',
             'instanceActionsCategories_id' => 14,
             'instanceActions_dependent' => null,
             'instanceActions_incompatible' => null
@@ -251,7 +251,7 @@ final class CustomProjectStatus extends AbstractMigration
 
         $this->table('instanceActions')->insert([
             'instanceActions_id' => 135,
-            'instanceActions_name' => 'Add new Project Status',
+            'instanceActions_name' => 'Neuen Projektstatus hinzufügen',
             'instanceActionsCategories_id' => 14,
             'instanceActions_dependent' => '134,136',
             'instanceActions_incompatible' => null
@@ -259,7 +259,7 @@ final class CustomProjectStatus extends AbstractMigration
 
         $this->table('instanceActions')->insert([
             'instanceActions_id' => 136,
-            'instanceActions_name' => 'Edit Project Statuses',
+            'instanceActions_name' => 'Projektstatus bearbeiten',
             'instanceActionsCategories_id' => 14,
             'instanceActions_dependent' => '134',
             'instanceActions_incompatible' => null
@@ -267,7 +267,7 @@ final class CustomProjectStatus extends AbstractMigration
 
         $this->table('instanceActions')->insert([
             'instanceActions_id' => 137,
-            'instanceActions_name' => 'Delete Project Statuses',
+            'instanceActions_name' => 'Projektstatus löschen',
             'instanceActionsCategories_id' => 14,
             'instanceActions_dependent' => '134,136',
             'instanceActions_incompatible' => null
