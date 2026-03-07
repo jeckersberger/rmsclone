@@ -260,6 +260,14 @@ foreach ($CONFIG['CSP'] as $key => $value) {
 }
 header($CSPString);
 
+// Security headers
+header("X-Frame-Options: SAMEORIGIN");
+header("X-Content-Type-Options: nosniff");
+header("Referrer-Policy: strict-origin-when-cross-origin");
+header("Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=()");
+if ($isSecure) {
+    header("Strict-Transport-Security: max-age=31536000; includeSubDomains");
+}
 
 // Include the Auth class
 require_once __DIR__ . '/libs/Auth/main.php';

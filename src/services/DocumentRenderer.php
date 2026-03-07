@@ -65,6 +65,19 @@ class DocumentRenderer {
     }
     $vatRate = $kurEnabled ? 0 : (float)($business['instances_vatRate'] ?? 19.0);
 
+    // 4b) Reverse-Charge-Verfahren fuer EU-Ausland (Art. 196 MwSt-Richtlinie)
+    $reverseCharge = false;
+    $reverseChargeNotice = null;
+    if (!$kurEnabled
+        && !empty($client['clients_reverseCharge'])
+        && !empty($client['clients_vatId'])
+    ) {
+        $reverseCharge = true;
+        $vatRate = 0;
+        $reverseChargeNotice = 'Steuerschuldnerschaft des Leistungsempfaengers (Reverse Charge, Art. 196 MwSt-Richtlinie). '
+            . 'Die Umsatzsteuer ist vom Leistungsempfaenger zu entrichten.';
+    }
+
     // 5) Summen + Rabatt + KUR/MwSt
     $discountPct = max(0.0, min(100.0, (float)($opts['discount_pct'] ?? 0)));
     $totals = self::calcTotals($flatLines, [
@@ -72,6 +85,15 @@ class DocumentRenderer {
       'vat_rate' => $vatRate,
       'discount_pct' => $discountPct,
     ]);
+
+    // 5b) Reverse-Charge-Hinweis in Totals einfuegen
+    if ($reverseCharge) {
+        $totals['reverse_charge'] = true;
+        $totals['reverse_charge_notice'] = $reverseChargeNotice;
+        $totals['client_vat_id'] = $client['clients_vatId'];
+    } else {
+        $totals['reverse_charge'] = false;
+    }
 
     // 6) Nummer ziehen
     $docNumber = SequenceService::next($db, $instanceId, $type);
@@ -124,7 +146,21 @@ class DocumentRenderer {
       'skonto_days'   => $skontoDays,
       'skonto_amount' => $skontoAmount,
       'skonto_date'   => $skontoDate ? $skontoDate->format('d.m.Y') : null,
+      'valid_until'   => null,
     ];
+
+    // For quotes: add valid_until from opts or default +30 days
+    if ($type === 'quote') {
+      $validUntilStr = $opts['valid_until'] ?? null;
+      if ($validUntilStr) {
+        $docData['valid_until'] = new DateTime($validUntilStr);
+      } else {
+        $db->where('instances_id', $instanceId);
+        $instRow = $db->getOne('instances', ['valid_until_default_days']);
+        $defaultDays = (int)($instRow['valid_until_default_days'] ?? 30) ?: 30;
+        $docData['valid_until'] = (clone $docDate)->modify("+{$defaultDays} days");
+      }
+    }
 
     // 10) Try custom template first, fall back to built-in
     $db->where('instances_id', $instanceId);
@@ -252,6 +288,169 @@ class DocumentRenderer {
       'zugferd_s3files_id'=>$zugferdFileId,
       'xrechnung_s3files_id'=>$xrechnungFileId,
     ];
+  }
+
+  /**
+   * Renders a preview HTML (no save, no sequence number, watermark overlay).
+   * Returns HTML string for iframe display.
+   */
+  public static function renderPreview($db, int $instanceId, int $projectId, string $type, string $templateKey, array $opts): string {
+    // 1) Stammdaten
+    $business = BusinessRepo::getSettings($db, $instanceId);
+    $project  = ProjectRepo::getWithFinance($db, $instanceId, $projectId);
+    $client   = ClientsRepo::getById($db, $project['clients_id']);
+
+    // 2) Miettage / Leistungszeitraum
+    $durationDays = isset($opts['duration_days']) && $opts['duration_days']>0
+      ? (int)$opts['duration_days']
+      : self::calcDays(new DateTime($project['projects_dateStart']), new DateTime($project['projects_dateEnd']));
+
+    // 3) Zeilen
+    $lineData = self::buildLines($project, $durationDays, $opts);
+    $flatLines  = $lineData['_flat'];
+    $categories = $lineData['_grouped'];
+
+    // 4) KUR
+    $kurEnabled = (bool)($business['instances_kurEnabled'] ?? true);
+    if ($kurEnabled && !empty($business['instances_kurTransitionYear'])) {
+      if ((int)date('Y') >= (int)$business['instances_kurTransitionYear']) {
+        $kurEnabled = false;
+      }
+    }
+    $vatRate = $kurEnabled ? 0 : (float)($business['instances_vatRate'] ?? 19.0);
+
+    // 5) Summen
+    $discountPct = max(0.0, min(100.0, (float)($opts['discount_pct'] ?? 0)));
+    $totals = self::calcTotals($flatLines, [
+      'kur' => $kurEnabled, 'vat_rate' => $vatRate, 'discount_pct' => $discountPct,
+    ]);
+
+    // 6) Preview number
+    $docNumber = 'VORSCHAU';
+
+    // 7) Dates
+    $paymentTermDays = (int)($client['clients_paymentTermDays'] ?? $business['instances_paymentTermDays'] ?? 14);
+    $docDate = new DateTime();
+    $dueDate = (clone $docDate)->modify("+{$paymentTermDays} days");
+
+    // Skonto
+    $skontoEnabled = !empty($opts['skonto_enabled']);
+    $skontoRate = $skontoEnabled ? (float)($opts['skonto_rate'] ?? $client['clients_skontoRate'] ?? $business['instances_skontoRate'] ?? 0) : 0;
+    $skontoDays = $skontoEnabled ? (int)($opts['skonto_days'] ?? $client['clients_skontoDays'] ?? $business['instances_skontoDays'] ?? 0) : 0;
+    $skontoAmount = 0;
+    $skontoDate = null;
+    if ($skontoEnabled && $skontoRate > 0 && $skontoDays > 0 && $type === 'invoice') {
+      $skontoAmount = round($totals['gross'] * $skontoRate / 100, 2);
+      $skontoDate = (clone $docDate)->modify("+{$skontoDays} days");
+      $totals['skonto_rate'] = $skontoRate;
+      $totals['skonto_days'] = $skontoDays;
+      $totals['skonto_amount'] = $skontoAmount;
+      $totals['skonto_gross'] = round($totals['gross'] - $skontoAmount, 2);
+      $totals['skonto_date'] = $skontoDate->format('d.m.Y');
+    }
+
+    // 8) Leistungszeitraum
+    $servicePeriodStart = new DateTime($project['projects_dateStart'] ?? $project['projects_dates_deliver_start'] ?? 'now');
+    $servicePeriodEnd   = new DateTime($project['projects_dateEnd'] ?? $project['projects_dates_deliver_end'] ?? 'now');
+
+    // 9) Doc data
+    $typeLabels = [
+      'invoice'       => ['title' => 'Rechnung',     'number_label' => 'Rechnungsnummer'],
+      'quote'         => ['title' => 'Angebot',       'number_label' => 'Angebotsnummer'],
+      'delivery_note' => ['title' => 'Lieferschein',  'number_label' => 'Lieferscheinnummer'],
+    ];
+    $docData = [
+      'type'          => $type,
+      'number'        => $docNumber,
+      'date'          => $docDate,
+      'due_date'      => $dueDate,
+      'payment_term_days' => $paymentTermDays,
+      'duration_days' => $durationDays,
+      'discount_pct'  => $discountPct,
+      'service_period_start' => $servicePeriodStart,
+      'service_period_end'   => $servicePeriodEnd,
+      'title'         => ($typeLabels[$type]['title'] ?? $type) . ' (VORSCHAU)',
+      'number_label'  => $typeLabels[$type]['number_label'] ?? 'Dokumentnummer',
+      'skonto_rate'   => $skontoRate,
+      'skonto_days'   => $skontoDays,
+      'skonto_amount' => $skontoAmount,
+      'skonto_date'   => $skontoDate ? $skontoDate->format('d.m.Y') : null,
+      'valid_until'   => null,
+    ];
+
+    // For quotes: add valid_until
+    if ($type === 'quote') {
+      $validUntilStr = $opts['valid_until'] ?? null;
+      if ($validUntilStr) {
+        $docData['valid_until'] = new DateTime($validUntilStr);
+      } else {
+        $db->where('instances_id', $instanceId);
+        $instRow = $db->getOne('instances', ['valid_until_default_days']);
+        $defaultDays = (int)($instRow['valid_until_default_days'] ?? 30) ?: 30;
+        $docData['valid_until'] = (clone $docDate)->modify("+{$defaultDays} days");
+      }
+    }
+
+    // 10) Template
+    $db->where('instances_id', $instanceId);
+    $db->where('type', $type);
+    $db->where('key', $templateKey);
+    $tpl = $db->getOne('document_templates');
+
+    if ($tpl) {
+      $twig = new TwigEnv(new ArrayLoader(['tpl' => $tpl['twig_html']]), ['cache'=>false,'autoescape'=>false]);
+    } else {
+      $twig = new TwigEnv(new \Twig\Loader\FilesystemLoader(__DIR__ . '/../templates'), ['cache'=>false,'autoescape'=>false]);
+    }
+
+    $twig->addFilter(new \Twig\TwigFilter('numberDe', function ($value, int $decimals = 2) {
+      return number_format((float)$value, $decimals, ',', '.');
+    }));
+    $twig->addFilter(new \Twig\TwigFilter('dateDe', function ($datetime, string $format = 'd.m.Y') {
+      if ($datetime instanceof \DateTimeInterface) return $datetime->format($format);
+      if (is_string($datetime) && strlen($datetime) > 0) return date($format, strtotime($datetime));
+      return '';
+    }));
+
+    $logoDataUri = null;
+    if (!empty($business['instances_logo'])) {
+      global $bCMS;
+      if (isset($bCMS)) {
+        $logoDataUri = $bCMS->s3DataUri($business['instances_logo']);
+      }
+    }
+
+    $templateVars = [
+      'business'   => $business,
+      'client'     => $client,
+      'project'    => $project,
+      'doc'        => $docData,
+      'lines'      => $flatLines,
+      'categories' => $categories,
+      'totals'     => $totals,
+      'options'    => $opts,
+      'logo'       => $logoDataUri ?: null,
+    ];
+
+    $html = $tpl
+      ? $twig->render('tpl', $templateVars)
+      : $twig->render('document_de.twig', $templateVars);
+
+    // Add watermark overlay
+    $watermark = '<style>
+      .preview-watermark {
+        position: fixed; top: 35%; left: 10%; z-index: 9999;
+        font-size: 72pt; color: rgba(255,0,0,0.12); font-weight: bold;
+        transform: rotate(-35deg); pointer-events: none;
+        white-space: nowrap; letter-spacing: 8px;
+      }
+    </style>
+    <div class="preview-watermark">VORSCHAU / PREVIEW</div>';
+
+    // Insert watermark before closing </body>
+    $html = str_replace('</body>', $watermark . '</body>', $html);
+
+    return $html;
   }
 
   private static function calcDays(DateTime $start, DateTime $end): int {

@@ -20,6 +20,10 @@ if ($allowedOrigin && isset($_SERVER['HTTP_ORIGIN'])) {
 }
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With, X-CSRF-Token");
+// Security headers for API responses
+header("X-Content-Type-Options: nosniff");
+header("X-Frame-Options: DENY");
+header("Referrer-Policy: strict-origin-when-cross-origin");
 //Copy the payload over to get&post to maintain compatibility between the app and the frontend
 $dataPayload = json_decode(file_get_contents('php://input'));
 $dataPayload = (array) $dataPayload;

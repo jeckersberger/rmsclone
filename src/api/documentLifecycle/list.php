@@ -21,6 +21,8 @@ if ($projectId) {
 }
 
 // Enrich with ZUGFeRD XML file IDs from document_exports
+// and compute expired flag for quotes
+$today = date('Y-m-d');
 foreach ($docs as &$d) {
     if ($d['doc_type'] === 'invoice' && !empty($d['doc_number'])) {
         $DBLIB->where('instances_id', $instanceId);
@@ -30,6 +32,13 @@ foreach ($docs as &$d) {
         $d['zugferd_s3files_id'] = $export ? $export['zugferd_xml_s3files_id'] : null;
     } else {
         $d['zugferd_s3files_id'] = null;
+    }
+
+    // Add expired flag for quotes with valid_until in the past
+    $d['is_expired'] = false;
+    if (!empty($d['valid_until']) && $d['valid_until'] < $today
+        && !in_array($d['status'], ['accepted', 'rejected', 'cancelled', 'expired'])) {
+        $d['is_expired'] = true;
     }
 }
 unset($d);

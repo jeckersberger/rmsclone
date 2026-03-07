@@ -68,9 +68,9 @@
 - [x] Dokumentenstatus-Tracking (erstellt, gesendet, angenommen, abgelehnt) — `DocumentLifecycleService`
 - [x] Quick-Convert Buttons (Angebot → AB → Rechnung) — `src/project/project_documents.twig`
 - [x] Angebots-Vorlagen mit Textbausteinen — `text_blocks` Tabelle + API + `src/business/textblocks.php`
-- [ ] Angebots-Gültigkeit (Ablaufdatum)
+- [x] Angebots-Gültigkeit (Ablaufdatum) — `DocumentLifecycleService` (valid_until, +30 Tage Default) + `document_de.twig` + `src/cron/quote-expiry-check.php`
 - [ ] Angebots-Versionen
-- [ ] PDF-Vorschau vor dem Versand
+- [x] PDF-Vorschau vor dem Versand — `src/api/documentLifecycle/preview.php` + `DocumentRenderer::renderPreview()` + Modal in `project_documents.twig`
 - [x] Skonto-Bedingungen auf Angeboten/Rechnungen — `DocumentRenderer.php` (Skonto-Rate + Tage) + `ZugferdService.php` (XML Payment Terms)
 
 ### 6.2.2 Rechnungswesen
@@ -80,14 +80,14 @@
 - [x] Zahlungsbedingungen in DB — `instances_paymentTermDays`, `clients_paymentTermDays`
 - [x] Teilrechnungen / Abschlagsrechnungen — `db/migrations/20260307300000_partial_invoices.php` + API-Endpoints (`partialInvoice.php`, `finalInvoice.php`)
 - [ ] SEPA-Lastschrift-Mandatsverwaltung
-- [ ] Automatischer Rechnungsversand per E-Mail (Cronjob-basiert)
+- [x] Automatischer Rechnungsversand per E-Mail (Cronjob-basiert) — `src/services/InvoiceEmailService.php` + `src/cron/auto-invoice-email.php` + Migration
 - [x] Wiederkehrende Projekte (Vorlage) — `src/services/RecurringProjectService.php`
-- [ ] Mahngebühren automatisch berechnen und auf Mahnung ausweisen
-- [ ] Mahnbriefe als PDF generieren und per E-Mail versenden
+- [x] Mahngebühren automatisch berechnen und auf Mahnung ausweisen — `DunningService` (Zinsen + Mahngebühren pro Stufe)
+- [x] Mahnbriefe als PDF generieren und per E-Mail versenden — `src/services/DunningLetterService.php` + `src/templates/dunning_letter_de.twig` + `src/api/dunning/generateLetter.php`
 - [ ] Mahnsperre bei Teilzahlung (automatisch pausieren)
 - [ ] Zahlungseingänge mit Bankdaten abgleichen (MT940/CAMT Import)
-- [ ] Sammelrechnung (mehrere Projekte → eine Rechnung)
-- [ ] Reverse-Charge-Verfahren für EU-Auslandsgeschäfte
+- [x] Sammelrechnung (mehrere Projekte → eine Rechnung) — `src/services/CollectiveInvoiceService.php` + `src/business/collective-invoice.php` + Template + API
+- [x] Reverse-Charge-Verfahren für EU-Auslandsgeschäfte — `clients_isEU`, `clients_reverseCharge` + `DocumentRenderer.php` + `document_de.twig` (Art. 196 MwSt-Richtlinie)
 - [ ] Teilzahlungs-Tracking auf Rechnungsebene
 - [x] Cron-Automatisierung für wiederkehrende Projekte — `src/cron/recurring-projects.php`
 - [ ] Wiederkehrende Projekte: Verfügbarkeits-Check vor Auto-Erstellung
@@ -167,8 +167,8 @@
 ### API-Sicherheit
 - [x] Rate-Limiting für Login und API-Endpunkte — `RateLimitService.php` + DB-Migration + Login-Integration
 - [ ] Input-Sanitization: htmlspecialchars/strip_tags für alle User-Inputs
-- [ ] Content-Security-Policy (CSP) Header setzen
-- [ ] X-Frame-Options Header (Clickjacking-Schutz)
+- [x] Content-Security-Policy (CSP) Header setzen — `src/common/head.php` (bereits vorhanden)
+- [x] X-Frame-Options Header (Clickjacking-Schutz) — `src/common/head.php` + `src/api/apiHead.php` (SAMEORIGIN/DENY + X-Content-Type-Options + Referrer-Policy + Permissions-Policy + HSTS)
 - [ ] Prepared Statements in allen rawQuery()-Aufrufen prüfen
 - [ ] API-Antworten: keine internen Fehler-Details an Client leaken
 - [x] **Partner-API: Input-Validierung** — `accept.php`, `invite.php`, `equipment.php`, `request.php`: filter_var, preg_match, json_last_error
@@ -351,15 +351,15 @@
 | Phase 1 - ZUGFeRD          | 5/5       | 0     | **100%** ✅ |
 | Phase 1 - DSGVO            | 10/10     | 0     | **100%** ✅ |
 | Phase 1 - DB & Lokalisierung | 10/10   | 0     | **100%** ✅ |
-| Phase 2 - Angebotswesen    | 5/8       | 3     | 63%         |
-| Phase 2 - Rechnungswesen   | 7/15      | 8     | 47%         |
+| Phase 2 - Angebotswesen    | 7/8       | 1     | 88%         |
+| Phase 2 - Rechnungswesen   | 12/15     | 3     | 80%         |
 | Phase 2 - Buchhaltung      | 4/9       | 5     | 44%         |
 | Phase 2 - Kunden           | 6/13      | 7     | 46%         |
 | Phase 3 - Reporting        | 4/11      | 7     | 36%         |
 | Phase 3 - Logistik         | 4/8       | 4     | 50%         |
 | Phase 3 - Code-Qualität    | 0/8       | 8     | 0%          |
 | Sicherheit - KRITISCH      | 4/4       | 0     | **100%** ✅ |
-| Sicherheit - API           | 7/12      | 5     | 58%         |
+| Sicherheit - API           | 9/12      | 3     | 75%         |
 | Sicherheit - Session/Auth  | 3/6       | 3     | 50%         |
 | Sicherheit - Datenbank     | 1/5       | 4     | 20%         |
 | Sicherheit - Dateien       | 0/3       | 3     | 0%          |
@@ -377,7 +377,7 @@
 | Extra - Integrationen      | 0/9       | 9     | 0%          |
 | Extra - Dokumentation      | 3/7       | 4     | 43%         |
 | Extra - DevOps             | 0/8       | 8     | 0%          |
-| **GESAMT**                  | **115/271**| **156**| **42%**   |
+| **GESAMT**                  | **124/271**| **147**| **46%**   |
 
 ---
 
@@ -398,8 +398,8 @@
 10. ~~Rate-Limiting für Login~~ ✅ erledigt
 
 ### Bald umsetzen (Komfort + Compliance)
-11. Automatischer Rechnungsversand per E-Mail
-12. Mahnbriefe als PDF generieren + versenden
+11. ~~Automatischer Rechnungsversand per E-Mail~~ ✅ erledigt
+12. ~~Mahnbriefe als PDF generieren + versenden~~ ✅ erledigt
 13. ~~Lieferschein-Nummer über SequenceService~~ ✅ erledigt
 14. ~~Kundenhistorie-Übersichtsseite~~ ✅ erledigt
 15. ~~Foreign Keys für neue Tabellen~~ ✅ erledigt
@@ -428,4 +428,4 @@
 
 ---
 
-*Zuletzt aktualisiert: 07.03.2026*
+*Zuletzt aktualisiert: 07.03.2026 (Abend)*

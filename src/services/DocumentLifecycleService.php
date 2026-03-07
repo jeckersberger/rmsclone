@@ -20,6 +20,16 @@ class DocumentLifecycleService
      */
     public function create(int $instanceId, int $projectId, string $docType, array $data): int
     {
+        // Default valid_until to +30 days for quotes if not provided
+        $validUntil = $data['valid_until'] ?? null;
+        if ($docType === 'quote' && $validUntil === null) {
+            // Check instance setting for default days, fallback to 30
+            $this->db->where('instances_id', $instanceId);
+            $inst = $this->db->getOne('instances', ['valid_until_default_days']);
+            $defaultDays = (int)($inst['valid_until_default_days'] ?? 30) ?: 30;
+            $validUntil = date('Y-m-d', strtotime("+{$defaultDays} days"));
+        }
+
         $this->db->insert('document_lifecycle', [
             'instances_id'       => $instanceId,
             'projects_id'        => $projectId,
@@ -32,7 +42,7 @@ class DocumentLifecycleService
             'net_amount'         => $data['net_amount'] ?? 0,
             'gross_amount'       => $data['gross_amount'] ?? 0,
             'currency'           => $data['currency'] ?? 'EUR',
-            'valid_until'        => $data['valid_until'] ?? null,
+            'valid_until'        => $validUntil,
             'due_date'           => $data['due_date'] ?? null,
             'notes'              => $data['notes'] ?? null,
             'created_by'         => $data['created_by'],
@@ -244,10 +254,11 @@ class DocumentLifecycleService
         $transitions = [
             'quote' => [
                 'draft'    => ['sent'],
-                'sent'     => ['accepted', 'rejected', 'cancelled'],
+                'sent'     => ['accepted', 'rejected', 'cancelled', 'expired'],
                 'accepted' => [],
                 'rejected' => [],
                 'cancelled' => [],
+                'expired'  => [],
             ],
             'order_confirmation' => [
                 'draft' => ['sent'],

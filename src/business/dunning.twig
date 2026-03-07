@@ -123,6 +123,9 @@ $(document).ready(function() {
                     html += '<td>';
                     html += '<button class="btn btn-sm btn-warning createDunningBtn" data-id="' + inv.id + '" title="{{ t("create_dunning") }}"><i class="fas fa-envelope"></i></button> ';
                     html += '<button class="btn btn-sm btn-info aiDunningBtn" data-id="' + inv.id + '" data-doc="' + (inv.doc_number || '') + '" data-client="' + (inv.clients_name || '') + '" data-amount="' + (inv.gross_amount || 0) + '" data-email="' + (inv.clients_email || '') + '" title="KI-Mahnung generieren"><i class="fas fa-robot"></i></button> ';
+                    if (inv.last_dunning && inv.last_dunning.id) {
+                        html += '<button class="btn btn-sm btn-secondary generateLetterBtn" data-dunning-id="' + inv.last_dunning.id + '" title="PDF erzeugen"><i class="fas fa-file-pdf"></i> PDF</button> ';
+                    }
                     html += '<button class="btn btn-sm btn-success markPaidBtn" data-id="' + inv.id + '" title="{{ t("mark_paid") }}"><i class="fas fa-check"></i></button>';
                     html += '</td>';
                     html += '</tr>';
@@ -265,6 +268,34 @@ $(document).ready(function() {
                     loadDunning();
                 });
             }
+        });
+    });
+
+    // PDF erzeugen (Mahnbrief)
+    $(document).on('click', '.generateLetterBtn', function() {
+        var btn = $(this);
+        var dunningId = btn.data('dunning-id');
+        btn.html('<i class="fas fa-spinner fa-spin"></i> PDF...').prop('disabled', true);
+
+        ajaxcall('dunning/generateLetter.php', {dunning_id: dunningId}, function(data) {
+            btn.html('<i class="fas fa-file-pdf"></i> PDF').prop('disabled', false);
+            if (data.result && data.response) {
+                var downloadUrl = data.response.download_url;
+                var filename = data.response.filename || 'Mahnbrief.pdf';
+                bootbox.dialog({
+                    title: '<i class="fas fa-file-pdf text-danger"></i> Mahnbrief erstellt',
+                    message: '<p>Der Mahnbrief <strong>' + filename + '</strong> wurde erfolgreich erzeugt.</p>' +
+                        (downloadUrl ? '<a href="' + downloadUrl + '" target="_blank" class="btn btn-primary"><i class="fas fa-download"></i> PDF herunterladen</a>' : ''),
+                    buttons: {
+                        ok: { label: 'Schliessen', className: 'btn-default' }
+                    }
+                });
+            } else {
+                bootbox.alert('<i class="fas fa-exclamation-triangle text-danger"></i> Mahnbrief konnte nicht erzeugt werden.');
+            }
+        }, function() {
+            btn.html('<i class="fas fa-file-pdf"></i> PDF').prop('disabled', false);
+            bootbox.alert('Fehler beim Erzeugen des Mahnbriefs.');
         });
     });
 });

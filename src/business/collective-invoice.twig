@@ -1,0 +1,215 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-file-invoice-dollar"></i> Sammelrechnung erstellen</h3>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Fassen Sie mehrere Projekte eines Kunden zu einer Sammelrechnung zusammen.</p>
+
+                {# Schritt 1: Kunde waehlen #}
+                <div class="form-group">
+                    <label><strong>1. Kunde auswaehlen</strong></label>
+                    {% if clients|length > 0 %}
+                    <select class="form-control" id="clientSelect">
+                        <option value="">-- Bitte waehlen --</option>
+                        {% for c in clients %}
+                        <option value="{{ c.clients_id }}">
+                            {{ c.clients_name }}
+                            {% if c.clients_customerNumber %}({{ c.clients_customerNumber }}){% endif %}
+                            - {{ c.project_count }} offene Projekte
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% else %}
+                    <div class="alert alert-info">
+                        Keine Kunden mit mindestens 2 noch nicht abgerechneten Projekten gefunden.
+                    </div>
+                    {% endif %}
+                </div>
+
+                {# Schritt 2: Projekte waehlen #}
+                <div id="projectSelection" style="display: none;">
+                    <label><strong>2. Projekte auswaehlen</strong> <small class="text-muted">(mindestens 2)</small></label>
+                    <div id="projectList" class="mb-3"></div>
+                    <button class="btn btn-sm btn-outline-secondary" id="selectAllBtn"><i class="fas fa-check-double"></i> Alle auswaehlen</button>
+                </div>
+
+                {# Schritt 3: Optionen #}
+                <div id="invoiceOptions" style="display: none; margin-top: 15px;">
+                    <label><strong>3. Optionen</strong></label>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="skontoEnabled">
+                                    <label class="custom-control-label" for="skontoEnabled">Skonto gewaehren</label>
+                                </div>
+                                <div id="skontoFields" style="display: none; margin-top: 5px;">
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <input type="number" step="0.01" class="form-control form-control-sm" id="skontoRate" placeholder="Satz (%)" value="{{ USERDATA.instance.instances_skontoRate ?? 2 }}">
+                                        </div>
+                                        <div class="col-6">
+                                            <input type="number" class="form-control form-control-sm" id="skontoDays" placeholder="Tage" value="{{ USERDATA.instance.instances_skontoDays ?? 10 }}">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Rabatt (%)</label>
+                                <input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm" id="discountPct" value="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {# Zusammenfassung #}
+                <div id="summaryPanel" style="display: none; margin-top: 15px;">
+                    <div class="alert alert-info">
+                        <strong>Zusammenfassung:</strong>
+                        <span id="summaryText"></span>
+                    </div>
+                    <button class="btn btn-primary btn-lg" id="createBtn">
+                        <i class="fas fa-file-invoice-dollar"></i> Sammelrechnung erstellen
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Ergebnis-Modal #}
+<div class="modal fade" id="resultModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h4 class="modal-title"><i class="fas fa-check-circle"></i> Sammelrechnung erstellt</h4>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body" id="resultBody"></div>
+            <div class="modal-footer">
+                <a href="#" class="btn btn-primary" id="downloadLink" target="_blank"><i class="fas fa-download"></i> PDF herunterladen</a>
+                <button type="button" class="btn btn-default" data-dismiss="modal">Schliessen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    var selectedProjects = [];
+
+    $('#clientSelect').change(function() {
+        var clientId = $(this).val();
+        if (!clientId) {
+            $('#projectSelection, #invoiceOptions, #summaryPanel').hide();
+            return;
+        }
+
+        ajaxcall('collectiveInvoice/eligible.php', {client_id: clientId}, function(data) {
+            var projects = data.response.projects || [];
+            var html = '';
+            projects.forEach(function(p) {
+                var dateStr = '';
+                if (p.projects_dates_deliver_start) {
+                    dateStr = p.projects_dates_deliver_start.substring(0, 10);
+                    if (p.projects_dates_deliver_end) dateStr += ' - ' + p.projects_dates_deliver_end.substring(0, 10);
+                }
+                html += '<div class="custom-control custom-checkbox mb-1">' +
+                    '<input type="checkbox" class="custom-control-input project-cb" id="proj_' + p.projects_id + '" value="' + p.projects_id + '">' +
+                    '<label class="custom-control-label" for="proj_' + p.projects_id + '">' +
+                    '<strong>' + p.projects_name + '</strong>' +
+                    (dateStr ? ' <small class="text-muted">(' + dateStr + ')</small>' : '') +
+                    '</label></div>';
+            });
+
+            if (projects.length < 2) {
+                html = '<div class="alert alert-warning">Weniger als 2 offene Projekte fuer diesen Kunden.</div>';
+            }
+
+            $('#projectList').html(html);
+            $('#projectSelection').show();
+            $('#invoiceOptions, #summaryPanel').hide();
+        });
+    });
+
+    $(document).on('change', '.project-cb', function() {
+        updateSelection();
+    });
+
+    $('#selectAllBtn').click(function() {
+        $('.project-cb').prop('checked', true);
+        updateSelection();
+    });
+
+    $('#skontoEnabled').change(function() {
+        $('#skontoFields').toggle(this.checked);
+    });
+
+    function updateSelection() {
+        selectedProjects = [];
+        $('.project-cb:checked').each(function() {
+            selectedProjects.push(parseInt($(this).val()));
+        });
+
+        if (selectedProjects.length >= 2) {
+            $('#invoiceOptions, #summaryPanel').show();
+            $('#summaryText').text(selectedProjects.length + ' Projekte ausgewaehlt');
+        } else {
+            $('#invoiceOptions, #summaryPanel').hide();
+        }
+    }
+
+    $('#createBtn').click(function() {
+        if (selectedProjects.length < 2) return;
+
+        var btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Wird erstellt...');
+
+        var params = {
+            project_ids: JSON.stringify(selectedProjects)
+        };
+        if ($('#skontoEnabled').is(':checked')) {
+            params.skonto_enabled = '1';
+            params.skonto_rate = $('#skontoRate').val();
+            params.skonto_days = $('#skontoDays').val();
+        }
+        var discountPct = parseFloat($('#discountPct').val() || 0);
+        if (discountPct > 0) {
+            params.discount_pct = discountPct;
+        }
+
+        ajaxcall('collectiveInvoice/create.php', params, function(data) {
+            btn.prop('disabled', false).html('<i class="fas fa-file-invoice-dollar"></i> Sammelrechnung erstellen');
+
+            if (data.result && data.response) {
+                var r = data.response;
+                var html = '<p><strong>Rechnungsnummer:</strong> ' + r.doc_number + '</p>' +
+                    '<p><strong>Bruttobetrag:</strong> ' + parseFloat(r.gross_amount).toFixed(2).replace('.', ',') + ' EUR</p>' +
+                    '<p><strong>Projekte:</strong> ' + r.project_count + '</p>';
+
+                if (r.project_summaries) {
+                    html += '<table class="table table-sm"><thead><tr><th>Projekt</th><th class="text-right">Betrag</th></tr></thead><tbody>';
+                    r.project_summaries.forEach(function(ps) {
+                        html += '<tr><td>' + ps.project_name + '</td><td class="text-right">' +
+                            parseFloat(ps.subtotal).toFixed(2).replace('.', ',') + ' EUR</td></tr>';
+                    });
+                    html += '</tbody></table>';
+                }
+
+                $('#resultBody').html(html);
+                $('#downloadLink').attr('href', '{{ CONFIG.ROOTURL }}/api/file/?r=true&f=' + r.s3files_id);
+                $('#resultModal').modal('show');
+            }
+        }, function(err) {
+            btn.prop('disabled', false).html('<i class="fas fa-file-invoice-dollar"></i> Sammelrechnung erstellen');
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -151,6 +151,22 @@
                                                                 <input type="number" min="0" class="form-control" name="clients_paymentTermDays" value="{{ client.clients_paymentTermDays }}" placeholder="Standard verwenden">
                                                             </div>
                                                             <hr>
+                                                            <h6><i class="fas fa-globe-europe"></i> EU / Reverse Charge</h6>
+                                                            <div class="custom-control custom-checkbox" style="margin-bottom: 5px;">
+                                                                <input type="hidden" name="clients_isEU" value="0">
+                                                                <input type="checkbox" class="custom-control-input" id="clientIsEU{{ client.clients_id }}" name="clients_isEU" value="1" {% if client.clients_isEU %}checked{% endif %}>
+                                                                <label class="custom-control-label" for="clientIsEU{{ client.clients_id }}">EU-Kunde (Ausland)</label>
+                                                            </div>
+                                                            <div class="custom-control custom-checkbox" style="margin-bottom: 5px;">
+                                                                <input type="hidden" name="clients_reverseCharge" value="0">
+                                                                <input type="checkbox" class="custom-control-input" id="clientReverseCharge{{ client.clients_id }}" name="clients_reverseCharge" value="1" {% if client.clients_reverseCharge %}checked{% endif %}>
+                                                                <label class="custom-control-label" for="clientReverseCharge{{ client.clients_id }}">Reverse-Charge-Verfahren</label>
+                                                            </div>
+                                                            <small class="form-text text-muted" style="margin-bottom: 5px;">
+                                                                <i class="fas fa-info-circle"></i> Reverse Charge nur aktivieren bei B2B-Leistungen an Unternehmen im EU-Ausland mit gueltiger USt-IdNr.
+                                                                Die MwSt. wird dann auf der Rechnung mit 0% ausgewiesen (Art. 196 MwSt-Richtlinie).
+                                                            </small>
+                                                            <hr>
                                                             <h6><i class="fas fa-truck"></i> Lieferadresse</h6>
                                                             <div class="input-group" style="margin-bottom: 5px;">
                                                                 <div class="input-group-prepend"><span class="input-group-text">Lieferadresse</span></div>

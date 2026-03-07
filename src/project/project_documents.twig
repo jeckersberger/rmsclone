@@ -5,6 +5,7 @@
             <div class="card-header">
                 <h3 class="card-title"><i class="fas fa-file-invoice"></i> {{ t('document_lifecycle') }}</h3>
                 <div class="card-tools">
+                    <button class="btn btn-sm btn-outline-secondary" id="previewDocBtn"><i class="fas fa-eye"></i> Vorschau</button>
                     <button class="btn btn-sm btn-outline-warning" id="partialInvoiceBtn"><i class="fas fa-receipt"></i> Abschlagsrechnung</button>
                     <button class="btn btn-sm btn-primary" id="createDocBtn"><i class="fas fa-plus"></i> {{ t('create_document') }}</button>
                 </div>
@@ -20,7 +21,7 @@
                             <th>{{ t('net_amount') }}</th>
                             <th>{{ t('gross_amount') }}</th>
                             <th>{{ t('date') }}</th>
-                            <th>{{ t('due_date') }}</th>
+                            <th>{{ t('due_date') }} / G&uuml;ltig bis</th>
                             <th>{{ t('actions') }}</th>
                         </tr>
                     </thead>
@@ -40,6 +41,24 @@
                 <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <div class="modal-body" id="docChainBody"></div>
+        </div>
+    </div>
+</div>
+
+{# PDF Preview Modal #}
+<div class="modal fade" id="previewModal">
+    <div class="modal-dialog modal-xl" style="max-width: 900px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title"><i class="fas fa-eye"></i> Dokumentvorschau</h4>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body p-0">
+                <iframe id="previewIframe" style="width:100%; height:80vh; border:none;"></iframe>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Schlie&szlig;en</button>
+            </div>
         </div>
     </div>
 </div>
@@ -65,12 +84,13 @@ $(document).ready(function() {
         'paid': '{{ t("status_paid") }}',
         'overdue': '{{ t("status_overdue") }}',
         'reminded': '{{ t("status_reminded") }}',
-        'cancelled': '{{ t("status_cancelled") }}'
+        'cancelled': '{{ t("status_cancelled") }}',
+        'expired': 'Abgelaufen'
     };
     var statusBadges = {
         'draft': 'secondary', 'sent': 'info', 'accepted': 'success',
         'rejected': 'danger', 'paid': 'success', 'overdue': 'warning',
-        'reminded': 'warning', 'cancelled': 'dark'
+        'reminded': 'warning', 'cancelled': 'dark', 'expired': 'danger'
     };
 
     function loadDocuments() {
@@ -89,7 +109,11 @@ $(document).ready(function() {
                         typeLabel = '<strong>Schlussrechnung</strong>';
                     }
                     html += '<td>' + typeLabel + '</td>';
-                    html += '<td><span class="badge badge-' + (statusBadges[doc.status] || 'secondary') + '">' + (statusLabels[doc.status] || doc.status) + '</span></td>';
+                    var statusHtml = '<span class="badge badge-' + (statusBadges[doc.status] || 'secondary') + '">' + (statusLabels[doc.status] || doc.status) + '</span>';
+                    if (doc.is_expired) {
+                        statusHtml += ' <span class="badge badge-danger" title="Angebot abgelaufen"><i class="fas fa-clock"></i> Abgelaufen</span>';
+                    }
+                    html += '<td>' + statusHtml + '</td>';
                     html += '<td>' + formatMoney(doc.net_amount) + '</td>';
                     var grossCol = formatMoney(doc.gross_amount);
                     if ((doc.doc_type === 'invoice' || doc.doc_type === 'partial_invoice') && parseFloat(doc.paid_amount || 0) > 0 && doc.status !== 'paid') {
@@ -99,7 +123,14 @@ $(document).ready(function() {
                     }
                     html += '<td>' + grossCol + '</td>';
                     html += '<td>' + (doc.created_at ? doc.created_at.substring(0,10) : '-') + '</td>';
-                    html += '<td>' + (doc.due_date || '-') + '</td>';
+                    var dueDateHtml = doc.due_date || '-';
+                    if (doc.doc_type === 'quote' && doc.valid_until) {
+                        dueDateHtml = '<small class="text-muted">G&uuml;ltig bis:</small><br>' + doc.valid_until;
+                        if (doc.is_expired) {
+                            dueDateHtml += ' <span class="text-danger"><i class="fas fa-exclamation-triangle"></i></span>';
+                        }
+                    }
+                    html += '<td>' + dueDateHtml + '</td>';
                     html += '<td>';
                     html += '<div class="btn-group btn-group-sm">';
                     if (doc.s3files_id) {
@@ -140,22 +171,96 @@ $(document).ready(function() {
 
     loadDocuments();
 
+    // Preview document
+    $('#previewDocBtn').click(function() {
+        bootbox.dialog({
+            title: '<i class="fas fa-eye"></i> Dokumentvorschau',
+            message: '<form id="previewDocForm">' +
+                '<div class="form-group">' +
+                '<label>Dokumenttyp</label>' +
+                '<select class="form-control" id="previewDocType">' +
+                '<option value="quote">{{ t("quote") }}</option>' +
+                '<option value="invoice">{{ t("invoice") }}</option>' +
+                '</select>' +
+                '</div>' +
+                '</form>',
+            buttons: {
+                cancel: { label: 'Abbrechen', className: 'btn-default' },
+                confirm: {
+                    label: '<i class="fas fa-eye"></i> Vorschau anzeigen',
+                    className: 'btn-info',
+                    callback: function() {
+                        var docType = $('#previewDocType').val();
+                        // Build form and submit to iframe
+                        var form = $('<form>', {
+                            method: 'POST',
+                            action: '{{ CONFIG.ROOTURL }}/api/documentLifecycle/preview.php',
+                            target: 'previewIframe'
+                        });
+                        form.append($('<input>', {type: 'hidden', name: 'project_id', value: projectId}));
+                        form.append($('<input>', {type: 'hidden', name: 'doc_type', value: docType}));
+                        form.append($('<input>', {type: 'hidden', name: 'csrf_token', value: $('meta[name="csrf-token"]').attr('content') || ''}));
+                        form.appendTo('body');
+                        // Set iframe name attribute
+                        $('#previewIframe').attr('name', 'previewIframe');
+                        form.submit();
+                        form.remove();
+                        $('#previewModal').modal('show');
+                    }
+                }
+            }
+        });
+    });
+
     // Create document
     $('#createDocBtn').click(function() {
-        bootbox.prompt({
+        var defaultValidUntil = new Date();
+        defaultValidUntil.setDate(defaultValidUntil.getDate() + 30);
+        var validUntilStr = defaultValidUntil.toISOString().substring(0, 10);
+
+        bootbox.dialog({
             title: '{{ t("create_document") }}',
-            inputType: 'select',
-            inputOptions: [
-                {text: '{{ t("quote") }}', value: 'quote'},
-                {text: '{{ t("order_confirmation") }}', value: 'order_confirmation'},
-                {text: '{{ t("invoice") }}', value: 'invoice'}
-            ],
-            callback: function(docType) {
-                if (!docType) return;
-                if (docType === 'invoice') {
-                    showInvoiceOptionsDialog(docType);
-                } else {
-                    window.location.href = '{{ CONFIG.ROOTURL }}/project/projectInvoice.php?id=' + projectId + '&type=' + (docType === 'order_confirmation' ? 'invoice' : docType);
+            message: '<form id="createDocForm">' +
+                '<div class="form-group">' +
+                '<label>Dokumenttyp</label>' +
+                '<select class="form-control" id="createDocType">' +
+                '<option value="quote">{{ t("quote") }}</option>' +
+                '<option value="order_confirmation">{{ t("order_confirmation") }}</option>' +
+                '<option value="invoice">{{ t("invoice") }}</option>' +
+                '</select>' +
+                '</div>' +
+                '<div class="form-group" id="validUntilGroup">' +
+                '<label>G&uuml;ltig bis</label>' +
+                '<input type="date" class="form-control" id="createDocValidUntil" value="' + validUntilStr + '">' +
+                '<small class="text-muted">Standard: 30 Tage ab heute</small>' +
+                '</div>' +
+                '</form>',
+            onShown: function() {
+                $('#createDocType').change(function() {
+                    $('#validUntilGroup').toggle($(this).val() === 'quote');
+                });
+            },
+            buttons: {
+                cancel: { label: 'Abbrechen', className: 'btn-default' },
+                confirm: {
+                    label: '<i class="fas fa-plus"></i> Erstellen',
+                    className: 'btn-primary',
+                    callback: function() {
+                        var docType = $('#createDocType').val();
+                        if (!docType) return;
+                        if (docType === 'invoice') {
+                            showInvoiceOptionsDialog(docType);
+                            return;
+                        }
+                        var url = '{{ CONFIG.ROOTURL }}/project/projectInvoice.php?id=' + projectId + '&type=' + (docType === 'order_confirmation' ? 'invoice' : docType);
+                        if (docType === 'quote') {
+                            var validUntil = $('#createDocValidUntil').val();
+                            if (validUntil) {
+                                url += '&valid_until=' + encodeURIComponent(validUntil);
+                            }
+                        }
+                        window.location.href = url;
+                    }
                 }
             }
         });
@@ -218,7 +323,7 @@ $(document).ready(function() {
         var currentStatus = $(this).data('status');
         var transitions = {
             'draft': ['sent'],
-            'sent': ['accepted', 'rejected', 'paid', 'overdue', 'cancelled'],
+            'sent': ['accepted', 'rejected', 'paid', 'overdue', 'cancelled', 'expired'],
             'overdue': ['paid', 'reminded', 'cancelled'],
             'reminded': ['paid', 'overdue', 'cancelled']
         };
