@@ -12,8 +12,8 @@
 - [x] Pflichthinweis "Gemäß § 19 UStG..." auf Rechnungen — `DocumentRenderer.php`
 - [x] Umsatzgrenze-Tracking/Warnung — `src/business/euer.php` + `euer.twig`
 - [x] KUR-Einstellung in Business-Settings-UI (Toggle) — `src/instances/instances_germanSettings.twig`
-- [ ] Automatische E-Mail-Warnung bei Annäherung an Umsatzgrenze (80%, 90%, 100%)
-- [ ] KUR-Übergangslogik: Automatischer Wechsel zur Regelbesteuerung bei Überschreitung
+- [x] Automatische E-Mail-Warnung bei Annäherung an Umsatzgrenze (80%, 90%, 100%) — `src/cron/kur-threshold-check.php`
+- [x] KUR-Übergangslogik: Automatischer Wechsel zur Regelbesteuerung bei Überschreitung — `kur-threshold-check.php` + `DocumentRenderer.php` (instances_kurTransitionYear)
 
 ### 6.1.2 GoBD-Konforme Rechnungen
 - [x] Steuernummer/USt-IdNr. in DB — `instances_taxNumber`, `instances_vatId`
@@ -23,29 +23,29 @@
 - [x] Netto-/MwSt-/Bruttobetrag getrennt — `DocumentRenderer.php`
 - [x] KUR-Hinweis auf Steuerbefreiung — `DocumentRenderer.php`
 - [x] Leistungszeitraum/Lieferdatum auf Rechnung — `DocumentRenderer.php` + `document_de.twig`
-- [ ] Aufbewahrungspflicht (10 Jahre) - automatische Archivierung
+- [x] Aufbewahrungspflicht (10 Jahre) - automatische Archivierung — `src/cron/gobd-archive-check.php` + `document_exports.retention_expires_at`
 - [x] Unveränderbarkeit der Rechnung nach Erstellung (Dokument-Locking) — `DocumentRenderer.php`: GoBD-Sperre bei Duplikat
-- [ ] Lückenlose Nummernkreise sicherstellen (keine gelöschten Nummern)
-- [ ] Verfahrensdokumentation (GoBD-Pflicht) als generiertes PDF
+- [x] Lückenlose Nummernkreise sicherstellen (keine gelöschten Nummern) — `SequenceService.php`: Row-Level Locking + `document_sequence_log` Tabelle
+- [x] Verfahrensdokumentation (GoBD-Pflicht) als generiertes PDF — `src/services/GobdDocumentationService.php` + `src/api/gobd/verfahrensdokumentation.php`
 
 ### 6.1.3 XRechnung / ZUGFeRD
 - [x] DB-Tabellen für ZUGFeRD-Struktur — `db/migrations/20260228130000_phase3_zugferd_reports_logistics.php`
 - [x] ~~horstoeko/zugferd Composer-Package installieren~~ — Eigene Implementierung statt Library: `src/services/ZugferdService.php` + `src/services/PdfA3Converter.php`
 - [x] ZUGFeRD PDF/A-3 + XML Generierung — `src/services/ZugferdService.php` + `src/services/PdfA3Converter.php` + Integration in `DocumentRenderer.php`
-- [ ] XRechnung Unterstützung
-- [ ] Leitweg-ID Feld für öffentliche Auftraggeber
+- [x] XRechnung Unterstützung — `src/services/XRechnungService.php` (UBL 2.1) + Integration in `DocumentRenderer.php`
+- [x] Leitweg-ID Feld für öffentliche Auftraggeber — `clients_leitwegId` + `clients_buyerReference` in DB
 
 ### 6.1.4 DSGVO (Datenschutz)
 - [x] Löschkonzept für Kundendaten — `src/services/DsgvoService.php` (Art. 17, Aufbewahrungsfristen § 147 AO)
 - [x] Datenexport-Funktion (Art. 20 DSGVO - Datenportabilität) — `src/api/dsgvo/export.php` + `DsgvoService.php`
-- [ ] Cookie-Consent-Verwaltung
+- [x] Cookie-Consent-Verwaltung — `src/services/CookieConsentService.php` + Banner in `template.twig` + `cookie_consents` Tabelle
 - [x] DSGVO-konforme Dokumentation des Audit-Logs — `dsgvo_log` Tabelle + `src/api/dsgvo/log.php`
 - [x] DSGVO-Verwaltungsoberfläche — `src/business/dsgvo.php` + `dsgvo.twig`
 - [x] Aufbewahrungsfristen-Prüfung — `src/api/dsgvo/retentionCheck.php`
 - [x] Löschvorschläge (Clients > 10 Jahre inaktiv) — `src/api/dsgvo/deletionSuggestions.php`
-- [ ] Auftragsverarbeitungsvertrag (AVV) Vorlage generieren
-- [ ] Datenschutzerklärung / Impressum-Seite
-- [ ] Automatischer DSGVO-Report (jährlich) als PDF
+- [x] Auftragsverarbeitungsvertrag (AVV) Vorlage generieren — `src/services/AvvService.php`
+- [x] Datenschutzerklärung / Impressum-Seite — `src/business/legal.php` + `legal.twig` (Auto-Impressum aus Geschäftsdaten)
+- [x] Automatischer DSGVO-Report (jährlich) als PDF — `src/services/DsgvoReportService.php` + `src/api/dsgvo/annualReport.php`
 
 ### Datenbank & Lokalisierung
 - [x] DB auf utf8mb4 umstellen — Migration vorhanden
@@ -278,6 +278,14 @@
 - [ ] RFID Label-Druck
 - [ ] Automatische Inventur beim Durchfahren eines RFID-Gates
 
+### KI-Integration
+- [ ] **Asset-Daten automatisch per KI/Web-Suche ausfüllen** — Bei Asset-Anlage: Name/Hersteller eingeben → KI sucht online nach Produktdaten (Neupreis, Marktwert, Spezifikationen, Gewicht, Abmessungen) und füllt Felder automatisch aus. Daten sind editierbar falls fehlerhaft.
+  - [ ] API-Endpoint: `src/api/assets/aiLookup.php` — Nimmt Name+Hersteller, gibt Produktdaten zurück
+  - [ ] Service: `src/services/AiAssetLookupService.php` — Web-Suche + KI-Auswertung (Claude API oder OpenAI)
+  - [ ] UI: Auto-Complete/Vorschläge beim Tippen in Asset-Erstellungsformular
+  - [ ] Felder: Neupreis, aktueller Marktwert, Gewicht, Abmessungen, Kategorie-Vorschlag, Bild-URL
+  - [ ] Alle KI-Vorschläge als "vorgeschlagen" markiert und vom Benutzer bestätigbar/änderbar
+
 ### Mobile & UX
 - [ ] Progressive Web App (PWA) für mobile Nutzung
 - [ ] Barcode-Scanner über Handy-Kamera (ohne extra App)
@@ -285,11 +293,29 @@
 - [ ] Dark Mode (DB-Feld existiert bereits)
 - [ ] Touch-optimierte UI für Tablets (Lager-Nutzung)
 - [ ] Schnellerfassung: Projekt anlegen in unter 30 Sekunden
+- [ ] **QR-Code auf Lieferschein** — Scanbar per Handy, öffnet zugehörigen Packauftrag in mobiler Ansicht
+  - [ ] QR-Code-Generierung im Lieferschein-PDF (enthält URL zum Packauftrag)
+  - [ ] Mobile Packauftrag-Ansicht optimiert für Smartphone-Scan
+  - [ ] DeliveryNoteService: QR-Code mit PackingList-Link generieren
+
+### Android Scanner-App
+- [ ] **Native Android-App für Equipment-Scanner** — Optimiert für Lager-/Eventbetrieb
+  - [ ] Barcode/QR-Code Scanner (Kamera + externe Scanner via Bluetooth)
+  - [ ] Equipment Check-in/Check-out mit Zustandserfassung (Foto + Notiz)
+  - [ ] Lieferschein-QR scannen → Packauftrag öffnen und Positionen abhaken
+  - [ ] Inventur-Modus: Assets scannen und mit Soll-Bestand abgleichen
+  - [ ] Offline-Fähigkeit: Scans zwischenspeichern und bei Verbindung synchronisieren
+  - [ ] Push-Benachrichtigungen bei anstehenden Projekten/Rückgaben
+  - [ ] API-Authentifizierung über Token (kein Session-basierter Login)
+  - [ ] Technologie: Kotlin/Jetpack Compose oder React Native
 
 ### Integrationen
 - [ ] Google Calendar / Outlook Sync (bidirektional, nicht nur ICS-Export)
 - [ ] Stripe/PayPal Zahlungslinks auf Rechnungen optional
-- [ ] Überweisungs QR Code mit allen wichtigen Daten auf der Rechnung 
+- [ ] **Überweisungs-QR-Code auf Rechnungen** — EPC-QR-Code (GiroCode) mit IBAN, Betrag, Verwendungszweck für direktes Scannen mit Banking-App
+  - [ ] QR-Code-Generierung im Rechnungs-PDF (EPC/GiroCode Standard)
+  - [ ] JS-Unterstützung in Custom-Rechnungslayouts für dynamische QR-Code-Erzeugung
+  - [ ] DocumentRenderer: QR-Code als Data-URI oder SVG einbetten
 - [ ] Versand-Integration (DHL, DPD) für Equipment-Lieferung
 - [ ] Buchhaltungs-API (lexoffice, sevDesk, FastBill)
 - [ ] Webhook-System für externe Integrationen
@@ -320,11 +346,11 @@
 
 | Bereich                    | Umgesetzt | Offen | Fortschritt |
 |----------------------------|-----------|-------|-------------|
-| Phase 1 - KUR              | 5/7       | 2     | 71%         |
-| Phase 1 - GoBD             | 8/11      | 3     | 73%         |
-| Phase 1 - ZUGFeRD          | 3/5       | 2     | 60%         |
-| Phase 1 - DSGVO            | 6/10      | 4     | 60%         |
-| Phase 1 - DB & Lokalisierung | 10/10   | 0     | 100%        |
+| Phase 1 - KUR              | 7/7       | 0     | **100%** ✅ |
+| Phase 1 - GoBD             | 11/11     | 0     | **100%** ✅ |
+| Phase 1 - ZUGFeRD          | 5/5       | 0     | **100%** ✅ |
+| Phase 1 - DSGVO            | 10/10     | 0     | **100%** ✅ |
+| Phase 1 - DB & Lokalisierung | 10/10   | 0     | **100%** ✅ |
 | Phase 2 - Angebotswesen    | 5/8       | 3     | 63%         |
 | Phase 2 - Rechnungswesen   | 7/15      | 8     | 47%         |
 | Phase 2 - Buchhaltung      | 2/9       | 7     | 22%         |
@@ -332,7 +358,7 @@
 | Phase 3 - Reporting        | 4/11      | 7     | 36%         |
 | Phase 3 - Logistik         | 4/8       | 4     | 50%         |
 | Phase 3 - Code-Qualität    | 0/8       | 8     | 0%          |
-| Sicherheit - KRITISCH      | 4/4       | 0     | 100%        |
+| Sicherheit - KRITISCH      | 4/4       | 0     | **100%** ✅ |
 | Sicherheit - API           | 7/12      | 5     | 58%         |
 | Sicherheit - Session/Auth  | 3/6       | 3     | 50%         |
 | Sicherheit - Datenbank     | 1/5       | 4     | 20%         |
@@ -343,13 +369,15 @@
 | Extra - Multi-Business     | 5/9       | 4     | 56%         |
 | Extra - Equipment          | 7/13      | 6     | 54%         |
 | Extra - Finanzen           | 3/7       | 4     | 43%         |
+| Extra - KI-Integration     | 0/5       | 5     | 0%          |
 | Extra - Kommunikation      | 0/7       | 7     | 0%          |
 | Extra - RFID               | 1/5       | 4     | 20%         |
-| Extra - Mobile/UX          | 0/6       | 6     | 0%          |
-| Extra - Integrationen      | 0/6       | 6     | 0%          |
+| Extra - Mobile/UX          | 0/9       | 9     | 0%          |
+| Extra - Android-App        | 0/8       | 8     | 0%          |
+| Extra - Integrationen      | 0/9       | 9     | 0%          |
 | Extra - Dokumentation      | 3/7       | 4     | 43%         |
 | Extra - DevOps             | 0/8       | 8     | 0%          |
-| **GESAMT**                  | **102/240**| **138**| **43%**   |
+| **GESAMT**                  | **113/271**| **158**| **42%**   |
 
 ---
 
@@ -383,11 +411,20 @@
 ### Mittelfristig (Skalierung + Professionalisierung)
 20. ~~ZUGFeRD implementieren~~ ✅ erledigt (eigene Implementierung statt horstoeko/zugferd)
 21. ~~Teilrechnungen / Abschlagsrechnungen~~ ✅ erledigt
-22. Unit Tests für kritische Services (PHPUnit)
-23. Kunden-Portal (Self-Service)
-24. Equipment-Auslastungsberichte
-25. Docker-Compose Produktions-Setup mit SSL
-26. 2-Faktor-Authentifizierung (TOTP)
+22. ~~XRechnung (UBL 2.1)~~ ✅ erledigt
+23. ~~Lückenlose Nummernkreise~~ ✅ erledigt
+24. ~~GoBD Verfahrensdokumentation~~ ✅ erledigt
+25. ~~Cookie-Consent~~ ✅ erledigt
+26. ~~DSGVO-Jahresbericht~~ ✅ erledigt
+27. ~~AVV-Vorlage~~ ✅ erledigt
+28. KI-Asset-Lookup (Produktdaten automatisch ausfüllen)
+29. QR-Code auf Rechnungen (EPC/GiroCode)
+30. Unit Tests für kritische Services (PHPUnit)
+31. Kunden-Portal (Self-Service)
+32. Equipment-Auslastungsberichte
+33. Docker-Compose Produktions-Setup mit SSL
+34. 2-Faktor-Authentifizierung (TOTP)
+35. Android Scanner-App für Equipment/Inventur
 
 ---
 
