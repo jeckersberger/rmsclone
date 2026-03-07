@@ -30,8 +30,8 @@
 
 ### 6.1.3 XRechnung / ZUGFeRD
 - [x] DB-Tabellen für ZUGFeRD-Struktur — `db/migrations/20260228130000_phase3_zugferd_reports_logistics.php`
-- [ ] horstoeko/zugferd Composer-Package installieren
-- [ ] ZUGFeRD PDF/A-3 + XML Generierung
+- [x] ~~horstoeko/zugferd Composer-Package installieren~~ — Eigene Implementierung statt Library: `src/services/ZugferdService.php` + `src/services/PdfA3Converter.php`
+- [x] ZUGFeRD PDF/A-3 + XML Generierung — `src/services/ZugferdService.php` + `src/services/PdfA3Converter.php` + Integration in `DocumentRenderer.php`
 - [ ] XRechnung Unterstützung
 - [ ] Leitweg-ID Feld für öffentliche Auftraggeber
 
@@ -71,14 +71,14 @@
 - [ ] Angebots-Gültigkeit (Ablaufdatum)
 - [ ] Angebots-Versionen
 - [ ] PDF-Vorschau vor dem Versand
-- [ ] Skonto-Bedingungen auf Angeboten/Rechnungen (z.B. "2% bei Zahlung innerhalb 10 Tagen")
+- [x] Skonto-Bedingungen auf Angeboten/Rechnungen — `DocumentRenderer.php` (Skonto-Rate + Tage) + `ZugferdService.php` (XML Payment Terms)
 
 ### 6.2.2 Rechnungswesen
 - [x] Mahnwesen (Vorschlagssystem) — `src/business/dunning.php` + `dunning.twig`
 - [x] Mahnstufen-Eskalation (Erinnerung → 1./2./3. Mahnung) — `DunningService`
 - [x] Stornorechnung/Gutschrift — `DocumentLifecycleService` (credit_note, cancellation)
 - [x] Zahlungsbedingungen in DB — `instances_paymentTermDays`, `clients_paymentTermDays`
-- [ ] Teilrechnungen / Abschlagsrechnungen
+- [x] Teilrechnungen / Abschlagsrechnungen — `db/migrations/20260307300000_partial_invoices.php` + API-Endpoints (`partialInvoice.php`, `finalInvoice.php`)
 - [ ] SEPA-Lastschrift-Mandatsverwaltung
 - [ ] Automatischer Rechnungsversand per E-Mail (Cronjob-basiert)
 - [x] Wiederkehrende Projekte (Vorlage) — `src/services/RecurringProjectService.php`
@@ -322,11 +322,11 @@
 |----------------------------|-----------|-------|-------------|
 | Phase 1 - KUR              | 5/7       | 2     | 71%         |
 | Phase 1 - GoBD             | 8/11      | 3     | 73%         |
-| Phase 1 - ZUGFeRD          | 1/5       | 4     | 20%         |
+| Phase 1 - ZUGFeRD          | 3/5       | 2     | 60%         |
 | Phase 1 - DSGVO            | 6/10      | 4     | 60%         |
 | Phase 1 - DB & Lokalisierung | 10/10   | 0     | 100%        |
-| Phase 2 - Angebotswesen    | 4/8       | 4     | 50%         |
-| Phase 2 - Rechnungswesen   | 6/15      | 9     | 40%         |
+| Phase 2 - Angebotswesen    | 5/8       | 3     | 63%         |
+| Phase 2 - Rechnungswesen   | 7/15      | 8     | 47%         |
 | Phase 2 - Buchhaltung      | 2/9       | 7     | 22%         |
 | Phase 2 - Kunden           | 5/13      | 8     | 38%         |
 | Phase 3 - Reporting        | 4/11      | 7     | 36%         |
@@ -349,7 +349,7 @@
 | Extra - Integrationen      | 0/6       | 6     | 0%          |
 | Extra - Dokumentation      | 3/7       | 4     | 43%         |
 | Extra - DevOps             | 0/8       | 8     | 0%          |
-| **GESAMT**                  | **98/240**| **142**| **41%**    |
+| **GESAMT**                  | **101/240**| **139**| **42%**   |
 
 ---
 
@@ -381,8 +381,8 @@
 19. FinTS-Bankanbindung langfristig/wiederkehrend mit KI-Zahlungsabgleich
 
 ### Mittelfristig (Skalierung + Professionalisierung)
-20. ZUGFeRD/XRechnung implementieren (`horstoeko/zugferd` installieren)
-21. Teilrechnungen / Abschlagsrechnungen
+20. ~~ZUGFeRD implementieren~~ ✅ erledigt (eigene Implementierung statt horstoeko/zugferd)
+21. ~~Teilrechnungen / Abschlagsrechnungen~~ ✅ erledigt
 22. Unit Tests für kritische Services (PHPUnit)
 23. Kunden-Portal (Self-Service)
 24. Equipment-Auslastungsberichte
