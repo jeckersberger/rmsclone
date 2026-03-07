@@ -139,6 +139,15 @@ class DocumentRenderer {
       return '';
     }));
 
+    // Logo als Data-URI laden (falls vorhanden)
+    $logoDataUri = null;
+    if (!empty($business['instances_logo'])) {
+      global $bCMS;
+      if (isset($bCMS)) {
+        $logoDataUri = $bCMS->s3DataUri($business['instances_logo']);
+      }
+    }
+
     $templateVars = [
       'business'   => $business,
       'client'     => $client,
@@ -148,6 +157,7 @@ class DocumentRenderer {
       'categories' => $categories,
       'totals'     => $totals,
       'options'    => $opts,
+      'logo'       => $logoDataUri ?: null,
     ];
 
     $html = $tpl
