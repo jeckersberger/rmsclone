@@ -95,8 +95,8 @@
 ### 6.2.3 Buchhaltungsanbindung
 - [x] DATEV-Export — `src/services/DatevExportService.php` + `src/business/datev.php`
 - [x] EÜR-Unterstützung — `src/business/euer.php` + `euer.twig`
-- [ ] EÜR-Kategorien (Einnahme-/Ausgabearten für EÜR-Formular)
-- [ ] SKR03/SKR04 Kontenzuordnung
+- [x] EÜR-Kategorien (Einnahme-/Ausgabearten für EÜR-Formular) — `euer_categories` Tabelle mit 7 vordefinierten Kategorien (Einnahmen KUR, Fremdpersonal, Personal, Fahrtkosten, Raumkosten, Betriebsausgaben, Abschreibungen)
+- [x] SKR03/SKR04 Kontenzuordnung — `instances_datevKontenrahmen` (Standard SKR03) + Kontenmappings in `DatevExportService.php`
 - [ ] BWA-Auswertung (Betriebswirtschaftliche Auswertung)
 - [ ] Export für lexoffice, sevDesk
 - [ ] Bankanbindung (FinTS/HBCI) für automatischen Zahlungsabgleich (langfristig/wiederkehrend mit KI-Zahlungsabgleich)
@@ -353,7 +353,7 @@
 | Phase 1 - DB & Lokalisierung | 10/10   | 0     | **100%** ✅ |
 | Phase 2 - Angebotswesen    | 5/8       | 3     | 63%         |
 | Phase 2 - Rechnungswesen   | 7/15      | 8     | 47%         |
-| Phase 2 - Buchhaltung      | 2/9       | 7     | 22%         |
+| Phase 2 - Buchhaltung      | 4/9       | 5     | 44%         |
 | Phase 2 - Kunden           | 6/13      | 7     | 46%         |
 | Phase 3 - Reporting        | 4/11      | 7     | 36%         |
 | Phase 3 - Logistik         | 4/8       | 4     | 50%         |
@@ -377,7 +377,7 @@
 | Extra - Integrationen      | 0/9       | 9     | 0%          |
 | Extra - Dokumentation      | 3/7       | 4     | 43%         |
 | Extra - DevOps             | 0/8       | 8     | 0%          |
-| **GESAMT**                  | **113/271**| **158**| **42%**   |
+| **GESAMT**                  | **115/271**| **156**| **42%**   |
 
 ---
 
