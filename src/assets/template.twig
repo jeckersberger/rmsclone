@@ -287,7 +287,7 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 						</li>
 					{% else %}
 						<li class="nav-item">
-							<a href="{{ CONFIG.ROOTURL }}/login/?logout" class="nav-link">Abmelden</a>
+							<a href="{{ CONFIG.ROOTURL }}/login/?logout" class="nav-link">Logout</a>
 						</li>
 					{% endif %}
 				</ul>
@@ -468,14 +468,14 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 										<li class="nav-item">
 											<a href="{{CONFIG.ROOTURL}}/project/list.php" class="nav-link">
 												<i class="nav-icon fas fa-list-ol"></i>
-												<p>Alle Projekte</p>
+												<p>All Projects</p>
 											</a>
 										</li>
 										{% if "PROJECTS:CREATE"|instancePermissions %}
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/project/new.php" class="nav-link">
 													<i class="nav-icon fas fa-plus"></i>
-													<p>Neues Projekt</p>
+													<p>New Project</p>
 												</a>
 											</li>
 										{% endif %}
@@ -501,44 +501,44 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 										{% endif %}
 									{% endif %}
 
-									{# ===== INVENTAR ===== #}
+									{# ===== INVENTORY ===== #}
 									<li class="nav-item has-treeview">
 										<a href="#" class="nav-link">
 											<i class="nav-icon fas fa-warehouse"></i>
-											<p>Inventar<i class="fas fa-angle-left right"></i></p>
+											<p>Inventory<i class="fas fa-angle-left right"></i></p>
 										</a>
 										<ul class="nav nav-treeview">
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL}}/assets.php" class="nav-link">
 													<i class="nav-icon fas fa-list"></i>
-													<p>Alle Assets</p>
+													<p>All Assets</p>
 												</a>
 											</li>
 											{% if "ASSETS:CREATE"|instancePermissions %}
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL}}/newAsset.php" class="nav-link">
 													<i class="fas fa-plus nav-icon"></i>
-													<p>Neues Asset</p>
+													<p>New Asset</p>
 												</a>
 											</li>
 											{% endif %}
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/instances/groups.php" class="nav-link">
 													<i class="nav-icon fas fa-layer-group"></i>
-													<p>Gruppen</p>
+													<p>Groups</p>
 												</a>
 											</li>
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/manufacturers.php" class="nav-link">
 													<i class="nav-icon fas fa-industry"></i>
-													<p>Hersteller</p>
+													<p>Manufacturers</p>
 												</a>
 											</li>
 											{% if "ASSETS:CREATE"|instancePermissions %}
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/business/inventory.php" class="nav-link">
 													<i class="fas fa-clipboard-check nav-icon"></i>
-													<p>Inventurpruefung</p>
+													<p>Inventory Check</p>
 												</a>
 											</li>
 											{% endif %}
@@ -553,19 +553,19 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 										</ul>
 									</li>
 
-									{# ===== KUNDEN & STANDORTE ===== #}
+									{# ===== CLIENTS & LOCATIONS ===== #}
 									{% if "CLIENTS:VIEW"|instancePermissions or "LOCATIONS:VIEW"|instancePermissions or "PROJECTS:VIEW"|instancePermissions %}
 									<li class="nav-item has-treeview">
 										<a href="#" class="nav-link">
 											<i class="nav-icon fas fa-briefcase"></i>
-											<p>Kunden & Standorte<i class="fas fa-angle-left right"></i></p>
+											<p>Clients & Locations<i class="fas fa-angle-left right"></i></p>
 										</a>
 										<ul class="nav nav-treeview">
 											{% if "CLIENTS:VIEW"|instancePermissions %}
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/clients.php" class="nav-link">
 													<i class="nav-icon fas fa-address-book"></i>
-													<p>Kunden</p>
+													<p>Clients</p>
 												</a>
 											</li>
 											{% endif %}
@@ -573,7 +573,7 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/location/" class="nav-link">
 													<i class="fa fa-map-marked-alt nav-icon"></i>
-													<p>Standorte</p>
+													<p>Locations</p>
 												</a>
 											</li>
 											{% endif %}
@@ -581,7 +581,7 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/business/partners.php" class="nav-link">
 													<i class="fas fa-handshake nav-icon"></i>
-													<p>Partner</p>
+													<p>Partners</p>
 												</a>
 											</li>
 											{% endif %}
@@ -589,7 +589,7 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 									</li>
 									{% endif %}
 
-									{# ===== E-MAIL ===== #}
+									{# ===== EMAIL ===== #}
 								{% if "EMAIL_INBOX:VIEW"|instancePermissions or "USERS:VIEW:MAILINGS"|instancePermissions %}
 								<li class="nav-item has-treeview">
 									<a href="#" class="nav-link">
@@ -600,14 +600,14 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 										<li class="nav-item">
 											<a href="{{ CONFIG.ROOTURL }}/email/inbox.php" class="nav-link">
 												<i class="nav-icon fas fa-inbox"></i>
-												<p>Posteingang</p>
+												<p>Inbox</p>
 											</a>
 										</li>
 										{% if "EMAIL_OUTBOX:VIEW"|instancePermissions or "USERS:VIEW:MAILINGS"|instancePermissions %}
 										<li class="nav-item">
 											<a href="{{ CONFIG.ROOTURL }}/email/sent.php" class="nav-link">
 												<i class="nav-icon fas fa-paper-plane"></i>
-												<p>Gesendet</p>
+												<p>Sent</p>
 											</a>
 										</li>
 										{% endif %}
@@ -615,25 +615,25 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 								</li>
 								{% endif %}
 
-								{# ===== FINANZEN ===== #}
+								{# ===== FINANCE ===== #}
 									{% if "FINANCE:PAYMENTS_LEDGER:VIEW"|instancePermissions or "BUSINESS:BUSINESS_STATS:VIEW"|instancePermissions or "BUSINESS:BUSINESS_SETTINGS:VIEW"|instancePermissions %}
 									<li class="nav-item has-treeview">
 										<a href="#" class="nav-link">
 											<i class="nav-icon fas fa-coins"></i>
-											<p>Finanzen<i class="fas fa-angle-left right"></i></p>
+											<p>Finance<i class="fas fa-angle-left right"></i></p>
 										</a>
 										<ul class="nav nav-treeview">
 											{% if "FINANCE:PAYMENTS_LEDGER:VIEW"|instancePermissions %}
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/ledger.php" class="nav-link">
 													<i class="nav-icon fas fa-receipt"></i>
-													<p>Zahlungen</p>
+													<p>Payments</p>
 												</a>
 											</li>
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/business/dunning.php" class="nav-link">
 													<i class="nav-icon fas fa-exclamation-triangle"></i>
-													<p>Mahnwesen</p>
+													<p>Dunning</p>
 												</a>
 											</li>
 											{% endif %}
@@ -641,7 +641,7 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/business/profit.php" class="nav-link">
 													<i class="fas fa-chart-line nav-icon"></i>
-													<p>Gewinn-Dashboard</p>
+													<p>Profit Dashboard</p>
 												</a>
 											</li>
 											{% endif %}
@@ -649,13 +649,13 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/business/reports.php" class="nav-link">
 													<i class="nav-icon fas fa-chart-pie"></i>
-													<p>Berichte</p>
+													<p>Reports</p>
 												</a>
 											</li>
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/business/euer.php" class="nav-link">
 													<i class="nav-icon fas fa-calculator"></i>
-													<p>EUeR</p>
+													<p>Income Statement</p>
 												</a>
 											</li>
 											{% endif %}
@@ -671,7 +671,7 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/business/datev.php" class="nav-link">
 													<i class="nav-icon fas fa-file-csv"></i>
-													<p>Steuer-Export</p>
+													<p>Tax Export</p>
 												</a>
 											</li>
 											{% endif %}
@@ -679,7 +679,7 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL}}/instances/billing.php" class="nav-link">
 													<i class="nav-icon fas fa-money-check"></i>
-													<p>Abrechnung</p>
+													<p>Billing</p>
 												</a>
 											</li>
 											{% endif %}
@@ -687,62 +687,62 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 									</li>
 									{% endif %}
 
-									{# ===== WARTUNG ===== #}
+									{# ===== MAINTENANCE ===== #}
 									{% if "MAINTENANCE_JOBS:VIEW"|instancePermissions %}
 									<li class="nav-item has-treeview">
 										<a href="#" class="nav-link">
 											<i class="nav-icon fas fa-tools"></i>
-											<p>Wartung<i class="fas fa-angle-left right"></i></p>
+											<p>Maintenance<i class="fas fa-angle-left right"></i></p>
 										</a>
 										<ul class="nav nav-treeview">
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/maintenance/" class="nav-link">
 													<i class="nav-icon fas fa-paint-roller"></i>
-													<p>Wartungsauftraege</p>
+													<p>Work Orders</p>
 												</a>
 											</li>
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/business/maintenance-schedule.php" class="nav-link">
 													<i class="fas fa-calendar-check nav-icon"></i>
-													<p>Wartungsplan</p>
+													<p>Maintenance Schedule</p>
 												</a>
 											</li>
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/business/damage-reports.php" class="nav-link">
 													<i class="fas fa-exclamation-circle nav-icon"></i>
-													<p>Schadenmeldungen</p>
+													<p>Damage Reports</p>
 												</a>
 											</li>
 										</ul>
 									</li>
 									{% endif %}
 
-									{# ===== VERWALTUNG ===== #}
+									{# ===== ADMINISTRATION ===== #}
 									<li class="nav-item has-treeview">
 										<a href="#" class="nav-link">
 											<i class="nav-icon fas fa-cogs"></i>
-											<p>Verwaltung<i class="fas fa-angle-left right"></i></p>
+											<p>Administration<i class="fas fa-angle-left right"></i></p>
 										</a>
 										<ul class="nav nav-treeview">
 											{% if "BUSINESS:BUSINESS_STATS:VIEW"|instancePermissions %}
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/instances/stats.php" class="nav-link">
 													<i class="nav-icon fas fa-chart-bar"></i>
-													<p>Statistiken</p>
+													<p>Statistics</p>
 												</a>
 											</li>
 											{% endif %}
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/instances/calendar.php" class="nav-link">
 													<i class="nav-icon far fa-calendar-alt"></i>
-													<p>Kalender</p>
+													<p>Calendar</p>
 												</a>
 											</li>
 											{% if "TRAINING:VIEW"|instancePermissions %}
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL}}/training/" class="nav-link">
 													<i class="nav-icon fas fa-graduation-cap"></i>
-													<p>Schulungen</p>
+													<p>Training</p>
 												</a>
 											</li>
 											{% endif %}
@@ -750,7 +750,7 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/cms/list.php" class="nav-link">
 													<i class="far fa-newspaper nav-icon"></i>
-													<p>CMS-Seiten</p>
+													<p>CMS Pages</p>
 												</a>
 											</li>
 											{% endif %}
@@ -764,7 +764,7 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/business/ai-usage.php" class="nav-link">
 													<i class="nav-icon fas fa-robot"></i>
-													<p>KI-Nutzung</p>
+													<p>AI Usage</p>
 												</a>
 											</li>
 											{% endif %}
@@ -772,7 +772,7 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/instances/navigation.php" class="nav-link">
 													<i class="nav-icon fas fa-users-cog"></i>
-													<p>Benutzer & Einstellungen</p>
+													<p>Users & Settings</p>
 												</a>
 											</li>
 											{% endif %}
@@ -787,9 +787,9 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 									</li>
 {% endif %}
 
-									{# ===== CMS SEITEN ===== #}
+									{# ===== CMS PAGES ===== #}
 									{% if NAVIGATIONCMSPages %}
-										<li class="nav-header">SEITEN</li>
+										<li class="nav-header">PAGES</li>
 										{% for page in NAVIGATIONCMSPages %}
 											{% if page.SUBPAGES %}
 												<li class="nav-item has-treeview">
@@ -838,13 +838,13 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/server/config.php" class="nav-link">
 													<i class="nav-icon fas fa-cog"></i>
-													<p>Konfiguration</p>
+													<p>Configuration</p>
 												</a>
 											</li>
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/server/update.php" class="nav-link" id="navUpdateLink">
 													<i class="nav-icon fas fa-download"></i>
-													<p>System-Update <span id="updateBadge" class="right badge badge-warning" style="display:none;">Neu</span></p>
+													<p>System Update <span id="updateBadge" class="right badge badge-warning" style="display:none;">New</span></p>
 												</a>
 											</li>
 											{% endif %}
@@ -852,7 +852,7 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/server/users.php" class="nav-link">
 													<i class="nav-icon fas fa-users"></i>
-													<p>Benutzer</p>
+													<p>Users</p>
 												</a>
 											</li>
 											{% endif %}
@@ -860,7 +860,7 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/server/permissions.php" class="nav-link">
 													<i class="nav-icon fas fa-unlock-alt"></i>
-													<p>Berechtigungen</p>
+													<p>Permissions</p>
 												</a>
 											</li>
 											{% endif %}
@@ -868,7 +868,7 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/server/instances.php" class="nav-link">
 													<i class="nav-icon fas fa-city"></i>
-													<p>Unternehmen</p>
+													<p>Businesses</p>
 												</a>
 											</li>
 											{% endif %}
@@ -876,7 +876,7 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/server/auditLog.php" class="nav-link">
 													<i class="nav-icon fas fa-gavel"></i>
-													<p>Pruefprotokoll</p>
+													<p>Audit Log</p>
 												</a>
 											</li>
 											{% endif %}
@@ -884,7 +884,7 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/server/analytics/" class="nav-link">
 													<i class="nav-icon far fa-chart-bar"></i>
-													<p>Analysen</p>
+													<p>Analytics</p>
 												</a>
 											</li>
 											{% endif %}
@@ -892,7 +892,7 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 											<li class="nav-item">
 												<a href="{{ CONFIG.ROOTURL }}/server/import.php" class="nav-link">
 													<i class="nav-icon fas fa-upload"></i>
-													<p>Importieren</p>
+													<p>Import</p>
 												</a>
 											</li>
 											{% endif %}
