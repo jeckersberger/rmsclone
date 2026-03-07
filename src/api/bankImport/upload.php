@@ -17,7 +17,7 @@ $format = trim($_POST['format'] ?? '');
 $accountId = !empty($_POST['account_id']) ? (int)$_POST['account_id'] : null;
 
 if (!in_array($format, ['mt940', 'camt053', 'csv'])) {
-    finish(false, ["message" => "Ungueltiges Format. Erlaubt: mt940, camt053, csv"]);
+    finish(false, ["message" => "Ungueltiges Format. Erlaubt: mt940, camt053, csv. Fuer FinTS-Abruf siehe /bankImport/fintsConnect"]);
 }
 
 if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {

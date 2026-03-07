@@ -27,14 +27,27 @@ switch ($method) {
         $name = trim($_POST['account_name'] ?? '');
         if (!$name) finish(false, ["message" => "account_name erforderlich."]);
 
-        $id = $service->createAccount($instanceId, [
+        $accountData = [
             'account_name' => $name,
             'iban'         => trim($_POST['iban'] ?? ''),
             'bic'          => trim($_POST['bic'] ?? ''),
             'bank_name'    => trim($_POST['bank_name'] ?? ''),
             'currency'     => trim($_POST['currency'] ?? 'EUR'),
             'is_default'   => (int)($_POST['is_default'] ?? 0),
-        ]);
+        ];
+
+        $id = $service->createAccount($instanceId, $accountData);
+
+        // FinTS-Konfiguration direkt mitgeben wenn vorhanden
+        if (!empty($_POST['fints_url'])) {
+            require_once __DIR__ . '/../../services/FinTSService.php';
+            $fints = new FinTSService($DBLIB);
+            $fintsData = [];
+            foreach (['fints_url', 'fints_blz', 'fints_username', 'fints_account_number', 'fints_port', 'fints_version', 'fints_enabled'] as $f) {
+                if (isset($_POST[$f])) $fintsData[$f] = $_POST[$f];
+            }
+            $fints->configureAccount($instanceId, $id, $fintsData);
+        }
         finish(true, null, ["id" => $id]);
         break;
 
