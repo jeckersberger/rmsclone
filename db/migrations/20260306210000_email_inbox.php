@@ -15,7 +15,6 @@ final class EmailInbox extends AbstractMigration
         // Eingehende E-Mails
         $emailReceived = $this->table('emailReceived', [
             'id' => 'emailReceived_id',
-            'signed' => false,
         ]);
         $emailReceived
             ->addColumn('instances_id', 'integer')
@@ -97,10 +96,9 @@ final class EmailInbox extends AbstractMigration
         // Anhaenge der eingehenden E-Mails
         $emailAttachment = $this->table('emailAttachments', [
             'id' => 'emailAttachment_id',
-            'signed' => false,
         ]);
         $emailAttachment
-            ->addColumn('emailReceived_id', 'integer', ['signed' => false])
+            ->addColumn('emailReceived_id', 'integer')
             ->addColumn('instances_id', 'integer')
             ->addColumn('emailAttachment_filename', 'string', [
                 'limit' => 500,
@@ -111,7 +109,6 @@ final class EmailInbox extends AbstractMigration
                 'comment' => 'MIME-Type des Anhangs',
             ])
             ->addColumn('emailAttachment_size', 'integer', [
-                'signed' => false,
                 'comment' => 'Dateigroesse in Bytes',
             ])
             ->addColumn('emailAttachment_storagePath', 'string', [
