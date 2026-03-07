@@ -17,8 +17,8 @@ $instanceId = $server['instances_id'];
 $startDate = trim($_POST['start_date'] ?? '');
 $endDate = trim($_POST['end_date'] ?? '');
 $equipment = $_POST['equipment'] ?? [];
-$notes = trim($_POST['notes'] ?? '');
-$requestingName = trim($_POST['requesting_server_name'] ?? $server['partner_servers_name']);
+$notes = strip_tags(trim($_POST['notes'] ?? ''));
+$requestingName = strip_tags(trim($_POST['requesting_server_name'] ?? $server['partner_servers_name']));
 
 if (empty($startDate) || empty($endDate) || empty($equipment)) {
     finish(false, ['code' => 'INVALID', 'message' => 'Missing required fields']);
@@ -33,6 +33,9 @@ if (is_string($equipment)) {
 }
 if (!is_array($equipment) || empty($equipment)) {
     finish(false, ['code' => 'INVALID', 'message' => 'Equipment must be a non-empty array']);
+}
+if (count($equipment) > 100) {
+    finish(false, ['code' => 'INVALID', 'message' => 'Too many equipment items (max 100)']);
 }
 
 // Partner-Request in unserer DB speichern

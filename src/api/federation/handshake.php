@@ -18,6 +18,31 @@ require_once __DIR__ . '/../../services/FederationService.php';
 
 $FEDERATION = new FederationService($DBLIB);
 
+// Parse JSON body
+$contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+if (stripos($contentType, 'application/json') !== false) {
+    $jsonBody = json_decode(file_get_contents('php://input'), true);
+    if (is_array($jsonBody)) {
+        $_POST = array_merge($_POST, $jsonBody);
+    }
+}
+
+// Rate limiting: max 5 handshake attempts per IP per 10 minutes
+$clientIp = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+$rateCacheKey = 'federation_handshake_' . hash('sha256', $clientIp);
+$rateCacheFile = sys_get_temp_dir() . '/' . $rateCacheKey;
+$now = time();
+$attempts = [];
+if (file_exists($rateCacheFile)) {
+    $attempts = json_decode(file_get_contents($rateCacheFile), true) ?: [];
+    $attempts = array_filter($attempts, function ($t) use ($now) { return $t > $now - 600; });
+}
+if (count($attempts) >= 5) {
+    finish(false, ['code' => 'RATE_LIMIT', 'message' => 'Too many handshake attempts. Try again later.']);
+}
+$attempts[] = $now;
+file_put_contents($rateCacheFile, json_encode(array_values($attempts)), LOCK_EX);
+
 $partnerCode = trim($_POST['partner_code'] ?? '');
 $requestingUrl = trim($_POST['requesting_server_url'] ?? '');
 $requestingName = trim($_POST['requesting_server_name'] ?? '');

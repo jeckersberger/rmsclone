@@ -255,8 +255,9 @@ class FederationService
 
         if ($search) {
             $sql .= " AND (at.assetTypes_name LIKE ? OR ac.assetCategories_name LIKE ?)";
-            $params[] = "%$search%";
-            $params[] = "%$search%";
+            $escapedSearch = str_replace(['%', '_', '\\'], ['\\%', '\\_', '\\\\'], $search);
+            $params[] = "%{$escapedSearch}%";
+            $params[] = "%{$escapedSearch}%";
         }
 
         $sql .= " GROUP BY at.assetTypes_id ORDER BY ac.assetCategories_rank ASC, at.assetTypes_name ASC";
