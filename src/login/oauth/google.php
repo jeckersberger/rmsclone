@@ -79,7 +79,13 @@ if ($user) {
 		exit;
 	} else {
 		$GLOBALS['AUTH']->generateToken($user['users_userid'], false, "Web - Google", "web-session");
-		header("Location: " . (isset($_SESSION['return']) ? $_SESSION['return'] : $CONFIG['ROOTURL']));
+		$redirect = $CONFIG['ROOTURL'];
+		if (isset($_SESSION['return']) && $_SESSION['return']) {
+			$p = parse_url($_SESSION['return']);
+			$r = parse_url($CONFIG['ROOTURL']);
+			if ($p && $r && isset($p['host']) && $p['host'] === $r['host']) $redirect = $_SESSION['return'];
+		}
+		header("Location: " . $redirect);
 		exit;
 	}
 } else {
@@ -127,6 +133,12 @@ if (!$_SESSION['return'] and isset($_SESSION['app-oauth'])) {
 	exit;
 } else {
 	$GLOBALS['AUTH']->generateToken($newUser, false, "Web - Google", "web-session");
-	header("Location: " . (isset($_SESSION['return']) ? $_SESSION['return'] : $CONFIG['ROOTURL']));
+	$redirect = $CONFIG['ROOTURL'];
+	if (isset($_SESSION['return']) && $_SESSION['return']) {
+		$p = parse_url($_SESSION['return']);
+		$r = parse_url($CONFIG['ROOTURL']);
+		if ($p && $r && isset($p['host']) && $p['host'] === $r['host']) $redirect = $_SESSION['return'];
+	}
+	header("Location: " . $redirect);
 	exit;
 }

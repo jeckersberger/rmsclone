@@ -491,13 +491,7 @@ $configStructureArray = [
     "form" => [
       "type" => "secret",
       "default" => function () {
-        $characters = 'ABCDEFGHKMNOPQRSTUVWXYZ0123456789';
-        $charactersLength = strlen($characters);
-        $randomString = '';
-        for ($i = 0; $i < 64; $i++) {
-          $randomString .= $characters[rand(0, $charactersLength - 1)];
-        }
-        return $randomString;
+        return bin2hex(random_bytes(32));
       },
       "name" => "JWT Key",
       "group" => "Security & Login",

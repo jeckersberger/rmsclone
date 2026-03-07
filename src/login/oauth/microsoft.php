@@ -53,7 +53,13 @@ if ($user) {
 	//Log them in successfully - duplicated below for signup
 
 	$GLOBALS['AUTH']->generateToken($user['users_userid'], false, "Web - Microsoft", "web-session");
-	header("Location: " . (isset($_SESSION['return']) ? $_SESSION['return'] : $CONFIG['ROOTURL']));
+	$redirect = $CONFIG['ROOTURL'];
+	if (isset($_SESSION['return']) && $_SESSION['return']) {
+		$p = parse_url($_SESSION['return']);
+		$r = parse_url($CONFIG['ROOTURL']);
+		if ($p && $r && isset($p['host']) && $p['host'] === $r['host']) $redirect = $_SESSION['return'];
+	}
+	header("Location: " . $redirect);
 	exit;
 } else {
 	//See if an email is found, but not linked to microsoft. We don't want to auto-link them because its a good attack vector, so instead prompt a password login and then link in account settings.
@@ -100,6 +106,12 @@ if (!$_SESSION['return'] and isset($_SESSION['app-oauth'])) {
 	exit;
 } else {
 	$GLOBALS['AUTH']->generateToken($newUser, false, "Web - Microsoft", "web-session");
-	header("Location: " . (isset($_SESSION['return']) ? $_SESSION['return'] : $CONFIG['ROOTURL']));
+	$redirect = $CONFIG['ROOTURL'];
+	if (isset($_SESSION['return']) && $_SESSION['return']) {
+		$p = parse_url($_SESSION['return']);
+		$r = parse_url($CONFIG['ROOTURL']);
+		if ($p && $r && isset($p['host']) && $p['host'] === $r['host']) $redirect = $_SESSION['return'];
+	}
+	header("Location: " . $redirect);
 	exit;
 }

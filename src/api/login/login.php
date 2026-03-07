@@ -82,7 +82,13 @@ if (isset($_POST['formInput']) and isset($_POST['password'])) {
                 finish(true,null,["redirect" => $_SESSION['app-oauth'] . "oauth_callback?token=" . $jwt]);
             } else {
                 $GLOBALS['AUTH']->generateToken($user['users_userid'], false, "Web", "web-session");
-                finish(true,null,["redirect" => (isset($_SESSION['return']) ? $_SESSION['return'] : $CONFIG['ROOTURL'])]);
+                $redirect = $CONFIG['ROOTURL'];
+                if (isset($_SESSION['return']) && $_SESSION['return']) {
+                    $p = parse_url($_SESSION['return']);
+                    $r = parse_url($CONFIG['ROOTURL']);
+                    if ($p && $r && isset($p['host']) && $p['host'] === $r['host']) $redirect = $_SESSION['return'];
+                }
+                finish(true,null,["redirect" => $redirect]);
             }
         }
 	}
