@@ -115,7 +115,7 @@
 - [ ] Kreditlimit
 - [ ] Kunden-Duplikate erkennen und zusammenführen (Merge)
 - [ ] Kunden-Import aus CSV/Excel
-- [ ] Verschiedene Lieferadressen pro Kunde
+- [x] Lieferadresse pro Kunde — `clients_deliveryAddress`, `clients_deliveryContact`, `clients_deliveryPhone`, `clients_deliveryNotes` in DB
 - [ ] USt-IdNr. Validierung über VIES (EU-Dienst)
 
 ---
@@ -328,7 +328,7 @@
 | Phase 2 - Angebotswesen    | 5/8       | 3     | 63%         |
 | Phase 2 - Rechnungswesen   | 7/15      | 8     | 47%         |
 | Phase 2 - Buchhaltung      | 2/9       | 7     | 22%         |
-| Phase 2 - Kunden           | 5/13      | 8     | 38%         |
+| Phase 2 - Kunden           | 6/13      | 7     | 46%         |
 | Phase 3 - Reporting        | 4/11      | 7     | 36%         |
 | Phase 3 - Logistik         | 4/8       | 4     | 50%         |
 | Phase 3 - Code-Qualität    | 0/8       | 8     | 0%          |
@@ -349,7 +349,7 @@
 | Extra - Integrationen      | 0/6       | 6     | 0%          |
 | Extra - Dokumentation      | 3/7       | 4     | 43%         |
 | Extra - DevOps             | 0/8       | 8     | 0%          |
-| **GESAMT**                  | **101/240**| **139**| **42%**   |
+| **GESAMT**                  | **102/240**| **138**| **43%**   |
 
 ---
 
