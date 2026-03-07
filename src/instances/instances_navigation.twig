@@ -263,6 +263,30 @@
                 <a href="{{ CONFIG.ROOTURL }}/instances/configuration/invoices.php" class="small-box-footer">Rechnungen verwalten <i class="fas fa-arrow-circle-right"></i></a>
             </div>
         </div>
+        <div class="col-lg-3 col-6">
+            <div class="small-box bg-primary">
+                <div class="inner">
+                    <h3>Dokumentvorlagen</h3>
+                    <p>Vorlagen fuer Angebote, Rechnungen, Lieferscheine.</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+                <a href="{{ CONFIG.ROOTURL }}/instances/configuration/documentTemplates.php" class="small-box-footer">Vorlagen verwalten <i class="fas fa-arrow-circle-right"></i></a>
+            </div>
+        </div>
+        <div class="col-lg-3 col-6">
+            <div class="small-box bg-primary">
+                <div class="inner">
+                    <h3>Mahnstufen</h3>
+                    <p>Mahnstufen und Mahngebuehren konfigurieren.</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <a href="{{ CONFIG.ROOTURL }}/instances/configuration/dunning-levels.php" class="small-box-footer">Mahnstufen verwalten <i class="fas fa-arrow-circle-right"></i></a>
+            </div>
+        </div>
         {% endif %}
         {% if ("BUSINESS:BUSINESS_SETTINGS:VIEW"|instancePermissions or "ASSETS:ASSET_CATEGORIES:VIEW"|instancePermissions) %}
         <div class="col-12">
