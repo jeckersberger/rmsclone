@@ -18,7 +18,7 @@ final class EmailInbox extends AbstractMigration
             'signed' => false,
         ]);
         $emailReceived
-            ->addColumn('instances_id', 'integer', ['signed' => false])
+            ->addColumn('instances_id', 'integer')
             ->addColumn('emailReceived_messageId', 'string', [
                 'limit' => 255,
                 'comment' => 'Message-ID Header der E-Mail',
@@ -75,12 +75,10 @@ final class EmailInbox extends AbstractMigration
             ])
             ->addColumn('projects_id', 'integer', [
                 'null' => true,
-                'signed' => false,
                 'comment' => 'Zugeordnetes Projekt (manuell oder automatisch)',
             ])
             ->addColumn('clients_id', 'integer', [
                 'null' => true,
-                'signed' => false,
                 'comment' => 'Zugeordneter Kunde (automatisch anhand Absender)',
             ])
             ->addIndex(['instances_id'])
@@ -103,7 +101,7 @@ final class EmailInbox extends AbstractMigration
         ]);
         $emailAttachment
             ->addColumn('emailReceived_id', 'integer', ['signed' => false])
-            ->addColumn('instances_id', 'integer', ['signed' => false])
+            ->addColumn('instances_id', 'integer')
             ->addColumn('emailAttachment_filename', 'string', [
                 'limit' => 500,
                 'comment' => 'Original-Dateiname',
@@ -125,7 +123,6 @@ final class EmailInbox extends AbstractMigration
             ])
             ->addColumn('s3files_id', 'integer', [
                 'null' => true,
-                'signed' => false,
                 'comment' => 'Verknuepfung mit s3files wenn in Dateisystem importiert',
             ])
             ->addIndex(['emailReceived_id'])
