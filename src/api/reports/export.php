@@ -3,7 +3,8 @@
  * Report-Export (CSV, Excel, PDF)
  *
  * POST-Parameter:
- *   type     - 'revenue' | 'outstanding' | 'dunning' | 'utilization' | ...
+ *   type     - 'revenue' | 'outstanding' | 'dunning' | 'utilization' | 'top_clients' |
+ *              'seasonality' | 'roi' | 'compare' | 'top_performers' | 'underutilized'
  *   format   - 'csv' | 'xlsx' | 'pdf' (Standard: csv)
  *   year     - Jahr (optional, Standard: aktuelles Jahr)
  *   group_by - 'month' | 'client' (nur bei revenue)
@@ -23,9 +24,12 @@ if (!in_array($format, ['csv', 'xlsx', 'pdf'])) {
     $format = 'csv';
 }
 
-$rows = [];
+$exportSvc = new ReportExportService();
 $headers = [];
+$rows = [];
 $filename = 'export';
+$useService = false;
+$reportData = [];
 
 switch ($type) {
     case 'revenue':
@@ -94,7 +98,7 @@ switch ($type) {
                 number_format($inv['gross_amount'] ?? 0, 2, ',', '.'),
                 $inv['due_date'] ?? '-',
                 $inv['days_overdue'] ?? 0,
-                $inv['dunning_level'] ?? 0
+                $levelNames[$inv['dunning_level'] ?? 0] ?? $inv['dunning_level']
             ];
         }
         $filename = 'mahnungen_' . date('Y-m-d');
@@ -107,8 +111,7 @@ switch ($type) {
     case 'compare':
     case 'top_performers':
     case 'underutilized':
-        $exportSvc = new ReportExportService();
-        $reportData = [];
+        $useService = true;
 
         if ($type === 'utilization') {
             $utilSvc = new UtilizationReportService($DBLIB);
@@ -149,6 +152,7 @@ switch ($type) {
             $reportData = $utilSvc->getUnderutilized($instanceId, $year, $threshold);
         }
 
+        // Export via service
         if ($format === 'xlsx') {
             $result = $exportSvc->exportExcel($type, $reportData);
         } elseif ($format === 'pdf') {
@@ -156,6 +160,7 @@ switch ($type) {
         } else {
             $result = $exportSvc->exportReport($type, $reportData);
         }
+
         if (isset($result['error'])) {
             finish(false, ["code" => "EXPORT_ERROR", "message" => $result['error']]);
         }
@@ -166,17 +171,18 @@ switch ($type) {
         finish(false, ["code" => "INVALID_TYPE"]);
 }
 
-// Build export based on format
-$exportSvc2 = new ReportExportService();
+// -------------------------------------------------------
+// Handle revenue/outstanding/dunning exports (non-service types)
+// These use the $headers/$rows/$filename built in the switch above.
+// -------------------------------------------------------
 
 if ($format === 'xlsx') {
-    $csvResult = $exportSvc2->exportCsv($headers, $rows, $filename);
-    // Re-parse CSV into structured data for Excel export
-    $result = $exportSvc2->exportExcel('_raw', []);
-    // Simpler: build Excel directly from headers+rows
+    // Build Excel from headers + rows using PhpSpreadsheet
     $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
     $sheet = $spreadsheet->getActiveSheet();
     $sheet->setTitle('Export');
+
+    // Header row
     foreach ($headers as $colIdx => $header) {
         $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIdx + 1);
         $sheet->setCellValue($colLetter . '1', $header);
@@ -186,50 +192,97 @@ if ($format === 'xlsx') {
     $sheet->getStyle("A1:{$lastCol}1")->getFill()
         ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
         ->getStartColor()->setARGB('FFD9E1F2');
+
+    // Data rows
     foreach ($rows as $rowIdx => $row) {
         foreach ($row as $colIdx => $cell) {
             $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIdx + 1);
             $sheet->setCellValue($colLetter . ($rowIdx + 2), $cell);
         }
     }
-    foreach (range('A', $lastCol) as $col) {
-        $sheet->getColumnDimension($col)->setAutoSize(true);
+
+    // Auto-size columns
+    for ($i = 1; $i <= count($headers); $i++) {
+        $sheet->getColumnDimension(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($i))->setAutoSize(true);
     }
+
+    // Add borders
+    if (count($rows) > 0) {
+        $dataRange = "A1:{$lastCol}" . (count($rows) + 1);
+        $sheet->getStyle($dataRange)->getBorders()->getAllBorders()
+            ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+    }
+
     $tmpFile = tempnam(sys_get_temp_dir(), 'rms_xlsx_');
     $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
     $writer->save($tmpFile);
     $xlsxContent = file_get_contents($tmpFile);
     unlink($tmpFile);
+    $spreadsheet->disconnectWorksheets();
+
     finish(true, null, [
-        'data' => base64_encode($xlsxContent),
+        'file' => base64_encode($xlsxContent),
         'filename' => $filename . '.xlsx',
-        'mime' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'row_count' => count($rows),
+        'format' => 'xlsx',
     ]);
+
 } elseif ($format === 'pdf') {
+    // Build PDF from headers + rows using Dompdf
+    $reportTitles = [
+        'revenue' => 'Umsatzbericht',
+        'outstanding' => 'Offene Posten',
+        'dunning' => 'Mahnungen',
+    ];
+    $title = $reportTitles[$type] ?? 'Bericht';
+
     $html = '<!DOCTYPE html><html><head><meta charset="UTF-8">';
-    $html .= '<style>body{font-family:DejaVu Sans,sans-serif;font-size:10px;margin:20px;}h1{font-size:16px;}table{width:100%;border-collapse:collapse;}th{background:#2c3e50;color:white;padding:6px 8px;text-align:left;font-size:9px;}td{padding:5px 8px;border-bottom:1px solid #ddd;font-size:9px;}tr:nth-child(even) td{background:#f9f9f9;}</style></head><body>';
-    $html .= '<h1>' . htmlspecialchars($filename) . '</h1>';
-    $html .= '<div style="color:#666;margin-bottom:15px;font-size:9px;">Erstellt am ' . date('d.m.Y H:i') . '</div>';
+    $html .= '<style>
+        body { font-family: DejaVu Sans, sans-serif; font-size: 10px; color: #333; margin: 20px; }
+        h1 { font-size: 18px; color: #2c3e50; border-bottom: 2px solid #4472C4; padding-bottom: 8px; margin-bottom: 5px; }
+        .meta { font-size: 9px; color: #888; margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background-color: #4472C4; color: #fff; padding: 6px 8px; text-align: left; font-size: 10px; }
+        td { padding: 5px 8px; border-bottom: 1px solid #ddd; font-size: 9px; }
+        tr:nth-child(even) td { background-color: #f2f6fc; }
+        .footer { margin-top: 20px; font-size: 8px; color: #aaa; text-align: center; border-top: 1px solid #ddd; padding-top: 5px; }
+    </style></head><body>';
+    $html .= '<h1>' . htmlspecialchars($title) . '</h1>';
+    $html .= '<div class="meta">Erstellt am: ' . date('d.m.Y H:i') . '</div>';
     $html .= '<table><thead><tr>';
-    foreach ($headers as $h) $html .= '<th>' . htmlspecialchars($h) . '</th>';
+    foreach ($headers as $h) {
+        $html .= '<th>' . htmlspecialchars($h) . '</th>';
+    }
     $html .= '</tr></thead><tbody>';
     foreach ($rows as $row) {
         $html .= '<tr>';
-        foreach ($row as $cell) $html .= '<td>' . htmlspecialchars((string)$cell) . '</td>';
+        foreach ($row as $cell) {
+            $html .= '<td>' . htmlspecialchars((string)$cell) . '</td>';
+        }
         $html .= '</tr>';
     }
-    $html .= '</tbody></table></body></html>';
-    $dompdf = new \Dompdf\Dompdf(['isRemoteEnabled' => false]);
+    $html .= '</tbody></table>';
+    $html .= '<div class="footer">RMS Berichtssystem &ndash; ' . htmlspecialchars($title) . ' &ndash; ' . date('d.m.Y') . '</div>';
+    $html .= '</body></html>';
+
+    $options = new \Dompdf\Options();
+    $options->set('isHtml5ParserEnabled', true);
+    $options->set('isRemoteEnabled', false);
+    $options->set('defaultFont', 'DejaVu Sans');
+
+    $dompdf = new \Dompdf\Dompdf($options);
     $dompdf->loadHtml($html);
-    $dompdf->setPaper('A4', 'landscape');
+    $orientation = count($headers) > 6 ? 'landscape' : 'portrait';
+    $dompdf->setPaper('A4', $orientation);
     $dompdf->render();
+
     finish(true, null, [
-        'data' => base64_encode($dompdf->output()),
+        'file' => base64_encode($dompdf->output()),
         'filename' => $filename . '.pdf',
-        'mime' => 'application/pdf',
         'row_count' => count($rows),
+        'format' => 'pdf',
     ]);
+
 } else {
     // CSV (default)
     $csv = chr(0xEF) . chr(0xBB) . chr(0xBF); // UTF-8 BOM for Excel
@@ -241,6 +294,7 @@ if ($format === 'xlsx') {
         }, $row);
         $csv .= implode(';', $escaped) . "\r\n";
     }
+
     finish(true, null, [
         'csv' => base64_encode($csv),
         'filename' => $filename . '.csv',
