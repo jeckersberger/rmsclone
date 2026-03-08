@@ -5,7 +5,7 @@ if (!$AUTH->instancePermissionCheck("PROJECTS:PROJECT_CREW:CREATE") or !isset($_
 
 $DBLIB->where("projects.instances_id", $AUTH->data['instance']['instances_id']);
 $DBLIB->where("projects.projects_deleted", 0);
-$DBLIB->where("projects.projects_id", $_POST['projects_id']);
+$DBLIB->where("projects.projects_id", intval($_POST['projects_id']));
 $project = $DBLIB->getone("projects", ["projects_id","projects_name", "projects_dates_use_start","projects_dates_use_end"]);
 if (!$project) finish(false);
 
@@ -19,12 +19,10 @@ $DBLIB->where("(userInstances.userInstances_archived IS NULL OR userInstances.us
 $DBLIB->orderBy("users.users_name1", "ASC");
 $DBLIB->orderBy("users.users_name2", "ASC");
 if (strlen($_POST['term']) > 0) {
+    $searchTerm = '%' . $DBLIB->escape(trim($_POST['term'])) . '%';
     $DBLIB->where("(
-		users_email LIKE '%" . $bCMS->sanitizeStringMYSQL($_POST['term']) . "%'
-		OR users_name1 LIKE '%" . $bCMS->sanitizeStringMYSQL($_POST['term']) . "%'
-		OR users_name2 LIKE '%" . $bCMS->sanitizeStringMYSQL($_POST['term']) . "%'	
-		OR CONCAT( users_name1,  ' ', users_name2 ) LIKE '%" . $bCMS->sanitizeStringMYSQL($_POST['term']) . "%'
-    )");
+        users_email LIKE ? OR users_name1 LIKE ? OR users_name2 LIKE ? OR CONCAT(users_name1, ' ', users_name2) LIKE ?
+    )", [$searchTerm, $searchTerm, $searchTerm, $searchTerm]);
 }
 $users = $DBLIB->get("users", 15, ["users.users_userid", "users.users_name1", "users.users_name2", "users.users_email"]);
 if (!$users) finish(false, ["code" => "LIST-USERS-FAIL", "message"=> "Could not search for Users"]);

@@ -117,6 +117,12 @@
     </div>
     <div class="header-right">
       <div style="font-size: 20pt; font-weight: bold; color: #2c3e50;">{{ doc.title }}</div>
+      {% if doc.type == 'delivery_note' and delivery_note_qr %}
+      <div style="margin-top: 3mm; text-align: right;">
+        <img src="{{ delivery_note_qr }}" alt="QR-Code Packauftrag" style="width: 35mm; height: 35mm;">
+        <div style="font-size: 7pt; color: #666; margin-top: 1mm;">Packauftrag scannen</div>
+      </div>
+      {% endif %}
     </div>
   </div>
 

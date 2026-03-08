@@ -619,4 +619,52 @@ class DocumentRenderer {
   private static function fileName(string $type, string $num): string {
     return ($type==='invoice'?'Rechnung':($type==='quote'?'Angebot':'Lieferschein')).'_'.$num.'.pdf';
   }
+
+  /**
+   * Erzeugt QR-Code fuer Lieferschein mit Link zum Packauftrag.
+   *
+   * Der QR-Code enthaelt eine URL zur mobilen Packansicht.
+   * Ein sicherer Token wird generiert und in der Datenbank gespeichert,
+   * damit der Link ohne Login geprueft werden kann.
+   *
+   * @param object $db         Datenbank-Verbindung
+   * @param int    $instanceId Instanz-ID
+   * @param int    $projectId  Projekt-ID
+   * @param string $docNumber  Lieferscheinnummer
+   * @return string|null       Data-URI des QR-Codes oder null
+   */
+  private static function generateDeliveryNoteQr($db, int $instanceId, int $projectId, string $docNumber): ?string
+  {
+    // Packliste fuer dieses Projekt suchen
+    $db->where('instances_id', $instanceId);
+    $db->where('projects_id', $projectId);
+    $db->orderBy('created_at', 'DESC');
+    $packingList = $db->getOne('packing_lists', ['id']);
+
+    if (!$packingList) {
+      return null;
+    }
+
+    $packingListId = (int)$packingList['id'];
+
+    // Sicheren Token generieren und speichern
+    $token = bin2hex(random_bytes(16));
+    $db->where('id', $packingListId);
+    $db->update('packing_lists', [
+      'delivery_note_qr_token' => $token,
+    ]);
+
+    // Base-URL aus Konfiguration oder Server-Variablen ermitteln
+    $baseUrl = '';
+    if (defined('BASE_URL')) {
+      $baseUrl = BASE_URL;
+    } elseif (!empty($_SERVER['HTTP_HOST'])) {
+      $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+      $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'];
+    }
+
+    $url = rtrim($baseUrl, '/') . '/mobile/packing.php?id=' . $packingListId . '&token=' . $token;
+
+    return QrCodeGenerator::generateDataUri($url, 180, 'M');
+  }
 }
