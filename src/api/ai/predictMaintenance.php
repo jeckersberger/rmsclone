@@ -45,13 +45,16 @@ if ($assetTypeId && $scope === 'type') {
             ORDER BY ml.performed_at DESC LIMIT 50";
     $logs = $DBLIB->rawQuery($sql, [$assetTypeId]) ?: [];
 
-    // Get damage reports
-    $sql = "SELECT m.maintenance_id, m.maintenance_asset, m.maintenance_notes, m.maintenance_flagDate,
-                   m.maintenance_status
-            FROM maintenance m
-            JOIN assets a ON m.maintenance_asset = a.assets_id
-            WHERE a.assetTypes_id = ? AND m.instances_id = ?
-            ORDER BY m.maintenance_flagDate DESC LIMIT 20";
+    // Get damage reports / maintenance jobs
+    $sql = "SELECT mj.maintenanceJobs_id, mj.maintenanceJobs_assets as maintenance_asset,
+                   mj.maintenanceJobs_faultDescription as maintenance_notes,
+                   mj.maintenanceJobs_timestamp_added as maintenance_flagDate,
+                   mjs.maintenanceJobsStatuses_name as maintenance_status
+            FROM maintenanceJobs mj
+            LEFT JOIN maintenanceJobsStatuses mjs ON mj.maintenanceJobsStatuses_id = mjs.maintenanceJobsStatuses_id
+            WHERE mj.maintenanceJobs_assets LIKE CONCAT('%', ?, '%') AND mj.instances_id = ?
+            AND mj.maintenanceJobs_deleted = 0
+            ORDER BY mj.maintenanceJobs_timestamp_added DESC LIMIT 20";
     $damages = $DBLIB->rawQuery($sql, [$assetTypeId, $instanceId]) ?: [];
 
     $context = "Equipment-Typ: {$type['assetTypes_name']}\n";

@@ -38,11 +38,13 @@ $sql = "SELECT dl.doc_type, dl.doc_number, dl.status, dl.gross_amount, dl.create
 $payments = $DBLIB->rawQuery($sql, [$clientId, $instanceId]) ?: [];
 
 // Get dunning history
-$sql = "SELECT d.dunning_level, d.dunning_date, d.dunning_amount, d.dunning_status
-        FROM dunning_records d
-        JOIN projects p ON d.projects_id = p.projects_id
-        WHERE p.clients_id = ? AND d.instances_id = ?
-        ORDER BY d.dunning_date DESC LIMIT 10";
+$sql = "SELECT dh.dunning_level, dh.dunning_date, dh.total_due as dunning_amount,
+               CASE WHEN dh.sent_at IS NOT NULL THEN 'sent' ELSE 'pending' END as dunning_status
+        FROM dunning_history dh
+        JOIN document_lifecycle dl ON dh.document_lifecycle_id = dl.id
+        JOIN projects p ON dl.projects_id = p.projects_id
+        WHERE p.clients_id = ? AND dh.instances_id = ?
+        ORDER BY dh.dunning_date DESC LIMIT 10";
 $dunnings = $DBLIB->rawQuery($sql, [$clientId, $instanceId]) ?: [];
 
 $context = "Kunde: {$client['clients_name']}\n";
