@@ -277,12 +277,28 @@ class DsgvoService
     }
 
     /**
-     * Daten-Minimierung: Alle persönlichen Felder entfernen
+     * Daten-Minimierung: Nur personenbezogene Daten exportieren,
+     * keine internen System-IDs, Flags oder technische Felder.
      */
     private function sanitizeForExport(array $client): array
     {
-        // Entferne interne System-IDs und Flags die nicht personenbezogen sind
-        unset($client['instances_id'], $client['clients_deleted']);
-        return $client;
+        // Whitelist: Nur personenbezogene Felder exportieren (DSGVO Art. 15)
+        $allowedFields = [
+            'clients_name', 'clients_email', 'clients_phone',
+            'clients_address', 'clients_website', 'clients_notes',
+            'clients_vatId', 'clients_customerNumber',
+            'clients_paymentTermDays', 'clients_company',
+            'clients_deliveryAddress', 'clients_deliveryContact',
+            'clients_deliveryPhone', 'clients_deliveryNotes',
+            'clients_created', 'clients_updated',
+        ];
+
+        $filtered = [];
+        foreach ($allowedFields as $field) {
+            if (array_key_exists($field, $client)) {
+                $filtered[$field] = $client[$field];
+            }
+        }
+        return $filtered;
     }
 }

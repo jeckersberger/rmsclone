@@ -166,42 +166,42 @@
 
 ### API-Sicherheit
 - [x] Rate-Limiting für Login und API-Endpunkte — `RateLimitService.php` + DB-Migration + Login-Integration
-- [ ] Input-Sanitization: htmlspecialchars/strip_tags für alle User-Inputs
+- [x] Input-Sanitization: htmlspecialchars/strip_tags für alle User-Inputs — Globale Sanitization in `apiHead.php` + `InputSanitizer.php` + `InputValidationService.php`
 - [x] Content-Security-Policy (CSP) Header setzen — `src/common/head.php` (bereits vorhanden)
 - [x] X-Frame-Options Header (Clickjacking-Schutz) — `src/common/head.php` + `src/api/apiHead.php` (SAMEORIGIN/DENY + X-Content-Type-Options + Referrer-Policy + Permissions-Policy + HSTS)
-- [ ] Prepared Statements in allen rawQuery()-Aufrufen prüfen
-- [ ] API-Antworten: keine internen Fehler-Details an Client leaken
+- [x] Prepared Statements in allen rawQuery()-Aufrufen prüfen — Alle rawQuery() nutzen Parameterized Queries, `availability/overview.php` + `emailViewer.php` gefixt
+- [x] API-Antworten: keine internen Fehler-Details an Client leaken — `apiHeadSecure.php`: Debug-Info nur ins Log, nicht an Client + `ErrorHandlerService.php`
 - [x] **Partner-API: Input-Validierung** — `accept.php`, `invite.php`, `equipment.php`, `request.php`: filter_var, preg_match, json_last_error
 - [x] **JSON-Decoding sicher** — `partner/request.php`: `json_last_error()` Prüfung hinzugefügt
 - [x] **Datumsformate validiert** — `partner/equipment.php`, `partner/request.php`: YYYY-MM-DD Regex + strtotime-Prüfung
-- [ ] **Equipment-IDs nicht geprüft** — `PartnerService.php:246`: `assetTypes_id` wird nicht validiert ob es zur Partner-Instance gehört
+- [x] **Equipment-IDs geprüft** — `PartnerService.php`: `assetTypes_id` wird gegen `toInstanceId` validiert + intval + LIKE-Sanitization via `SqlSanitizer`
 - [x] **Rate-Limiting für Partner-Code-Generierung** — `partner/generateCode.php`: Max 5 pro Stunde
 - [x] **Account-Enumeration gefixt** — `partner/invite.php`: Einheitliche Fehlermeldung
 
 ### Session & Auth
 - [x] Session-Cookie: HttpOnly + Secure + SameSite=Strict — `head.php`: session_set_cookie_params mit Array-Syntax
 - [x] Session-Regeneration nach Login — `login.php`: `session_regenerate_id(true)` nach Erfolg
-- [ ] Passwort-Policy erzwingen (Mindestlänge, Komplexität)
+- [x] Passwort-Policy erzwingen (Mindestlänge, Komplexität) — `PasswordPolicyService.php` (10 Zeichen, Gross/Klein/Ziffern/Sonderzeichen, Common-Password-Check) + Integration in `changePass.php` + `forcePasswordChange.php`
 - [x] Account-Lockout nach 15 Fehlversuchen (30 Min) — `login.php`: Temporäre Sperre + Meldung
-- [ ] Zwei-Faktor-Authentifizierung (2FA/TOTP)
-- [ ] Login-Protokoll (IP, Zeitpunkt, Erfolg/Fehler)
+- [x] Zwei-Faktor-Authentifizierung (2FA/TOTP) — `TotpService.php` (RFC 6238, Backup-Codes, bcrypt-gehashed) + `src/api/account/totpSetup.php` + Integration in `login.php`
+- [x] Login-Protokoll (IP, Zeitpunkt, Erfolg/Fehler) — `LoginLogService.php` + `login_log` Tabelle + Integration in `login.php` + `src/api/account/loginLog.php`
 
 ### Datenbank-Sicherheit
 - [x] Foreign Keys für alle neuen Tabellen — `20260304110000_add_foreign_keys.php` (16 Tabellen)
-- [ ] Verschlüsselung sensibler Daten at-rest (IBAN, Steuernummer)
-- [ ] Automatische Datenbank-Backups (mysqldump Cronjob)
-- [ ] DB-Benutzer mit minimalen Rechten (kein DROP/ALTER in Produktion)
-- [ ] **Inkonsistente SQL-Sanitization** — `search/quick.php` nutzt `$DBLIB->escape()`, aber `groups/search.php` nutzt `sanitizeStringMYSQL()` → vereinheitlichen
+- [x] Verschlüsselung sensibler Daten at-rest (IBAN, Steuernummer) — `EncryptionService.php` (AES-256-GCM, ENCRYPTION_KEY env var, encrypt/decrypt/encryptFields/decryptFields)
+- [x] Automatische Datenbank-Backups (mysqldump Cronjob) — `src/cron/database-backup.php` (gzip, Retention-Policy, konfigurierbar)
+- [x] DB-Benutzer mit minimalen Rechten (kein DROP/ALTER in Produktion) — `docs/DB_SECURITY.md` (App/Migrate/Backup Benutzer-Konzept)
+- [x] **SQL-Sanitization vereinheitlicht** — `SqlSanitizer.php` fuer LIKE-Escaping, `sanitizeStringMYSQL()` durch `SqlSanitizer::sanitizeSearch()` ersetzt in `searchType.php`
 
 ### Datei-Sicherheit
-- [ ] Upload-Validierung: Dateityp, Dateigröße, MIME-Type prüfen
-- [ ] Uploaded Files außerhalb des Webroot speichern
-- [ ] Virus-Scan für hochgeladene Dateien (ClamAV)
+- [x] Upload-Validierung: Dateityp, Dateigröße, MIME-Type prüfen — `UploadValidationService.php` + finfo MIME-Check + PHP-Code-Detection in `localUpload.php`
+- [x] Uploaded Files außerhalb des Webroot speichern — `LocalFileStorage.php`: `/data/uploads/` + `localUpload.php`: Default geaendert zu `/data/uploads`
+- [x] Virus-Scan für hochgeladene Dateien (ClamAV) — `VirusScanService.php` (clamdscan/clamscan, fail-open mit Logging) + Integration in `localUpload.php`
 
 ### DSGVO-Sicherheit
-- [ ] **Datenexport filtert interne Felder nicht** — `DsgvoService.php:72-80`: Export enthält System-IDs und interne Flags → nur personenbezogene Daten exportieren
-- [ ] Verschlüsselter Datenexport (ZIP mit Passwort) für E-Mail-Versand
-- [ ] Automatische Löschung temporärer Export-Dateien
+- [x] **Datenexport filtert interne Felder** — `DsgvoService.php`: Whitelist-Ansatz, nur personenbezogene Felder exportieren
+- [x] Verschlüsselter Datenexport (ZIP mit Passwort) für E-Mail-Versand — `src/api/dsgvo/export.php`: format=encrypted, AES-256 ZIP + Passwort
+- [x] Automatische Löschung temporärer Export-Dateien — `src/cron/cleanup-temp-exports.php` (stündlich, 1h max Alter)
 
 ---
 
@@ -359,11 +359,11 @@
 | Phase 3 - Logistik         | 8/8       | 0     | **100%** ✅ |
 | Phase 3 - Code-Qualität    | 8/8       | 0     | **100%** ✅ |
 | Sicherheit - KRITISCH      | 4/4       | 0     | **100%** ✅ |
-| Sicherheit - API           | 9/12      | 3     | 75%         |
-| Sicherheit - Session/Auth  | 3/6       | 3     | 50%         |
-| Sicherheit - Datenbank     | 1/5       | 4     | 20%         |
-| Sicherheit - Dateien       | 0/3       | 3     | 0%          |
-| Sicherheit - DSGVO         | 0/3       | 3     | 0%          |
+| Sicherheit - API           | 12/12     | 0     | **100%** ✅ |
+| Sicherheit - Session/Auth  | 6/6       | 0     | **100%** ✅ |
+| Sicherheit - Datenbank     | 5/5       | 0     | **100%** ✅ |
+| Sicherheit - Dateien       | 3/3       | 0     | **100%** ✅ |
+| Sicherheit - DSGVO         | 3/3       | 0     | **100%** ✅ |
 | Extra - Dashboard/Nav      | 6/10      | 4     | 60%         |
 | Extra - Projekte           | 2/8       | 6     | 25%         |
 | Extra - Multi-Business     | 5/9       | 4     | 56%         |
@@ -377,7 +377,7 @@
 | Extra - Integrationen      | 0/9       | 9     | 0%          |
 | Extra - Dokumentation      | 3/7       | 4     | 43%         |
 | Extra - DevOps             | 0/8       | 8     | 0%          |
-| **GESAMT**                  | **161/271**| **110**| **59%**   |
+| **GESAMT**                  | **177/271**| **94** | **65%**   |
 
 ---
 
@@ -427,9 +427,9 @@
 35. Kunden-Portal (Self-Service)
 36. ~~Equipment-Auslastungsberichte~~ ✅ erledigt
 37. Docker-Compose Produktions-Setup mit SSL
-38. 2-Faktor-Authentifizierung (TOTP)
+38. ~~2-Faktor-Authentifizierung (TOTP)~~ ✅ erledigt
 39. Android Scanner-App für Equipment/Inventur
 
 ---
 
-*Zuletzt aktualisiert: 08.03.2026 — Phase 1-3 komplett (100%)*
+*Zuletzt aktualisiert: 08.03.2026 — Phase 1-3 + Sicherheit komplett (100%)*

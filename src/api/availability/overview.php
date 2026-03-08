@@ -34,16 +34,18 @@ $DBLIB->where("projects.projects_deleted", 0);
 $DBLIB->where("projects.projects_archived", 0);
 $DBLIB->where("assetsAssignments.assetsAssignments_deleted", 0);
 $DBLIB->where("assets.assets_deleted", 0);
-// Filter: project dates overlap with requested range
+// Filter: project dates overlap with requested range (parameterized)
+$dateToEnd = $dateTo . ' 23:59:59';
+$dateFromStart = $dateFrom . ' 00:00:00';
 $DBLIB->where("(
     (projects.projects_dates_use_start IS NOT NULL AND projects.projects_dates_use_end IS NOT NULL
-     AND projects.projects_dates_use_start <= '" . $DBLIB->escape($dateTo) . " 23:59:59'
-     AND projects.projects_dates_use_end >= '" . $DBLIB->escape($dateFrom) . " 00:00:00')
+     AND projects.projects_dates_use_start <= ?
+     AND projects.projects_dates_use_end >= ?)
     OR
     (projects.projects_dates_deliver_start IS NOT NULL AND projects.projects_dates_deliver_end IS NOT NULL
-     AND projects.projects_dates_deliver_start <= '" . $DBLIB->escape($dateTo) . " 23:59:59'
-     AND projects.projects_dates_deliver_end >= '" . $DBLIB->escape($dateFrom) . " 00:00:00')
-)");
+     AND projects.projects_dates_deliver_start <= ?
+     AND projects.projects_dates_deliver_end >= ?)
+)", [$dateToEnd, $dateFromStart, $dateToEnd, $dateFromStart]);
 
 if ($assetTypeFilter) {
     $DBLIB->where("assets.assetTypes_id", $assetTypeFilter);

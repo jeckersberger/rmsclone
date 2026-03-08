@@ -38,6 +38,19 @@ foreach ($_GET as $key=>$item) {
 }
 //POST is now the authoritarian copy
 
+// Global input sanitization: htmlspecialchars for all string values to prevent XSS
+// This is a defense-in-depth measure — individual endpoints should still validate their inputs
+foreach ($_POST as $key => $value) {
+    if (is_string($value)) {
+        $_POST[$key] = htmlspecialchars(trim($value), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
+}
+foreach ($_GET as $key => $value) {
+    if (is_string($value)) {
+        $_GET[$key] = htmlspecialchars(trim($value), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
+}
+
 
 require_once __DIR__ . '/../common/head.php';
 require_once __DIR__ . '/notifications/main.php';

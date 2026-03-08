@@ -133,9 +133,12 @@ class PartnerService
         $params = $activePartnerIds;
 
         if ($searchTerm) {
+            // Escape LIKE wildcards to prevent wildcard injection
+            $sqlSan = new SqlSanitizer();
+            $safeTerm = $sqlSan->sanitizeSearch($searchTerm);
             $sql .= " AND (at.assetTypes_name LIKE ? OR ac.assetCategories_name LIKE ?)";
-            $params[] = "%$searchTerm%";
-            $params[] = "%$searchTerm%";
+            $params[] = "%{$safeTerm}%";
+            $params[] = "%{$safeTerm}%";
         }
 
         $sql .= " GROUP BY at.assetTypes_id ORDER BY ac.assetCategories_rank ASC, at.assetTypes_name ASC";
@@ -244,11 +247,23 @@ class PartnerService
         $requestId = $this->db->getInsertId();
 
         foreach ($items['equipment'] as $item) {
+            $assetTypeId = intval($item['assetTypes_id'] ?? 0);
+            $quantity = max(1, intval($item['quantity'] ?? 1));
+
+            // Validate that the assetType belongs to the target partner instance
+            $this->db->where('assetTypes_id', $assetTypeId);
+            $this->db->where('instances_id', $toInstanceId);
+            $this->db->where('assetTypes_deleted', 0);
+            $validAsset = $this->db->getOne('assetTypes', ['assetTypes_id']);
+            if (!$validAsset) {
+                continue; // Skip invalid/unauthorized asset types
+            }
+
             $this->db->insert('partner_request_items', [
                 'partner_requests_id' => $requestId,
-                'assetTypes_id' => $item['assetTypes_id'],
-                'quantity' => $item['quantity'],
-                'day_rate' => $item['day_rate'] ?? null,
+                'assetTypes_id' => $assetTypeId,
+                'quantity' => $quantity,
+                'day_rate' => isset($item['day_rate']) ? floatval($item['day_rate']) : null,
             ]);
         }
 

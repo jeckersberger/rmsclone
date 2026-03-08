@@ -1,6 +1,8 @@
 <?php
 require_once 'loginAjaxHead.php';
 require_once __DIR__ . '/../../services/RateLimitService.php';
+require_once __DIR__ . '/../../services/LoginLogService.php';
+require_once __DIR__ . '/../../services/TotpService.php';
 use \Firebase\JWT\JWT;
 if (isset($_POST['formInput']) and isset($_POST['password'])) {
 	$input = trim(strtolower($GLOBALS['bCMS']->sanitizeString($_POST['formInput'])));
@@ -17,7 +19,7 @@ if (isset($_POST['formInput']) and isset($_POST['password'])) {
         if (filter_var($input, FILTER_VALIDATE_EMAIL)) $DBLIB->where ("users_email", $input);
         else $DBLIB->where ("users_username", $input);
         $DBLIB->where("users_password", NULL, "IS NOT"); //To cover oauth users
-        $user = $DBLIB->getOne("users",["users.users_salty1", "users.users_suspended", "users.users_salty2", "users.users_password", "users.users_userid", "users.users_hash"]);
+        $user = $DBLIB->getOne("users",["users.users_salty1", "users.users_suspended", "users.users_salty2", "users.users_password", "users.users_userid", "users.users_hash", "users.users_totpSecret", "users.users_totpEnabled"]);
         if (!$user) $successful = false;
         elseif ($user['users_password'] != hash($user['users_hash'], $user['users_salty1'] . $password . $user['users_salty2'])) $successful = false;
         else $successful = true;
@@ -56,18 +58,45 @@ if (isset($_POST['formInput']) and isset($_POST['password'])) {
             "loginAttempts_successful" => ($successful ? '1' : '0')
         ]);
 
+        // Initialize login log service
+        $loginLog = new LoginLogService($DBLIB);
+        $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+
         if ($bruteforceattempt) {
             $rateLimiter->recordAttempt('login', $clientIp, false);
+            $loginLog->logAttempt($user['users_userid'] ?? null, $clientIp, $userAgent, false, 'brute_force_block');
             finish(false, ["code" => null, "message" => "Sorry - you've tried too many times to login - please try again in 5 minutes"]);
         }
         elseif (!$successful) {
             $rateLimiter->recordAttempt('login', $clientIp, false);
+            $loginLog->logAttempt($user['users_userid'] ?? null, $clientIp, $userAgent, false, 'invalid_credentials');
             finish(false, ["code" => null, "message" => "Username, email or password incorrect"]);
         }
-        elseif ($user['users_suspended'] != '0') finish(false, ["code" => null, "message" => "User account is suspended"]);
+        elseif ($user['users_suspended'] != '0') {
+            $loginLog->logAttempt($user['users_userid'], $clientIp, $userAgent, false, 'account_suspended');
+            finish(false, ["code" => null, "message" => "User account is suspended"]);
+        }
         else {
+            // TOTP-Pruefung: Wenn 2FA aktiviert, muss TOTP-Code mitgesendet werden
+            $totpService = new TotpService($DBLIB);
+            if ($totpService->isTotpEnabled($user['users_userid'])) {
+                $totpCode = trim($_POST['totp_code'] ?? '');
+                if (empty($totpCode)) {
+                    // Kein Code mitgesendet — Frontend soll TOTP-Eingabe anzeigen
+                    finish(false, ["code" => "TOTP_REQUIRED", "message" => "Zwei-Faktor-Code erforderlich"]);
+                }
+                // Versuche TOTP-Code, dann Backup-Code
+                if (!$totpService->verifyCode($user['users_totpSecret'] ?? '', $totpCode)
+                    && !$totpService->verifyBackupCode($user['users_userid'], $totpCode)) {
+                    $loginLog->logAttempt($user['users_userid'], $clientIp, $userAgent, false, 'invalid_totp');
+                    finish(false, ["code" => "TOTP_INVALID", "message" => "Ungueltiger Zwei-Faktor-Code"]);
+                }
+            }
+
             $rateLimiter->recordAttempt('login', $clientIp, true);
             $rateLimiter->resetOnSuccess('login', $clientIp);
+            $loginLog->logAttempt($user['users_userid'], $clientIp, $userAgent, true);
+
             // Session-Regeneration: Neue Session-ID nach Login (verhindert Session-Fixation)
             if (session_status() === PHP_SESSION_ACTIVE) {
                 $returnUrl = $_SESSION['return'] ?? null;

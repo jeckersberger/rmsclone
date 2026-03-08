@@ -23,7 +23,8 @@ $DBLIB->join("manufacturers", "manufacturers.manufacturers_id=assetTypes.manufac
 $DBLIB->join("assetCategories", "assetCategories.assetCategories_id=assetTypes.assetCategories_id", "LEFT");
 $DBLIB->join("assetCategoriesGroups", "assetCategoriesGroups.assetCategoriesGroups_id=assetCategories.assetCategoriesGroups_id", "LEFT");
 if (isset($_POST['term'])) {
-    $term = $bCMS->sanitizeStringMYSQL($_POST['term']);
+    $sqlSan = new SqlSanitizer();
+    $term = $sqlSan->sanitizeSearch($_POST['term']);
     $DBLIB->where("(assetTypes_description LIKE ? OR assetTypes_name LIKE ?)", ['%' . $term . '%', '%' . $term . '%']);
 } else $DBLIB->orderBy("assetTypes_name", "ASC");
 $assets = $DBLIB->get("assetTypes", 15, ["assetTypes_name", "assetTypes_id", "assetCategories_name", "assetCategoriesGroups_name", "manufacturers.manufacturers_name"]);

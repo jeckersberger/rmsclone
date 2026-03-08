@@ -40,10 +40,35 @@ if ($_FILES['file']['size'] > 67108864) {
     finish(false, ["code" => null, "message" => "File too large (max 64MB)"]);
 }
 
+// Enhanced security: MIME type validation using finfo (not user-supplied type)
+$finfo = new finfo(FILEINFO_MIME_TYPE);
+$detectedMime = $finfo->file($_FILES['file']['tmp_name']);
+
+// Block executable MIME types
+$blockedMimes = ['application/x-httpd-php', 'application/x-php', 'text/x-php', 'application/x-executable', 'application/x-sharedlib'];
+if (in_array($detectedMime, $blockedMimes, true)) {
+    finish(false, ["code" => null, "message" => "File type not allowed"]);
+}
+
+// Check for embedded PHP code (web shell prevention)
+$tempContent = file_get_contents($_FILES['file']['tmp_name'], false, null, 0, 8192);
+if ($tempContent !== false && preg_match('/<\?php|<\?=/i', $tempContent)) {
+    finish(false, ["code" => null, "message" => "File contains potentially dangerous code"]);
+}
+
+// Virus scan with ClamAV (if available)
+require_once __DIR__ . '/../../services/VirusScanService.php';
+$virusScanner = new VirusScanService();
+$scanResult = $virusScanner->scan($_FILES['file']['tmp_name']);
+if (!$scanResult['clean']) {
+    finish(false, ["code" => null, "message" => "File rejected: virus detected (" . ($scanResult['threat'] ?? 'unknown') . ")"]);
+}
+
 $storagePath = "uploads/" . $type;
 $filename = time() . "-" . mt_rand(1000000000, 9999999999) . "." . $extension;
 
-$storageRoot = getenv('LOCAL_STORAGE_PATH') ?: '/var/www/html/storage';
+// Store uploads outside webroot for security
+$storageRoot = getenv('LOCAL_STORAGE_PATH') ?: '/data/uploads';
 $fullDir = $storageRoot . "/" . $storagePath;
 $fullPath = $fullDir . "/" . $filename;
 
