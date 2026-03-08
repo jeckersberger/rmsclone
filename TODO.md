@@ -462,4 +462,28 @@
 
 ---
 
-*Zuletzt aktualisiert: 08.03.2026 — 280/280 (100%) Kern-Features komplett. UI-Integration der erweiterten KI-Features offen.*
+## Neue Features (geplant)
+
+### KI-Chat (Programmsteuerung per natürlicher Sprache)
+- [x] DB-Migration für Chat-Tabellen (`ai_chat_conversations`, `ai_chat_messages`) — `db/migrations/20260308960000_ai_chat.php`
+- [x] Feature-Toggle `instances_aiFeatureChat` — `20260308960000_ai_chat.php`
+- [x] ChatService mit Claude Tool-Use / Function-Calling — `src/services/ChatService.php`
+  - Tools: search_projects, check_availability, search_clients, get_overdue_returns, get_project_details, create_project, search_assets, get_dashboard_stats, get_upcoming_projects
+- [ ] Chat API-Endpoint (`/api/ai/chat.php`) — Senden, Historie, Konversationen
+- [ ] Chat Frontend-UI — Floating Chat-Widget (Bottom-Right), Nachrichten-Historie, Markdown-Rendering
+- [ ] Chat in AI-Settings-Seite als Feature-Toggle einbauen
+- [ ] Weitere Tools hinzufügen: Rechnung erstellen, E-Mail senden, Mahnung auslösen, Equipment zuweisen
+- [ ] Chat-Konversationen exportieren / archivieren
+
+### Verleih-Workflow Verbesserungen
+- [ ] Überfällige Rückgaben Dashboard — eigene Seite mit Filterung, Kunden-Kontakt, Erinnerungs-Versand
+- [ ] Überfällige Rückgaben API-Endpoint (`/api/availability/overdueReturns.php`)
+- [ ] Verfügbarkeits-Kalender erweitern — Resource-Timeline-View (FullCalendar Scheduler)
+- [ ] Automatische Konfliktwarnungen beim Zuweisen von Equipment
+- [ ] Check-in/Check-out Verbesserungen — Foto-Upload bei Rückgabe, Schadensvergleich vorher/nachher
+- [ ] Dashboard-Widget für überfällige Rückgaben
+- [ ] E-Mail-Erinnerungen bei überfälligen Rückgaben (Cron-Job)
+
+---
+
+*Zuletzt aktualisiert: 08.03.2026 — 280/280 (100%) Kern-Features komplett. KI-Chat + Verleih-Workflow in Arbeit.*

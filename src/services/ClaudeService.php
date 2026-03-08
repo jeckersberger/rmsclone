@@ -40,6 +40,7 @@ class ClaudeService
         'predict_maintenance' => 'instances_aiFeaturePredictMaintenance',
         'crew_optimize'     => 'instances_aiFeatureCrewOptimize',
         'duplicate_detect'  => 'instances_aiFeatureDuplicateDetect',
+        'chat'              => 'instances_aiFeatureChat',
     ];
 
     // Cost per 1M tokens (USD) - Haiku 4.5
