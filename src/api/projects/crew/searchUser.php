@@ -36,9 +36,11 @@ else {
             $DBLIB->join("projects", "crewAssignments.projects_id=projects.projects_id", "LEFT");
             $DBLIB->join("projectsStatuses", "projects.projectsStatuses_id=projectsStatuses.projectsStatuses_id", "LEFT");
             $DBLIB->where("projects.projects_deleted", 0);
-            $DBLIB->where("(crewAssignments.projects_id != " . $project['projects_id'] . ")");
+            $DBLIB->where("crewAssignments.projects_id != ?", [intval($project['projects_id'])]);
             $DBLIB->where("projectsStatuses.projectsStatuses_assetsReleased", 0);
-            $DBLIB->where("((projects_dates_use_start >= '" . $project["projects_dates_use_start"] . "' AND projects_dates_use_start <= '" . $project["projects_dates_use_end"] . "') OR (projects_dates_use_end >= '" . $project["projects_dates_use_start"] . "' AND projects_dates_use_end <= '" . $project["projects_dates_use_end"] . "') OR (projects_dates_use_end >= '" . $project["projects_dates_use_end"] . "' AND projects_dates_use_start <= '" . $project["projects_dates_use_start"] . "'))");
+            $pStart = $project["projects_dates_use_start"];
+            $pEnd = $project["projects_dates_use_end"];
+            $DBLIB->where("((projects_dates_use_start >= ? AND projects_dates_use_start <= ?) OR (projects_dates_use_end >= ? AND projects_dates_use_end <= ?) OR (projects_dates_use_end >= ? AND projects_dates_use_start <= ?))", [$pStart, $pEnd, $pStart, $pEnd, $pEnd, $pStart]);
             $existingAssignments = $DBLIB->get("crewAssignments", null, ["projects.projects_name"]);
             $user['clashes'] = [];
             foreach ($existingAssignments as $assignment) {

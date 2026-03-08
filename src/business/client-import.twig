@@ -1,0 +1,435 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+
+{# ══════════════════════════════════════════════════════════ #}
+{#  TAB-NAVIGATION                                           #}
+{# ══════════════════════════════════════════════════════════ #}
+<div class="row">
+    <div class="col-12">
+        <div class="card card-primary card-outline card-tabs">
+            <div class="card-header p-0 pt-1">
+                <ul class="nav nav-tabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-toggle="tab" href="#tabImport">
+                            <i class="fas fa-file-upload"></i> Import
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-toggle="tab" href="#tabHistory">
+                            <i class="fas fa-history"></i> Import-Verlauf
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="tab-content">
+
+{# ══════════════════════════════════════════════════════════ #}
+{#  TAB 1: IMPORT                                            #}
+{# ══════════════════════════════════════════════════════════ #}
+<div class="tab-pane active" id="tabImport">
+
+    {# --- Schritt 1: Datei hochladen --- #}
+    <div class="card" id="step1">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-upload"></i> Schritt 1: CSV-Datei hochladen</h3>
+        </div>
+        <div class="card-body">
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label>CSV-Datei auswaehlen</label>
+                    <div class="input-group">
+                        <div class="custom-file">
+                            <input type="file" class="custom-file-input" id="importFile" name="file" accept=".csv,.txt,.xls,.xlsx">
+                            <label class="custom-file-label" for="importFile">Datei auswaehlen...</label>
+                        </div>
+                    </div>
+                    <small class="form-text text-muted">Unterstuetzte Formate: CSV, TXT (Semikolon-getrennt)</small>
+                </div>
+                <div class="form-group">
+                    <label>Trennzeichen</label>
+                    <select class="form-control" id="delimiter" name="delimiter" style="width: 200px;">
+                        <option value=";" selected>Semikolon (;)</option>
+                        <option value=",">Komma (,)</option>
+                        <option value="&#9;">Tabulator</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary" id="uploadBtn">
+                    <i class="fas fa-upload"></i> Hochladen und Vorschau
+                </button>
+            </form>
+        </div>
+    </div>
+
+    {# --- Schritt 2: Spalten-Mapping --- #}
+    <div class="card" id="step2" style="display:none;">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-columns"></i> Schritt 2: Spalten zuordnen</h3>
+        </div>
+        <div class="card-body">
+            <p>Datei: <strong id="uploadedFilename"></strong> (<span id="totalRows"></span> Datensaetze)</p>
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>CSV-Spalte</th>
+                            <th>Zielfeld</th>
+                            <th>Vorschau</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mappingTable"></tbody>
+                </table>
+            </div>
+            <div class="custom-control custom-checkbox mt-3">
+                <input type="checkbox" class="custom-control-input" id="skipDuplicates" checked>
+                <label class="custom-control-label" for="skipDuplicates">Duplikate ueberspringen (gleicher Name+E-Mail oder Kundennummer)</label>
+            </div>
+            <div class="mt-3">
+                <button type="button" class="btn btn-secondary" id="backToStep1">
+                    <i class="fas fa-arrow-left"></i> Zurueck
+                </button>
+                <button type="button" class="btn btn-primary" id="showPreviewBtn">
+                    <i class="fas fa-eye"></i> Vorschau anzeigen
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {# --- Schritt 3: Vorschau --- #}
+    <div class="card" id="step3" style="display:none;">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-eye"></i> Schritt 3: Vorschau</h3>
+        </div>
+        <div class="card-body">
+            <p>So werden die ersten Datensaetze importiert:</p>
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm">
+                    <thead class="thead-light" id="previewHeader"></thead>
+                    <tbody id="previewBody"></tbody>
+                </table>
+            </div>
+            <div class="mt-3">
+                <button type="button" class="btn btn-secondary" id="backToStep2">
+                    <i class="fas fa-arrow-left"></i> Zurueck
+                </button>
+                <button type="button" class="btn btn-success" id="executeImportBtn">
+                    <i class="fas fa-file-import"></i> Import starten
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {# --- Schritt 4: Ergebnis --- #}
+    <div class="card" id="step4" style="display:none;">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-check-circle"></i> Schritt 4: Import-Ergebnis</h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="info-box bg-success">
+                        <span class="info-box-icon"><i class="fas fa-check"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">Importiert</span>
+                            <span class="info-box-number" id="resultImported">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-box bg-warning">
+                        <span class="info-box-icon"><i class="fas fa-forward"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">Uebersprungen</span>
+                            <span class="info-box-number" id="resultSkipped">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-box bg-danger">
+                        <span class="info-box-icon"><i class="fas fa-exclamation-triangle"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">Fehler</span>
+                            <span class="info-box-number" id="resultErrors">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="errorDetails" style="display:none;">
+                <h5>Fehlerdetails:</h5>
+                <ul id="errorList" class="list-group"></ul>
+            </div>
+            <div class="mt-3">
+                <a href="{{ CONFIG.ROOTURL }}/clients/" class="btn btn-primary">
+                    <i class="fas fa-users"></i> Zur Kundenliste
+                </a>
+                <button type="button" class="btn btn-secondary" id="newImportBtn">
+                    <i class="fas fa-redo"></i> Neuen Import starten
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{# ══════════════════════════════════════════════════════════ #}
+{#  TAB 2: IMPORT-VERLAUF                                    #}
+{# ══════════════════════════════════════════════════════════ #}
+<div class="tab-pane" id="tabHistory">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-history"></i> Import-Verlauf</h3>
+        </div>
+        <div class="card-body table-responsive p-0">
+            {% if importLog|length > 0 %}
+            <table class="table table-striped table-sm">
+                <thead>
+                    <tr>
+                        <th>Datum</th>
+                        <th>Datei</th>
+                        <th>Gesamt</th>
+                        <th>Importiert</th>
+                        <th>Uebersprungen</th>
+                        <th>Fehler</th>
+                        <th>Benutzer</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in importLog %}
+                    <tr>
+                        <td>{{ entry.imported_at|date('d.m.Y H:i') }}</td>
+                        <td>{{ entry.filename }}</td>
+                        <td>{{ entry.records_total }}</td>
+                        <td><span class="badge badge-success">{{ entry.records_imported }}</span></td>
+                        <td><span class="badge badge-warning">{{ entry.records_skipped }}</span></td>
+                        <td>
+                            {% set errorCount = 0 %}
+                            {% if entry.errors %}
+                                {% set errorData = entry.errors|json_decode %}
+                                {% if errorData is iterable %}
+                                    {% set errorCount = errorData|length %}
+                                {% endif %}
+                            {% endif %}
+                            {% if errorCount > 0 %}
+                                <span class="badge badge-danger">{{ errorCount }}</span>
+                            {% else %}
+                                <span class="badge badge-success">0</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ entry.users_name1 }} {{ entry.users_name2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+                <p class="text-center text-muted p-3"><i>Noch keine Imports durchgefuehrt</i></p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+</div>{# /tab-content #}
+
+<script>
+$(document).ready(function() {
+    var uploadData = null;
+
+    // Dateiname im Label anzeigen
+    $('#importFile').on('change', function() {
+        var fileName = $(this).val().split('\\').pop();
+        $(this).next('.custom-file-label').html(fileName || 'Datei auswaehlen...');
+    });
+
+    // Schritt 1: Upload
+    $('#uploadForm').on('submit', function(e) {
+        e.preventDefault();
+        var formData = new FormData();
+        var fileInput = $('#importFile')[0];
+        if (!fileInput.files.length) {
+            bootbox.alert('Bitte waehlen Sie eine Datei aus.');
+            return;
+        }
+        formData.append('file', fileInput.files[0]);
+        formData.append('delimiter', $('#delimiter').val());
+
+        var csrfMeta = $('meta[name="csrf-token"]');
+        if (csrfMeta.length) {
+            formData.append('csrf_token', csrfMeta.attr('content'));
+        }
+
+        $('#uploadBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Wird hochgeladen...');
+
+        $.ajax({
+            url: '{{ CONFIG.ROOTURL }}/api/clients/importUpload.php',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            dataType: 'json',
+            success: function(response) {
+                $('#uploadBtn').prop('disabled', false).html('<i class="fas fa-upload"></i> Hochladen und Vorschau');
+                if (response.result) {
+                    uploadData = response.response;
+                    showStep2(uploadData);
+                } else {
+                    bootbox.alert('Fehler: ' + (response.error ? response.error.message : 'Unbekannter Fehler'));
+                }
+            },
+            error: function() {
+                $('#uploadBtn').prop('disabled', false).html('<i class="fas fa-upload"></i> Hochladen und Vorschau');
+                bootbox.alert('Verbindungsfehler beim Upload.');
+            }
+        });
+    });
+
+    // Schritt 2: Mapping anzeigen
+    function showStep2(data) {
+        $('#step1').hide();
+        $('#step2').show();
+        $('#uploadedFilename').text(data.filename);
+        $('#totalRows').text(data.total_rows);
+
+        var tbody = $('#mappingTable');
+        tbody.empty();
+
+        var targetFields = data.target_fields;
+        var autoMapping = data.auto_mapping || {};
+
+        $.each(data.headers, function(index, header) {
+            var select = '<select class="form-control form-control-sm mapping-select" data-index="' + index + '">';
+            select += '<option value="">-- Nicht importieren --</option>';
+            $.each(targetFields, function(label, dbField) {
+                var selected = (autoMapping[index] === dbField) ? ' selected' : '';
+                select += '<option value="' + dbField + '"' + selected + '>' + label + '</option>';
+            });
+            select += '</select>';
+
+            var preview = '';
+            if (data.preview && data.preview.length > 0) {
+                var values = [];
+                for (var i = 0; i < Math.min(3, data.preview.length); i++) {
+                    if (data.preview[i][index]) {
+                        values.push(data.preview[i][index]);
+                    }
+                }
+                preview = '<small class="text-muted">' + values.join(', ') + '</small>';
+            }
+
+            tbody.append('<tr><td><strong>' + header + '</strong></td><td>' + select + '</td><td>' + preview + '</td></tr>');
+        });
+    }
+
+    // Zurueck zu Schritt 1
+    $('#backToStep1').click(function() {
+        $('#step2').hide();
+        $('#step1').show();
+    });
+
+    // Schritt 3: Vorschau
+    $('#showPreviewBtn').click(function() {
+        if (!uploadData) return;
+
+        var mapping = {};
+        var hasMapping = false;
+        $('.mapping-select').each(function() {
+            var val = $(this).val();
+            if (val) {
+                mapping[$(this).data('index')] = val;
+                hasMapping = true;
+            }
+        });
+
+        if (!hasMapping) {
+            bootbox.alert('Bitte ordnen Sie mindestens eine Spalte zu.');
+            return;
+        }
+
+        // Vorschau-Tabelle aufbauen
+        var headerRow = '<tr>';
+        var fieldLabels = {};
+        $.each(uploadData.target_fields, function(label, dbField) {
+            fieldLabels[dbField] = label;
+        });
+
+        $.each(mapping, function(csvIndex, dbField) {
+            headerRow += '<th>' + (fieldLabels[dbField] || dbField) + '</th>';
+        });
+        headerRow += '</tr>';
+        $('#previewHeader').html(headerRow);
+
+        var tbody = $('#previewBody');
+        tbody.empty();
+        if (uploadData.preview) {
+            $.each(uploadData.preview, function(i, row) {
+                var tr = '<tr>';
+                $.each(mapping, function(csvIndex, dbField) {
+                    tr += '<td>' + (row[csvIndex] || '') + '</td>';
+                });
+                tr += '</tr>';
+                tbody.append(tr);
+            });
+        }
+
+        $('#step2').hide();
+        $('#step3').show();
+    });
+
+    // Zurueck zu Schritt 2
+    $('#backToStep2').click(function() {
+        $('#step3').hide();
+        $('#step2').show();
+    });
+
+    // Schritt 4: Import ausfuehren
+    $('#executeImportBtn').click(function() {
+        var mapping = {};
+        $('.mapping-select').each(function() {
+            var val = $(this).val();
+            if (val) {
+                mapping[$(this).data('index')] = val;
+            }
+        });
+
+        var skipDuplicates = $('#skipDuplicates').is(':checked') ? 1 : 0;
+
+        $('#executeImportBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Import laeuft...');
+
+        ajaxcall('clients/importExecute.php', {
+            mapping: JSON.stringify(mapping),
+            skip_duplicates: skipDuplicates
+        }, function(data) {
+            $('#executeImportBtn').prop('disabled', false).html('<i class="fas fa-file-import"></i> Import starten');
+            $('#step3').hide();
+            $('#step4').show();
+
+            $('#resultImported').text(data.imported);
+            $('#resultSkipped').text(data.skipped);
+            $('#resultErrors').text(data.errors ? data.errors.length : 0);
+
+            if (data.errors && data.errors.length > 0) {
+                $('#errorDetails').show();
+                var list = $('#errorList');
+                list.empty();
+                $.each(data.errors, function(i, err) {
+                    list.append('<li class="list-group-item list-group-item-danger">' + err + '</li>');
+                });
+            } else {
+                $('#errorDetails').hide();
+            }
+        });
+    });
+
+    // Neuer Import
+    $('#newImportBtn').click(function() {
+        uploadData = null;
+        $('#step4').hide();
+        $('#step1').show();
+        $('#uploadForm')[0].reset();
+        $('.custom-file-label').html('Datei auswaehlen...');
+    });
+});
+</script>
+
+{% endblock %}

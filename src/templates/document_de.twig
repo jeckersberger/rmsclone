@@ -347,6 +347,21 @@
   </div>
   {% endif %}
 
+  {# ══════ GIROCODE / EPC-QR-CODE (nur Rechnungen) ══════ #}
+  {% if doc.type == 'invoice' and giro_code %}
+  <div style="display: table; width: 100%; margin-bottom: 4mm;">
+    <div style="display: table-cell; width: 65%; vertical-align: middle;">
+    </div>
+    <div style="display: table-cell; width: 35%; vertical-align: top; text-align: right;">
+      <div style="border: 0.5pt solid #ddd; border-radius: 2mm; padding: 3mm; display: inline-block; text-align: center;">
+        <img src="{{ giro_code }}" alt="GiroCode" style="width: 35mm; height: 35mm;">
+        <div style="font-size: 8pt; font-weight: bold; color: #2c3e50; margin-top: 1.5mm;">Zahlung per QR-Code</div>
+        <div style="font-size: 6.5pt; color: #888; margin-top: 0.5mm;">Scannen Sie diesen Code mit Ihrer Banking-App</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   {# ══════ NOTIZEN ══════ #}
   {% if project.projects_invoiceNotes and doc.type == 'invoice' %}
   <div class="notes">

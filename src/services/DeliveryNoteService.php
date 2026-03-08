@@ -1,4 +1,7 @@
 <?php
+
+require_once __DIR__ . '/QrCodeGenerator.php';
+
 /**
  * Lieferschein-Service mit Unterschriftsfeld
  *
@@ -6,7 +9,7 @@
  * - Kundendaten (Name, Adresse)
  * - Equipment-Liste mit Zustand
  * - Unterschriftsfelder (Ausgabe + Rueckgabe)
- * - QR-Code fuer digitale Verknuepfung
+ * - QR-Code fuer digitale Verknuepfung (Packauftrag)
  */
 class DeliveryNoteService
 {
