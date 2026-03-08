@@ -5,7 +5,7 @@
  * Loescht DSGVO-Exports, PDF-Previews und andere temporaere Dateien
  * die aelter als 1 Stunde sind.
  *
- * Crontab: */15 * * * * php /path/to/src/cron/cleanup-temp-exports.php
+ * Crontab: every 15 min - php /path/to/src/cron/cleanup-temp-exports.php
  */
 
 $tempDirs = [

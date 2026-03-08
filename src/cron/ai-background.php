@@ -3,7 +3,7 @@
  * Cron-Job: KI-Hintergrund-Automatisierung
  *
  * Aufruf: php src/cron/ai-background.php
- * Empfohlener Crontab-Eintrag: */10 * * * * php /path/to/src/cron/ai-background.php >> /var/log/adamrms-cron.log 2>&1
+ * Empfohlener Crontab-Eintrag: every 10 min - php /path/to/src/cron/ai-background.php >> /var/log/adamrms-cron.log 2>&1
  *
  * REGELN:
  *   - Eingehend (Mails einsortieren, Kategorisieren) = automatisch, ohne Bestaetigung

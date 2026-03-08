@@ -97,5 +97,5 @@ switch ($event->type) {
     break;
   default:
     // Unexpected event type
-    continue;
+    break;
 }

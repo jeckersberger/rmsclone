@@ -3,7 +3,7 @@
  * Cron-Job: Automatischer Rechnungsversand per E-Mail
  *
  * Aufruf: php src/cron/auto-invoice-email.php
- * Empfohlener Crontab-Eintrag: */5 * * * * php /path/to/src/cron/auto-invoice-email.php >> /var/log/adamrms-cron.log 2>&1
+ * Empfohlener Crontab-Eintrag: every 5 min - php /path/to/src/cron/auto-invoice-email.php >> /var/log/adamrms-cron.log 2>&1
  *
  * Funktionen:
  *   1. Sucht Dokumente in document_lifecycle mit auto_send_email = 1 und status = 'draft'

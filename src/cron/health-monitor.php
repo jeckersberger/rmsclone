@@ -13,7 +13,7 @@
  *   php src/cron/health-monitor.php
  *
  * Recommended crontab entry (every 15 minutes):
- *   */15 * * * * php /path/to/src/cron/health-monitor.php >> /var/log/adamrms-health.log 2>&1
+ *   every 15 min - php /path/to/src/cron/health-monitor.php >> /var/log/adamrms-health.log 2>&1
  */
 if (php_sapi_name() !== 'cli') {
     http_response_code(403);
