@@ -85,7 +85,7 @@ class ProfitCalculationService
     {
         $this->db->where('instances_id', $instanceId);
         $this->db->where('projects_deleted', 0);
-        $this->db->where("(projects_dates_use_start >= '$dateFrom' AND projects_dates_use_start <= '$dateTo')");
+        $this->db->where("(projects_dates_use_start >= ? AND projects_dates_use_start <= ?)", [$dateFrom, $dateTo]);
         $projects = $this->db->get('projects', null, ['projects_id', 'projects_name']);
 
         $totals = ['revenue' => 0, 'costs' => 0, 'profit' => 0];
@@ -326,7 +326,7 @@ class ProfitCalculationService
             $this->db->where('instances_id', $instanceId);
             $this->db->where('projects_deleted', 0);
             $this->db->where('projects_archived', 0);
-            $this->db->where("(projects_dates_use_start >= '$monthStart' AND projects_dates_use_start <= '$monthEnd')");
+            $this->db->where("(projects_dates_use_start >= ? AND projects_dates_use_start <= ?)", [$monthStart, $monthEnd]);
             $projects = $this->db->get('projects', null, ['projects_id']);
 
             $monthRevenue = 0;

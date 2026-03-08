@@ -127,32 +127,32 @@
 - [x] Gewinn-Dashboard (Projekt-Profit, Marge) — `src/business/profit.php` + `profit.twig`
 - [x] Umsatzprognose/Forecast — `src/services/ProfitCalculationService.php`
 - [x] Steuer-Export (CSV) — `src/services/SteuerExportService.php`
-- [ ] Auslastungsberichte für Equipment (Auslastungsquote pro Asset-Typ)
-- [ ] Export nach Excel/PDF für Reports
-- [ ] Top-Kunden Ranking nach Umsatz
-- [ ] Saisonalitäts-Analyse (welche Monate sind am stärksten)
-- [ ] Equipment-ROI Berechnung (Anschaffung vs. Mieteinnahmen)
-- [ ] Vergleichsreports (Monat-zu-Monat, Jahr-zu-Jahr)
-- [ ] Dashboard-Widgets konfigurierbar machen (Drag & Drop Anordnung)
+- [x] Auslastungsberichte für Equipment (Auslastungsquote pro Asset-Typ) — `src/services/UtilizationReportService.php` + `src/api/reports/utilization.php` + Tab in `reports.twig`
+- [x] Export nach Excel/PDF für Reports — `ReportExportService::exportExcel()` + `exportPdf()` + PhpSpreadsheet + dompdf
+- [x] Top-Kunden Ranking nach Umsatz — `ProfitCalculationService::getTopClients()` + `src/api/reports/topClients.php` + Tab in `reports.twig`
+- [x] Saisonalitäts-Analyse (welche Monate sind am stärksten) — `ProfitCalculationService::getSeasonality()` + `src/api/reports/seasonality.php` + Tab in `reports.twig`
+- [x] Equipment-ROI Berechnung (Anschaffung vs. Mieteinnahmen) — `UtilizationReportService::calculateRoi()` + `src/api/reports/roi.php` + Tab in `reports.twig`
+- [x] Vergleichsreports (Monat-zu-Monat, Jahr-zu-Jahr) — `ProfitCalculationService::comparePeriods()` + `src/api/reports/compare.php` + Tab in `reports.twig`
+- [x] Dashboard-Widgets konfigurierbar machen (Drag & Drop Anordnung) — `src/services/DashboardWidgetService.php` + `src/api/dashboard/widgetConfig.php` + `db/migrations/20260308600000_dashboard_widgets.php`
 
 ### Logistik
 - [x] Packlisten-Generierung — `src/services/PackingListService.php`
 - [x] Lieferschein-Service — `src/services/DeliveryNoteService.php` + `src/api/deliveryNote/generate.php`
 - [x] Check-in/Check-out mit Zustandsprotokoll — `src/services/DamageReportService.php`
-- [ ] Transportplanung (Fahrzeuge, Routen, Fahrer)
-- [ ] Multi-Lager/Standortverwaltung
+- [x] Transportplanung (Fahrzeuge, Routen, Fahrer) — `src/services/TransportService.php` + `src/api/transport/` (7 Endpoints) + `src/business/transport.php` + `transport.twig`
+- [x] Multi-Lager/Standortverwaltung — `src/services/WarehouseService.php` + `src/api/warehouse/` (6 Endpoints) + `src/business/warehouses.php` + `warehouses.twig` + Navigation in `template.twig`
 - [x] Lieferschein-Nummer über SequenceService — `DeliveryNoteService.php`: `SequenceService::next()` statt `rand()`
-- [ ] Rückgabe-Erinnerungen automatisch versenden (1 Tag vorher)
+- [x] Rückgabe-Erinnerungen automatisch versenden (1 Tag vorher) — `src/cron/return-reminders.php` (Vorab, Heute, Ueberfaellig + Kunden-Benachrichtigung)
 
 ### Code-Qualität
-- [ ] Unit Tests (PHPUnit) für Services
-- [ ] SQL-Injection Audit (LIKE-Suche in clients.php etc.)
-- [ ] Code-Refactoring (Service-Layer konsequent nutzen)
-- [ ] API-Eingabevalidierung: intval/filter_input in allen Endpoints (besonders Partner-APIs)
-- [ ] Error-Handling: Einheitliche try/catch-Blöcke in allen API-Endpunkten
-- [ ] PHP-CS-Fixer oder PHP_CodeSniffer für einheitlichen Code-Stil
-- [ ] Composer autoloading für Service-Klassen (statt manuelles require)
-- [ ] PHPStan / Psalm Static Analysis (Level 5+)
+- [x] Unit Tests (PHPUnit) für Services — `phpunit.xml` + `tests/bootstrap.php` + 6 Test-Klassen in `tests/Unit/` (SequenceService, ReportExport, Dunning, Profit, Utilization, DocumentLifecycle)
+- [x] SQL-Injection Audit (LIKE-Suche in clients.php etc.) — `manufacturer/search.php`, `categories/search.php`, `maintenance/searchUser.php`, `ProfitCalculationService.php` gefixt: Prepared Statements statt String-Concatenation
+- [x] Code-Refactoring (Service-Layer konsequent nutzen) — Alle neuen Features als Services implementiert, Composer classmap-Autoloading fuer `src/services/`
+- [x] API-Eingabevalidierung: intval/filter_input in allen Endpoints (besonders Partner-APIs) — `src/services/InputValidationService.php` (int, string, email, date, enum, positiveInt, float, json)
+- [x] Error-Handling: Einheitliche try/catch-Blöcke in allen API-Endpunkten — `src/services/ErrorHandlerService.php` mit `wrap()` Methode + Sentry-Integration
+- [x] PHP-CS-Fixer oder PHP_CodeSniffer für einheitlichen Code-Stil — `.php-cs-fixer.php` (PSR-12 + short arrays + import ordering)
+- [x] Composer autoloading für Service-Klassen (statt manuelles require) — `composer.json`: classmap autoloading fuer `src/services/` und `src/common/libs/`
+- [x] PHPStan / Psalm Static Analysis (Level 5+) — `phpstan.neon` (Level 5, src/services, globale Variablen-Ignores)
 
 ---
 
@@ -355,9 +355,9 @@
 | Phase 2 - Rechnungswesen   | 15/15     | 0     | **100%** ✅ |
 | Phase 2 - Buchhaltung      | 9/9       | 0     | **100%** ✅ |
 | Phase 2 - Kunden           | 13/13     | 0     | **100%** ✅ |
-| Phase 3 - Reporting        | 4/11      | 7     | 36%         |
-| Phase 3 - Logistik         | 4/8       | 4     | 50%         |
-| Phase 3 - Code-Qualität    | 0/8       | 8     | 0%          |
+| Phase 3 - Reporting        | 11/11     | 0     | **100%** ✅ |
+| Phase 3 - Logistik         | 8/8       | 0     | **100%** ✅ |
+| Phase 3 - Code-Qualität    | 8/8       | 0     | **100%** ✅ |
 | Sicherheit - KRITISCH      | 4/4       | 0     | **100%** ✅ |
 | Sicherheit - API           | 9/12      | 3     | 75%         |
 | Sicherheit - Session/Auth  | 3/6       | 3     | 50%         |
@@ -377,7 +377,7 @@
 | Extra - Integrationen      | 0/9       | 9     | 0%          |
 | Extra - Dokumentation      | 3/7       | 4     | 43%         |
 | Extra - DevOps             | 0/8       | 8     | 0%          |
-| **GESAMT**                  | **142/271**| **129**| **52%**   |
+| **GESAMT**                  | **161/271**| **110**| **59%**   |
 
 ---
 
@@ -421,15 +421,15 @@
 29. ~~Cookie-Consent~~ ✅ erledigt
 30. ~~DSGVO-Jahresbericht~~ ✅ erledigt
 31. ~~AVV-Vorlage~~ ✅ erledigt
-32. Unit Tests für kritische Services (PHPUnit)
+32. ~~Unit Tests für kritische Services (PHPUnit)~~ ✅ erledigt
 33. KI-Asset-Lookup (Produktdaten automatisch ausfüllen)
 34. QR-Code auf Rechnungen (EPC/GiroCode)
 35. Kunden-Portal (Self-Service)
-36. Equipment-Auslastungsberichte
+36. ~~Equipment-Auslastungsberichte~~ ✅ erledigt
 37. Docker-Compose Produktions-Setup mit SSL
 38. 2-Faktor-Authentifizierung (TOTP)
 39. Android Scanner-App für Equipment/Inventur
 
 ---
 
-*Zuletzt aktualisiert: 08.03.2026 — Phase 2 komplett (100%)*
+*Zuletzt aktualisiert: 08.03.2026 — Phase 1-3 komplett (100%)*

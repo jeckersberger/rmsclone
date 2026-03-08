@@ -2,35 +2,28 @@
 require_once __DIR__ . '/../apiHeadSecure.php';
 require_once __DIR__ . '/../../services/TransportService.php';
 
-if (!$AUTH->instancePermissionCheck("PROJECTS:VIEW")) die("404");
+if (!$AUTH->instancePermissionCheck("PROJECTS:VIEW")) finish(false, ["message" => "Permission denied"]);
 
-if (empty($_POST['planned_date'])) finish(false, ["message" => "Datum ist erforderlich"]);
+$plannedDate = filter_input(INPUT_POST, 'planned_date', FILTER_SANITIZE_SPECIAL_CHARS);
+if (!$plannedDate) finish(false, ["message" => "planned_date required"]);
 
-$service = new TransportService($DBLIB);
-$instanceId = $AUTH->data['instance']['instances_id'];
+try {
+    $data = [
+        'projects_id' => intval($_POST['projects_id'] ?? 0) ?: null,
+        'from_warehouse_id' => intval($_POST['from_warehouse_id'] ?? 0) ?: null,
+        'to_warehouse_id' => intval($_POST['to_warehouse_id'] ?? 0) ?: null,
+        'to_address' => $_POST['to_address'] ?? null,
+        'driver_name' => $_POST['driver_name'] ?? null,
+        'vehicle' => $_POST['vehicle'] ?? null,
+        'planned_date' => $plannedDate,
+        'planned_time' => $_POST['planned_time'] ?? null,
+        'notes' => $_POST['notes'] ?? null,
+    ];
 
-$id = $service->createPlan($instanceId, [
-    'projects_id' => $_POST['projects_id'] ?? null,
-    'from_warehouse_id' => $_POST['from_warehouse_id'] ?? null,
-    'to_warehouse_id' => $_POST['to_warehouse_id'] ?? null,
-    'to_address' => $_POST['to_address'] ?? null,
-    'driver_name' => $_POST['driver_name'] ?? null,
-    'vehicle' => $_POST['vehicle'] ?? null,
-    'planned_date' => $_POST['planned_date'],
-    'planned_time' => $_POST['planned_time'] ?? null,
-    'notes' => $_POST['notes'] ?? null,
-]);
+    $service = new TransportService($DBLIB);
+    $id = $service->createPlan($AUTH->data['instance']['instances_id'], $data);
 
-if (!$id) finish(false, ["message" => "Transportplan konnte nicht erstellt werden"]);
-
-// Positionen hinzufuegen, falls uebergeben
-if (!empty($_POST['items']) && is_array($_POST['items'])) {
-    foreach ($_POST['items'] as $item) {
-        if (!empty($item['assetTypes_id']) && !empty($item['quantity'])) {
-            $service->addItem($id, (int) $item['assetTypes_id'], (int) $item['quantity']);
-        }
-    }
+    finish($id > 0, $id > 0 ? null : ["message" => "Transportplan konnte nicht erstellt werden"], ['id' => $id]);
+} catch (Exception $e) {
+    finish(false, ["message" => "Fehler beim Erstellen: " . $e->getMessage()]);
 }
-
-$bCMS->auditLog("CREATE", "transport_plans", "Transportplan erstellt (ID: {$id})", $AUTH->data['users_userid']);
-finish(true, ["id" => $id]);

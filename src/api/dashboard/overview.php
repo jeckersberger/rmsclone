@@ -5,6 +5,7 @@
  * unpaid invoices, projects without invoices, and upcoming 7-day schedule.
  */
 require_once __DIR__ . '/../apiHeadSecure.php';
+require_once __DIR__ . '/../../services/DashboardWidgetService.php';
 
 if (!$AUTH->instancePermissionCheck("PROJECTS:VIEW")) finish(false, ["code" => "PERMISSIONS"]);
 
@@ -174,5 +175,12 @@ $pendingApprovals = $DBLIB->get('quote_approval_tokens', 5, [
     'id', 'doc_number', 'client_name', 'created_at', 'expires_at', 'projects_id'
 ]) ?: [];
 $response['pending_approvals'] = $pendingApprovals;
+
+// ── 8. Widget configuration ──
+$widgetService = new DashboardWidgetService($DBLIB);
+$response['widget_config'] = $widgetService->getWidgetConfig(
+    $AUTH->data['users_userid'],
+    (int) $AUTH->data['instance']['instances_id']
+);
 
 finish(true, null, $response);

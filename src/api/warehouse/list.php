@@ -2,9 +2,13 @@
 require_once __DIR__ . '/../apiHeadSecure.php';
 require_once __DIR__ . '/../../services/WarehouseService.php';
 
-if (!$AUTH->instancePermissionCheck("ASSETS:VIEW")) die("404");
+if (!$AUTH->instancePermissionCheck("ASSETS:VIEW")) finish(false, ["message" => "Permission denied"]);
 
-$service = new WarehouseService($DBLIB);
-$warehouses = $service->getWarehouses($AUTH->data['instance']['instances_id']);
+try {
+    $service = new WarehouseService($DBLIB);
+    $warehouses = $service->getWarehouses($AUTH->data['instance']['instances_id']);
 
-finish(true, ["warehouses" => $warehouses]);
+    finish(true, null, ['warehouses' => $warehouses]);
+} catch (Exception $e) {
+    finish(false, ["message" => "Fehler beim Laden der Lager: " . $e->getMessage()]);
+}

@@ -1,0 +1,400 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+<div class="row">
+    {# ── Filter + Neuer Plan ── #}
+    <div class="col-lg-4">
+        <div class="card card-primary card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-filter"></i> Zeitraum filtern</h3>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label>Von</label>
+                    <input type="date" class="form-control" id="filterDateFrom">
+                </div>
+                <div class="form-group">
+                    <label>Bis</label>
+                    <input type="date" class="form-control" id="filterDateTo">
+                </div>
+                <button class="btn btn-primary btn-block" id="filterBtn">
+                    <i class="fas fa-search"></i> Filtern
+                </button>
+                <button class="btn btn-outline-secondary btn-block btn-sm" id="resetFilterBtn">
+                    <i class="fas fa-times"></i> Filter zuruecksetzen
+                </button>
+            </div>
+        </div>
+
+        {% if "PROJECTS:VIEW"|instancePermissions %}
+        <div class="card card-success card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-plus"></i> Neuer Transportplan</h3>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label>Projekt</label>
+                    <select class="form-control select2" id="newPlanProject" style="width:100%;">
+                        <option value="">-- Optional --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Von Lager</label>
+                    <select class="form-control" id="newPlanFromWarehouse">
+                        <option value="">-- Waehlen --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Nach Lager</label>
+                    <select class="form-control" id="newPlanToWarehouse">
+                        <option value="">-- oder Adresse --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Zieladresse (falls kein Lager)</label>
+                    <input type="text" class="form-control" id="newPlanToAddress" placeholder="Strasse, PLZ Ort">
+                </div>
+                <div class="form-group">
+                    <label>Fahrer</label>
+                    <input type="text" class="form-control" id="newPlanDriver" placeholder="Name des Fahrers">
+                </div>
+                <div class="form-group">
+                    <label>Fahrzeug</label>
+                    <input type="text" class="form-control" id="newPlanVehicle" placeholder="z.B. Sprinter AB-CD 1234">
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-7">
+                        <label>Datum *</label>
+                        <input type="date" class="form-control" id="newPlanDate">
+                    </div>
+                    <div class="form-group col-5">
+                        <label>Uhrzeit</label>
+                        <input type="time" class="form-control" id="newPlanTime">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Notizen</label>
+                    <textarea class="form-control" id="newPlanNotes" rows="2"></textarea>
+                </div>
+                <button class="btn btn-success btn-block" id="createPlanBtn">
+                    <i class="fas fa-save"></i> Transportplan erstellen
+                </button>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {# ── Transportplaene Liste ── #}
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-truck"></i> Transportplaene</h3>
+                <div class="card-tools">
+                    <span class="badge badge-info" id="planCount">0</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="overlay" id="plansLoading"><i class="fas fa-sync fa-spin fa-2x"></i></div>
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th style="width:30px;"></th>
+                            <th>Datum</th>
+                            <th>Projekt</th>
+                            <th>Von</th>
+                            <th>Nach</th>
+                            <th>Fahrer</th>
+                            <th>Fahrzeug</th>
+                            <th>Status</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="plansBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Modal: Position hinzufuegen ── #}
+<div class="modal fade" id="addItemModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-plus"></i> Position hinzufuegen</h5>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="addItemPlanId">
+                <div class="form-group">
+                    <label>Equipment-Typ</label>
+                    <select class="form-control select2" id="addItemAssetType" style="width:100%;">
+                        <option value="">-- Waehlen --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Menge</label>
+                    <input type="number" class="form-control" id="addItemQty" min="1" value="1">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-primary" id="addItemSaveBtn">
+                    <i class="fas fa-save"></i> Hinzufuegen
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    var allPlans = [];
+
+    // Heutiges Datum als Standard
+    var today = new Date().toISOString().split('T')[0];
+    $('#newPlanDate').val(today);
+
+    function statusBadge(status) {
+        var map = {
+            'planned': '<span class="badge badge-primary">Geplant</span>',
+            'in_transit': '<span class="badge badge-warning">Unterwegs</span>',
+            'delivered': '<span class="badge badge-success">Geliefert</span>',
+            'cancelled': '<span class="badge badge-danger">Storniert</span>'
+        };
+        return map[status] || '<span class="badge badge-secondary">' + status + '</span>';
+    }
+
+    function formatDate(d) {
+        if (!d) return '-';
+        var parts = d.split('-');
+        if (parts.length === 3) return parts[2] + '.' + parts[1] + '.' + parts[0];
+        return d;
+    }
+
+    function loadPlans() {
+        var params = {};
+        var from = $('#filterDateFrom').val();
+        var to = $('#filterDateTo').val();
+        if (from) params.date_from = from;
+        if (to) params.date_to = to;
+
+        ajaxcall('transport/list.php', params, function(data) {
+            if (!data.response) return;
+            allPlans = data.response.plans || [];
+            renderPlans();
+            $('#plansLoading').hide();
+        }, false);
+    }
+
+    function renderPlans() {
+        var html = '';
+        $('#planCount').text(allPlans.length);
+
+        if (allPlans.length === 0) {
+            html = '<tr><td colspan="9" class="text-center text-muted">Keine Transportplaene gefunden</td></tr>';
+        } else {
+            allPlans.forEach(function(p) {
+                var destination = p.to_warehouse_name || p.to_address || '-';
+                html += '<tr class="plan-row" data-id="' + p.id + '" style="cursor:pointer;">';
+                html += '<td><i class="fas fa-chevron-right toggle-icon" data-id="' + p.id + '"></i></td>';
+                html += '<td>' + formatDate(p.planned_date) + (p.planned_time ? ' <small class="text-muted">' + p.planned_time.substring(0,5) + '</small>' : '') + '</td>';
+                html += '<td>' + (p.projects_name || '-') + '</td>';
+                html += '<td>' + (p.from_warehouse_name || '-') + '</td>';
+                html += '<td>' + destination + '</td>';
+                html += '<td>' + (p.driver_name || '-') + '</td>';
+                html += '<td>' + (p.vehicle || '-') + '</td>';
+                html += '<td>' + statusBadge(p.status) + '</td>';
+                html += '<td>';
+                if (p.status === 'planned') {
+                    html += '<button class="btn btn-xs btn-info addItemBtn mr-1" data-id="' + p.id + '" title="Position hinzufuegen"><i class="fas fa-plus"></i></button>';
+                    html += '<button class="btn btn-xs btn-danger cancelPlanBtn" data-id="' + p.id + '" title="Stornieren"><i class="fas fa-ban"></i></button>';
+                }
+                html += '</td>';
+                html += '</tr>';
+
+                // Expandable items row
+                html += '<tr class="item-details" id="items-' + p.id + '" style="display:none;">';
+                html += '<td colspan="9" class="bg-light p-2">';
+                var items = p.items || [];
+                if (items.length > 0) {
+                    html += '<table class="table table-sm table-bordered mb-0">';
+                    html += '<thead><tr><th>Equipment</th><th>Menge</th><th>Geladen</th><th>Geliefert</th></tr></thead>';
+                    html += '<tbody>';
+                    items.forEach(function(item) {
+                        html += '<tr>';
+                        html += '<td>' + (item.assetTypes_name || '-') + '</td>';
+                        html += '<td>' + item.quantity + '</td>';
+                        html += '<td><div class="form-check"><input type="checkbox" class="form-check-input markLoadedCb" data-item-id="' + item.id + '"' + (item.loaded == 1 ? ' checked disabled' : '') + '></div></td>';
+                        html += '<td><div class="form-check"><input type="checkbox" class="form-check-input markDeliveredCb" data-item-id="' + item.id + '"' + (item.delivered == 1 ? ' checked disabled' : '') + (item.loaded != 1 ? ' disabled' : '') + '></div></td>';
+                        html += '</tr>';
+                    });
+                    html += '</tbody></table>';
+                } else {
+                    html += '<span class="text-muted"><i class="fas fa-info-circle"></i> Keine Positionen vorhanden</span>';
+                }
+                html += '</td></tr>';
+            });
+        }
+        $('#plansBody').html(html);
+    }
+
+    // Toggle plan details
+    $(document).on('click', '.plan-row', function(e) {
+        if ($(e.target).closest('button').length) return;
+        var id = $(this).data('id');
+        var detailRow = $('#items-' + id);
+        var icon = $(this).find('.toggle-icon');
+        detailRow.toggle();
+        icon.toggleClass('fa-chevron-right fa-chevron-down');
+    });
+
+    // Lager-Dropdowns laden
+    function loadWarehouses() {
+        ajaxcall('warehouse/list.php', {}, function(data) {
+            if (!data.response) return;
+            var whs = data.response.warehouses || [];
+            var opts = '<option value="">-- Waehlen --</option>';
+            whs.forEach(function(w) {
+                opts += '<option value="' + w.id + '">' + w.name + '</option>';
+            });
+            $('#newPlanFromWarehouse').html(opts);
+            $('#newPlanToWarehouse').html('<option value="">-- oder Adresse --</option>' + opts.replace('<option value="">-- Waehlen --</option>', ''));
+        }, false);
+    }
+    loadWarehouses();
+
+    // Equipment-Typen laden
+    ajaxcall('assets/list.php', {pageLimit: 500}, function(data) {
+        if (!data.response || !data.response.assets) return;
+        var opts = '<option value="">-- Waehlen --</option>';
+        data.response.assets.forEach(function(a) {
+            opts += '<option value="' + a.assetTypes_id + '">' + a.assetTypes_name + '</option>';
+        });
+        $('#addItemAssetType').html(opts);
+    }, false);
+
+    // Initial load
+    loadPlans();
+
+    // Filter
+    $('#filterBtn').click(function() {
+        loadPlans();
+    });
+
+    $('#resetFilterBtn').click(function() {
+        $('#filterDateFrom').val('');
+        $('#filterDateTo').val('');
+        loadPlans();
+    });
+
+    // Transportplan erstellen
+    $('#createPlanBtn').click(function() {
+        var date = $('#newPlanDate').val();
+        if (!date) { bootbox.alert('Bitte Datum angeben'); return; }
+
+        ajaxcall('transport/create.php', {
+            projects_id: $('#newPlanProject').val(),
+            from_warehouse_id: $('#newPlanFromWarehouse').val(),
+            to_warehouse_id: $('#newPlanToWarehouse').val(),
+            to_address: $('#newPlanToAddress').val(),
+            driver_name: $('#newPlanDriver').val(),
+            vehicle: $('#newPlanVehicle').val(),
+            planned_date: date,
+            planned_time: $('#newPlanTime').val(),
+            notes: $('#newPlanNotes').val()
+        }, function(data) {
+            if (data.result) {
+                bootbox.alert('<i class="fas fa-check text-success"></i> Transportplan erfolgreich erstellt');
+                $('#newPlanToAddress, #newPlanDriver, #newPlanVehicle, #newPlanNotes').val('');
+                $('#newPlanTime').val('');
+                loadPlans();
+            }
+        });
+    });
+
+    // Position hinzufuegen - Modal oeffnen
+    $(document).on('click', '.addItemBtn', function(e) {
+        e.stopPropagation();
+        var planId = $(this).data('id');
+        $('#addItemPlanId').val(planId);
+        $('#addItemAssetType').val('').trigger('change');
+        $('#addItemQty').val(1);
+        $('#addItemModal').modal('show');
+    });
+
+    // Position speichern
+    $('#addItemSaveBtn').click(function() {
+        var planId = $('#addItemPlanId').val();
+        var assetTypeId = $('#addItemAssetType').val();
+        var qty = parseInt($('#addItemQty').val());
+
+        if (!assetTypeId) { bootbox.alert('Bitte Equipment-Typ waehlen'); return; }
+        if (!qty || qty < 1) { bootbox.alert('Bitte Menge angeben'); return; }
+
+        ajaxcall('transport/addItem.php', {
+            plan_id: planId,
+            assetTypes_id: assetTypeId,
+            quantity: qty
+        }, function(data) {
+            if (data.result) {
+                $('#addItemModal').modal('hide');
+                loadPlans();
+            }
+        });
+    });
+
+    // Geladen markieren
+    $(document).on('change', '.markLoadedCb', function() {
+        var cb = $(this);
+        var itemId = cb.data('item-id');
+        if (!cb.is(':checked')) { cb.prop('checked', false); return; }
+
+        ajaxcall('transport/markLoaded.php', {item_id: itemId}, function(data) {
+            if (data.result) {
+                cb.prop('disabled', true);
+                // Geliefert-Checkbox aktivieren
+                cb.closest('tr').find('.markDeliveredCb').prop('disabled', false);
+            } else {
+                cb.prop('checked', false);
+            }
+        });
+    });
+
+    // Geliefert markieren
+    $(document).on('change', '.markDeliveredCb', function() {
+        var cb = $(this);
+        var itemId = cb.data('item-id');
+        if (!cb.is(':checked')) { cb.prop('checked', false); return; }
+
+        ajaxcall('transport/markDelivered.php', {item_id: itemId}, function(data) {
+            if (data.result) {
+                cb.prop('disabled', true);
+            } else {
+                cb.prop('checked', false);
+            }
+        });
+    });
+
+    // Plan stornieren
+    $(document).on('click', '.cancelPlanBtn', function(e) {
+        e.stopPropagation();
+        var planId = $(this).data('id');
+        bootbox.confirm('Transportplan wirklich stornieren?', function(r) {
+            if (!r) return;
+            ajaxcall('transport/cancel.php', {plan_id: planId}, function(data) {
+                if (data.result) {
+                    bootbox.alert('<i class="fas fa-check text-success"></i> Transportplan storniert');
+                    loadPlans();
+                }
+            });
+        });
+    });
+
+    // Select2 initialisieren
+    if ($.fn.select2) {
+        $('#newPlanProject').select2({theme: 'bootstrap4', placeholder: '-- Optional --', allowClear: true});
+        $('#addItemAssetType').select2({theme: 'bootstrap4', placeholder: '-- Waehlen --', dropdownParent: $('#addItemModal')});
+    }
+});
+</script>
+{% endblock %}

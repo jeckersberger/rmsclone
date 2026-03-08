@@ -771,6 +771,30 @@ ignoreURLs: ['searchUser.php'] // Ignore user searches
 									</li>
 									{% endif %}
 
+									{# ===== LOGISTIK ===== #}
+									{% if "PROJECTS:VIEW"|instancePermissions %}
+									<li class="nav-item has-treeview">
+										<a href="#" class="nav-link">
+											<i class="nav-icon fas fa-truck"></i>
+											<p>Logistik<i class="fas fa-angle-left right"></i></p>
+										</a>
+										<ul class="nav nav-treeview">
+											<li class="nav-item">
+												<a href="{{ CONFIG.ROOTURL }}/business/transport.php" class="nav-link">
+													<i class="nav-icon fas fa-route"></i>
+													<p>Transportplanung</p>
+												</a>
+											</li>
+											<li class="nav-item">
+												<a href="{{ CONFIG.ROOTURL }}/business/warehouses.php" class="nav-link">
+													<i class="nav-icon fas fa-warehouse"></i>
+													<p>Lagerverwaltung</p>
+												</a>
+											</li>
+										</ul>
+									</li>
+									{% endif %}
+
 									{# ===== VERWALTUNG ===== #}
 									<li class="nav-item has-treeview">
 										<a href="#" class="nav-link">
