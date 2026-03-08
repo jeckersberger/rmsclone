@@ -92,15 +92,30 @@
                                             {% endif %}
                                         </div>
                                         <div class="modal fade" id="clientModal{{ client.clients_id }}">
-                                            <div class="modal-dialog">
+                                            <div class="modal-dialog modal-lg">
                                                 <div class="modal-content">
                                                     <div class="modal-header">
-                                                        <h4 class="modal-title">{{ client.clients_name }} {{ t('edit') }}</h4>
+                                                        <h4 class="modal-title">{{ client.clients_name }}</h4>
                                                         <button type="button" class="close" data-dismiss="modal" aria-label="{{ t('close') }}">
                                                             <span aria-hidden="true">&times;</span>
                                                         </button>
                                                     </div>
                                                     <div class="modal-body">
+                                                        <ul class="nav nav-tabs" role="tablist">
+                                                            <li class="nav-item">
+                                                                <a class="nav-link active" data-toggle="tab" href="#clientTab_edit_{{ client.clients_id }}">
+                                                                    <i class="fas fa-edit"></i> Stammdaten
+                                                                </a>
+                                                            </li>
+                                                            <li class="nav-item">
+                                                                <a class="nav-link comm-tab-link" data-toggle="tab" href="#clientTab_comm_{{ client.clients_id }}" data-clientid="{{ client.clients_id }}">
+                                                                    <i class="fas fa-comments"></i> Kommunikation
+                                                                </a>
+                                                            </li>
+                                                        </ul>
+                                                        <div class="tab-content mt-3">
+                                                            {# --- Tab: Stammdaten --- #}
+                                                            <div class="tab-pane active" id="clientTab_edit_{{ client.clients_id }}">
                                                         <form class="clientEdit-form" data-clientid="{{ client.clients_id }}">
                                                             <input type="hidden" name="clients_id" value="{{ client.clients_id }}"/>
                                                             <div class="input-group" style="margin-bottom: 5px;">
@@ -190,6 +205,72 @@
                                                                 <textarea class="form-control" rows="3" name="clients_notes"  placeholder="">{{ client.clients_notes }}</textarea>
                                                             </div>
                                                         </form>
+                                                            </div>
+                                                            {# --- Tab: Kommunikation --- #}
+                                                            <div class="tab-pane" id="clientTab_comm_{{ client.clients_id }}">
+                                                                {# Neuen Eintrag anlegen #}
+                                                                <div class="card card-outline card-primary mb-3">
+                                                                    <div class="card-header p-2">
+                                                                        <h6 class="mb-0"><i class="fas fa-plus"></i> Neuer Eintrag</h6>
+                                                                    </div>
+                                                                    <div class="card-body p-2">
+                                                                        <form class="commAdd-form" data-clientid="{{ client.clients_id }}">
+                                                                            <div class="row">
+                                                                                <div class="col-md-4">
+                                                                                    <div class="form-group mb-2">
+                                                                                        <label class="mb-1">Typ</label>
+                                                                                        <select class="form-control form-control-sm" name="type" required>
+                                                                                            <option value="email">E-Mail</option>
+                                                                                            <option value="phone">Telefon</option>
+                                                                                            <option value="meeting">Meeting</option>
+                                                                                            <option value="note">Notiz</option>
+                                                                                            <option value="letter">Brief</option>
+                                                                                        </select>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div class="col-md-4">
+                                                                                    <div class="form-group mb-2">
+                                                                                        <label class="mb-1">Richtung</label>
+                                                                                        <select class="form-control form-control-sm" name="direction">
+                                                                                            <option value="outbound">Ausgehend</option>
+                                                                                            <option value="inbound">Eingehend</option>
+                                                                                        </select>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div class="col-md-4">
+                                                                                    <div class="form-group mb-2">
+                                                                                        <label class="mb-1">Datum</label>
+                                                                                        <input type="datetime-local" class="form-control form-control-sm" name="communication_date">
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="form-group mb-2">
+                                                                                <label class="mb-1">Betreff</label>
+                                                                                <input type="text" class="form-control form-control-sm" name="subject" required placeholder="Betreff eingeben">
+                                                                            </div>
+                                                                            <div class="form-group mb-2">
+                                                                                <label class="mb-1">Ansprechpartner</label>
+                                                                                <input type="text" class="form-control form-control-sm" name="contact_person" placeholder="Name des Ansprechpartners">
+                                                                            </div>
+                                                                            <div class="form-group mb-2">
+                                                                                <label class="mb-1">Inhalt</label>
+                                                                                <textarea class="form-control form-control-sm" name="content" rows="3" placeholder="Details zur Kommunikation..."></textarea>
+                                                                            </div>
+                                                                            <button type="submit" class="btn btn-sm btn-primary">
+                                                                                <i class="fas fa-save"></i> Eintrag speichern
+                                                                            </button>
+                                                                        </form>
+                                                                    </div>
+                                                                </div>
+
+                                                                {# Timeline der Kommunikation #}
+                                                                <div class="comm-timeline" data-clientid="{{ client.clients_id }}">
+                                                                    <div class="text-center text-muted p-3">
+                                                                        <i class="fas fa-spinner fa-spin"></i> Wird geladen...
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>{# /tab-content #}
                                                     </div>
                                                     <div class="modal-footer justify-content-between">
                                                         <button type="button" class="btn btn-default" data-dismiss="modal">{{ t('close') }}</button>

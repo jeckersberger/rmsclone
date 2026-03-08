@@ -64,6 +64,9 @@ class DeliveryNoteService
         // Generate delivery note number via SequenceService (fortlaufend, GoBD-konform)
         $noteNumber = SequenceService::next($this->db, $instanceId, 'delivery_note');
 
+        // QR-Code fuer Packauftrag generieren
+        $qrCodeDataUri = $this->generatePackingQrCode($instanceId, $projectId);
+
         return [
             'note_number' => $noteNumber,
             'date' => date('d.m.Y'),
@@ -73,6 +76,53 @@ class DeliveryNoteService
             'total_items' => count($assets),
             'total_weight' => $totalWeight,
             'has_signature_fields' => true,
+            'qr_code' => $qrCodeDataUri,
         ];
+    }
+
+    /**
+     * Erzeugt einen QR-Code mit Link zum Packauftrag.
+     *
+     * Sucht die neueste Packliste fuer das Projekt, generiert einen
+     * sicheren Token und erstellt einen QR-Code mit der URL zur
+     * mobilen Packansicht.
+     *
+     * @param int $instanceId Instanz-ID
+     * @param int $projectId  Projekt-ID
+     * @return string|null    Data-URI des QR-Codes oder null
+     */
+    private function generatePackingQrCode(int $instanceId, int $projectId): ?string
+    {
+        // Neueste Packliste fuer dieses Projekt suchen
+        $this->db->where('instances_id', $instanceId);
+        $this->db->where('projects_id', $projectId);
+        $this->db->orderBy('created_at', 'DESC');
+        $packingList = $this->db->getOne('packing_lists', ['id']);
+
+        if (!$packingList) {
+            return null;
+        }
+
+        $packingListId = (int)$packingList['id'];
+
+        // Sicheren Token generieren und in Packliste speichern
+        $token = bin2hex(random_bytes(16));
+        $this->db->where('id', $packingListId);
+        $this->db->update('packing_lists', [
+            'delivery_note_qr_token' => $token,
+        ]);
+
+        // Base-URL ermitteln
+        $baseUrl = '';
+        if (defined('BASE_URL')) {
+            $baseUrl = BASE_URL;
+        } elseif (!empty($_SERVER['HTTP_HOST'])) {
+            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'];
+        }
+
+        $url = rtrim($baseUrl, '/') . '/mobile/packing.php?id=' . $packingListId . '&token=' . $token;
+
+        return QrCodeGenerator::generateDataUri($url, 180, 'M');
     }
 }

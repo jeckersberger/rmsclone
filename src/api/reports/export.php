@@ -93,6 +93,62 @@ switch ($type) {
         $filename = 'mahnungen_' . date('Y-m-d');
         break;
 
+    case 'utilization':
+    case 'top_clients':
+    case 'seasonality':
+    case 'roi':
+    case 'compare':
+    case 'top_performers':
+    case 'underutilized':
+        $exportSvc = new ReportExportService();
+        $reportData = [];
+
+        if ($type === 'utilization') {
+            $utilSvc = new UtilizationReportService($DBLIB);
+            $month = (int)($_POST['month'] ?? date('n'));
+            $reportData = $utilSvc->getUtilizationOverview($instanceId, $year, $month);
+        } elseif ($type === 'top_clients') {
+            $profitSvc = new ProfitCalculationService($DBLIB);
+            $limit = (int)($_POST['limit'] ?? 10);
+            $reportData = $profitSvc->getTopClients($instanceId, $year, $limit);
+        } elseif ($type === 'seasonality') {
+            $profitSvc = new ProfitCalculationService($DBLIB);
+            $years = (int)($_POST['years'] ?? 3);
+            $reportData = $profitSvc->getSeasonality($instanceId, $years);
+        } elseif ($type === 'roi') {
+            $utilSvc = new UtilizationReportService($DBLIB);
+            $sql = "SELECT DISTINCT at.assetTypes_id FROM assetTypes at
+                    JOIN assets a ON a.assetTypes_id = at.assetTypes_id AND a.assets_deleted = 0
+                    WHERE a.instances_id = ?";
+            $types_list = $DBLIB->rawQuery($sql, [$instanceId]) ?: [];
+            $reportData = [];
+            foreach ($types_list as $t) {
+                $roi = $utilSvc->calculateRoi((int)$t['assetTypes_id']);
+                if (!isset($roi['error'])) $reportData[] = $roi;
+            }
+        } elseif ($type === 'compare') {
+            $profitSvc = new ProfitCalculationService($DBLIB);
+            $p1s = $_POST['period1_start'] ?? date('Y-01-01', strtotime('-1 year'));
+            $p1e = $_POST['period1_end'] ?? date('Y-12-31', strtotime('-1 year'));
+            $p2s = $_POST['period2_start'] ?? date('Y-01-01');
+            $p2e = $_POST['period2_end'] ?? date('Y-m-d');
+            $reportData = $profitSvc->comparePeriods($instanceId, $p1s, $p1e, $p2s, $p2e);
+        } elseif ($type === 'top_performers') {
+            $utilSvc = new UtilizationReportService($DBLIB);
+            $reportData = $utilSvc->getTopPerformers($instanceId, $year);
+        } elseif ($type === 'underutilized') {
+            $utilSvc = new UtilizationReportService($DBLIB);
+            $threshold = (int)($_POST['threshold'] ?? 30);
+            $reportData = $utilSvc->getUnderutilized($instanceId, $year, $threshold);
+        }
+
+        $result = $exportSvc->exportReport($type, $reportData);
+        if (isset($result['error'])) {
+            finish(false, ["code" => "EXPORT_ERROR", "message" => $result['error']]);
+        }
+        finish(true, null, $result);
+        break;
+
     default:
         finish(false, ["code" => "INVALID_TYPE"]);
 }
