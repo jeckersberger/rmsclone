@@ -17,6 +17,7 @@ class ClaudeService
     private string $apiKey;
     private string $model;
     private array $settings;
+    private int $userId = 0;
 
     private const API_URL = 'https://api.anthropic.com/v1/messages';
     private const API_VERSION = '2023-06-01';
@@ -263,12 +264,12 @@ class ClaudeService
             'input_tokens' => $inputTokens,
             'output_tokens' => $outputTokens,
             'cost_estimate_usd' => round($cost, 6),
-            'users_userid' => 0, // caller sets this via setUserId if needed
+            'users_userid' => $this->userId,
         ]);
     }
 
     public function setUserId(int $userId): void
     {
-        // For the next log entry - stored globally is fine for single-request lifecycle
+        $this->userId = $userId;
     }
 }
