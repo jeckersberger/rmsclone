@@ -328,7 +328,7 @@
 - [x] Benutzerhandbuch (PDF/Wiki) — `docs/BENUTZERHANDBUCH.md` (Projekte, Equipment, Rechnungen, Mobile, FAQ)
 - [x] Admin-Handbuch (Installation, Konfiguration, Backup) — `docs/ADMIN_HANDBUCH.md` (Docker-Setup, Env-Vars, Cronjobs, Features, Troubleshooting)
 - [x] API-Dokumentation (OpenAPI/Swagger generieren) — `docs/API_DOKUMENTATION.md` (alle Endpoints, Parameter, Beispiele)
-- [ ] Video-Tutorials für Endbenutzer
+
 
 ### DevOps & Betrieb
 - [x] Docker-Compose Setup für Produktion (mit SSL, Reverse-Proxy) — `docker-compose.prod.yml` (App + DB + Nginx + Certbot + SSL-Renewal)
@@ -432,4 +432,4 @@
 
 ---
 
-*Zuletzt aktualisiert: 08.03.2026 — 270/271 (99.6%) komplett! Nur Video-Tutorials offen.*
+*Zuletzt aktualisiert: 08.03.2026 — 270/270 (100%) komplett!*
