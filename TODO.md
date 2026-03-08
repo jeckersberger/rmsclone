@@ -285,6 +285,17 @@
   - [x] UI: Auto-Complete/Vorschläge beim Tippen in Asset-Erstellungsformular
   - [x] Felder: Neupreis, aktueller Marktwert, Gewicht, Abmessungen, Kategorie-Vorschlag, Beschreibung
   - [x] Alle KI-Vorschläge als "vorgeschlagen" markiert und vom Benutzer bestätigbar/änderbar (confidence: high/medium/low)
+- [x] **Erweiterte KI-Features (8 neue)** — `src/api/ai/` + `ClaudeService.php` + Migration + AI Settings UI
+  - [x] Smarte Asset-Zuteilung — `src/api/ai/assetAllocation.php` (Equipment-Vorschlaege fuer Projekte)
+  - [x] Kunden-Risikobewertung — `src/api/ai/clientRisk.php` (Zahlungsverhalten, Kreditlimit)
+  - [x] E-Mail Auto-Reply — `src/api/ai/emailReply.php` (Antwortvorschlaege fuer eingehende Mails)
+  - [x] Finanz-Prognosen — `src/api/ai/financeForecast.php` (Umsatz/Cashflow-Vorhersage)
+  - [x] Dokument-Qualitaetscheck — `src/api/ai/documentCheck.php` (Rechnungen/Angebote pruefen vor Versand)
+  - [x] Predictive Maintenance — `src/api/ai/predictMaintenance.php` (Wartungsbedarf vorhersagen)
+  - [x] Crew-Optimierung — `src/api/ai/crewOptimize.php` (Team-Zusammensetzung, Konflikterkennung)
+  - [x] Duplikat-Erkennung — `src/api/ai/duplicateDetect.php` (Doppelte Kunden/Assets finden)
+  - [x] API-Key Test-Button — `src/api/ai/testKey.php` (Verbindung zur Claude API testen)
+  - [x] Feature-Toggles fuer alle 17 KI-Features in AI Settings UI
 
 ### Mobile & UX
 - [x] Progressive Web App (PWA) für mobile Nutzung — `PwaService.php` + `src/api/pwa/manifest.php` (Manifest + Service Worker + Offline-Fallback)
@@ -432,4 +443,23 @@
 
 ---
 
-*Zuletzt aktualisiert: 08.03.2026 — 270/270 (100%) komplett!*
+### Offene Verbesserungen (nach Fehlercheck)
+
+**KI-Features UI-Integration:**
+- [ ] KI-Buttons in Projekt-Detailseite einbauen (Asset-Zuteilung, Crew-Optimierung, Dokument-Check, Zusammenfassung)
+- [ ] KI-Button in Kunden-Detailseite einbauen (Risikobewertung)
+- [ ] KI-Reply-Button in E-Mail-Inbox einbauen
+- [ ] KI-Prognose-Button in Finanz-Dashboard einbauen
+- [ ] KI-Wartungsprognose in Maintenance-Seite einbauen
+- [ ] KI-Duplikat-Check in Kunden- und Asset-Listen einbauen
+- [ ] `setUserId()` in allen AI-Endpoints aufrufen fuer besseres Usage-Tracking
+
+**Technische Verbesserungen:**
+- [ ] Rate Limiting fuer neue AI-Endpoints (aktuell nur assetLookup hat Rate Limit)
+- [ ] API-Test Button: Fehler-Feedback verbessern (rote Meldung statt nur Timeout)
+- [ ] Cronjob `ai-background.php` um neue Features erweitern (Predictive Maintenance, Duplikat-Check)
+- [ ] Einheitliche Berechtigungspruefung fuer alle AI-Endpoints (AI:VIEW vs. spezifische Permissions)
+
+---
+
+*Zuletzt aktualisiert: 08.03.2026 — 280/280 (100%) Kern-Features komplett. UI-Integration der erweiterten KI-Features offen.*
