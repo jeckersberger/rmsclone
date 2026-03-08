@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/AvailabilityService.php';
+
 /**
  * Wiederkehrende Projekte
  *
@@ -13,10 +15,12 @@
 class RecurringProjectService
 {
     private $db;
+    private ?AvailabilityService $availabilityService = null;
 
     public function __construct($db)
     {
         $this->db = $db;
+        $this->availabilityService = new AvailabilityService($db);
     }
 
     /**
@@ -82,6 +86,20 @@ class RecurringProjectService
                 $this->db->where('instances_id', $instanceId);
                 $this->db->where('projects_deleted', 0);
                 if ($this->db->getOne('projects')) continue; // Already exists
+
+                // Verfuegbarkeits-Check: Alle Assets der Vorlage pruefen
+                $availabilityResult = $this->checkTemplateAvailability($t, $date);
+                if (!$availabilityResult['available']) {
+                    $created[] = [
+                        'projects_id' => 0,
+                        'name' => $checkName,
+                        'date' => $date['start'],
+                        'skipped' => true,
+                        'reason' => 'Equipment nicht verfuegbar',
+                        'conflicts' => $availabilityResult['conflicts'],
+                    ];
+                    continue;
+                }
 
                 // Create the project
                 $projectId = $this->createProjectFromTemplate($t, $date, $instanceId);
@@ -227,6 +245,37 @@ class RecurringProjectService
         }
 
         return $projectId;
+    }
+
+    /**
+     * Prueft ob alle Assets einer Vorlage fuer den Zeitraum verfuegbar sind
+     */
+    public function checkTemplateAvailability(array $template, array $dates): array
+    {
+        if (!$template['clone_assets']) {
+            return ['available' => true, 'conflicts' => []];
+        }
+
+        $this->db->where('projects_id', $template['source_project_id']);
+        $this->db->where('assetsAssignments_deleted', 0);
+        $assets = $this->db->get('assetsAssignments', null, ['assets_id']) ?: [];
+
+        $allConflicts = [];
+        foreach ($assets as $a) {
+            $conflicts = $this->availabilityService->getAssetConflicts(
+                (int)$a['assets_id'],
+                $dates['start'],
+                $dates['end']
+            );
+            if (!empty($conflicts)) {
+                $allConflicts[$a['assets_id']] = $conflicts;
+            }
+        }
+
+        return [
+            'available' => empty($allConflicts),
+            'conflicts' => $allConflicts,
+        ];
     }
 
     /**

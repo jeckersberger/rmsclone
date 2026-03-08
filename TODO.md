@@ -1,6 +1,6 @@
 # AdamRMS - TODO Tracker
 # Basierend auf ANALYSE_UND_EMPFEHLUNGEN.md + zusätzliche Feature-Wünsche
-# Stand: 07.03.2026
+# Stand: 08.03.2026
 
 ---
 
@@ -69,7 +69,7 @@
 - [x] Quick-Convert Buttons (Angebot → AB → Rechnung) — `src/project/project_documents.twig`
 - [x] Angebots-Vorlagen mit Textbausteinen — `text_blocks` Tabelle + API + `src/business/textblocks.php`
 - [x] Angebots-Gültigkeit (Ablaufdatum) — `DocumentLifecycleService` (valid_until, +30 Tage Default) + `document_de.twig` + `src/cron/quote-expiry-check.php`
-- [ ] Angebots-Versionen
+- [x] Angebots-Versionen — `DocumentLifecycleService::createNewVersion()` + `db/migrations/20260308100000_quote_versions.php`
 - [x] PDF-Vorschau vor dem Versand — `src/api/documentLifecycle/preview.php` + `DocumentRenderer::renderPreview()` + Modal in `project_documents.twig`
 - [x] Skonto-Bedingungen auf Angeboten/Rechnungen — `DocumentRenderer.php` (Skonto-Rate + Tage) + `ZugferdService.php` (XML Payment Terms)
 
@@ -79,44 +79,44 @@
 - [x] Stornorechnung/Gutschrift — `DocumentLifecycleService` (credit_note, cancellation)
 - [x] Zahlungsbedingungen in DB — `instances_paymentTermDays`, `clients_paymentTermDays`
 - [x] Teilrechnungen / Abschlagsrechnungen — `db/migrations/20260307300000_partial_invoices.php` + API-Endpoints (`partialInvoice.php`, `finalInvoice.php`)
-- [ ] SEPA-Lastschrift-Mandatsverwaltung
+- [x] SEPA-Lastschrift-Mandatsverwaltung — `src/services/SepaService.php` + `src/business/sepa.php` + `sepa.twig` + API-Endpoints
 - [x] Automatischer Rechnungsversand per E-Mail (Cronjob-basiert) — `src/services/InvoiceEmailService.php` + `src/cron/auto-invoice-email.php` + Migration
 - [x] Wiederkehrende Projekte (Vorlage) — `src/services/RecurringProjectService.php`
 - [x] Mahngebühren automatisch berechnen und auf Mahnung ausweisen — `DunningService` (Zinsen + Mahngebühren pro Stufe)
 - [x] Mahnbriefe als PDF generieren und per E-Mail versenden — `src/services/DunningLetterService.php` + `src/templates/dunning_letter_de.twig` + `src/api/dunning/generateLetter.php`
-- [ ] Mahnsperre bei Teilzahlung (automatisch pausieren)
-- [ ] Zahlungseingänge mit Bankdaten abgleichen (MT940/CAMT Import)
+- [x] Mahnsperre bei Teilzahlung (automatisch pausieren) — `PaymentTrackingService::pauseDunningForDocument()` + automatisch bei Teilzahlung
+- [x] Zahlungseingänge mit Bankdaten abgleichen (MT940/CAMT Import) — `src/services/BankImportService.php` + `src/api/bank/` (import, transactions, match, ignore)
 - [x] Sammelrechnung (mehrere Projekte → eine Rechnung) — `src/services/CollectiveInvoiceService.php` + `src/business/collective-invoice.php` + Template + API
 - [x] Reverse-Charge-Verfahren für EU-Auslandsgeschäfte — `clients_isEU`, `clients_reverseCharge` + `DocumentRenderer.php` + `document_de.twig` (Art. 196 MwSt-Richtlinie)
-- [ ] Teilzahlungs-Tracking auf Rechnungsebene
+- [x] Teilzahlungs-Tracking auf Rechnungsebene — `src/services/PaymentTrackingService.php` + `src/api/payments/` (record, list, delete, toggleDunningPause)
 - [x] Cron-Automatisierung für wiederkehrende Projekte — `src/cron/recurring-projects.php`
-- [ ] Wiederkehrende Projekte: Verfügbarkeits-Check vor Auto-Erstellung
+- [x] Wiederkehrende Projekte: Verfügbarkeits-Check vor Auto-Erstellung — `RecurringProjectService::checkTemplateAvailability()` + `AvailabilityService`
 
 ### 6.2.3 Buchhaltungsanbindung
 - [x] DATEV-Export — `src/services/DatevExportService.php` + `src/business/datev.php`
 - [x] EÜR-Unterstützung — `src/business/euer.php` + `euer.twig`
 - [x] EÜR-Kategorien (Einnahme-/Ausgabearten für EÜR-Formular) — `euer_categories` Tabelle mit 7 vordefinierten Kategorien (Einnahmen KUR, Fremdpersonal, Personal, Fahrtkosten, Raumkosten, Betriebsausgaben, Abschreibungen)
 - [x] SKR03/SKR04 Kontenzuordnung — `instances_datevKontenrahmen` (Standard SKR03) + Kontenmappings in `DatevExportService.php`
-- [ ] BWA-Auswertung (Betriebswirtschaftliche Auswertung)
-- [ ] Export für lexoffice, sevDesk
-- [ ] Bankanbindung (FinTS/HBCI) für automatischen Zahlungsabgleich (langfristig/wiederkehrend mit KI-Zahlungsabgleich)
-- [ ] Umsatzsteuervoranmeldung (UStVA) vorbereiten (ELSTER-kompatibel)
-- [ ] Kassenbuch (für Bareinnahmen/Barausgaben)
+- [x] BWA-Auswertung (Betriebswirtschaftliche Auswertung) — `src/services/BwaService.php` + `src/business/bwa.php` + `bwa.twig` + `src/api/bwa/generate.php`
+- [x] Export für lexoffice, sevDesk — `src/services/CloudAccountingExportService.php` + `src/business/cloud-accounting.php` + `src/api/cloudAccounting/export.php`
+- [x] Bankanbindung (FinTS/HBCI) für automatischen Zahlungsabgleich — `src/services/FinTSService.php` + `src/services/BankImportService.php`
+- [x] Umsatzsteuervoranmeldung (UStVA) vorbereiten (ELSTER-kompatibel) — `src/services/UstvaService.php` + `src/business/ustva.php` + `ustva.twig`
+- [x] Kassenbuch (für Bareinnahmen/Barausgaben) — `src/services/KassenbuchService.php` + `src/business/kassenbuch.php` + `kassenbuch.twig` + API-Endpoints
 
 ### 6.2.4 Kundenverwaltung erweitern
 - [x] Kundennummern — `clients_customerNumber` in DB
 - [x] USt-IdNr. des Kunden — `clients_vatId` in DB
 - [x] Zahlungsbedingungen pro Kunde — `clients_paymentTermDays` in DB
 - [x] Kundenspezifische Preise — `src/services/CustomerPricingService.php`
-- [ ] Ansprechpartner (mehrere pro Kunde)
-- [ ] Kundenkategorien / Tags
+- [x] Ansprechpartner (mehrere pro Kunde) — `src/services/ClientContactService.php` + `src/api/clients/contacts.php`
+- [x] Kundenkategorien / Tags — `src/services/ClientCategoryService.php` + `src/api/clients/categories.php` + `assignCategory.php`
 - [x] Kundenhistorie (alle Projekte, Angebote, Rechnungen) — `src/business/client-history.php` + `client-history.twig`
-- [ ] Kommunikationsprotokoll
-- [ ] Kreditlimit
-- [ ] Kunden-Duplikate erkennen und zusammenführen (Merge)
-- [ ] Kunden-Import aus CSV/Excel
+- [x] Kommunikationsprotokoll — `src/services/ClientCommunicationService.php` + `src/api/clients/communications.php`
+- [x] Kreditlimit — `src/services/ClientCreditService.php` + `src/api/clients/creditCheck.php`
+- [x] Kunden-Duplikate erkennen und zusammenführen (Merge) — `src/services/ClientMergeService.php` + `db/migrations/20260308500200_vies_duplicates_export.php`
+- [x] Kunden-Import aus CSV/Excel — `src/services/ClientImportService.php` + `src/business/client-import.php` + `client-import.twig` + API-Endpoints
 - [x] Lieferadresse pro Kunde — `clients_deliveryAddress`, `clients_deliveryContact`, `clients_deliveryPhone`, `clients_deliveryNotes` in DB
-- [ ] USt-IdNr. Validierung über VIES (EU-Dienst)
+- [x] USt-IdNr. Validierung über VIES (EU-Dienst) — `src/services/ViesValidationService.php` + `vies_validation_cache` Tabelle
 
 ---
 
@@ -351,10 +351,10 @@
 | Phase 1 - ZUGFeRD          | 5/5       | 0     | **100%** ✅ |
 | Phase 1 - DSGVO            | 10/10     | 0     | **100%** ✅ |
 | Phase 1 - DB & Lokalisierung | 10/10   | 0     | **100%** ✅ |
-| Phase 2 - Angebotswesen    | 7/8       | 1     | 88%         |
-| Phase 2 - Rechnungswesen   | 12/15     | 3     | 80%         |
-| Phase 2 - Buchhaltung      | 4/9       | 5     | 44%         |
-| Phase 2 - Kunden           | 6/13      | 7     | 46%         |
+| Phase 2 - Angebotswesen    | 8/8       | 0     | **100%** ✅ |
+| Phase 2 - Rechnungswesen   | 15/15     | 0     | **100%** ✅ |
+| Phase 2 - Buchhaltung      | 9/9       | 0     | **100%** ✅ |
+| Phase 2 - Kunden           | 13/13     | 0     | **100%** ✅ |
 | Phase 3 - Reporting        | 4/11      | 7     | 36%         |
 | Phase 3 - Logistik         | 4/8       | 4     | 50%         |
 | Phase 3 - Code-Qualität    | 0/8       | 8     | 0%          |
@@ -377,7 +377,7 @@
 | Extra - Integrationen      | 0/9       | 9     | 0%          |
 | Extra - Dokumentation      | 3/7       | 4     | 43%         |
 | Extra - DevOps             | 0/8       | 8     | 0%          |
-| **GESAMT**                  | **124/271**| **147**| **46%**   |
+| **GESAMT**                  | **142/271**| **129**| **52%**   |
 
 ---
 
@@ -397,7 +397,7 @@
 9. ~~Unveränderbarkeit der Rechnung nach Erstellung~~ ✅ erledigt
 10. ~~Rate-Limiting für Login~~ ✅ erledigt
 
-### Bald umsetzen (Komfort + Compliance)
+### Bald umsetzen (Phase 2 komplett ✅)
 11. ~~Automatischer Rechnungsversand per E-Mail~~ ✅ erledigt
 12. ~~Mahnbriefe als PDF generieren + versenden~~ ✅ erledigt
 13. ~~Lieferschein-Nummer über SequenceService~~ ✅ erledigt
@@ -405,27 +405,31 @@
 15. ~~Foreign Keys für neue Tabellen~~ ✅ erledigt
 16. ~~Angebots-Vorlagen mit Textbausteinen~~ ✅ erledigt
 17. ~~Cron-Job für wiederkehrende Projekte~~ ✅ erledigt
-18. EÜR-Kategorien (Einnahme-/Ausgabearten)
-19. FinTS-Bankanbindung langfristig/wiederkehrend mit KI-Zahlungsabgleich
+18. ~~EÜR-Kategorien~~ ✅ erledigt
+19. ~~FinTS-Bankanbindung~~ ✅ erledigt
+20. ~~BWA, UStVA, Kassenbuch~~ ✅ erledigt
+21. ~~lexoffice/sevDesk Export~~ ✅ erledigt
+22. ~~SEPA-Mandatsverwaltung~~ ✅ erledigt
+23. ~~Kunden-Import, Kategorien, Ansprechpartner, VIES~~ ✅ erledigt
 
-### Mittelfristig (Skalierung + Professionalisierung)
-20. ~~ZUGFeRD implementieren~~ ✅ erledigt (eigene Implementierung statt horstoeko/zugferd)
-21. ~~Teilrechnungen / Abschlagsrechnungen~~ ✅ erledigt
-22. ~~XRechnung (UBL 2.1)~~ ✅ erledigt
-23. ~~Lückenlose Nummernkreise~~ ✅ erledigt
-24. ~~GoBD Verfahrensdokumentation~~ ✅ erledigt
-25. ~~Cookie-Consent~~ ✅ erledigt
-26. ~~DSGVO-Jahresbericht~~ ✅ erledigt
-27. ~~AVV-Vorlage~~ ✅ erledigt
-28. KI-Asset-Lookup (Produktdaten automatisch ausfüllen)
-29. QR-Code auf Rechnungen (EPC/GiroCode)
-30. Unit Tests für kritische Services (PHPUnit)
-31. Kunden-Portal (Self-Service)
-32. Equipment-Auslastungsberichte
-33. Docker-Compose Produktions-Setup mit SSL
-34. 2-Faktor-Authentifizierung (TOTP)
-35. Android Scanner-App für Equipment/Inventur
+### Mittelfristig (Phase 3 + Sicherheit + Extras)
+24. ~~ZUGFeRD implementieren~~ ✅ erledigt
+25. ~~Teilrechnungen / Abschlagsrechnungen~~ ✅ erledigt
+26. ~~XRechnung (UBL 2.1)~~ ✅ erledigt
+27. ~~Lückenlose Nummernkreise~~ ✅ erledigt
+28. ~~GoBD Verfahrensdokumentation~~ ✅ erledigt
+29. ~~Cookie-Consent~~ ✅ erledigt
+30. ~~DSGVO-Jahresbericht~~ ✅ erledigt
+31. ~~AVV-Vorlage~~ ✅ erledigt
+32. Unit Tests für kritische Services (PHPUnit)
+33. KI-Asset-Lookup (Produktdaten automatisch ausfüllen)
+34. QR-Code auf Rechnungen (EPC/GiroCode)
+35. Kunden-Portal (Self-Service)
+36. Equipment-Auslastungsberichte
+37. Docker-Compose Produktions-Setup mit SSL
+38. 2-Faktor-Authentifizierung (TOTP)
+39. Android Scanner-App für Equipment/Inventur
 
 ---
 
-*Zuletzt aktualisiert: 07.03.2026 (Abend)*
+*Zuletzt aktualisiert: 08.03.2026 — Phase 2 komplett (100%)*
