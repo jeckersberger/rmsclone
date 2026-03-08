@@ -31,6 +31,14 @@ class ClaudeService
         'contract_analysis' => 'instances_aiFeatureContractAnalysis',
         'price_suggestion'  => 'instances_aiFeaturePriceSuggestion',
         'damage_report'     => 'instances_aiFeatureDamageReport',
+        'asset_allocation'  => 'instances_aiFeatureAssetAllocation',
+        'client_risk'       => 'instances_aiFeatureClientRisk',
+        'email_reply'       => 'instances_aiFeatureEmailReply',
+        'finance_forecast'  => 'instances_aiFeatureFinanceForecast',
+        'document_check'    => 'instances_aiFeatureDocumentCheck',
+        'predict_maintenance' => 'instances_aiFeaturePredictMaintenance',
+        'crew_optimize'     => 'instances_aiFeatureCrewOptimize',
+        'duplicate_detect'  => 'instances_aiFeatureDuplicateDetect',
     ];
 
     // Cost per 1M tokens (USD) - Haiku 4.5
