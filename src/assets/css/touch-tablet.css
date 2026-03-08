@@ -1,0 +1,188 @@
+/**
+ * Touch-optimierte UI fuer Tablets (Lager-Nutzung)
+ *
+ * Groessere Touch-Targets, breitere Buttons, optimierte Spacing
+ * fuer Tablet-Geraete im Lager-/Eventbetrieb.
+ *
+ * Einbinden: <link rel="stylesheet" href="/assets/css/touch-tablet.css" media="(pointer: coarse)">
+ */
+
+/* Nur fuer Touch-Geraete (Tablets, Smartphones) */
+@media (pointer: coarse) {
+    /* Groessere Touch-Targets (min 44px nach Apple HIG) */
+    .btn {
+        min-height: 48px;
+        min-width: 48px;
+        padding: 12px 20px;
+        font-size: 16px;
+    }
+
+    .btn-sm {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 10px 16px;
+        font-size: 15px;
+    }
+
+    /* Formular-Elemente groesser */
+    .form-control,
+    .form-select,
+    select.form-control {
+        min-height: 48px;
+        font-size: 16px; /* verhindert iOS Zoom */
+        padding: 10px 14px;
+    }
+
+    .form-check-input {
+        width: 24px;
+        height: 24px;
+        margin-top: 0;
+    }
+
+    .form-check-label {
+        padding-left: 8px;
+        font-size: 16px;
+        line-height: 24px;
+    }
+
+    /* Tabellen-Zeilen als Touch-Targets */
+    .table td,
+    .table th {
+        padding: 14px 12px;
+        font-size: 15px;
+    }
+
+    .table tbody tr {
+        cursor: pointer;
+    }
+
+    .table tbody tr:active {
+        background-color: rgba(0, 123, 255, 0.1);
+    }
+
+    /* Listen-Items */
+    .list-group-item {
+        padding: 14px 16px;
+        font-size: 15px;
+    }
+
+    /* Nav-Links */
+    .nav-link {
+        padding: 12px 16px;
+        font-size: 15px;
+    }
+
+    .sidebar .nav-link {
+        padding: 14px 16px;
+    }
+
+    /* Dropdown-Items */
+    .dropdown-item {
+        padding: 12px 20px;
+        font-size: 15px;
+    }
+
+    /* Cards mit mehr Abstand */
+    .card {
+        margin-bottom: 16px;
+    }
+
+    .card-body {
+        padding: 20px;
+    }
+
+    /* Pagination groesser */
+    .page-link {
+        padding: 12px 16px;
+        font-size: 16px;
+        min-width: 44px;
+        text-align: center;
+    }
+
+    /* Modal-Dialog */
+    .modal-dialog {
+        margin: 16px;
+    }
+
+    .modal-body {
+        padding: 20px;
+    }
+
+    /* Breadcrumbs */
+    .breadcrumb-item {
+        font-size: 15px;
+    }
+
+    /* Badge */
+    .badge {
+        padding: 6px 10px;
+        font-size: 14px;
+    }
+
+    /* Abstand zwischen Elementen */
+    .mb-3 { margin-bottom: 1.2rem !important; }
+    .mt-3 { margin-top: 1.2rem !important; }
+
+    /* Quick-Action Buttons (z.B. Scanner, Check-in/out) */
+    .btn-quick-action {
+        min-height: 72px;
+        font-size: 18px;
+        font-weight: 600;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    /* Swipe-Hints */
+    .swipe-hint {
+        text-align: center;
+        color: #999;
+        font-size: 13px;
+        padding: 8px;
+    }
+}
+
+/* Tablet Landscape - volle Breite nutzen */
+@media (pointer: coarse) and (min-width: 768px) {
+    .container,
+    .container-fluid {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    /* 2-Spalten Layout fuer grosse Tablets */
+    .tablet-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+}
+
+/* Smartphone Portrait - maximale Einfachheit */
+@media (pointer: coarse) and (max-width: 575px) {
+    .sidebar {
+        display: none;
+    }
+
+    .content-wrapper {
+        margin-left: 0 !important;
+    }
+
+    /* Tabelle horizontal scrollbar */
+    .table-responsive {
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Stack buttons vertikal */
+    .btn-group-touch {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .btn-group-touch .btn {
+        width: 100%;
+    }
+}
