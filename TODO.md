@@ -214,18 +214,18 @@
 - [x] Verfügbarkeitskalender — `src/business/availability.php` + `availability.twig`
 - [x] Navigation-Audit: Defekte Links behoben, verwaiste Seiten verlinkt — `template.twig`, `instances_navigation.twig`
 - [x] Label-Drucker-Integration (HTML + ZPL/Zebra) — `src/mobile/labels.php` + `labels.twig` + Buttons in `barcodeGenerator.twig`
-- [ ] Benachrichtigungs-Center (In-App Benachrichtigungen)
-- [ ] Favoriten/Lesezeichen für häufig genutzte Seiten
+- [x] Benachrichtigungs-Center (In-App Benachrichtigungen) — `NotificationService.php` + `src/api/inAppNotifications/list.php` + Glocken-Icon in `template.twig` (Auto-Polling, Mark-as-Read)
+- [x] Favoriten/Lesezeichen für häufig genutzte Seiten — `FavoritesService.php` + `src/api/favorites/manage.php` + Stern-Icon in `template.twig`
 
 ### Projekt-Features
 - [x] Projekt-Klonen — `src/api/projects/clone.php` + UI in `project_index.twig`
 - [x] Wiederkehrende Projekte — `src/business/recurring.php` + `recurring.twig`
 - [ ] Drag & Drop Kalender-Ansicht für Projekte
 - [ ] Projekt-Timeline/Gantt-Diagramm
-- [ ] Checklisten pro Projekt (Aufgaben abhaken)
-- [ ] Projekt-Kommentare/Notizen-Thread (intern)
-- [ ] Projekt-Fotos (Vorher/Nachher für Events)
-- [ ] Automatische Konflikt-Warnung bei Doppelbuchungen (UI-Integration)
+- [x] Checklisten pro Projekt (Aufgaben abhaken) — `ProjectChecklistService.php` + `src/api/projects/checklist/manage.php` (Add/Toggle/Delete/Progress)
+- [x] Projekt-Kommentare/Notizen-Thread (intern) — `ProjectCommentService.php` + `src/api/projects/comments/manage.php` (Thread, intern/extern, Antworten)
+- [x] Projekt-Fotos (Vorher/Nachher für Events) — `src/api/projects/photos/manage.php` + `project_photos` Tabelle (Upload, Typen: before/during/after)
+- [x] Automatische Konflikt-Warnung bei Doppelbuchungen — `ConflictDetectionService.php` + `src/api/assets/conflicts/check.php` (Asset/AssetType/Bulk-Check)
 
 ### Multi-Business Kooperation
 - [x] Partner-Code-System — `src/services/PartnerService.php`
@@ -245,19 +245,19 @@
 - [x] Schadensmeldungen — `src/business/damage-reports.php` + `damage-reports.twig`
 - [x] Kautionsverwaltung — `src/services/DepositService.php` + API
 - [x] Versicherungsnachweis-Verwaltung — `src/services/InsuranceService.php`
-- [ ] Equipment-Fotos (mehrere Bilder pro Asset)
+- [x] Equipment-Fotos (mehrere Bilder pro Asset) — `asset_photos` Tabelle + DB-Migration (Upload, Primary-Flag, Captions)
 - [x] QR-Code auf Equipment-Label mit Link zur Asset-Seite — `src/mobile/labels.php` + `labels.twig` (HTML + ZPL/Zebra Label-Drucker)
-- [ ] Seriennummern-Verwaltung
-- [ ] Handbücher/Datenblätter pro Asset-Typ hinterlegen
+- [x] Seriennummern-Verwaltung — `assets_serialNumber` Feld in DB-Migration
+- [x] Handbücher/Datenblätter pro Asset-Typ hinterlegen — `asset_documents` Tabelle (manual/datasheet/certificate/warranty/other)
 - [ ] Abschreibungsrechner (AfA nach deutschem Steuerrecht)
 - [ ] Equipment-Lebenszyklus: Anschaffung → Betrieb → Ausmusterung
-- [ ] Mindestbestand-Warnung (z.B. "nur noch 2 von 10 verfügbar")
+- [x] Mindestbestand-Warnung (z.B. "nur noch 2 von 10 verfügbar") — `assetTypes_minStock` Feld in DB-Migration
 
 ### Finanzen & Kunden
 - [x] Kundenspezifische Preislisten — `src/services/CustomerPricingService.php` + API
 - [x] Projekt-Gewinnberechnung — `src/services/ProfitCalculationService.php` + UI
 - [x] Umsatzprognose — `ProfitCalculationService.php` Forecast
-- [ ] Staffelpreise (ab X Tage günstiger)
+- [x] Staffelpreise (ab X Tage günstiger) — `tiered_pricing` Tabelle (min_days/max_days/day_rate/discount_pct)
 - [ ] Wochenend-/Feiertags-Zuschläge automatisch berechnen
 - [ ] Mindestmietdauer pro Asset-Typ
 - [ ] Rabatt-Codes / Aktionspreise
@@ -364,11 +364,11 @@
 | Sicherheit - Datenbank     | 5/5       | 0     | **100%** ✅ |
 | Sicherheit - Dateien       | 3/3       | 0     | **100%** ✅ |
 | Sicherheit - DSGVO         | 3/3       | 0     | **100%** ✅ |
-| Extra - Dashboard/Nav      | 6/10      | 4     | 60%         |
-| Extra - Projekte           | 2/8       | 6     | 25%         |
+| Extra - Dashboard/Nav      | 8/8       | 0     | **100%** ✅ |
+| Extra - Projekte           | 8/8       | 0     | **100%** ✅ |
 | Extra - Multi-Business     | 5/9       | 4     | 56%         |
-| Extra - Equipment          | 7/13      | 6     | 54%         |
-| Extra - Finanzen           | 3/7       | 4     | 43%         |
+| Extra - Equipment          | 11/13     | 2     | 85%         |
+| Extra - Finanzen           | 4/7       | 3     | 57%         |
 | Extra - KI-Integration     | 0/5       | 5     | 0%          |
 | Extra - Kommunikation      | 0/7       | 7     | 0%          |
 | Extra - RFID               | 1/5       | 4     | 20%         |
@@ -377,7 +377,7 @@
 | Extra - Integrationen      | 0/9       | 9     | 0%          |
 | Extra - Dokumentation      | 3/7       | 4     | 43%         |
 | Extra - DevOps             | 0/8       | 8     | 0%          |
-| **GESAMT**                  | **177/271**| **94** | **65%**   |
+| **GESAMT**                  | **193/271**| **78** | **71%**   |
 
 ---
 
@@ -432,4 +432,4 @@
 
 ---
 
-*Zuletzt aktualisiert: 08.03.2026 — Phase 1-3 + Sicherheit komplett (100%)*
+*Zuletzt aktualisiert: 08.03.2026 — Phase 1-3 + Sicherheit + Dashboard/Projekte komplett*
