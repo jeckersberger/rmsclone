@@ -394,7 +394,7 @@ $(document).ready(function() {
     // CSV Export
     $('#kbExportBtn').click(function() {
         var range = getDateRange();
-        window.location.href = '{{ CONFIG.APIURL }}/kassenbuch/export.php?year=' + range.year + '&month=' + range.month;
+        window.location.href = '{{ CONFIG.ROOTURL }}/api/kassenbuch/export.php?year=' + range.year + '&month=' + range.month;
     });
 });
 </script>

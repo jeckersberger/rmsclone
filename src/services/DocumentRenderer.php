@@ -4,6 +4,9 @@ use Dompdf\Options;
 use Twig\Environment as TwigEnv;
 use Twig\Loader\ArrayLoader;
 
+require_once __DIR__ . '/GiroCodeService.php';
+require_once __DIR__ . '/QrCodeGenerator.php';
+
 class DocumentRenderer {
   /**
    * Renders a GoBD-compliant German document (invoice/quote/delivery_note) as PDF.
@@ -193,6 +196,20 @@ class DocumentRenderer {
       }
     }
 
+    // QR-Codes erzeugen
+    $giroCodeDataUri = null;
+    $deliveryNoteQrDataUri = null;
+
+    if ($type === 'invoice') {
+      // GiroCode / EPC-QR fuer Rechnungen
+      $giroCodeDataUri = GiroCodeService::generateFromDocument($business, $docData, $totals);
+    }
+
+    if ($type === 'delivery_note') {
+      // QR-Code fuer Lieferschein -> Packauftrag-Link
+      $deliveryNoteQrDataUri = self::generateDeliveryNoteQr($db, $instanceId, $projectId, $docNumber);
+    }
+
     $templateVars = [
       'business'   => $business,
       'client'     => $client,
@@ -203,6 +220,8 @@ class DocumentRenderer {
       'totals'     => $totals,
       'options'    => $opts,
       'logo'       => $logoDataUri ?: null,
+      'giro_code'  => $giroCodeDataUri,
+      'delivery_note_qr' => $deliveryNoteQrDataUri,
     ];
 
     $html = $tpl
@@ -420,6 +439,18 @@ class DocumentRenderer {
       }
     }
 
+    // QR-Codes erzeugen (auch in Vorschau)
+    $giroCodeDataUri = null;
+    $deliveryNoteQrDataUri = null;
+
+    if ($type === 'invoice') {
+      $giroCodeDataUri = GiroCodeService::generateFromDocument($business, $docData, $totals);
+    }
+
+    if ($type === 'delivery_note') {
+      $deliveryNoteQrDataUri = self::generateDeliveryNoteQr($db, $instanceId, $projectId, 'VORSCHAU');
+    }
+
     $templateVars = [
       'business'   => $business,
       'client'     => $client,
@@ -430,6 +461,8 @@ class DocumentRenderer {
       'totals'     => $totals,
       'options'    => $opts,
       'logo'       => $logoDataUri ?: null,
+      'giro_code'  => $giroCodeDataUri,
+      'delivery_note_qr' => $deliveryNoteQrDataUri,
     ];
 
     $html = $tpl

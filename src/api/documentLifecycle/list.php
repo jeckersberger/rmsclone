@@ -20,18 +20,32 @@ if ($projectId) {
     ]) ?: [];
 }
 
-// Enrich with ZUGFeRD XML file IDs from document_exports
+// Enrich with ZUGFeRD XML file IDs, payment status from document_exports
 // and compute expired flag for quotes
 $today = date('Y-m-d');
 foreach ($docs as &$d) {
-    if ($d['doc_type'] === 'invoice' && !empty($d['doc_number'])) {
+    $d['zugferd_s3files_id'] = null;
+    $d['document_exports_paymentStatus'] = null;
+    $d['document_exports_paidAmount'] = 0;
+
+    if (($d['doc_type'] === 'invoice' || $d['doc_type'] === 'partial_invoice') && !empty($d['document_exports_id'])) {
+        $DBLIB->where('document_exports_id', $d['document_exports_id']);
+        $export = $DBLIB->getOne('document_exports', [
+            'zugferd_xml_s3files_id',
+            'document_exports_paidAmount',
+            'document_exports_paymentStatus'
+        ]);
+        if ($export) {
+            $d['zugferd_s3files_id'] = $export['zugferd_xml_s3files_id'] ?? null;
+            $d['document_exports_paidAmount'] = $export['document_exports_paidAmount'] ?? 0;
+            $d['document_exports_paymentStatus'] = $export['document_exports_paymentStatus'] ?? 'unpaid';
+        }
+    } elseif ($d['doc_type'] === 'invoice' && !empty($d['doc_number'])) {
         $DBLIB->where('instances_id', $instanceId);
         $DBLIB->where('doc_number', $d['doc_number']);
         $DBLIB->where('zugferd_xml_s3files_id IS NOT NULL');
         $export = $DBLIB->getOne('document_exports', ['zugferd_xml_s3files_id']);
         $d['zugferd_s3files_id'] = $export ? $export['zugferd_xml_s3files_id'] : null;
-    } else {
-        $d['zugferd_s3files_id'] = null;
     }
 
     // Add expired flag for quotes with valid_until in the past

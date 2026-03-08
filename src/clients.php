@@ -1,5 +1,8 @@
 <?php
 require_once __DIR__ . '/common/headSecure.php';
+require_once __DIR__ . '/services/ClientContactService.php';
+require_once __DIR__ . '/services/ClientCategoryService.php';
+require_once __DIR__ . '/services/ClientCreditService.php';
 use Money\Currency;
 use Money\Money;
 
@@ -69,8 +72,23 @@ foreach ($clients as $client) {
 		$client['totalOutstanding'] = $client['totalOutstanding']->add(new Money($project['finance']['projectsFinanceCache_grandTotal'], new Currency($AUTH->data['instance']['instances_config_currency'])));
 	}
 
+	// Kategorien des Kunden laden
+	$categoryService = new ClientCategoryService($DBLIB);
+	$client['categories'] = $categoryService->getClientCategories($client['clients_id']);
+
+	// Kontakte laden
+	$contactService = new ClientContactService($DBLIB);
+	$client['contacts'] = $contactService->getContacts($client['clients_id']);
+
+	// Kredit-Info laden
+	$creditService = new ClientCreditService($DBLIB);
+	$client['creditInfo'] = $creditService->getCreditInfo($client['clients_id']);
+
 	$PAGEDATA['clients'][] = $client;
 }
 
+// Alle verfuegbaren Kategorien fuer die Instanz laden
+$categoryService = new ClientCategoryService($DBLIB);
+$PAGEDATA['allCategories'] = $categoryService->getCategories($AUTH->data['instance']['instances_id']);
 
 echo $TWIG->render('clients.twig', $PAGEDATA);
