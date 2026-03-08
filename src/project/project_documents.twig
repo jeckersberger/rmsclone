@@ -108,10 +108,23 @@ $(document).ready(function() {
                     if (doc.is_final_invoice == 1) {
                         typeLabel = '<strong>Schlussrechnung</strong>';
                     }
+                    // Versionsnummer fuer Angebote anzeigen
+                    if (doc.doc_type === 'quote' && doc.version) {
+                        typeLabel += ' <span class="badge badge-light" title="Version ' + doc.version + '">v' + doc.version + '</span>';
+                    }
                     html += '<td>' + typeLabel + '</td>';
                     var statusHtml = '<span class="badge badge-' + (statusBadges[doc.status] || 'secondary') + '">' + (statusLabels[doc.status] || doc.status) + '</span>';
                     if (doc.is_expired) {
                         statusHtml += ' <span class="badge badge-danger" title="Angebot abgelaufen"><i class="fas fa-clock"></i> Abgelaufen</span>';
+                    }
+                    // Zahlungsstatus-Badge fuer Rechnungen
+                    if ((doc.doc_type === 'invoice' || doc.doc_type === 'partial_invoice') && doc.document_exports_paymentStatus) {
+                        var payBadges = {'unpaid': 'danger', 'partial': 'warning', 'paid': 'success'};
+                        var payLabels = {'unpaid': 'Unbezahlt', 'partial': 'Teilbezahlt', 'paid': 'Bezahlt'};
+                        var ps = doc.document_exports_paymentStatus;
+                        if (ps !== 'unpaid' || (doc.status !== 'draft' && doc.status !== 'paid')) {
+                            statusHtml += ' <span class="badge badge-' + (payBadges[ps] || 'secondary') + '" title="Zahlungsstatus"><i class="fas fa-coins"></i> ' + (payLabels[ps] || ps) + '</span>';
+                        }
                     }
                     html += '<td>' + statusHtml + '</td>';
                     html += '<td>' + formatMoney(doc.net_amount) + '</td>';
@@ -150,10 +163,20 @@ $(document).ready(function() {
                         html += '<button class="btn btn-primary btn-sm docQuickConvertBtn" data-id="' + doc.id + '" data-target="invoice" title="{{ t("quick_convert_to_invoice") }}"><i class="fas fa-arrow-right"></i> {{ t("invoice") }}</button>';
                     }
                     if ((doc.doc_type === 'invoice' || doc.doc_type === 'partial_invoice') && doc.status !== 'paid' && doc.status !== 'cancelled') {
-                        html += '<button class="btn btn-success btn-sm docMarkPaidBtn" data-id="' + doc.id + '" data-gross="' + doc.gross_amount + '" data-paid="' + (doc.paid_amount || 0) + '" title="Zahlung erfassen"><i class="fas fa-euro-sign"></i></button>';
+                        html += '<button class="btn btn-success btn-sm docMarkPaidBtn" data-id="' + doc.id + '" data-gross="' + doc.gross_amount + '" data-paid="' + (doc.paid_amount || 0) + '" data-exports-id="' + (doc.document_exports_id || '') + '" title="Zahlung erfassen"><i class="fas fa-euro-sign"></i></button>';
+                    }
+                    if ((doc.doc_type === 'invoice' || doc.doc_type === 'partial_invoice') && doc.document_exports_id) {
+                        html += '<button class="btn btn-outline-info btn-sm docPaymentHistoryBtn" data-exports-id="' + doc.document_exports_id + '" data-number="' + (doc.doc_number || '') + '" data-gross="' + doc.gross_amount + '" title="Zahlungsverlauf anzeigen"><i class="fas fa-list-ol"></i></button>';
                     }
                     if (doc.doc_type === 'quote' || doc.doc_type === 'order_confirmation' || doc.doc_type === 'invoice') {
                         html += '<button class="btn btn-default docConvertBtn" data-id="' + doc.id + '" data-type="' + doc.doc_type + '" title="{{ t("convert_document") }}"><i class="fas fa-arrow-right"></i></button>';
+                    }
+                    // Neue Version und Versionshistorie fuer Angebote
+                    if (doc.doc_type === 'quote' && doc.document_exports_id) {
+                        html += '<button class="btn btn-outline-primary btn-sm docNewVersionBtn" data-exports-id="' + doc.document_exports_id + '" title="Neue Version erstellen"><i class="fas fa-copy"></i> Neue Version</button>';
+                        if (doc.has_versions) {
+                            html += '<button class="btn btn-outline-secondary btn-sm docVersionHistoryBtn" data-exports-id="' + doc.document_exports_id + '" title="Versionshistorie anzeigen"><i class="fas fa-history"></i> ' + doc.version_count + ' Versionen</button>';
+                        }
                     }
                     html += '</div>';
                     html += '</td>';
@@ -551,12 +574,118 @@ $(document).ready(function() {
         }, false);
     });
 
-    // Zahlung erfassen
+    // ═══ Neue Angebots-Version erstellen ═══
+    $(document).on('click', '.docNewVersionBtn', function() {
+        var exportsId = $(this).data('exports-id');
+        bootbox.dialog({
+            title: '<i class="fas fa-copy"></i> Neue Angebots-Version erstellen',
+            message: '<form id="newVersionForm">' +
+                '<div class="form-group">' +
+                '<label>&Auml;nderungsnotizen <small class="text-muted">(optional)</small></label>' +
+                '<textarea class="form-control" id="versionNotes" rows="3" placeholder="Beschreiben Sie die &Auml;nderungen in dieser Version..."></textarea>' +
+                '</div>' +
+                '</form>',
+            buttons: {
+                cancel: { label: 'Abbrechen', className: 'btn-default' },
+                confirm: {
+                    label: '<i class="fas fa-copy"></i> Version erstellen',
+                    className: 'btn-primary',
+                    callback: function() {
+                        ajaxcall('documentLifecycle/createVersion.php', {
+                            document_exports_id: exportsId,
+                            version_notes: $('#versionNotes').val()
+                        }, function(data) {
+                            if (data.response) {
+                                bootbox.alert('<strong>' + data.response.message + '</strong>');
+                            }
+                            loadDocuments();
+                        });
+                    }
+                }
+            }
+        });
+    });
+
+    // ═══ Versionshistorie anzeigen ═══
+    $(document).on('click', '.docVersionHistoryBtn', function() {
+        var exportsId = $(this).data('exports-id');
+        // Versionshistorie ueber einen separaten AJAX-Call laden
+        ajaxcall('documentLifecycle/list.php', {project_id: projectId}, function(data) {
+            if (!data.response || !data.response.documents) return;
+
+            // Alle Angebote mit passender version_parent_id finden
+            var docs = data.response.documents;
+            var targetDoc = null;
+            for (var i = 0; i < docs.length; i++) {
+                if (docs[i].document_exports_id == exportsId) {
+                    targetDoc = docs[i];
+                    break;
+                }
+            }
+
+            if (!targetDoc) {
+                bootbox.alert('Versionsinformationen nicht gefunden.');
+                return;
+            }
+
+            var parentId = targetDoc.version_parent_id || exportsId;
+
+            // Alle Versionen dieses Angebots sammeln
+            var versions = [];
+            for (var i = 0; i < docs.length; i++) {
+                var d = docs[i];
+                if (d.doc_type === 'quote' && (d.document_exports_id == parentId || d.version_parent_id == parentId)) {
+                    versions.push(d);
+                }
+            }
+
+            // Nach Version sortieren
+            versions.sort(function(a, b) { return (a.version || 1) - (b.version || 1); });
+
+            var html = '<table class="table table-sm table-striped">';
+            html += '<thead><tr><th>Version</th><th>Dokumentnr.</th><th>Status</th><th>Erstellt am</th><th>Aktionen</th></tr></thead>';
+            html += '<tbody>';
+            versions.forEach(function(v) {
+                var badge = statusBadges[v.status] || 'secondary';
+                var label = statusLabels[v.status] || v.status;
+                var isCurrent = (v.document_exports_id == exportsId);
+                html += '<tr' + (isCurrent ? ' class="table-active"' : '') + '>';
+                html += '<td><strong>v' + (v.version || 1) + '</strong>' + (isCurrent ? ' <span class="badge badge-info">Aktuell</span>' : '') + '</td>';
+                html += '<td>' + (v.doc_number || '-') + '</td>';
+                html += '<td><span class="badge badge-' + badge + '">' + label + '</span></td>';
+                html += '<td>' + (v.created_at ? v.created_at.substring(0, 10) : '-') + '</td>';
+                html += '<td>';
+                if (v.s3files_id) {
+                    html += '<a href="{{ CONFIG.ROOTURL }}/api/file/?r=true&f=' + v.s3files_id + '" class="btn btn-sm btn-default" title="Herunterladen"><i class="fas fa-download"></i></a>';
+                }
+                html += '</td>';
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+
+            if (versions.length === 0) {
+                html = '<p class="text-muted text-center">Keine Versionshistorie vorhanden.</p>';
+            }
+
+            bootbox.dialog({
+                title: '<i class="fas fa-history"></i> Versionshistorie',
+                message: html,
+                size: 'large',
+                buttons: {
+                    ok: { label: 'Schlie&szlig;en', className: 'btn-default' }
+                }
+            });
+        }, false);
+    });
+
+    // Zahlung erfassen (erweitert mit PaymentTrackingService)
     $(document).on('click', '.docMarkPaidBtn', function() {
         var docId = $(this).data('id');
+        var exportsId = $(this).data('exports-id');
         var gross = parseFloat($(this).data('gross') || 0);
         var alreadyPaid = parseFloat($(this).data('paid') || 0);
         var remaining = (gross - alreadyPaid).toFixed(2);
+        var today = new Date().toISOString().substring(0, 10);
 
         bootbox.dialog({
             title: '<i class="fas fa-euro-sign"></i> Zahlung erfassen',
@@ -565,12 +694,20 @@ $(document).ready(function() {
                 (alreadyPaid > 0 ? '<br>Bereits bezahlt: ' + formatMoney(alreadyPaid) + '<br>Offen: <strong>' + formatMoney(remaining) + '</strong>' : '') + '</p>' +
                 '<div class="form-group"><label>Zahlungsbetrag (EUR)</label>' +
                 '<input type="number" step="0.01" min="0.01" class="form-control" id="payAmount" value="' + remaining + '"></div>' +
+                '<div class="form-group"><label>Zahlungsdatum</label>' +
+                '<input type="date" class="form-control" id="payDate" value="' + today + '"></div>' +
+                '<div class="form-group"><label>Zahlungsart</label>' +
+                '<select class="form-control" id="payMethod">' +
+                '<option value="bank_transfer">Ueberweisung</option>' +
+                '<option value="sepa">SEPA-Lastschrift</option>' +
+                '<option value="cash">Barzahlung</option>' +
+                '<option value="paypal">PayPal</option>' +
+                '<option value="other">Sonstige</option>' +
+                '</select></div>' +
                 '<div class="form-group"><label>Referenz <small class="text-muted">(optional)</small></label>' +
                 '<input type="text" class="form-control" id="payReference" placeholder="z.B. Ueberweisungsreferenz"></div>' +
-                '<div class="form-group"><div class="custom-control custom-checkbox">' +
-                '<input type="checkbox" class="custom-control-input" id="payPartial">' +
-                '<label class="custom-control-label" for="payPartial">Teilzahlung (Rechnung bleibt offen)</label>' +
-                '</div></div>' +
+                '<div class="form-group"><label>Bemerkungen <small class="text-muted">(optional)</small></label>' +
+                '<textarea class="form-control" id="payNotes" rows="2"></textarea></div>' +
                 '</form>',
             buttons: {
                 cancel: { label: 'Abbrechen', className: 'btn-default' },
@@ -578,23 +715,118 @@ $(document).ready(function() {
                     label: '<i class="fas fa-check"></i> Zahlung buchen',
                     className: 'btn-success',
                     callback: function() {
-                        ajaxcall('documentLifecycle/markPaid.php', {
-                            doc_id: docId,
-                            amount: $('#payAmount').val(),
-                            reference: $('#payReference').val(),
-                            partial: $('#payPartial').is(':checked') ? '1' : '0'
-                        }, function(data) {
-                            if (data.response) {
-                                var msg = data.response.fully_paid
-                                    ? 'Rechnung vollstaendig bezahlt!'
-                                    : 'Teilzahlung erfasst. Offen: ' + formatMoney(data.response.remaining);
-                                bootbox.alert(msg);
-                            }
-                            loadDocuments();
-                        });
+                        var payAmount = parseFloat($('#payAmount').val());
+                        if (exportsId) {
+                            // Neues PaymentTracking-System verwenden
+                            ajaxcall('payments/record.php', {
+                                document_exports_id: exportsId,
+                                amount: payAmount,
+                                payment_date: $('#payDate').val(),
+                                payment_method: $('#payMethod').val(),
+                                reference: $('#payReference').val(),
+                                notes: $('#payNotes').val()
+                            }, function(data) {
+                                if (data.response) {
+                                    var r = data.response;
+                                    var msg = r.payment_status === 'paid'
+                                        ? 'Rechnung vollstaendig bezahlt!'
+                                        : 'Teilzahlung erfasst. Bezahlt: ' + formatMoney(r.total_paid) + ' / Offen: ' + formatMoney(r.remaining);
+                                    if (r.payment_status === 'partial') {
+                                        msg += '<br><small class="text-info"><i class="fas fa-pause-circle"></i> Mahnverfahren wurde automatisch pausiert.</small>';
+                                    }
+                                    bootbox.alert(msg);
+                                }
+                                loadDocuments();
+                            });
+                        } else {
+                            // Fallback: altes System
+                            ajaxcall('documentLifecycle/markPaid.php', {
+                                doc_id: docId,
+                                amount: payAmount,
+                                reference: $('#payReference').val(),
+                                partial: (payAmount < parseFloat(remaining)) ? '1' : '0'
+                            }, function(data) {
+                                if (data.response) {
+                                    var msg = data.response.fully_paid
+                                        ? 'Rechnung vollstaendig bezahlt!'
+                                        : 'Teilzahlung erfasst. Offen: ' + formatMoney(data.response.remaining);
+                                    bootbox.alert(msg);
+                                }
+                                loadDocuments();
+                            });
+                        }
                     }
                 }
             }
+        });
+    });
+
+    // ═══ Zahlungsverlauf anzeigen ═══
+    $(document).on('click', '.docPaymentHistoryBtn', function() {
+        var exportsId = $(this).data('exports-id');
+        var docNumber = $(this).data('number');
+        var gross = parseFloat($(this).data('gross') || 0);
+
+        ajaxcall('payments/list.php', {document_exports_id: exportsId}, function(data) {
+            if (!data.response) return;
+
+            var payments = data.response.payments || [];
+            var remaining = parseFloat(data.response.remaining || 0);
+            var totalPaid = 0;
+            payments.forEach(function(p) { totalPaid += parseFloat(p.amount || 0); });
+
+            var html = '<div class="mb-3">' +
+                '<strong>Rechnung:</strong> ' + docNumber + '<br>' +
+                '<strong>Bruttobetrag:</strong> ' + formatMoney(gross) + '<br>' +
+                '<strong>Bezahlt:</strong> <span class="text-success">' + formatMoney(totalPaid) + '</span><br>' +
+                '<strong>Offen:</strong> <span class="' + (remaining > 0 ? 'text-danger' : 'text-success') + '">' + formatMoney(remaining) + '</span>' +
+                '</div>';
+
+            // Fortschrittsbalken
+            var pct = gross > 0 ? Math.min(100, Math.round(totalPaid / gross * 100)) : 0;
+            html += '<div class="progress mb-3" style="height: 20px;">' +
+                '<div class="progress-bar bg-success" role="progressbar" style="width: ' + pct + '%" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100">' + pct + '%</div>' +
+                '</div>';
+
+            if (payments.length > 0) {
+                html += '<table class="table table-sm table-striped">';
+                html += '<thead><tr><th>Datum</th><th>Betrag</th><th>Zahlungsart</th><th>Referenz</th><th>Aktionen</th></tr></thead>';
+                html += '<tbody>';
+                payments.forEach(function(p) {
+                    html += '<tr>';
+                    html += '<td>' + (p.payment_date || '-') + '</td>';
+                    html += '<td>' + formatMoney(p.amount) + '</td>';
+                    html += '<td>' + (p.payment_method_label || p.payment_method || '-') + '</td>';
+                    html += '<td>' + (p.reference || '-') + '</td>';
+                    html += '<td><button class="btn btn-sm btn-outline-danger deletePaymentBtn" data-payment-id="' + p.id + '" data-exports-id="' + exportsId + '" title="Zahlung loeschen"><i class="fas fa-trash"></i></button></td>';
+                    html += '</tr>';
+                });
+                html += '</tbody></table>';
+            } else {
+                html += '<p class="text-muted text-center">Keine Zahlungen erfasst.</p>';
+            }
+
+            bootbox.dialog({
+                title: '<i class="fas fa-list-ol"></i> Zahlungsverlauf - ' + docNumber,
+                message: html,
+                size: 'large',
+                buttons: {
+                    ok: { label: 'Schliessen', className: 'btn-default' }
+                }
+            });
+        }, false);
+    });
+
+    // Zahlung loeschen (aus dem Zahlungsverlauf-Dialog)
+    $(document).on('click', '.deletePaymentBtn', function() {
+        var paymentId = $(this).data('payment-id');
+        var btn = $(this);
+        bootbox.confirm('Diese Zahlung wirklich loeschen?', function(ok) {
+            if (!ok) return;
+            ajaxcall('payments/delete.php', {payment_id: paymentId}, function() {
+                btn.closest('tr').fadeOut(300, function() { $(this).remove(); });
+                loadDocuments();
+            });
         });
     });
 });

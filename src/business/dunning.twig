@@ -69,9 +69,11 @@
                             <th>{{ t('project') }}</th>
                             <th>{{ t('client') }}</th>
                             <th>{{ t('gross_amount') }}</th>
+                            <th>Zahlungsstatus</th>
                             <th>{{ t('due_date') }}</th>
                             <th>{{ t('days_overdue') }}</th>
                             <th>{{ t('dunning_level') }}</th>
+                            <th>Mahnsperre</th>
                             <th>{{ t('actions') }}</th>
                         </tr>
                     </thead>
@@ -112,26 +114,68 @@ $(document).ready(function() {
                 data.response.invoices.forEach(function(inv) {
                     var daysOverdue = Math.floor((Date.now() - new Date(inv.due_date).getTime()) / 86400000);
                     var level = inv.dunning_level || 0;
-                    html += '<tr>';
+                    var isPaused = inv.last_dunning && inv.last_dunning.dunning_history_paused == 1;
+                    var pauseReason = (inv.last_dunning && inv.last_dunning.dunning_history_pauseReason) || '';
+
+                    html += '<tr' + (isPaused ? ' class="table-secondary"' : '') + '>';
                     html += '<td>' + (inv.doc_number || '-') + '</td>';
                     html += '<td>' + (inv.projects_name || '-') + '</td>';
                     html += '<td>' + (inv.clients_name || '-') + '</td>';
-                    html += '<td>' + formatMoney(inv.gross_amount) + '</td>';
+
+                    // Bruttobetrag mit Zahlungsinfo
+                    var amountHtml = formatMoney(inv.gross_amount);
+                    if (parseFloat(inv.paid_amount || 0) > 0) {
+                        var remaining = parseFloat(inv.gross_amount) - parseFloat(inv.paid_amount);
+                        amountHtml += '<br><small class="text-success">Bezahlt: ' + formatMoney(inv.paid_amount) + '</small>';
+                        amountHtml += '<br><small class="text-danger">Offen: ' + formatMoney(remaining) + '</small>';
+                    }
+                    html += '<td>' + amountHtml + '</td>';
+
+                    // Zahlungsstatus
+                    var payStatus = inv.document_exports_paymentStatus || 'unpaid';
+                    var payBadges = {'unpaid': 'danger', 'partial': 'warning', 'paid': 'success'};
+                    var payLabels = {'unpaid': 'Unbezahlt', 'partial': 'Teilbezahlt', 'paid': 'Bezahlt'};
+                    html += '<td><span class="badge badge-' + (payBadges[payStatus] || 'secondary') + '"><i class="fas fa-coins"></i> ' + (payLabels[payStatus] || payStatus) + '</span></td>';
+
                     html += '<td>' + (inv.due_date || '-') + '</td>';
                     html += '<td><span class="badge badge-' + (daysOverdue > 30 ? 'danger' : 'warning') + '">' + daysOverdue + ' {{ t("days") }}</span></td>';
                     html += '<td><span class="badge badge-' + (levelBadges[level] || 'secondary') + '">' + (levelLabels[level] || '-') + '</span></td>';
+
+                    // Mahnsperre-Spalte
                     html += '<td>';
-                    html += '<button class="btn btn-sm btn-warning createDunningBtn" data-id="' + inv.id + '" title="{{ t("create_dunning") }}"><i class="fas fa-envelope"></i></button> ';
-                    html += '<button class="btn btn-sm btn-info aiDunningBtn" data-id="' + inv.id + '" data-doc="' + (inv.doc_number || '') + '" data-client="' + (inv.clients_name || '') + '" data-amount="' + (inv.gross_amount || 0) + '" data-email="' + (inv.clients_email || '') + '" title="KI-Mahnung generieren"><i class="fas fa-robot"></i></button> ';
-                    if (inv.last_dunning && inv.last_dunning.id) {
-                        html += '<button class="btn btn-sm btn-secondary generateLetterBtn" data-dunning-id="' + inv.last_dunning.id + '" title="PDF erzeugen"><i class="fas fa-file-pdf"></i> PDF</button> ';
+                    if (isPaused) {
+                        html += '<span class="badge badge-info" title="' + pauseReason + '"><i class="fas fa-pause-circle"></i> Pausiert</span>';
+                        html += '<br><small class="text-muted">' + pauseReason + '</small>';
+                    } else {
+                        html += '<span class="badge badge-light"><i class="fas fa-play-circle"></i> Aktiv</span>';
                     }
-                    html += '<button class="btn btn-sm btn-success markPaidBtn" data-id="' + inv.id + '" title="{{ t("mark_paid") }}"><i class="fas fa-check"></i></button>';
+                    html += '</td>';
+
+                    // Aktionen
+                    html += '<td>';
+                    html += '<div class="btn-group btn-group-sm">';
+                    if (!isPaused) {
+                        html += '<button class="btn btn-warning createDunningBtn" data-id="' + inv.id + '" title="{{ t("create_dunning") }}"><i class="fas fa-envelope"></i></button>';
+                    }
+                    html += '<button class="btn btn-info aiDunningBtn" data-id="' + inv.id + '" data-doc="' + (inv.doc_number || '') + '" data-client="' + (inv.clients_name || '') + '" data-amount="' + (inv.gross_amount || 0) + '" data-email="' + (inv.clients_email || '') + '" title="KI-Mahnung generieren"><i class="fas fa-robot"></i></button>';
+                    if (inv.last_dunning && inv.last_dunning.id) {
+                        html += '<button class="btn btn-secondary generateLetterBtn" data-dunning-id="' + inv.last_dunning.id + '" title="PDF erzeugen"><i class="fas fa-file-pdf"></i></button>';
+                    }
+                    html += '<button class="btn btn-success markPaidBtn" data-id="' + inv.id + '" title="{{ t("mark_paid") }}"><i class="fas fa-check"></i></button>';
+                    // Mahnsperre umschalten
+                    if (inv.document_exports_id) {
+                        if (isPaused) {
+                            html += '<button class="btn btn-outline-success togglePauseBtn" data-exports-id="' + inv.document_exports_id + '" data-paused="0" title="Mahnverfahren fortsetzen"><i class="fas fa-play"></i></button>';
+                        } else {
+                            html += '<button class="btn btn-outline-warning togglePauseBtn" data-exports-id="' + inv.document_exports_id + '" data-paused="1" title="Mahnverfahren pausieren"><i class="fas fa-pause"></i></button>';
+                        }
+                    }
+                    html += '</div>';
                     html += '</td>';
                     html += '</tr>';
                 });
             } else {
-                html = '<tr><td colspan="8" class="text-center text-muted">{{ t("no_overdue_invoices") }}</td></tr>';
+                html = '<tr><td colspan="10" class="text-center text-muted">{{ t("no_overdue_invoices") }}</td></tr>';
             }
             $('#dunningTableBody').html(html);
             $('#dunningLoadingOverlay').hide();
@@ -269,6 +313,46 @@ $(document).ready(function() {
                 });
             }
         });
+    });
+
+    // Mahnsperre manuell umschalten
+    $(document).on('click', '.togglePauseBtn', function() {
+        var exportsId = $(this).data('exports-id');
+        var paused = $(this).data('paused');
+        var btn = $(this);
+
+        if (paused == 1) {
+            // Pausieren: Grund abfragen
+            bootbox.prompt({
+                title: '<i class="fas fa-pause-circle"></i> Mahnverfahren pausieren',
+                message: '<p>Geben Sie einen Grund fuer die Mahnsperre an:</p>',
+                value: 'Manuell pausiert',
+                callback: function(reason) {
+                    if (reason === null) return;
+                    btn.prop('disabled', true);
+                    ajaxcall('payments/toggleDunningPause.php', {
+                        document_exports_id: exportsId,
+                        paused: 1,
+                        reason: reason
+                    }, function() {
+                        loadDunning();
+                    });
+                }
+            });
+        } else {
+            // Fortsetzen
+            bootbox.confirm('Mahnverfahren wirklich fortsetzen?', function(ok) {
+                if (!ok) return;
+                btn.prop('disabled', true);
+                ajaxcall('payments/toggleDunningPause.php', {
+                    document_exports_id: exportsId,
+                    paused: 0,
+                    reason: ''
+                }, function() {
+                    loadDunning();
+                });
+            });
+        }
     });
 
     // PDF erzeugen (Mahnbrief)

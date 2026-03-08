@@ -1,0 +1,362 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-university"></i> SEPA-Lastschrift-Mandatsverwaltung</h3>
+                <div class="card-tools">
+                    <button class="btn btn-sm btn-primary" id="newMandateBtn"><i class="fas fa-plus"></i> Neues Mandat</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <select class="form-control form-control-sm" id="filterStatus">
+                            <option value="">Alle Status</option>
+                            <option value="active" selected>Aktiv</option>
+                            <option value="revoked">Widerrufen</option>
+                            <option value="expired">Abgelaufen</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-sm btn-outline-secondary" id="refreshMandatesBtn"><i class="fas fa-sync"></i> Aktualisieren</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="overlay" id="mandatesLoadingOverlay"><i class="fas fa-sync fa-spin fa-3x"></i></div>
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th>Mandatsreferenz</th>
+                            <th>Kunde</th>
+                            <th>IBAN</th>
+                            <th>Kontoinhaber</th>
+                            <th>Typ</th>
+                            <th>Status</th>
+                            <th>Datum</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mandatesTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-file-code"></i> SEPA-XML Sammeleinzug</h3>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Waehlen Sie Rechnungen aus, fuer die ein SEPA-Lastschrifteinzug erzeugt werden soll. Es werden nur Rechnungen beruecksichtigt, deren Kunden ein aktives SEPA-Mandat haben.</p>
+                <div class="form-group">
+                    <label>Rechnungs-IDs (kommagetrennt)</label>
+                    <input type="text" class="form-control" id="batchInvoiceIds" placeholder="z.B. 101, 102, 103">
+                </div>
+                <button class="btn btn-success" id="generateBatchXmlBtn"><i class="fas fa-download"></i> SEPA-XML erzeugen (Sammeleinzug)</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Neues Mandat -->
+<div class="modal fade" id="newMandateModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-plus"></i> Neues SEPA-Mandat anlegen</h5>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <form id="newMandateForm">
+                    <div class="form-group">
+                        <label>Kunde <span class="text-danger">*</span></label>
+                        <select class="form-control" name="clients_id" required>
+                            <option value="">-- Kunde waehlen --</option>
+                            {% for client in clients %}
+                            <option value="{{ client.clients_id }}">{{ client.clients_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>IBAN <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="iban" required placeholder="DE89 3704 0044 0532 0130 00">
+                    </div>
+                    <div class="form-group">
+                        <label>BIC</label>
+                        <input type="text" class="form-control" name="bic" placeholder="COBADEFFXXX">
+                    </div>
+                    <div class="form-group">
+                        <label>Kontoinhaber <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="account_holder" required placeholder="Vorname Nachname / Firmenname">
+                    </div>
+                    <div class="form-group">
+                        <label>Mandatstyp</label>
+                        <select class="form-control" name="mandate_type">
+                            <option value="CORE">CORE (Verbraucher)</option>
+                            <option value="B2B">B2B (Geschaeftskunden)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Unterschriftsdatum</label>
+                        <input type="datetime-local" class="form-control" name="signed_at">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-primary" id="saveMandateBtn"><i class="fas fa-save"></i> Mandat anlegen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Einzeleinzug -->
+<div class="modal fade" id="singleCollectionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-file-code"></i> Einzeleinzug erzeugen</h5>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <form id="singleCollectionForm">
+                    <input type="hidden" name="mandate_id" id="singleMandateId">
+                    <div class="form-group">
+                        <label>Mandatsreferenz</label>
+                        <input type="text" class="form-control" id="singleMandateRef" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Betrag (EUR) <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" name="amount" step="0.01" min="0.01" required placeholder="0,00">
+                    </div>
+                    <div class="form-group">
+                        <label>Verwendungszweck <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="purpose" required placeholder="z.B. Rechnung RE-2026-001">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-success" id="generateSingleXmlBtn"><i class="fas fa-download"></i> XML erzeugen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    var statusLabels = {
+        'active': '<span class="badge badge-success">Aktiv</span>',
+        'revoked': '<span class="badge badge-danger">Widerrufen</span>',
+        'expired': '<span class="badge badge-secondary">Abgelaufen</span>'
+    };
+
+    function maskIban(iban) {
+        if (!iban || iban.length < 8) return iban || '-';
+        return iban.substring(0, 4) + ' **** **** ' + iban.substring(iban.length - 4);
+    }
+
+    function loadMandates() {
+        var status = $('#filterStatus').val();
+        var params = {};
+        if (status) params.status = status;
+
+        ajaxcall('sepa/listMandates.php', params, function(data) {
+            if (!data.response || !data.response.mandates) return;
+
+            var html = '';
+            if (data.response.mandates.length > 0) {
+                data.response.mandates.forEach(function(m) {
+                    html += '<tr>';
+                    html += '<td><code>' + (m.mandate_reference || '-') + '</code></td>';
+                    html += '<td>' + (m.clients_name || '-') + '</td>';
+                    html += '<td>' + maskIban(m.iban) + '</td>';
+                    html += '<td>' + (m.account_holder || '-') + '</td>';
+                    html += '<td><span class="badge badge-info">' + (m.mandate_type || 'CORE') + '</span></td>';
+                    html += '<td>' + (statusLabels[m.status] || m.status) + '</td>';
+                    html += '<td>' + (m.mandate_date || '-') + '</td>';
+                    html += '<td>';
+                    if (m.status === 'active') {
+                        html += '<button class="btn btn-sm btn-danger revokeBtn" data-id="' + m.id + '" data-ref="' + m.mandate_reference + '" title="Mandat widerrufen"><i class="fas fa-ban"></i></button> ';
+                        html += '<button class="btn btn-sm btn-success singleCollectBtn" data-id="' + m.id + '" data-ref="' + m.mandate_reference + '" title="Einzeleinzug"><i class="fas fa-file-code"></i></button>';
+                    }
+                    html += '</td>';
+                    html += '</tr>';
+                });
+            } else {
+                html = '<tr><td colspan="8" class="text-center text-muted">Keine Mandate gefunden</td></tr>';
+            }
+            $('#mandatesTableBody').html(html);
+            $('#mandatesLoadingOverlay').hide();
+        }, false);
+    }
+
+    loadMandates();
+
+    $('#filterStatus').on('change', function() {
+        $('#mandatesLoadingOverlay').show();
+        loadMandates();
+    });
+
+    $('#refreshMandatesBtn').on('click', function() {
+        $('#mandatesLoadingOverlay').show();
+        loadMandates();
+    });
+
+    // Neues Mandat Modal
+    $('#newMandateBtn').on('click', function() {
+        $('#newMandateForm')[0].reset();
+        $('#newMandateModal').modal('show');
+    });
+
+    // Mandat speichern
+    $('#saveMandateBtn').on('click', function() {
+        var form = $('#newMandateForm');
+        var clientsId = form.find('[name="clients_id"]').val();
+        var iban = form.find('[name="iban"]').val();
+        var accountHolder = form.find('[name="account_holder"]').val();
+
+        if (!clientsId || !iban || !accountHolder) {
+            bootbox.alert('Bitte fuellen Sie alle Pflichtfelder aus.');
+            return;
+        }
+
+        var btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Speichern...');
+
+        ajaxcall('sepa/createMandate.php', {
+            clients_id: clientsId,
+            iban: iban,
+            bic: form.find('[name="bic"]').val(),
+            account_holder: accountHolder,
+            mandate_type: form.find('[name="mandate_type"]').val(),
+            signed_at: form.find('[name="signed_at"]').val()
+        }, function(data) {
+            btn.prop('disabled', false).html('<i class="fas fa-save"></i> Mandat anlegen');
+            if (data.result) {
+                $('#newMandateModal').modal('hide');
+                bootbox.alert('<i class="fas fa-check text-success"></i> SEPA-Mandat erfolgreich angelegt. Referenz: <strong>' + (data.response.mandate_reference || '') + '</strong>');
+                loadMandates();
+            } else {
+                bootbox.alert('<i class="fas fa-exclamation-triangle text-danger"></i> ' + (data.error && data.error.message ? data.error.message : 'Fehler beim Anlegen des Mandats.'));
+            }
+        }, function() {
+            btn.prop('disabled', false).html('<i class="fas fa-save"></i> Mandat anlegen');
+            bootbox.alert('Fehler beim Anlegen des Mandats.');
+        });
+    });
+
+    // Mandat widerrufen
+    $(document).on('click', '.revokeBtn', function() {
+        var mandateId = $(this).data('id');
+        var mandateRef = $(this).data('ref');
+        bootbox.confirm('Moechten Sie das Mandat <strong>' + mandateRef + '</strong> wirklich widerrufen? Diese Aktion kann nicht rueckgaengig gemacht werden.', function(confirmed) {
+            if (confirmed) {
+                ajaxcall('sepa/revokeMandate.php', {mandate_id: mandateId}, function(data) {
+                    if (data.result) {
+                        bootbox.alert('<i class="fas fa-check text-success"></i> Mandat erfolgreich widerrufen.');
+                        loadMandates();
+                    } else {
+                        bootbox.alert('<i class="fas fa-exclamation-triangle text-danger"></i> ' + (data.error && data.error.message ? data.error.message : 'Fehler beim Widerrufen.'));
+                    }
+                });
+            }
+        });
+    });
+
+    // Einzeleinzug Modal
+    $(document).on('click', '.singleCollectBtn', function() {
+        $('#singleMandateId').val($(this).data('id'));
+        $('#singleMandateRef').val($(this).data('ref'));
+        $('#singleCollectionForm').find('[name="amount"]').val('');
+        $('#singleCollectionForm').find('[name="purpose"]').val('');
+        $('#singleCollectionModal').modal('show');
+    });
+
+    // Einzeleinzug XML erzeugen
+    $('#generateSingleXmlBtn').on('click', function() {
+        var mandateId = $('#singleMandateId').val();
+        var amount = $('#singleCollectionForm').find('[name="amount"]').val();
+        var purpose = $('#singleCollectionForm').find('[name="purpose"]').val();
+
+        if (!amount || !purpose) {
+            bootbox.alert('Bitte Betrag und Verwendungszweck eingeben.');
+            return;
+        }
+
+        var btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Erzeugen...');
+
+        ajaxcall('sepa/generateXml.php', {
+            mode: 'single',
+            mandate_id: mandateId,
+            amount: amount,
+            purpose: purpose
+        }, function(data) {
+            btn.prop('disabled', false).html('<i class="fas fa-download"></i> XML erzeugen');
+            if (data.result && data.response && data.response.xml) {
+                downloadXml(data.response.xml, data.response.filename);
+                $('#singleCollectionModal').modal('hide');
+            } else {
+                bootbox.alert('<i class="fas fa-exclamation-triangle text-danger"></i> ' + (data.error && data.error.message ? data.error.message : 'XML konnte nicht erzeugt werden.'));
+            }
+        }, function() {
+            btn.prop('disabled', false).html('<i class="fas fa-download"></i> XML erzeugen');
+            bootbox.alert('Fehler beim Erzeugen der SEPA-XML-Datei.');
+        });
+    });
+
+    // Sammeleinzug
+    $('#generateBatchXmlBtn').on('click', function() {
+        var idsStr = $('#batchInvoiceIds').val().trim();
+        if (!idsStr) {
+            bootbox.alert('Bitte geben Sie mindestens eine Rechnungs-ID ein.');
+            return;
+        }
+
+        var ids = idsStr.split(',').map(function(s) { return parseInt(s.trim()); }).filter(function(n) { return n > 0; });
+        if (ids.length === 0) {
+            bootbox.alert('Keine gueltigen Rechnungs-IDs gefunden.');
+            return;
+        }
+
+        var btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Erzeugen...');
+
+        ajaxcall('sepa/generateXml.php', {
+            mode: 'batch',
+            invoice_ids: JSON.stringify(ids)
+        }, function(data) {
+            btn.prop('disabled', false).html('<i class="fas fa-download"></i> SEPA-XML erzeugen (Sammeleinzug)');
+            if (data.result && data.response && data.response.xml) {
+                downloadXml(data.response.xml, data.response.filename);
+            } else {
+                bootbox.alert('<i class="fas fa-exclamation-triangle text-danger"></i> ' + (data.error && data.error.message ? data.error.message : 'XML konnte nicht erzeugt werden. Pruefen Sie ob aktive Mandate vorhanden sind.'));
+            }
+        }, function() {
+            btn.prop('disabled', false).html('<i class="fas fa-download"></i> SEPA-XML erzeugen (Sammeleinzug)');
+            bootbox.alert('Fehler beim Erzeugen der SEPA-XML-Datei.');
+        });
+    });
+
+    function downloadXml(base64Data, filename) {
+        var raw = atob(base64Data);
+        var blob = new Blob([raw], {type: 'application/xml;charset=utf-8;'});
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = filename || 'SEPA-Lastschrift.xml';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+});
+</script>
+{% endblock %}

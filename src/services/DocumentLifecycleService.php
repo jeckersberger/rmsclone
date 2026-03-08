@@ -532,6 +532,115 @@ class DocumentLifecycleService
         ];
     }
 
+    // ═══════════════════════════════════════════════
+    //  ANGEBOTS-VERSIONEN (Quote Versioning)
+    // ═══════════════════════════════════════════════
+
+    /**
+     * Neue Version eines Angebots erstellen
+     *
+     * Klont den document_exports-Eintrag mit inkrementierter Versionsnummer
+     * und verknuepft ihn mit dem Original-Angebot (parentVersionId).
+     *
+     * @param int         $documentExportsId  ID des zu versionierenden Angebots in document_exports
+     * @param int         $userId             ID des ausfuehrenden Benutzers
+     * @param string|null $versionNotes       Aenderungsnotizen fuer die neue Version
+     * @return int|null   ID des neuen document_exports-Eintrags oder null bei Fehler
+     */
+    public function createNewVersion(int $documentExportsId, int $userId, ?string $versionNotes = null): ?int
+    {
+        // Original-Eintrag laden
+        $this->db->where('id', $documentExportsId);
+        $original = $this->db->getOne('document_exports');
+        if (!$original) return null;
+
+        // Nur Angebote (quotes) duerfen versioniert werden
+        if ($original['type'] !== 'quote') return null;
+
+        // Eltern-Version ermitteln: wenn das Original bereits eine Version ist,
+        // die parentVersionId uebernehmen, sonst ist das Original selbst der Elternteil
+        $parentId = !empty($original['document_exports_parentVersionId'])
+            ? (int)$original['document_exports_parentVersionId']
+            : $documentExportsId;
+
+        // Hoechste bestehende Version fuer diese Angebots-Kette ermitteln
+        $this->db->where('document_exports_parentVersionId', $parentId);
+        $this->db->orderBy('document_exports_version', 'DESC');
+        $latestChild = $this->db->getOne('document_exports', ['document_exports_version']);
+
+        // Auch die Version des Originals beruecksichtigen
+        $this->db->where('id', $parentId);
+        $parentDoc = $this->db->getOne('document_exports', ['document_exports_version']);
+        $parentVersion = (int)($parentDoc['document_exports_version'] ?? 1);
+
+        $latestChildVersion = $latestChild ? (int)$latestChild['document_exports_version'] : 0;
+        $newVersion = max($parentVersion, $latestChildVersion) + 1;
+
+        // Neuen Export-Eintrag als Klon erstellen
+        $this->db->insert('document_exports', [
+            'instances_id'                     => $original['instances_id'],
+            'projects_id'                      => $original['projects_id'],
+            'type'                             => $original['type'],
+            'template_id'                      => $original['template_id'],
+            'sequence_id'                      => $original['sequence_id'] ?? null,
+            'doc_number'                       => $original['doc_number'],
+            'language'                         => $original['language'],
+            'currency'                         => $original['currency'],
+            'totals_json'                      => $original['totals_json'],
+            'snapshot_json'                     => $original['snapshot_json'],
+            's3files_id'                       => $original['s3files_id'],
+            'generated_by'                     => $userId,
+            'generated_at'                     => date('Y-m-d H:i:s'),
+            'document_exports_version'         => $newVersion,
+            'document_exports_parentVersionId' => $parentId,
+            'document_exports_versionNotes'    => $versionNotes,
+        ]);
+
+        $newId = $this->db->getInsertId();
+        if (!$newId) return null;
+
+        // Falls das Original noch keine Version gesetzt hat, auf 1 setzen
+        if (empty($original['document_exports_version']) || (int)$original['document_exports_version'] === 0) {
+            $this->db->where('id', $documentExportsId);
+            $this->db->update('document_exports', [
+                'document_exports_version' => 1,
+            ]);
+        }
+
+        return (int)$newId;
+    }
+
+    /**
+     * Alle Versionen eines Angebots abrufen
+     *
+     * @param int $documentExportsId  ID irgendeiner Version des Angebots
+     * @return array  Liste aller Versionen, sortiert nach Versionsnummer
+     */
+    public function getQuoteVersions(int $documentExportsId): array
+    {
+        // Erst das Original laden, um den parentId zu ermitteln
+        $this->db->where('id', $documentExportsId);
+        $doc = $this->db->getOne('document_exports');
+        if (!$doc) return [];
+
+        $parentId = !empty($doc['document_exports_parentVersionId'])
+            ? (int)$doc['document_exports_parentVersionId']
+            : $documentExportsId;
+
+        // Alle Versionen laden: das Original selbst + alle Kinder
+        $this->db->where('id', $parentId);
+        $parent = $this->db->getOne('document_exports');
+        $versions = $parent ? [$parent] : [];
+
+        $this->db->where('document_exports_parentVersionId', $parentId);
+        $this->db->orderBy('document_exports_version', 'ASC');
+        $children = $this->db->get('document_exports') ?: [];
+
+        $versions = array_merge($versions, $children);
+
+        return $versions;
+    }
+
     private function logStatusChange(int $docId, ?string $oldStatus, string $newStatus, int $userId, ?string $comment): void
     {
         $this->db->insert('document_status_history', [

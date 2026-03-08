@@ -40,6 +40,45 @@ foreach ($docs as &$d) {
         && !in_array($d['status'], ['accepted', 'rejected', 'cancelled', 'expired'])) {
         $d['is_expired'] = true;
     }
+
+    // Versionsinformationen fuer Angebote aus document_exports laden
+    $d['version'] = null;
+    $d['document_exports_id'] = null;
+    $d['has_versions'] = false;
+    $d['version_count'] = 0;
+    if ($d['doc_type'] === 'quote' && !empty($d['document_exports_id'])) {
+        $DBLIB->where('id', $d['document_exports_id']);
+        $exportInfo = $DBLIB->getOne('document_exports', [
+            'id', 'document_exports_version', 'document_exports_parentVersionId'
+        ]);
+        if ($exportInfo) {
+            $d['version'] = (int)($exportInfo['document_exports_version'] ?? 1);
+            $d['document_exports_id'] = (int)$exportInfo['id'];
+
+            // Pruefen ob weitere Versionen existieren
+            $parentId = !empty($exportInfo['document_exports_parentVersionId'])
+                ? (int)$exportInfo['document_exports_parentVersionId']
+                : (int)$exportInfo['id'];
+            $DBLIB->where('document_exports_parentVersionId', $parentId);
+            $childCount = (int)$DBLIB->getValue('document_exports', 'count(*)');
+            $d['has_versions'] = $childCount > 0;
+            $d['version_count'] = $childCount + 1; // +1 fuer das Original
+            $d['version_parent_id'] = $parentId;
+        }
+    } elseif ($d['doc_type'] === 'quote' && !empty($d['doc_number'])) {
+        // Fallback: document_exports ueber doc_number suchen
+        $DBLIB->where('instances_id', $instanceId);
+        $DBLIB->where('doc_number', $d['doc_number']);
+        $DBLIB->where('type', 'quote');
+        $DBLIB->orderBy('document_exports_version', 'DESC');
+        $exportInfo = $DBLIB->getOne('document_exports', [
+            'id', 'document_exports_version', 'document_exports_parentVersionId'
+        ]);
+        if ($exportInfo) {
+            $d['version'] = (int)($exportInfo['document_exports_version'] ?? 1);
+            $d['document_exports_id'] = (int)$exportInfo['id'];
+        }
+    }
 }
 unset($d);
 

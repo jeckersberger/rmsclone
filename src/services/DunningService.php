@@ -27,9 +27,11 @@ class DunningService
         $this->db->where('dl.due_date', date('Y-m-d'), '<');
         $this->db->join('projects p', 'dl.projects_id=p.projects_id', 'LEFT');
         $this->db->join('clients c', 'p.clients_id=c.clients_id', 'LEFT');
+        $this->db->join('document_exports de', 'dl.document_exports_id=de.document_exports_id', 'LEFT');
         $this->db->orderBy('dl.due_date', 'ASC');
         $invoices = $this->db->get('document_lifecycle dl', null, [
-            'dl.*', 'p.projects_name', 'c.clients_name', 'c.clients_email'
+            'dl.*', 'p.projects_name', 'c.clients_name', 'c.clients_email',
+            'de.document_exports_paidAmount', 'de.document_exports_paymentStatus'
         ]) ?: [];
 
         foreach ($invoices as &$inv) {
@@ -61,6 +63,12 @@ class DunningService
         $this->db->where('instances_id', $instanceId);
         $invoice = $this->db->getOne('document_lifecycle');
         if (!$invoice) return null;
+
+        // Mahnsperre pruefen: pausiertes Mahnverfahren nicht fortsetzen
+        $lastDunning = $this->getLastDunning($docLifecycleId);
+        if ($lastDunning && !empty($lastDunning['dunning_history_paused'])) {
+            return null; // Mahnverfahren pausiert
+        }
 
         $daysOverdue = (int)((time() - strtotime($invoice['due_date'])) / 86400);
         $nextLevel = $this->getNextDunningLevel($instanceId, $invoice);
