@@ -48,8 +48,12 @@
                                     <button type="button" class="btn btn-outline-secondary" id="toggleKeyVisibility">
                                         <i class="fas fa-eye"></i>
                                     </button>
+                                    <button type="button" class="btn btn-outline-success" id="testApiKey">
+                                        <i class="fas fa-plug"></i> Testen
+                                    </button>
                                 </div>
                             </div>
+                            <div id="apiKeyTestResult" class="mt-2" style="display:none;"></div>
                             <small class="form-text text-muted">
                                 API-Key von <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a>.
                                 Wird sicher gespeichert. Kosten: ca. 1-2 EUR/Monat bei normaler Nutzung.
@@ -173,6 +177,25 @@ $(document).ready(function() {
     $('#aiEnabledToggle').change(function() {
         $('#aiConfigSection').toggle(this.checked);
         $('#aiUsageSection').toggle(this.checked);
+    });
+
+    $('#testApiKey').click(function() {
+        var key = $('#aiApiKey').val().trim();
+        if (!key) { $('#apiKeyTestResult').html('<div class="alert alert-warning alert-sm py-1 px-2 mb-0"><i class="fas fa-exclamation-triangle"></i> Bitte zuerst einen API-Key eingeben.</div>').show(); return; }
+        var btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Teste...');
+        $('#apiKeyTestResult').hide();
+        ajaxcall('ai/testKey.php', {apiKey: key}, function(data) {
+            btn.prop('disabled', false).html('<i class="fas fa-plug"></i> Testen');
+            var r = data.response;
+            $('#apiKeyTestResult').html('<div class="alert alert-success alert-sm py-1 px-2 mb-0"><i class="fas fa-check-circle"></i> Verbindung erfolgreich! Modell: <b>' + r.model + '</b></div>').show();
+        }, false);
+        // Handle error case manually since ajaxcall reloadIfError=false
+        setTimeout(function() {
+            if (btn.prop('disabled')) {
+                btn.prop('disabled', false).html('<i class="fas fa-plug"></i> Testen');
+            }
+        }, 20000);
     });
 
     $('#toggleKeyVisibility').click(function() {
