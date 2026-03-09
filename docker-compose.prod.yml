@@ -52,6 +52,11 @@ services:
       - CONFIG_TELEMETRY_NANOID=${CONFIG_TELEMETRY_NANOID:-prod}
     volumes:
       - file_storage:/var/www/html/storage
+      - ./src:/var/www/html/src
+      - ./vendor:/var/www/html/vendor
+      - ./db:/var/www/html/db
+      - ./phinx.php:/var/www/html/phinx.php
+      - ./scripts:/var/www/html/scripts
     deploy:
       resources:
         limits:
