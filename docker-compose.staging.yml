@@ -1,5 +1,5 @@
 # ==============================================================================
-# AdamRMS - Staging Environment
+# MyRMS - Staging Environment
 # ==============================================================================
 #
 # Usage:
@@ -9,7 +9,7 @@
 # Unterschiede zu Produktion:
 # - Debug-Modus aktiviert
 # - Keine SSL-Zertifikate (HTTP only)
-# - Eigene Datenbank (staging_adamrms)
+# - Eigene Datenbank (staging_myrms)
 # - Seeding mit Testdaten moeglich
 # - Reduzierte Ressourcen-Limits
 #
@@ -20,21 +20,21 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: adamrms-staging-app
+    container_name: myrms-staging-app
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
       - DB_HOSTNAME=db
-      - DB_DATABASE=${DB_DATABASE:-staging_adamrms}
-      - DB_USERNAME=${DB_USERNAME:-adamrms_staging}
+      - DB_DATABASE=${DB_DATABASE:-staging_myrms}
+      - DB_USERNAME=${DB_USERNAME:-myrms_staging}
       - DB_PASSWORD=${DB_PASSWORD:-staging_password}
       - DB_PORT=3306
       - DEV_MODE=true
       - ROOT_URL=${ROOT_URL:-http://localhost:8080}
       - CORS_ALLOWED_ORIGIN=${ROOT_URL:-http://localhost:8080}
-      - CONFIG_PROJECT_NAME=AdamRMS [STAGING]
+      - CONFIG_PROJECT_NAME=MyRMS [STAGING]
       - CONFIG_TIMEZONE=Europe/Berlin
       - LOCAL_STORAGE_PATH=/var/www/html/storage
       - CONFIG_FILES_ENABLED=Enabled
@@ -59,7 +59,7 @@ services:
 
   db:
     image: mysql:8.0
-    container_name: adamrms-staging-db
+    container_name: myrms-staging-db
     restart: unless-stopped
     command: >-
       --default-authentication-plugin=mysql_native_password
@@ -68,8 +68,8 @@ services:
     volumes:
       - staging_db:/var/lib/mysql
     environment:
-      - MYSQL_DATABASE=${DB_DATABASE:-staging_adamrms}
-      - MYSQL_USER=${DB_USERNAME:-adamrms_staging}
+      - MYSQL_DATABASE=${DB_DATABASE:-staging_myrms}
+      - MYSQL_USER=${DB_USERNAME:-myrms_staging}
       - MYSQL_PASSWORD=${DB_PASSWORD:-staging_password}
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-staging_root_pw}
     ports:
@@ -88,7 +88,7 @@ services:
   # phpMyAdmin fuer Staging-DB Zugriff
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
-    container_name: adamrms-staging-pma
+    container_name: myrms-staging-pma
     restart: unless-stopped
     environment:
       - PMA_HOST=db

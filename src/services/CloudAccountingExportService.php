@@ -236,7 +236,7 @@ class CloudAccountingExportService
                 'phoneNumbers' => [
                     'business' => [$c['clients_phone'] ?? ''],
                 ],
-                'note' => 'Import aus AdamRMS - Kundennr: ' . ($c['clients_customerNumber'] ?? $c['clients_id']),
+                'note' => 'Import aus MyRMS - Kundennr: ' . ($c['clients_customerNumber'] ?? $c['clients_id']),
             ];
         }
 
@@ -281,7 +281,7 @@ class CloudAccountingExportService
                 '',
                 '',
                 '',
-                $this->csvField('Import aus AdamRMS'),
+                $this->csvField('Import aus MyRMS'),
             ]);
         }
 

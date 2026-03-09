@@ -3,7 +3,7 @@
  * Cron-Job: Ueberfaellige Rechnungen automatisch markieren und Mahnungen vorschlagen
  *
  * Aufruf: php src/cron/overdue-invoices.php
- * Empfohlener Crontab-Eintrag: 0 7 * * * php /path/to/src/cron/overdue-invoices.php >> /var/log/adamrms-cron.log 2>&1
+ * Empfohlener Crontab-Eintrag: 0 7 * * * php /path/to/src/cron/overdue-invoices.php >> /var/log/myrms-cron.log 2>&1
  *
  * Funktionen:
  *   1. Rechnungen mit ueberschrittenem Faelligkeitsdatum auf 'overdue' setzen

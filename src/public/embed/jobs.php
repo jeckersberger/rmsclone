@@ -1,6 +1,6 @@
 <?php
 require_once 'head.php';
-if (!isset($PAGEDATA['INSTANCE']['publicData']['enableVacancies']) or !$PAGEDATA['INSTANCE']['publicData']['enableVacancies']) die("Disabled by your AdamRMS administrator");
+if (!isset($PAGEDATA['INSTANCE']['publicData']['enableVacancies']) or !$PAGEDATA['INSTANCE']['publicData']['enableVacancies']) die("Disabled by your MyRMS administrator");
 
 $PAGEDATA['pageConfig'] = ["TITLE" => "Crew Role Vacancies", "BREADCRUMB" => false];
 $DBLIB->where("projectsVacantRoles.projectsVacantRoles_deleted",0);

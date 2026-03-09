@@ -36,7 +36,7 @@ class TotpService
     /**
      * Generiert die otpauth:// URI fuer Authenticator-Apps
      */
-    public function getProvisioningUri(string $secret, string $email, string $issuer = 'AdamRMS'): string
+    public function getProvisioningUri(string $secret, string $email, string $issuer = 'MyRMS'): string
     {
         $label = rawurlencode($issuer) . ':' . rawurlencode($email);
         $params = http_build_query([

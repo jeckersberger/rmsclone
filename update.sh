@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# AdamRMS - Update Script
+# MyRMS - Update Script
 # ==============================================================================
 #
 # Zieht die neueste Version aus Git und aktualisiert die laufende
@@ -65,7 +65,7 @@ done
 UPDATE_START=$(date +%s)
 
 echo "============================================================"
-echo "  AdamRMS Update"
+echo "  MyRMS Update"
 echo "  Gestartet: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "============================================================"
 echo ""

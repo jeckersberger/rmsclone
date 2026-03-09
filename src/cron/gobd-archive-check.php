@@ -3,7 +3,7 @@
  * Cron-Job: GoBD-konforme Archivierung und Aufbewahrungsfristen
  *
  * Aufruf: php src/cron/gobd-archive-check.php
- * Empfohlener Crontab-Eintrag: 0 3 1 * * php /path/to/src/cron/gobd-archive-check.php >> /var/log/adamrms-cron.log 2>&1
+ * Empfohlener Crontab-Eintrag: 0 3 1 * * php /path/to/src/cron/gobd-archive-check.php >> /var/log/myrms-cron.log 2>&1
  *
  * Funktionen:
  *   1. retention_expires_at fuer neue Dokumente setzen (10 Jahre)

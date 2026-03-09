@@ -1,9 +1,8 @@
 # ==============================================================================
-# AdamRMS Clone - Synology DiskStation Docker Compose
+# MyRMS - Synology DiskStation Docker Compose
 # ==============================================================================
 #
-# Dieses Setup ist für Synology NAS optimiert und nutzt andere Ports als die
-# Originalversion, damit beide parallel laufen können.
+# Dieses Setup ist fuer Synology NAS optimiert und ersetzt die Originalversion.
 #
 # Installation:
 #   1. cp .env.synology.example .env.synology
@@ -11,11 +10,11 @@
 #   3. docker compose -f docker-compose.synology.yml --env-file .env.synology up -d
 #
 # Die App ist dann erreichbar unter:
-#   http://<NAS-IP>:8090
+#   http://<NAS-IP>:80
 #
 # SSL/HTTPS:
 #   Nutze den Synology Reverse Proxy (Systemsteuerung > Anmeldeportal > Erweitert
-#   > Reverse Proxy) um eine Domain mit SSL auf Port 8090 weiterzuleiten.
+#   > Reverse Proxy) um eine Domain mit SSL weiterzuleiten.
 #
 # ==============================================================================
 
@@ -27,24 +26,24 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: rmsclone-app
+    container_name: myrms-app
     restart: always
     depends_on:
       db:
         condition: service_healthy
     ports:
-      - "${APP_PORT:-8090}:80"
+      - "${APP_PORT:-80}:80"
     environment:
       - DB_HOSTNAME=db
-      - DB_DATABASE=${DB_DATABASE:-rmsclone}
-      - DB_USERNAME=${DB_USERNAME:-rmsclone}
+      - DB_DATABASE=${DB_DATABASE:-myrms}
+      - DB_USERNAME=${DB_USERNAME:-myrms}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_PORT=3306
       - DEV_MODE=false
-      - ROOT_URL=${ROOT_URL:-http://localhost:8090}
-      - CORS_ALLOWED_ORIGIN=${ROOT_URL:-http://localhost:8090}
-      - CONFIG_ROOTURL=${ROOT_URL:-http://localhost:8090}
-      - CONFIG_PROJECT_NAME=${CONFIG_PROJECT_NAME:-RMS Clone}
+      - ROOT_URL=${ROOT_URL:-http://localhost}
+      - CORS_ALLOWED_ORIGIN=${ROOT_URL:-http://localhost}
+      - CONFIG_ROOTURL=${ROOT_URL:-http://localhost}
+      - CONFIG_PROJECT_NAME=${CONFIG_PROJECT_NAME:-MyRMS}
       - CONFIG_TIMEZONE=${CONFIG_TIMEZONE:-Europe/Berlin}
       - LOCAL_STORAGE_PATH=/var/www/html/storage
       - CONFIG_FILES_ENABLED=${CONFIG_FILES_ENABLED:-Enabled}
@@ -56,7 +55,7 @@ services:
       - CONFIG_AUTH_JWTKey=${CONFIG_AUTH_JWTKey}
       - CONFIG_TELEMETRY_NANOID=${CONFIG_TELEMETRY_NANOID:-synology}
     volumes:
-      - rmsclone_storage:/var/www/html/storage
+      - myrms_storage:/var/www/html/storage
     deploy:
       resources:
         limits:
@@ -73,11 +72,11 @@ services:
       start_period: 90s
 
   # --------------------------------------------------------------------------
-  # MySQL Database (eigener Port, kein Konflikt mit Original-RMS)
+  # MySQL Database
   # --------------------------------------------------------------------------
   db:
     image: mysql:8.0
-    container_name: rmsclone-db
+    container_name: myrms-db
     restart: always
     command: >-
       --default-authentication-plugin=mysql_native_password
@@ -88,12 +87,12 @@ services:
       --innodb-flush-log-at-trx-commit=2
       --max-connections=50
     ports:
-      - "${DB_EXTERNAL_PORT:-3307}:3306"
+      - "${DB_EXTERNAL_PORT:-3306}:3306"
     volumes:
-      - rmsclone_db:/var/lib/mysql
+      - myrms_db:/var/lib/mysql
     environment:
-      - MYSQL_DATABASE=${DB_DATABASE:-rmsclone}
-      - MYSQL_USER=${DB_USERNAME:-rmsclone}
+      - MYSQL_DATABASE=${DB_DATABASE:-myrms}
+      - MYSQL_USER=${DB_USERNAME:-myrms}
       - MYSQL_PASSWORD=${DB_PASSWORD}
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
     deploy:
@@ -111,7 +110,7 @@ services:
       retries: 10
 
 volumes:
-  rmsclone_db:
+  myrms_db:
     driver: local
-  rmsclone_storage:
+  myrms_storage:
     driver: local

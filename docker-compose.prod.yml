@@ -1,5 +1,5 @@
 # ==============================================================================
-# AdamRMS - Production Docker Compose
+# MyRMS - Production Docker Compose
 # ==============================================================================
 #
 # Usage:
@@ -31,15 +31,15 @@ services:
         condition: service_healthy
     environment:
       - DB_HOSTNAME=${DB_HOSTNAME:-db}
-      - DB_DATABASE=${DB_DATABASE:-adamrms}
-      - DB_USERNAME=${DB_USERNAME:-adamrms}
+      - DB_DATABASE=${DB_DATABASE:-myrms}
+      - DB_USERNAME=${DB_USERNAME:-myrms}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_PORT=${DB_PORT:-3306}
       - DEV_MODE=false
       - ROOT_URL=${ROOT_URL}
       - CORS_ALLOWED_ORIGIN=${CORS_ALLOWED_ORIGIN}
       - CONFIG_ROOTURL=${ROOT_URL}
-      - CONFIG_PROJECT_NAME=${CONFIG_PROJECT_NAME:-AdamRMS}
+      - CONFIG_PROJECT_NAME=${CONFIG_PROJECT_NAME:-MyRMS}
       - CONFIG_TIMEZONE=${CONFIG_TIMEZONE:-Europe/Berlin}
       - LOCAL_STORAGE_PATH=${LOCAL_STORAGE_PATH:-/var/www/html/storage}
       - CONFIG_FILES_ENABLED=${CONFIG_FILES_ENABLED:-Enabled}
@@ -98,8 +98,8 @@ services:
       - db_data:/var/lib/mysql
       - db_logs:/var/log/mysql
     environment:
-      - MYSQL_DATABASE=${DB_DATABASE:-adamrms}
-      - MYSQL_USER=${DB_USERNAME:-adamrms}
+      - MYSQL_DATABASE=${DB_DATABASE:-myrms}
+      - MYSQL_USER=${DB_USERNAME:-myrms}
       - MYSQL_PASSWORD=${DB_PASSWORD}
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
     deploy:

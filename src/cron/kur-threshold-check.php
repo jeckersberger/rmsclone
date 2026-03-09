@@ -3,7 +3,7 @@
  * Cron-Job: KUR-Umsatzgrenzen pruefen und E-Mail-Warnungen senden
  *
  * Aufruf: php src/cron/kur-threshold-check.php
- * Empfohlener Crontab-Eintrag: 0 8 1 * * php /path/to/src/cron/kur-threshold-check.php >> /var/log/adamrms-cron.log 2>&1
+ * Empfohlener Crontab-Eintrag: 0 8 1 * * php /path/to/src/cron/kur-threshold-check.php >> /var/log/myrms-cron.log 2>&1
  *
  * Funktionen:
  *   1. Aktuellen Jahresumsatz pro Instance berechnen

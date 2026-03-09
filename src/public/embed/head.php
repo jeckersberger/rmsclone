@@ -15,4 +15,4 @@ $DBLIB->where("instances_id", $_GET['i']);
 $PAGEDATA['INSTANCE'] = $DBLIB->getOne("instances");
 $PAGEDATA['INSTANCE']['publicData'] = json_decode($PAGEDATA['INSTANCE']['instances_publicConfig'], true);
 
-if (!$PAGEDATA['INSTANCE'] or !isset($PAGEDATA['INSTANCE']['publicData']['enabled']) or !$PAGEDATA['INSTANCE']['publicData']['enabled']) die("Disabled by AdamRMS administrator");
+if (!$PAGEDATA['INSTANCE'] or !isset($PAGEDATA['INSTANCE']['publicData']['enabled']) or !$PAGEDATA['INSTANCE']['publicData']['enabled']) die("Disabled by MyRMS administrator");

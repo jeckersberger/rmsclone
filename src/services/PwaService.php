@@ -10,11 +10,11 @@ class PwaService
     /**
      * Web App Manifest generieren
      */
-    public static function getManifest(string $appName = 'AdamRMS', string $baseUrl = '/'): array
+    public static function getManifest(string $appName = 'MyRMS', string $baseUrl = '/'): array
     {
         return [
             'name' => $appName,
-            'short_name' => 'AdamRMS',
+            'short_name' => 'MyRMS',
             'description' => 'Rental Management System - Mietverwaltung',
             'start_url' => $baseUrl,
             'display' => 'standalone',

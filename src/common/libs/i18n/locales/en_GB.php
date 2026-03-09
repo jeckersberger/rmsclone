@@ -1,6 +1,6 @@
 <?php
 /**
- * English (UK) translations for AdamRMS – fallback/reference file.
+ * English (UK) translations for MyRMS – fallback/reference file.
  */
 return [
     // ── Navigation / Sidebar ──

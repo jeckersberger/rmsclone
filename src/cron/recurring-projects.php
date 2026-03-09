@@ -3,7 +3,7 @@
  * Cron-Job: Wiederkehrende Projekte automatisch erstellen
  *
  * Aufruf: php src/cron/recurring-projects.php
- * Empfohlener Crontab-Eintrag: 0 6 * * * php /path/to/src/cron/recurring-projects.php >> /var/log/adamrms-cron.log 2>&1
+ * Empfohlener Crontab-Eintrag: 0 6 * * * php /path/to/src/cron/recurring-projects.php >> /var/log/myrms-cron.log 2>&1
  *
  * Geht alle aktiven Instances durch und erstellt Projekte aus
  * wiederkehrenden Vorlagen (daily, weekly, biweekly, monthly).

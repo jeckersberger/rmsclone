@@ -1,18 +1,8 @@
-# AdamRMS
-
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/adam-rms/adam-rms)
-![GitHub repo size](https://img.shields.io/github/repo-size/adam-rms/adam-rms)
-![GitHub issues](https://img.shields.io/github/issues/adam-rms/adam-rms)
-![GitHub closed issues](https://img.shields.io/github/issues-closed/adam-rms/adam-rms)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/adam-rms/adam-rms)
-![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed/adam-rms/adam-rms)
-![GitHub](https://img.shields.io/github/license/adam-rms/adam-rms)
-![GitHub stars](https://img.shields.io/github/stars/adam-rms/adam-rms)
-![GitHub contributors](https://img.shields.io/github/contributors/adam-rms/adam-rms)
+# MyRMS
 
 An advanced, open-source **Rental Management System** for Theatre, AV & Broadcast equipment. Built with PHP 8.3, Twig, MySQL, and AdminLTE. Deployed via Docker.
 
-Available as a hosted solution or self-hosted via Docker.
+Based on [AdamRMS](https://github.com/adam-rms/adam-rms), customized for own use.
 
 ## Features
 
@@ -88,7 +78,7 @@ Available as a hosted solution or self-hosted via Docker.
 ## Quick Start
 
 ```bash
-git clone <repo-url> && cd adam-rms
+git clone <repo-url> && cd myrms
 docker compose up -d
 ```
 
@@ -109,8 +99,8 @@ Configure via environment variables or `docker-compose.yml`:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `DB_HOSTNAME` | Database host | `db` |
-| `DB_DATABASE` | Database name | `adamrms` |
-| `DB_USERNAME` | Database user | `adamrms` |
+| `DB_DATABASE` | Database name | `myrms` |
+| `DB_USERNAME` | Database user | `myrms` |
 | `DB_PASSWORD` | Database password | - |
 | `ROOT_URL` | Public URL of the app | `http://localhost:8080` |
 | `CONFIG_TIMEZONE` | Timezone | `Europe/Berlin` |
@@ -142,20 +132,10 @@ db/
   seeds/         Seed data
 ```
 
-## Docker Images
-
-A maintained Docker image is hosted on GitHub Packages as [adam-rms/adam-rms](https://github.com/orgs/adam-rms/packages?repo_name=adam-rms).
-
-Database migrations run automatically on container startup.
-
 ## Development
-
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?ref=main&repo=217888995)
-
-This repo has a configured devcontainer for use with GitHub Codespaces or VSCode. Clone the repo and open in VSCode, then [open in a devcontainer](https://code.visualstudio.com/docs/devcontainers/tutorial).
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for the full development setup guide.
 
 ## License
 
-Licensed under **AGPL-3.0**. When self-hosting, changes to the source code must be kept open source. See [LICENSE](LICENSE) for details.
+Licensed under **AGPL-3.0**. See [LICENSE](LICENSE) for details.

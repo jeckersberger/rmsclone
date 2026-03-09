@@ -58,7 +58,7 @@ $now = gmdate('Ymd\THis\Z');
 
 $ics = "BEGIN:VCALENDAR\r\n";
 $ics .= "VERSION:2.0\r\n";
-$ics .= "PRODID:-//AdamRMS//Kalender//DE\r\n";
+$ics .= "PRODID:-//MyRMS//Kalender//DE\r\n";
 $ics .= "CALSCALE:GREGORIAN\r\n";
 $ics .= "METHOD:PUBLISH\r\n";
 $ics .= "X-WR-CALNAME:" . icsEscape($calName) . "\r\n";

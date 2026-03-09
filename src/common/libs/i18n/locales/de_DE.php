@@ -1,6 +1,6 @@
 <?php
 /**
- * German (Germany) translations for AdamRMS.
+ * German (Germany) translations for MyRMS.
  * Keys match the English UI labels.
  */
 return [

@@ -119,7 +119,7 @@ class WebhookService
                 'Content-Type: application/json',
                 'X-Webhook-Signature: sha256=' . $signature,
                 'X-Webhook-Event: ' . $event,
-                'User-Agent: AdamRMS-Webhook/1.0',
+                'User-Agent: MyRMS-Webhook/1.0',
             ],
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => 10,

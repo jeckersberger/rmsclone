@@ -3,7 +3,7 @@
  * Cron-Job: E-Mails ueber IMAP abrufen (pro Instance/Firma)
  *
  * Aufruf: php src/cron/fetch-emails.php
- * Empfohlener Crontab-Eintrag: every 5 min - php /path/to/src/cron/fetch-emails.php >> /var/log/adamrms-cron.log 2>&1
+ * Empfohlener Crontab-Eintrag: every 5 min - php /path/to/src/cron/fetch-emails.php >> /var/log/myrms-cron.log 2>&1
  *
  * Funktionen:
  *   1. Alle Instanzen mit aktiviertem IMAP durchgehen

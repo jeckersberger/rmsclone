@@ -1,6 +1,6 @@
 <?php
 /**
- * Simple translation helper for AdamRMS.
+ * Simple translation helper for MyRMS.
  *
  * Usage:
  *   $translator = new Translator('de_DE');

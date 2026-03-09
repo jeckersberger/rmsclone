@@ -3,7 +3,7 @@
  * Cron-Job: Abgelaufene Angebote automatisch als 'expired' markieren
  *
  * Aufruf: php src/cron/quote-expiry-check.php
- * Empfohlener Crontab-Eintrag: 0 6 * * * php /path/to/src/cron/quote-expiry-check.php >> /var/log/adamrms-cron.log 2>&1
+ * Empfohlener Crontab-Eintrag: 0 6 * * * php /path/to/src/cron/quote-expiry-check.php >> /var/log/myrms-cron.log 2>&1
  *
  * Prueft alle Angebote (quotes) die:
  *   - Status 'sent' haben

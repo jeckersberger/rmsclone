@@ -3,7 +3,7 @@
  * Cron-Job: Equipment-Wartungsintervalle pruefen
  *
  * Aufruf: php src/cron/maintenance-check.php
- * Empfohlener Crontab-Eintrag: 0 6 * * * php /path/to/src/cron/maintenance-check.php >> /var/log/adamrms-cron.log 2>&1
+ * Empfohlener Crontab-Eintrag: 0 6 * * * php /path/to/src/cron/maintenance-check.php >> /var/log/myrms-cron.log 2>&1
  *
  * Funktionen:
  *   1. Faellige Wartungen identifizieren

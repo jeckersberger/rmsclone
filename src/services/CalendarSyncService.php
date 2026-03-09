@@ -36,10 +36,10 @@ class CalendarSyncService
 
         $ics = "BEGIN:VCALENDAR\r\n";
         $ics .= "VERSION:2.0\r\n";
-        $ics .= "PRODID:-//AdamRMS//DE\r\n";
+        $ics .= "PRODID:-//MyRMS//DE\r\n";
         $ics .= "CALSCALE:GREGORIAN\r\n";
         $ics .= "METHOD:PUBLISH\r\n";
-        $ics .= "X-WR-CALNAME:AdamRMS Projekte\r\n";
+        $ics .= "X-WR-CALNAME:MyRMS Projekte\r\n";
         $ics .= "X-WR-TIMEZONE:Europe/Berlin\r\n";
 
         foreach ($projects as $project) {
@@ -62,7 +62,7 @@ class CalendarSyncService
 
         $ics = "BEGIN:VCALENDAR\r\n";
         $ics .= "VERSION:2.0\r\n";
-        $ics .= "PRODID:-//AdamRMS//DE\r\n";
+        $ics .= "PRODID:-//MyRMS//DE\r\n";
         $ics .= "METHOD:REQUEST\r\n";
         $ics .= $this->projectToVevent($project);
         $ics .= "END:VCALENDAR\r\n";
@@ -124,7 +124,7 @@ class CalendarSyncService
 
         $ics = "BEGIN:VCALENDAR\r\n";
         $ics .= "VERSION:2.0\r\n";
-        $ics .= "PRODID:-//AdamRMS//Partner//DE\r\n";
+        $ics .= "PRODID:-//MyRMS//Partner//DE\r\n";
         $ics .= "X-WR-CALNAME:Partner-Verfuegbarkeit\r\n";
 
         foreach ($projects as $project) {

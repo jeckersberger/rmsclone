@@ -178,7 +178,7 @@ class ChatService
         $today = date('Y-m-d');
 
         return <<<PROMPT
-Du bist der KI-Assistent fuer "{$companyName}", ein Verleih-Management-System (AdamRMS).
+Du bist der KI-Assistent fuer "{$companyName}", ein Verleih-Management-System (MyRMS).
 Der aktuelle Benutzer heisst {$userName}. Heute ist {$today}.
 
 Du kannst das System steuern, indem du die verfuegbaren Tools nutzt. Antworte immer auf Deutsch.

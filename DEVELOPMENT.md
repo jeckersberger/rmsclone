@@ -1,4 +1,4 @@
-# AdamRMS - Lokale Entwicklungsumgebung
+# MyRMS - Lokale Entwicklungsumgebung
 
 ## Voraussetzungen
 
@@ -28,7 +28,7 @@ Beim ersten Start passiert automatisch:
 
 | Service | URL | Beschreibung |
 |---------|-----|--------------|
-| **App** | http://localhost:8080 | AdamRMS Hauptanwendung |
+| **App** | http://localhost:8080 | MyRMS Hauptanwendung |
 | **phpMyAdmin** | http://localhost:8082 | Datenbank-Verwaltung |
 | **Mailpit** | http://localhost:8083 | E-Mail-Testumgebung (faengt alle E-Mails ab) |
 | **S3 Mock** | http://localhost:8081 | Datei-Upload Emulation |
@@ -39,9 +39,9 @@ Beim ersten Start passiert automatisch:
 |-----------|------|
 | Host | `localhost` (oder `db` aus Container) |
 | Port | `3306` |
-| Datenbank | `adamrms` |
-| Benutzer | `adamrms` |
-| Passwort | `adamrms_dev` |
+| Datenbank | `myrms` |
+| Benutzer | `myrms` |
+| Passwort | `myrms_dev` |
 | Root-Passwort | `root_dev` |
 
 ## PhpStorm / IntelliJ Einrichtung
@@ -58,13 +58,13 @@ Oeffne den Ordner `rmsclone/` als Projekt in PhpStorm.
 ### 3. Datenbank in PhpStorm verbinden
 1. **Database** Tab (rechts) > `+` > Data Source > MySQL
 2. Host: `localhost`, Port: `3306`
-3. User: `adamrms`, Password: `adamrms_dev`
-4. Database: `adamrms`
+3. User: `myrms`, Password: `myrms_dev`
+4. Database: `myrms`
 5. **Test Connection** klicken
 
 ### 4. Server-Konfiguration (fuer Debugging)
 1. **Settings > PHP > Servers** > `+`
-2. Name: `AdamRMS Docker`
+2. Name: `MyRMS Docker`
 3. Host: `localhost`, Port: `8080`
 4. Debugger: Xdebug (optional, siehe unten)
 5. **Path mapping**: `/pfad/zu/rmsclone` → `/var/www/html`
