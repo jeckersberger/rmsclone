@@ -10,7 +10,7 @@ switch ($action) {
     case 'manifest':
         header('Content-Type: application/manifest+json');
         $baseUrl = getenv('ROOT_URL') ?: '/';
-        $appName = getenv('CONFIG_PROJECT_NAME') ?: 'AdamRMS';
+        $appName = getenv('CONFIG_PROJECT_NAME') ?: 'MyRMS';
         echo json_encode(PwaService::getManifest($appName, $baseUrl), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         break;
 

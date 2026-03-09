@@ -33,7 +33,7 @@ function handleWebhook($subscription)  // contains a \Stripe\Subscription
     // Find the relevant product in the subscription and update the instance with the limits.
     foreach ($subscription->items->data as $item) {
       $thisProduct = $stripe->products->retrieve($item->plan->product, []);
-      if ($thisProduct and count($thisProduct->metadata) > 0 and $thisProduct->metadata['product'] === 'AdamRMS' and $thisProduct->metadata['instances_storageLimit'] and $thisProduct->metadata['instances_assetLimit'] and $thisProduct->metadata['instances_userLimit'] and $thisProduct->metadata['instances_projectLimit']) {
+      if ($thisProduct and count($thisProduct->metadata) > 0 and $thisProduct->metadata['product'] === 'MyRMS' and $thisProduct->metadata['instances_storageLimit'] and $thisProduct->metadata['instances_assetLimit'] and $thisProduct->metadata['instances_userLimit'] and $thisProduct->metadata['instances_projectLimit']) {
         $instanceUpdateData['instances_planName'] = $thisProduct->name;
         $instanceUpdateData['instances_suspended'] = 0;
         $instanceUpdateData['instances_suspendedReason'] = "";

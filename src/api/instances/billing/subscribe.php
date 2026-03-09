@@ -29,7 +29,7 @@ $checkout_session = \Stripe\Checkout\Session::create([
     'metadata' => [
       'instance_id' => $AUTH->data['instance']['instances_id'],
     ],
-    'description' => 'AdamRMS Subscription for ' . $AUTH->data['instance']['instances_name'],
+    'description' => 'MyRMS Subscription for ' . $AUTH->data['instance']['instances_name'],
     'trial_settings' => ['end_behavior' => ['missing_payment_method' => 'pause']],
     'trial_period_days' => 7,
   ],

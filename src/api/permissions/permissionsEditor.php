@@ -27,8 +27,8 @@ else die('2');
 
 /** @OA\Post(
  *     path="/permissions/permissionsEditor.php", 
- *     summary="AdamRMS Permission Editor", 
- *     description="Edit the permissions of an AdamRMS position  
+ *     summary="MyRMS Permission Editor", 
+ *     description="Edit the permissions of an MyRMS position  
 Requires server permission PERMISSIONS:EDIT
 ", 
  *     operationId="permissionEditor", 

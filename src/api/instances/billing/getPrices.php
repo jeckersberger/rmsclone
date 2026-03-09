@@ -8,7 +8,7 @@ if (!$stripeKey || strlen($stripeKey) === 0) {
 
 $stripe = new \Stripe\StripeClient($stripeKey);
 $products = $stripe->products->search([
-  'query' => 'active:\'true\' AND metadata[\'showInDashboard\']:\'true\' AND metadata[\'product\']:\'AdamRMS\'',
+  'query' => 'active:\'true\' AND metadata[\'showInDashboard\']:\'true\' AND metadata[\'product\']:\'MyRMS\'',
   'limit' => 100
 ]);
 $productsReturn = [];
