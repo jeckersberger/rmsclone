@@ -3,6 +3,9 @@
 *.swp
 
 .env
+.env.cloudflare
+.env.prod
+.env.synology
 
 vendor/
 
@@ -14,3 +17,5 @@ vendor/
 
 **/.idea
 .qodo
+install.sh
+myrms-zugangsdaten.txt
