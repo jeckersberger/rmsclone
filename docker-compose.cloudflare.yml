@@ -1,0 +1,183 @@
+# ==============================================================================
+# MyRMS - Cloudflare Tunnel Deployment
+# ==============================================================================
+#
+# Deployment via Cloudflare Tunnel on: dash.je-soundulight
+#
+# Setup:
+#   1. Run: bash scripts/setup-cloudflare.sh
+#      (erstellt .env.cloudflare, generiert Passwörter, konfiguriert alles)
+#
+#   2. Cloudflare Tunnel Token eintragen:
+#      - Gehe zu https://one.dash.cloudflare.com → Zero Trust → Networks → Tunnels
+#      - Erstelle einen neuen Tunnel (Name z.B. "myrms-dash")
+#      - Kopiere den Tunnel-Token und trage ihn in .env.cloudflare ein
+#      - Konfiguriere den Public Hostname:
+#          Subdomain: dash
+#          Domain:    je-soundulight (deine Zone)
+#          Service:   http://nginx:80
+#
+#   3. Starten:
+#      docker compose -f docker-compose.cloudflare.yml --env-file .env.cloudflare up -d
+#
+#   4. Fertig! Erreichbar unter: https://dash.je-soundulight
+#
+# ==============================================================================
+
+services:
+  # --------------------------------------------------------------------------
+  # Application (PHP + Apache)
+  # --------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DB_HOSTNAME=${DB_HOSTNAME:-db}
+      - DB_DATABASE=${DB_DATABASE:-myrms}
+      - DB_USERNAME=${DB_USERNAME:-myrms}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_PORT=${DB_PORT:-3306}
+      - DEV_MODE=false
+      - ROOT_URL=${ROOT_URL:-https://dash.je-soundulight}
+      - CORS_ALLOWED_ORIGIN=${CORS_ALLOWED_ORIGIN:-https://dash.je-soundulight}
+      - CONFIG_ROOTURL=${ROOT_URL:-https://dash.je-soundulight}
+      - CONFIG_PROJECT_NAME=${CONFIG_PROJECT_NAME:-MyRMS}
+      - CONFIG_TIMEZONE=${CONFIG_TIMEZONE:-Europe/Berlin}
+      - LOCAL_STORAGE_PATH=${LOCAL_STORAGE_PATH:-/var/www/html/storage}
+      - CONFIG_FILES_ENABLED=${CONFIG_FILES_ENABLED:-Enabled}
+      - CONFIG_EMAILS_ENABLED=${CONFIG_EMAILS_ENABLED:-Enabled}
+      - CONFIG_EMAILS_PROVIDER=${CONFIG_EMAILS_PROVIDER:-SMTP}
+      - CONFIG_EMAILS_FROMEMAIL=${CONFIG_EMAILS_FROMEMAIL}
+      - CONFIG_EMAILS_SMTP_SERVER=${CONFIG_EMAILS_SMTP_SERVER}
+      - CONFIG_EMAILS_SMTP_PORT=${CONFIG_EMAILS_SMTP_PORT:-587}
+      - CONFIG_AUTH_JWTKey=${CONFIG_AUTH_JWTKey}
+      - CONFIG_TELEMETRY_NANOID=${CONFIG_TELEMETRY_NANOID:-cloudflare_prod}
+    volumes:
+      - file_storage:/var/www/html/storage
+      - ./src:/var/www/html/src
+      - ./vendor:/var/www/html/vendor
+      - ./db:/var/www/html/db
+      - ./phinx.php:/var/www/html/phinx.php
+      - ./scripts:/var/www/html/scripts
+    networks:
+      - internal
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:80/api/health.php"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # --------------------------------------------------------------------------
+  # MySQL Database
+  # --------------------------------------------------------------------------
+  db:
+    image: mysql:8.0
+    restart: always
+    command: >-
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --innodb-buffer-pool-size=256M
+      --innodb-log-file-size=64M
+      --innodb-flush-log-at-trx-commit=2
+      --innodb-flush-method=O_DIRECT
+      --max-connections=150
+      --sort-buffer-size=2M
+      --join-buffer-size=2M
+      --tmp-table-size=64M
+      --max-heap-table-size=64M
+      --slow-query-log=1
+      --slow-query-log-file=/var/log/mysql/slow.log
+      --long-query-time=2
+    volumes:
+      - db_data:/var/lib/mysql
+      - db_logs:/var/log/mysql
+    environment:
+      - MYSQL_DATABASE=${DB_DATABASE:-myrms}
+      - MYSQL_USER=${DB_USERNAME:-myrms}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+    networks:
+      - internal
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # --------------------------------------------------------------------------
+  # Nginx - Internal Reverse Proxy (kein externer Port!)
+  # --------------------------------------------------------------------------
+  nginx:
+    image: nginx:1.25-alpine
+    restart: always
+    volumes:
+      - ./docker/nginx/nginx-cloudflare.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+    networks:
+      - internal
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+
+  # --------------------------------------------------------------------------
+  # Cloudflare Tunnel - Verbindet den Stack mit dash.je-soundulight
+  # --------------------------------------------------------------------------
+  # KEIN Port 80/443 nötig! Der Tunnel verbindet sich ausgehend zu Cloudflare.
+  # SSL wird automatisch von Cloudflare bereitgestellt.
+  # --------------------------------------------------------------------------
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: always
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - internal
+    depends_on:
+      - nginx
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 32M
+
+volumes:
+  db_data:
+    driver: local
+  db_logs:
+    driver: local
+  file_storage:
+    driver: local
+
+networks:
+  internal:
+    driver: bridge
