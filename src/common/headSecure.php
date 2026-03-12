@@ -1,11 +1,21 @@
 <?php
 require_once __DIR__ . '/head.php';
+require_once __DIR__ . '/../services/CsrfService.php';
 require_once __DIR__ . '/../assets/widgets/statsWidgets.php'; //Stats on homepage etc.
 
 //THIS IS DUPLICATED SOMEWHAT IN API HEAD SECURE AS SECURITY IS HANDLED SLIGHTLY DIFFERENTLY ON THE API END
 
 if (!$GLOBALS['AUTH']->login) {
-    $_SESSION['return'] = str_replace("src/", "", "http://" . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']);
+    $proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') ? 'https' : 'http';
+    $returnUrl = str_replace("src/", "", $proto . "://" . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']);
+    // Validate return URL belongs to our own domain
+    $parsedReturn = parse_url($returnUrl);
+    $parsedRoot = parse_url($CONFIG['ROOTURL']);
+    if ($parsedReturn && $parsedRoot && isset($parsedReturn['host']) && $parsedReturn['host'] === $parsedRoot['host']) {
+        $_SESSION['return'] = $returnUrl;
+    } else {
+        $_SESSION['return'] = $CONFIG['ROOTURL'];
+    }
     if ($CONFIG['DEV']) die($GLOBALS['AUTH']->debug . "<br/><a href='" . $CONFIG['ROOTURL'] . "/login/'>" . $CONFIG['ROOTURL'] . "/login/</a>");
     header("Location: " . $CONFIG['ROOTURL'] . "/login/");
     die('<meta http-equiv="refresh" content="0; url="' . $CONFIG['ROOTURL'] . "/login/" . '" />');
@@ -22,6 +32,7 @@ if (!$CONFIG['DEV']) {
 $PAGEDATA['AUTH'] = $AUTH;
 $PAGEDATA['USERDATA'] = $AUTH->data;
 $PAGEDATA['USERDATA']['users_email_md5'] = md5($PAGEDATA['USERDATA']['users_email']);
+$PAGEDATA['CSRF_TOKEN'] = CsrfService::generateToken();
 
 $DBLIB->insert("analyticsEvents", [
     "analyticsEvents_timestamp" => date("Y-m-d H:i:s"),

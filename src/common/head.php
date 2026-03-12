@@ -177,10 +177,19 @@ $PAGEDATA['MAINTENANCEJOBPRIORITIES'] = $GLOBALS['MAINTENANCEJOBPRIORITIES'];
 // Include Twig Extensions
 require_once __DIR__ . '/libs/twigExtensions.php';
 
-// Try to open up a session cookie
+// Try to open up a session cookie (secure defaults)
 try {
-    session_set_cookie_params(43200); //12hours
-    session_start(); //Open up the session
+    $isSecure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+        || (isset($_SERVER['HTTP_CF_VISITOR']) && strpos($_SERVER['HTTP_CF_VISITOR'], '"https"') !== false);
+    session_set_cookie_params([
+        'lifetime' => 43200, // 12 hours
+        'path' => '/',
+        'secure' => $isSecure,
+        'httponly' => true,
+        'samesite' => 'Strict',
+    ]);
+    session_start();
 } catch (Exception $e) {
     //Do Nothing
 }
@@ -193,70 +202,52 @@ $CSP = [
     ],
     "script-src" => [
         ["value" => "'self'", "comment" => ""],
-        ["value" => "'unsafe-inline'", "comment" => "We have loads of inline JS"],
+        ["value" => "'unsafe-inline'", "comment" => "Inline JS"],
         ["value" => "'unsafe-eval'", "comment" => ""],
-        ["value" => "https://*.adam-rms.com", "comment" => ""],
-        ["value" => "https://cdnjs.cloudflare.com", "comment" => ""],
-        ["value" => "https://static.cloudflareinsights.com", "comment" => ""],
-        ["value" => "https://www.youtube.com", "comment" => "Training modules allow youtube embed"],
-        ["value" => "https://*.ytimg.com", "comment" => "Training modules allow youtube embed"],
-        ["value" => "https://*.freshstatus.io", "comment" => ""],
-        ["value" => "https://js.stripe.com", "comment" => "Stripe payment pricing table"]
+        ["value" => "https://cdnjs.cloudflare.com", "comment" => "CDN Libraries"],
+        ["value" => "https://www.youtube.com", "comment" => "Training modules"],
+        ["value" => "https://*.ytimg.com", "comment" => "Training modules"],
     ],
     "style-src" => [
-        ["value" => "'unsafe-inline'", "comment" => "We have loads of inline CSS"],
+        ["value" => "'unsafe-inline'", "comment" => "Inline CSS"],
         ["value" => "'self'", "comment" => ""],
-        ["value" => "https://*.adam-rms.com", "comment" => ""],
-        ["value" => "https://cdnjs.cloudflare.com", "comment" => ""],
-        ["value" => "https://fonts.googleapis.com", "comment" => "Google fonts is used extensivley"]
+        ["value" => "https://cdnjs.cloudflare.com", "comment" => "CDN Libraries"],
+        ["value" => "https://fonts.googleapis.com", "comment" => "Google Fonts"]
     ],
     "font-src" => [
         ["value" => "'self'", "comment" => ""],
         ["value" => "data:", "comment" => ""],
-        ["value" => "https://*.adam-rms.com", "comment" => ""],
-        ["value" => "https://fonts.googleapis.com", "comment" => "Google fonts is used extensivley"],
-        ["value" => "https://fonts.gstatic.com", "comment" => "Google fonts is used extensivley"],
-        ["value" => "https://cdnjs.cloudflare.com", "comment" => "Libraries referenced in HTML"]
+        ["value" => "https://fonts.googleapis.com", "comment" => "Google Fonts"],
+        ["value" => "https://fonts.gstatic.com", "comment" => "Google Fonts"],
+        ["value" => "https://cdnjs.cloudflare.com", "comment" => "CDN Libraries"]
     ],
     "manifest-src" => [
-        ["value" => "'self'", "comment" => ""],
-        ["value" => "https://*.adam-rms.com", "comment" => "Show images on mobile devices like favicons"]
+        ["value" => "'self'", "comment" => ""]
     ],
     "img-src" => [
         ["value" => "'self'", "comment" => ""],
         ["value" => "data:", "comment" => ""],
         ["value" => "blob:", "comment" => ""],
-        ["value" => "https://*.adam-rms.com", "comment" => ""],
-        ["value" => "https://cdnjs.cloudflare.com", "comment" => "Libraries referenced in HTML"],
-        ["value" => "https://cloudflareinsights.com", "comment" => ""],
-        ["value" => "https://*.ytimg.com", "comment" => "Training modules allow youtube embed"]
+        ["value" => "https://cdnjs.cloudflare.com", "comment" => "CDN Libraries"],
+        ["value" => "https://*.ytimg.com", "comment" => "Training modules"]
     ],
     "connect-src" => [
         ["value" => "'self'", "comment" => ""],
-        ["value" => "https://*.adam-rms.com", "comment" => ""],
-        ["value" => "https://sentry.io", "comment" => ""],
-        ["value" => "https://cloudflareinsights.com", "comment" => ""],
-        ["value" => "https://*.amazonaws.com", "comment" => "To allow S3 uploads"],
-        ["value" => "https://*.freshstatus.io", "comment" => ""]
+        ["value" => "https://*.amazonaws.com", "comment" => "S3 uploads"],
     ],
     "frame-src" => [
-        ["value" => "https://www.youtube.com", "comment" => "Training modules allow youtube embed"],
-        ["value" => "https://*.freshstatus.io", "comment" => "Training modules allow youtube embed"],
-        ["value" => "https://js.stripe.com", "comment" => "Stripe payment pricing table"]
+        ["value" => "https://www.youtube.com", "comment" => "Training modules"],
     ],
     "object-src" => [
         ["value" => "'self'", "comment" => ""],
-        ["value" => "blob:", "comment" => "Inline PDFs generated by the system"]
+        ["value" => "blob:", "comment" => "Inline PDFs"]
     ],
     "worker-src" => [
         ["value" => "'self'", "comment" => ""],
-        ["value" => "blob:", "comment" => "Use of camera"]
+        ["value" => "blob:", "comment" => "Camera"]
     ],
     "frame-ancestors" => [
         ["value" => "'self'", "comment" => ""]
-    ],
-    "report-uri" => [
-        ["value" => "https://o83272.ingest.sentry.io/api/5204912/security/?sentry_key=3937ab95cc404dfa95b0e0cb91db5fc6", "comment" => "Report to sentry"]
     ]
 ];
 $CSPString = "Content-Security-Policy: ";
@@ -269,6 +260,14 @@ foreach ($CONFIG['CSP'] as $key => $value) {
 }
 header($CSPString);
 
+// Security headers
+header("X-Frame-Options: SAMEORIGIN");
+header("X-Content-Type-Options: nosniff");
+header("Referrer-Policy: strict-origin-when-cross-origin");
+header("Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=()");
+if ($isSecure) {
+    header("Strict-Transport-Security: max-age=31536000; includeSubDomains");
+}
 
 // Include the Auth class
 require_once __DIR__ . '/libs/Auth/main.php';

@@ -1,0 +1,344 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+<div class="row">
+    {# ── My Partner Code ── #}
+    <div class="col-lg-4">
+        <div class="card card-primary card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-key"></i> {{ t('my_partner_code') }}</h3>
+            </div>
+            <div class="card-body text-center">
+                <p class="text-muted">{{ t('partner_code_desc') }}</p>
+                <h2 id="myPartnerCode" class="text-primary" style="font-family:monospace; letter-spacing:4px;">-</h2>
+                <button class="btn btn-sm btn-default" id="generateCodeBtn"><i class="fas fa-sync"></i> {{ t('generate_new_code') }}</button>
+                <button class="btn btn-sm btn-default" id="copyCodeBtn"><i class="fas fa-copy"></i> {{ t('copy') }}</button>
+            </div>
+        </div>
+
+        {# ── Remote-Server verbinden ── #}
+        <div class="card card-success card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-globe"></i> Partner-Server verbinden</h3>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Geben Sie die Server-URL und den Partner-Code der anderen Firma ein.</p>
+                <div class="form-group">
+                    <label>Server-URL</label>
+                    <input type="url" class="form-control" id="remoteServerUrl" placeholder="https://partner-firma.de">
+                </div>
+                <div class="form-group">
+                    <label>Partner-Code</label>
+                    <input type="text" class="form-control" id="partnerCodeInput" placeholder="z.B. A3F8B2C1" maxlength="16" style="font-family:monospace; letter-spacing:2px; text-transform:uppercase;">
+                </div>
+                <button class="btn btn-success btn-block" id="federationConnectBtn"><i class="fas fa-link"></i> Verbinden</button>
+            </div>
+        </div>
+    </div>
+
+    {# ── Verbundene Partner-Server ── #}
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-server"></i> Verbundene Partner-Server</h3>
+                <div class="card-tools">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="loadServers()"><i class="fas fa-sync"></i></button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="overlay" id="partnersLoading"><i class="fas fa-sync fa-spin fa-2x"></i></div>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Firmenname</th>
+                            <th>Server-URL</th>
+                            <th>Status</th>
+                            <th>Letzter Kontakt</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="serversBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Partner Equipment Browser ── #}
+<div class="row">
+    <div class="col-12">
+        <div class="card card-outline card-info">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-warehouse"></i> {{ t('partner_equipment') }}</h3>
+                <div class="card-tools">
+                    <div class="input-group input-group-sm" style="width:200px; display:inline-flex;">
+                        <input type="text" class="form-control" id="partnerEquipSearch" placeholder="{{ t('search') }}...">
+                    </div>
+                    <div class="input-group input-group-sm ml-2" style="width:150px; display:inline-flex;">
+                        <input type="date" class="form-control" id="partnerDateFrom">
+                    </div>
+                    <div class="input-group input-group-sm ml-1" style="width:150px; display:inline-flex;">
+                        <input type="date" class="form-control" id="partnerDateTo">
+                    </div>
+                    <button class="btn btn-sm btn-info ml-1" id="searchPartnerEquipBtn"><i class="fas fa-search"></i></button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="overlay" id="equipLoading"><i class="fas fa-sync fa-spin fa-2x"></i></div>
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th>{{ t('partner') }}</th>
+                            <th>{{ t('asset_category') }}</th>
+                            <th>{{ t('asset_type') }}</th>
+                            <th>{{ t('total_count') }}</th>
+                            <th>{{ t('available') }}</th>
+                            <th>{{ t('partner_day_rate') }}</th>
+                            <th>{{ t('partner_week_rate') }}</th>
+                            <th>{{ t('actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="partnerEquipBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+var connectedServers = [];
+
+$(document).ready(function() {
+    loadPartnerCode();
+    loadServers();
+
+    // Partner-Code generieren
+    $('#generateCodeBtn').click(function() {
+        ajaxcall('partner/generateCode.php', {}, function(data) {
+            if (data.response) $('#myPartnerCode').text(data.response.partner_code);
+        });
+    });
+
+    // Partner-Code kopieren
+    $('#copyCodeBtn').click(function() {
+        navigator.clipboard.writeText($('#myPartnerCode').text());
+        $(this).html('<i class="fas fa-check"></i> Kopiert');
+        setTimeout(function() { $('#copyCodeBtn').html('<i class="fas fa-copy"></i> Kopieren'); }, 2000);
+    });
+
+    // Federation: Server verbinden
+    $('#federationConnectBtn').click(function() {
+        var url = $('#remoteServerUrl').val().trim();
+        var code = $('#partnerCodeInput').val().trim();
+        if (!url || !code) {
+            bootbox.alert('Bitte Server-URL und Partner-Code eingeben.');
+            return;
+        }
+        var btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Verbinde...');
+        ajaxcall('partner/federation_connect.php', {server_url: url, partner_code: code}, function(data) {
+            btn.prop('disabled', false).html('<i class="fas fa-link"></i> Verbinden');
+            if (data.result) {
+                bootbox.alert('Erfolgreich verbunden mit: ' + data.response.partner_name);
+                $('#remoteServerUrl').val('');
+                $('#partnerCodeInput').val('');
+                loadServers();
+            } else {
+                bootbox.alert('Fehler: ' + (data.error && data.error.message ? data.error.message : 'Verbindung fehlgeschlagen'));
+            }
+        }, function() {
+            btn.prop('disabled', false).html('<i class="fas fa-link"></i> Verbinden');
+            bootbox.alert('Netzwerkfehler. Bitte pruefen Sie die Server-URL.');
+        });
+    });
+
+    // Equipment suchen
+    $('#searchPartnerEquipBtn').click(loadAllPartnerEquipment);
+
+    // Equipment anfragen
+    $(document).on('click', '.requestEquipBtn', function() {
+        var serverId = $(this).data('server');
+        var typeId = $(this).data('type');
+        var typeName = $(this).data('name');
+        bootbox.prompt({
+            title: 'Equipment anfragen: ' + typeName,
+            inputType: 'number',
+            value: 1,
+            callback: function(qty) {
+                if (!qty || qty <= 0) return;
+                ajaxcall('partner/federation_equipment.php', {
+                    server_id: serverId,
+                    // TODO: Equipment-Request ueber Federation senden
+                }, function() {
+                    bootbox.alert('Anfrage gesendet.');
+                });
+            }
+        });
+    });
+});
+
+function loadPartnerCode() {
+    ajaxcall('partner/list.php', {}, function(data) {
+        if (data.response) {
+            $('#myPartnerCode').text(data.response.my_partner_code || 'Nicht generiert');
+        }
+    }, false);
+}
+
+function loadServers() {
+    $('#partnersLoading').show();
+    ajaxcall('partner/federation_list.php', {}, function(data) {
+        $('#partnersLoading').hide();
+        if (!data.response) return;
+
+        connectedServers = data.response.servers || [];
+        var html = '';
+
+        if (connectedServers.length === 0) {
+            html = '<tr><td colspan="5" class="text-center text-muted p-3">Keine verbundenen Server. Verbinden Sie sich ueber Partner-Code + Server-URL.</td></tr>';
+        }
+
+        connectedServers.forEach(function(s) {
+            var statusMap = { active: 'success', pending: 'warning', revoked: 'danger' };
+            var statusLabel = { active: 'Verbunden', pending: 'Ausstehend', revoked: 'Getrennt' };
+            var lastSeen = s.partner_servers_lastSeen ? new Date(s.partner_servers_lastSeen).toLocaleString('de-DE') : '-';
+
+            html += '<tr>';
+            html += '<td><strong>' + escHtml(s.partner_servers_name || 'Unbekannt') + '</strong></td>';
+            html += '<td><small><code>' + escHtml(s.partner_servers_url) + '</code></small></td>';
+            html += '<td><span class="badge badge-' + (statusMap[s.partner_servers_status] || 'secondary') + '">' + (statusLabel[s.partner_servers_status] || s.partner_servers_status) + '</span></td>';
+            html += '<td><small>' + lastSeen + '</small></td>';
+            html += '<td>';
+            if (s.partner_servers_status === 'active') {
+                html += '<button class="btn btn-xs btn-info pingServerBtn mr-1" data-id="' + s.partner_servers_id + '" title="Verbindung testen"><i class="fas fa-satellite-dish"></i></button>';
+                html += '<button class="btn btn-xs btn-primary loadEquipBtn mr-1" data-id="' + s.partner_servers_id + '" data-name="' + escHtml(s.partner_servers_name) + '" title="Equipment anzeigen"><i class="fas fa-warehouse"></i></button>';
+            }
+            html += '<button class="btn btn-xs btn-danger disconnectBtn" data-id="' + s.partner_servers_id + '" data-name="' + escHtml(s.partner_servers_name) + '" title="Trennen"><i class="fas fa-unlink"></i></button>';
+            html += '</td></tr>';
+        });
+
+        $('#serversBody').html(html);
+
+        // Alle Equipment laden wenn Server vorhanden
+        if (connectedServers.length > 0) loadAllPartnerEquipment();
+
+    }, false);
+}
+
+// Ping
+$(document).on('click', '.pingServerBtn', function() {
+    var btn = $(this);
+    var serverId = btn.data('id');
+    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+    ajaxcall('partner/federation_ping.php', {server_id: serverId}, function(data) {
+        btn.prop('disabled', false).html('<i class="fas fa-satellite-dish"></i>');
+        if (data.result) {
+            bootbox.alert('<i class="fas fa-check text-success"></i> Verbindung OK (' + data.response.latency_ms + 'ms)');
+        } else {
+            bootbox.alert('<i class="fas fa-times text-danger"></i> Server nicht erreichbar.');
+        }
+    }, function() {
+        btn.prop('disabled', false).html('<i class="fas fa-satellite-dish"></i>');
+        bootbox.alert('Netzwerkfehler.');
+    });
+});
+
+// Disconnect
+$(document).on('click', '.disconnectBtn', function() {
+    var serverId = $(this).data('id');
+    var name = $(this).data('name');
+    bootbox.confirm('Verbindung zu <strong>' + name + '</strong> wirklich trennen?', function(ok) {
+        if (!ok) return;
+        ajaxcall('partner/federation_disconnect.php', {server_id: serverId}, function() {
+            loadServers();
+        });
+    });
+});
+
+// Equipment eines einzelnen Servers laden
+$(document).on('click', '.loadEquipBtn', function() {
+    var serverId = $(this).data('id');
+    loadEquipmentForServer(serverId);
+});
+
+function loadAllPartnerEquipment() {
+    var params = {};
+    if ($('#partnerEquipSearch').val()) params.search = $('#partnerEquipSearch').val();
+    if ($('#partnerDateFrom').val()) params.start_date = $('#partnerDateFrom').val();
+    if ($('#partnerDateTo').val()) params.end_date = $('#partnerDateTo').val();
+
+    $('#equipLoading').show();
+    var allEquipment = [];
+    var pending = 0;
+
+    if (connectedServers.length === 0) {
+        $('#partnerEquipBody').html('<tr><td colspan="8" class="text-center text-muted">Keine Partner-Server verbunden.</td></tr>');
+        $('#equipLoading').hide();
+        return;
+    }
+
+    connectedServers.forEach(function(s) {
+        if (s.partner_servers_status !== 'active') return;
+        pending++;
+        var p = Object.assign({}, params, { server_id: s.partner_servers_id });
+        ajaxcall('partner/federation_equipment.php', p, function(data) {
+            pending--;
+            if (data.result && data.response.equipment) {
+                allEquipment = allEquipment.concat(data.response.equipment);
+            }
+            if (pending <= 0) renderEquipment(allEquipment);
+        }, function() {
+            pending--;
+            if (pending <= 0) renderEquipment(allEquipment);
+        });
+    });
+
+    if (pending === 0) {
+        $('#partnerEquipBody').html('<tr><td colspan="8" class="text-center text-muted">Keine aktiven Partner-Server.</td></tr>');
+        $('#equipLoading').hide();
+    }
+}
+
+function loadEquipmentForServer(serverId) {
+    var params = { server_id: serverId };
+    if ($('#partnerEquipSearch').val()) params.search = $('#partnerEquipSearch').val();
+    if ($('#partnerDateFrom').val()) params.start_date = $('#partnerDateFrom').val();
+    if ($('#partnerDateTo').val()) params.end_date = $('#partnerDateTo').val();
+
+    $('#equipLoading').show();
+    ajaxcall('partner/federation_equipment.php', params, function(data) {
+        if (data.result) renderEquipment(data.response.equipment || []);
+        else renderEquipment([]);
+    }, function() { renderEquipment([]); });
+}
+
+function renderEquipment(equipment) {
+    $('#equipLoading').hide();
+    var html = '';
+    if (equipment.length === 0) {
+        html = '<tr><td colspan="8" class="text-center text-muted">Kein Equipment gefunden.</td></tr>';
+    }
+    equipment.forEach(function(e) {
+        html += '<tr>';
+        html += '<td>' + escHtml(e.partner_name || '-') + '</td>';
+        html += '<td>' + escHtml(e.assetCategories_name || '-') + '</td>';
+        html += '<td><strong>' + escHtml(e.assetTypes_name) + '</strong></td>';
+        html += '<td>' + e.total_count + '</td>';
+        html += '<td>' + (e.available_count !== undefined ? '<span class="badge badge-' + (e.available_count > 0 ? 'success' : 'danger') + '">' + e.available_count + '</span>' : '-') + '</td>';
+        html += '<td>' + formatMoney(e.assetTypes_dayRate) + '</td>';
+        html += '<td>' + formatMoney(e.assetTypes_weekRate) + '</td>';
+        html += '<td><button class="btn btn-sm btn-primary requestEquipBtn" data-server="' + e.partner_server_id + '" data-type="' + e.assetTypes_id + '" data-name="' + escHtml(e.assetTypes_name) + '"><i class="fas fa-shopping-cart"></i></button></td>';
+        html += '</tr>';
+    });
+    $('#partnerEquipBody').html(html);
+}
+
+function formatMoney(v) {
+    return parseFloat(v || 0).toFixed(2).replace('.', ',') + ' \u20AC';
+}
+
+function escHtml(str) {
+    if (!str) return '';
+    return $('<div/>').text(str).html();
+}
+</script>
+{% endblock %}

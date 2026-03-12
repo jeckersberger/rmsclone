@@ -40,86 +40,86 @@ if (!$userPosition) finish(false, ["code" => "ADD-USER-TO-INSTANCE-FAIL", "messa
 
 $projectType = $DBLIB->insert("projectsTypes", [
     "instances_id" => $instance,
-    "projectsTypes_name" => "Full Project"
+    "projectsTypes_name" => "Vollständiges Projekt"
 ]);
 if (!$projectType) finish(false, ["code" => "ADD-PROJECT-TYPE-FAIL", "message" => "Could not create new project type"]);
 
 $defaultProjectStatuses = [
     [
-        "projectsStatuses_name" => "Added to RMS",
-        "projectsStatuses_description" => "Default",
+        "projectsStatuses_name" => "Im RMS erfasst",
+        "projectsStatuses_description" => "Standard",
         "projectsStatuses_foregroundColour" => "#000000",
         "projectsStatuses_backgroundColour" => "#F5F5F5",
         "projectsStatuses_rank" => 0,
         "projectsStatuses_assetsReleased" => false,
     ],
     [
-        "projectsStatuses_name" => "Targeted",
-        "projectsStatuses_description" => "Being targeted as a lead",
+        "projectsStatuses_name" => "Anvisiert",
+        "projectsStatuses_description" => "Als Lead anvisiert",
         "projectsStatuses_foregroundColour" => "#000000",
         "projectsStatuses_backgroundColour" => "#F5F5F5",
         "projectsStatuses_rank" => 1,
         "projectsStatuses_assetsReleased" => false
     ],
     [
-        "projectsStatuses_name" => "Quote Sent",
-        "projectsStatuses_description" => "Waiting for client confirmation",
+        "projectsStatuses_name" => "Angebot versendet",
+        "projectsStatuses_description" => "Warte auf Kundenbestätigung",
         "projectsStatuses_foregroundColour" => "#000000",
         "projectsStatuses_backgroundColour" => "#ffdd99",
         "projectsStatuses_rank" => 2,
         "projectsStatuses_assetsReleased" => false
     ],
     [
-        "projectsStatuses_name" => "Confirmed",
-        "projectsStatuses_description" => "Booked in with client",
+        "projectsStatuses_name" => "Bestätigt",
+        "projectsStatuses_description" => "Beim Kunden gebucht",
         "projectsStatuses_foregroundColour" => "#ffffff",
         "projectsStatuses_backgroundColour" => "#66ff66",
         "projectsStatuses_rank" => 3,
         "projectsStatuses_assetsReleased" => false
     ],
     [
-        "projectsStatuses_name" => "Prep",
-        "projectsStatuses_description" => "Being prepared for dispatch",
+        "projectsStatuses_name" => "Vorbereitung",
+        "projectsStatuses_description" => "Wird für den Versand vorbereitet",
         "projectsStatuses_foregroundColour" => "#000000",
         "projectsStatuses_backgroundColour" => "#ffdd99",
         "projectsStatuses_rank" => 4,
         "projectsStatuses_assetsReleased" => false
     ],
     [
-        "projectsStatuses_name" => "Dispatched",
-        "projectsStatuses_description" => "Sent to client",
+        "projectsStatuses_name" => "Versendet",
+        "projectsStatuses_description" => "An Kunden versendet",
         "projectsStatuses_foregroundColour" => "#ffffff",
         "projectsStatuses_backgroundColour" => "#66ff66",
         "projectsStatuses_rank" => 5,
         "projectsStatuses_assetsReleased" => false
     ],
     [
-        "projectsStatuses_name" => "Returned",
-        "projectsStatuses_description" => "Waiting to be checked in ",
+        "projectsStatuses_name" => "Zurückgekommen",
+        "projectsStatuses_description" => "Wartet auf Rücknahme",
         "projectsStatuses_foregroundColour" => "#000000",
         "projectsStatuses_backgroundColour" => "#ffdd99",
         "projectsStatuses_rank" => 6,
         "projectsStatuses_assetsReleased" => false
     ],
     [
-        "projectsStatuses_name" => "Closed",
-        "projectsStatuses_description" => "Pending move to Archive",
+        "projectsStatuses_name" => "Abgeschlossen",
+        "projectsStatuses_description" => "Wird archiviert",
         "projectsStatuses_foregroundColour" => "#000000",
         "projectsStatuses_backgroundColour" => "#F5F5F5",
         "projectsStatuses_rank" => 7,
         "projectsStatuses_assetsReleased" => false
     ],
     [
-        "projectsStatuses_name" => "Cancelled",
-        "projectsStatuses_description" => "Project Cancelled",
+        "projectsStatuses_name" => "Storniert",
+        "projectsStatuses_description" => "Projekt storniert",
         "projectsStatuses_foregroundColour" => "#000000",
         "projectsStatuses_backgroundColour" => "#F5F5F5",
         "projectsStatuses_rank" => 8,
         "projectsStatuses_assetsReleased" => true
     ],
     [
-        "projectsStatuses_name" => "Lead Lost",
-        "projectsStatuses_description" => "Project Cancelled",
+        "projectsStatuses_name" => "Lead verloren",
+        "projectsStatuses_description" => "Projekt storniert",
         "projectsStatuses_foregroundColour" => "#000000",
         "projectsStatuses_backgroundColour" => "#F5F5F5",
         "projectsStatuses_rank" => 9,
@@ -133,7 +133,7 @@ foreach ($defaultProjectStatuses as $projectStatus) {
 }
 
 $count = 0;
-foreach (["Pending pick", "Picked", "Prepping", "Tested", "Packed", "Dispatched", "Awaiting Check-in", "Case opened", "Unpacked", "Tested", "Stored"] as $item) {
+foreach (["Auswahl ausstehend", "Ausgewählt", "In Vorbereitung", "Geprüft", "Verpackt", "Versendet", "Wartet auf Rücknahme", "Case geöffnet", "Ausgepackt", "Geprüft", "Eingelagert"] as $item) {
     $assignmentsStatus = $DBLIB->insert("assetsAssignmentsStatus", [
         "instances_id" => $instance,
         "assetsAssignmentsStatus_name" => $item,

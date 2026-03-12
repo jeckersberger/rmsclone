@@ -230,13 +230,7 @@ class bID
     }
     private function generateTokenKey()
     {
-        $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        $charactersLength = strlen($characters);
-        $randomString = '';
-        for ($i = 0; $i < self::TOKEN_LENGTH; $i++) {
-            $randomString .= $characters[rand(0, $charactersLength - 1)];
-        }
-        return md5(time() . $randomString);
+        return bin2hex(random_bytes(32));
     }
 
     function generateToken($userID, $adminUserID = false, $deviceType, $tokenType) {
@@ -272,10 +266,18 @@ class bID
     function redirectToReturnAddress() {
         global $CONFIG;
         //If the function call has asked for a redirect
+        $redirectUrl = $CONFIG['ROOTURL'];
+        if (isset($_SESSION['return']) && $_SESSION['return']) {
+            $parsed = parse_url($_SESSION['return']);
+            $rootParsed = parse_url($CONFIG['ROOTURL']);
+            if ($parsed && $rootParsed && isset($parsed['host']) && $parsed['host'] === $rootParsed['host']) {
+                $redirectUrl = $_SESSION['return'];
+            }
+        }
         try {
-            header('Location: ' . (isset($_SESSION['return']) ? $_SESSION['return'] :  $CONFIG['ROOTURL'])); //Check for session url to redirect to
+            header('Location: ' . $redirectUrl);
         } catch (Exception $e) {
-            die('<meta http-equiv="refresh" content="0;url=' . (isset($_SESSION['return']) ? $_SESSION['return'] : $CONFIG['ROOTURL']) . '" />');
+            die('<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($redirectUrl, ENT_QUOTES, 'UTF-8') . '" />');
         }
     }
 

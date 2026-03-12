@@ -1,0 +1,432 @@
+{% extends "assets/template.twig" %}
+
+{% block content %}
+{% include 'instances/configuration/_settings_nav.twig' with { active: 'documentTemplates' } %}
+
+{# ══════ TEMPLATE LIST ══════ #}
+<div class="row" id="templateListSection">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-file-alt"></i> Dokumentvorlagen</h3>
+                <div class="card-tools">
+                    {% if "BUSINESS:BUSINESS_SETTINGS:EDIT"|instancePermissions %}
+                    <button class="btn btn-sm btn-primary" id="btnNewTemplate"><i class="fas fa-plus"></i> Neue Vorlage</button>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Typ</th>
+                                <th>Key</th>
+                                <th>Sprache</th>
+                                <th>Standard</th>
+                                <th style="width: 120px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="templateList">
+                            {% for tpl in templates %}
+                            <tr data-id="{{ tpl.id }}">
+                                <td><strong>{{ tpl.name }}</strong></td>
+                                <td>
+                                    {% if tpl.type == 'invoice' %}<span class="badge badge-info">Rechnung</span>
+                                    {% elseif tpl.type == 'quote' %}<span class="badge badge-success">Angebot</span>
+                                    {% else %}<span class="badge badge-secondary">Lieferschein</span>{% endif %}
+                                </td>
+                                <td><code>{{ tpl.key }}</code></td>
+                                <td>{{ tpl.language }}</td>
+                                <td>{% if tpl.is_default %}<span class="badge badge-warning"><i class="fas fa-star"></i> Standard</span>{% endif %}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-default btnEditTemplate" data-id="{{ tpl.id }}"><i class="fas fa-edit"></i></button>
+                                        <button class="btn btn-default btnDuplicateTemplate" data-id="{{ tpl.id }}"><i class="fas fa-copy"></i></button>
+                                        {% if "BUSINESS:BUSINESS_SETTINGS:EDIT"|instancePermissions %}
+                                        <button class="btn btn-danger btnDeleteTemplate" data-id="{{ tpl.id }}" data-name="{{ tpl.name }}"><i class="fas fa-trash"></i></button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% if templates|length == 0 %}
+                            <tr><td colspan="6" class="text-center text-muted p-4">
+                                <i class="fas fa-file-alt fa-3x mb-3" style="opacity:0.3"></i><br>
+                                Noch keine eigenen Vorlagen erstellt.<br>
+                                <small>Es wird die Standard-Vorlage verwendet. Erstelle eine eigene Vorlage um das Design anzupassen.</small>
+                            </td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle"></i>
+                    Wenn keine eigene Vorlage als Standard gesetzt ist, wird die eingebaute Standardvorlage verwendet.
+                    Du kannst die Standardvorlage als Basis fuer eigene Vorlagen kopieren.
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ══════ TEMPLATE EDITOR ══════ #}
+<div class="row" id="templateEditorSection" style="display:none;">
+    <div class="col-12">
+        <div class="card card-primary card-outline">
+            <div class="card-header">
+                <h3 class="card-title" id="editorTitle"><i class="fas fa-edit"></i> Vorlage bearbeiten</h3>
+                <div class="card-tools">
+                    <button class="btn btn-sm btn-default" id="btnBackToList"><i class="fas fa-arrow-left"></i> Zurueck zur Liste</button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <form id="templateForm">
+                    <input type="hidden" name="id" id="tplId" value="0">
+
+                    {# ── Meta fields ── #}
+                    <div class="p-3 border-bottom bg-light">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group mb-0">
+                                    <label>Name</label>
+                                    <input type="text" class="form-control form-control-sm" name="name" id="tplName" required placeholder="z.B. Rechnung Modern">
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group mb-0">
+                                    <label>Typ</label>
+                                    <select class="form-control form-control-sm" name="type" id="tplType">
+                                        <option value="invoice">Rechnung</option>
+                                        <option value="quote">Angebot</option>
+                                        <option value="delivery_note">Lieferschein</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group mb-0">
+                                    <label>Key</label>
+                                    <input type="text" class="form-control form-control-sm" name="key" id="tplKey" required placeholder="rechnung_modern" pattern="[a-z0-9_\-]+">
+                                    <small class="text-muted">Nur a-z, 0-9, _, -</small>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group mb-0">
+                                    <label>Sprache</label>
+                                    <input type="text" class="form-control form-control-sm" name="language" id="tplLanguage" value="de-DE">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group mb-0">
+                                    <label>&nbsp;</label>
+                                    <div class="custom-control custom-switch">
+                                        <input type="checkbox" class="custom-control-input" id="tplIsDefault" name="is_default" value="1">
+                                        <label class="custom-control-label" for="tplIsDefault">Als Standard fuer diesen Typ setzen</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# ── Editor tabs ── #}
+                    <ul class="nav nav-tabs mt-2 ml-3" id="editorTabs">
+                        <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#tabHtml"><i class="fas fa-code"></i> HTML / Twig</a></li>
+                        <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#tabCss"><i class="fas fa-palette"></i> CSS</a></li>
+                        <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#tabPreview"><i class="fas fa-eye"></i> Vorschau</a></li>
+                        <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#tabVars"><i class="fas fa-database"></i> Verfuegbare Variablen</a></li>
+                    </ul>
+                    <div class="tab-content">
+                        {# HTML/Twig Editor #}
+                        <div class="tab-pane active" id="tabHtml">
+                            <textarea class="form-control" name="twig_html" id="tplTwigHtml" style="width:100%;height:500px;font-family:'Fira Code',Consolas,'Courier New',monospace;font-size:12px;line-height:1.5;padding:12px;border:none;border-radius:0;resize:vertical;tab-size:2;background:#1e1e1e;color:#d4d4d4;" spellcheck="false" wrap="off"></textarea>
+                        </div>
+                        {# CSS Editor #}
+                        <div class="tab-pane" id="tabCss">
+                            <textarea class="form-control" name="css" id="tplCss" style="width:100%;height:400px;font-family:'Fira Code',Consolas,'Courier New',monospace;font-size:12px;line-height:1.5;padding:12px;border:none;border-radius:0;resize:vertical;tab-size:2;background:#1e1e1e;color:#d4d4d4;" spellcheck="false" wrap="off" placeholder="/* Eigenes CSS hier eingeben - wird in den <style> Block eingefuegt */"></textarea>
+                        </div>
+                        {# Preview #}
+                        <div class="tab-pane" id="tabPreview">
+                            <div class="p-2 bg-light border-bottom">
+                                <button type="button" class="btn btn-sm btn-info" id="btnRefreshPreview"><i class="fas fa-sync"></i> Vorschau aktualisieren</button>
+                                <span id="previewStatus" class="ml-2 text-muted"></span>
+                            </div>
+                            <div style="background:#e9ecef;padding:20px;min-height:500px;overflow:auto;">
+                                <div id="previewFrame" style="background:white;max-width:210mm;margin:0 auto;box-shadow:0 2px 12px rgba(0,0,0,0.15);min-height:297mm;padding:0;">
+                                    <p class="text-muted text-center pt-5">Klicke "Vorschau aktualisieren" um die Vorlage zu sehen.</p>
+                                </div>
+                            </div>
+                        </div>
+                        {# Variables Reference #}
+                        <div class="tab-pane" id="tabVars">
+                            <div class="p-3" style="max-height:500px;overflow-y:auto;">
+                                <h5>Verfuegbare Template-Variablen</h5>
+                                <p class="text-muted">Diese Variablen stehen in deiner Vorlage zur Verfuegung. Verwende die Twig-Syntax <code>{% verbatim %}{{ variable }}{% endverbatim %}</code>.</p>
+
+                                <h6 class="mt-3"><i class="fas fa-building"></i> business (Geschaeftsdaten)</h6>
+                                <table class="table table-sm table-bordered">
+                                    <tr><td><code>{% verbatim %}{{ business.instances_name }}{% endverbatim %}</code></td><td>Firmenname</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ business.instances_address }}{% endverbatim %}</code></td><td>Adresse (mehrzeilig)</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ business.instances_phone }}{% endverbatim %}</code></td><td>Telefon</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ business.instances_email }}{% endverbatim %}</code></td><td>E-Mail</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ business.instances_website }}{% endverbatim %}</code></td><td>Website</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ business.instances_taxNumber }}{% endverbatim %}</code></td><td>Steuernummer</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ business.instances_vatId }}{% endverbatim %}</code></td><td>USt-IdNr.</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ business.instances_kurEnabled }}{% endverbatim %}</code></td><td>Kleinunternehmer (1/0)</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ business.instances_bankName }}{% endverbatim %}</code></td><td>Bankname</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ business.instances_bankIban }}{% endverbatim %}</code></td><td>IBAN</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ business.instances_bankBic }}{% endverbatim %}</code></td><td>BIC</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ business.instances_ceoName }}{% endverbatim %}</code></td><td>Inhaber/Geschaeftsfuehrer</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ business.instances_courtOfJurisdiction }}{% endverbatim %}</code></td><td>Gerichtsstand</td></tr>
+                                </table>
+
+                                <h6 class="mt-3"><i class="fas fa-user"></i> client (Kundendaten)</h6>
+                                <table class="table table-sm table-bordered">
+                                    <tr><td><code>{% verbatim %}{{ client.clients_name }}{% endverbatim %}</code></td><td>Kundenname</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ client.clients_address }}{% endverbatim %}</code></td><td>Adresse</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ client.clients_vatId }}{% endverbatim %}</code></td><td>USt-IdNr. des Kunden</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ client.clients_customerNumber }}{% endverbatim %}</code></td><td>Kundennummer</td></tr>
+                                </table>
+
+                                <h6 class="mt-3"><i class="fas fa-file-invoice"></i> doc (Dokumentdaten)</h6>
+                                <table class="table table-sm table-bordered">
+                                    <tr><td><code>{% verbatim %}{{ doc.type }}{% endverbatim %}</code></td><td>invoice / quote / delivery_note</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ doc.number }}{% endverbatim %}</code></td><td>Dokumentnummer (z.B. RE-2026-0001)</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ doc.date|dateDe }}{% endverbatim %}</code></td><td>Dokumentdatum</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ doc.due_date|dateDe }}{% endverbatim %}</code></td><td>Faelligkeitsdatum</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ doc.payment_term_days }}{% endverbatim %}</code></td><td>Zahlungsziel (Tage)</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ doc.duration_days }}{% endverbatim %}</code></td><td>Miettage</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ doc.title }}{% endverbatim %}</code></td><td>Dokumenttitel (Rechnung/Angebot/Lieferschein)</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ doc.number_label }}{% endverbatim %}</code></td><td>Nummernbezeichnung</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ doc.service_period_start|dateDe }}{% endverbatim %}</code></td><td>Leistungszeitraum Beginn</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ doc.service_period_end|dateDe }}{% endverbatim %}</code></td><td>Leistungszeitraum Ende</td></tr>
+                                </table>
+
+                                <h6 class="mt-3"><i class="fas fa-layer-group"></i> categories (Gruppierte Positionen)</h6>
+                                <table class="table table-sm table-bordered">
+                                    <tr><td colspan="2"><strong>Schleife ueber Kategorien:</strong></td></tr>
+                                    <tr><td><code>{% verbatim %}{% for cat in categories %}{% endverbatim %}</code></td><td>Kategorie-Schleife</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ cat.name }}{% endverbatim %}</code></td><td>Kategoriename (z.B. "Licht", "Audio")</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ cat.subtotal|numberDe }}{% endverbatim %}</code></td><td>Zwischensumme der Kategorie</td></tr>
+                                    <tr><td colspan="2"><strong>Positionen innerhalb einer Kategorie:</strong></td></tr>
+                                    <tr><td><code>{% verbatim %}{% for line in cat.lines %}{% endverbatim %}</code></td><td>Positions-Schleife</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ line.name }}{% endverbatim %}</code></td><td>Positionsname</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ line.qty }}{% endverbatim %}</code></td><td>Menge</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ line.unit }}{% endverbatim %}</code></td><td>Einheit (Tag, Stueck, etc.)</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ line.day_price|numberDe }}{% endverbatim %}</code></td><td>Tagespreis/Einzelpreis</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ line.days }}{% endverbatim %}</code></td><td>Anzahl Tage</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ line.total|numberDe }}{% endverbatim %}</code></td><td>Gesamtpreis der Position</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ line.kind }}{% endverbatim %}</code></td><td>asset / set / extra</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ line.is_daily }}{% endverbatim %}</code></td><td>Tagesbezogene Position (true/false)</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ line.note }}{% endverbatim %}</code></td><td>Notiz zur Position</td></tr>
+                                </table>
+
+                                <h6 class="mt-3"><i class="fas fa-calculator"></i> totals (Summen)</h6>
+                                <table class="table table-sm table-bordered">
+                                    <tr><td><code>{% verbatim %}{{ totals.subtotal|numberDe }}{% endverbatim %}</code></td><td>Zwischensumme (netto)</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ totals.discount_pct }}{% endverbatim %}</code></td><td>Rabatt in Prozent</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ totals.discount|numberDe }}{% endverbatim %}</code></td><td>Rabattbetrag</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ totals.net|numberDe }}{% endverbatim %}</code></td><td>Nettobetrag</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ totals.vat_rate }}{% endverbatim %}</code></td><td>MwSt.-Satz</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ totals.vat|numberDe }}{% endverbatim %}</code></td><td>MwSt.-Betrag</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ totals.gross|numberDe }}{% endverbatim %}</code></td><td>Bruttobetrag</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ totals.kur }}{% endverbatim %}</code></td><td>Kleinunternehmer (true/false)</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ totals.kur_notice }}{% endverbatim %}</code></td><td>KUR-Hinweistext</td></tr>
+                                </table>
+
+                                <h6 class="mt-3"><i class="fas fa-filter"></i> Verfuegbare Filter</h6>
+                                <table class="table table-sm table-bordered">
+                                    <tr><td><code>{% verbatim %}{{ value|numberDe }}{% endverbatim %}</code></td><td>Deutsche Zahl: 1.234,56</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ value|numberDe(0) }}{% endverbatim %}</code></td><td>Ohne Dezimalen: 1.235</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ date|dateDe }}{% endverbatim %}</code></td><td>Deutsches Datum: 28.02.2026</td></tr>
+                                    <tr><td><code>{% verbatim %}{{ text|nl2br }}{% endverbatim %}</code></td><td>Zeilenumbrueche als &lt;br&gt;</td></tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer">
+                {% if "BUSINESS:BUSINESS_SETTINGS:EDIT"|instancePermissions %}
+                <button type="button" class="btn btn-primary" id="btnSaveTemplate"><i class="fas fa-save"></i> Speichern</button>
+                <button type="button" class="btn btn-default" id="btnLoadDefault"><i class="fas fa-file-import"></i> Standardvorlage laden</button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    var defaultTemplate = {{ defaultTemplate|json_encode|raw }};
+
+    // ── Navigation ──
+    function showList() {
+        $('#templateEditorSection').hide();
+        $('#templateListSection').show();
+    }
+    function showEditor(title) {
+        $('#templateListSection').hide();
+        $('#editorTitle').html('<i class="fas fa-edit"></i> ' + title);
+        $('#templateEditorSection').show();
+        $('#editorTabs a:first').tab('show');
+    }
+
+    $('#btnBackToList').click(function() {
+        if (confirm('Nicht gespeicherte Aenderungen gehen verloren. Zurueck zur Liste?')) {
+            showList();
+        }
+    });
+
+    // ── New template ──
+    $('#btnNewTemplate').click(function() {
+        $('#tplId').val(0);
+        $('#tplName').val('');
+        $('#tplType').val('invoice');
+        $('#tplKey').val('');
+        $('#tplLanguage').val('de-DE');
+        $('#tplIsDefault').prop('checked', false);
+        $('#tplTwigHtml').val('');
+        $('#tplCss').val('');
+        showEditor('Neue Vorlage erstellen');
+    });
+
+    // ── Load default template ──
+    $('#btnLoadDefault').click(function() {
+        if ($('#tplTwigHtml').val().length > 0) {
+            if (!confirm('Die Standardvorlage wird in den Editor geladen. Vorhandener Inhalt wird ueberschrieben.')) return;
+        }
+        $('#tplTwigHtml').val(defaultTemplate);
+    });
+
+    // ── Edit template ──
+    $(document).on('click', '.btnEditTemplate', function() {
+        var id = $(this).data('id');
+        ajaxcall("documentTemplates/get.php", { id: id }, function(data) {
+            var tpl = data.response.template;
+            $('#tplId').val(tpl.id);
+            $('#tplName').val(tpl.name);
+            $('#tplType').val(tpl.type);
+            $('#tplKey').val(tpl.key);
+            $('#tplLanguage').val(tpl.language);
+            $('#tplIsDefault').prop('checked', tpl.is_default == 1);
+            $('#tplTwigHtml').val(tpl.twig_html);
+            $('#tplCss').val(tpl.css);
+            showEditor('Vorlage bearbeiten: ' + tpl.name);
+        });
+    });
+
+    // ── Duplicate template ──
+    $(document).on('click', '.btnDuplicateTemplate', function() {
+        var id = $(this).data('id');
+        ajaxcall("documentTemplates/get.php", { id: id }, function(data) {
+            var tpl = data.response.template;
+            $('#tplId').val(0);
+            $('#tplName').val(tpl.name + ' (Kopie)');
+            $('#tplType').val(tpl.type);
+            $('#tplKey').val(tpl.key + '_copy');
+            $('#tplLanguage').val(tpl.language);
+            $('#tplIsDefault').prop('checked', false);
+            $('#tplTwigHtml').val(tpl.twig_html);
+            $('#tplCss').val(tpl.css);
+            showEditor('Vorlage duplizieren: ' + tpl.name);
+        });
+    });
+
+    // ── Delete template ──
+    $(document).on('click', '.btnDeleteTemplate', function() {
+        var id = $(this).data('id');
+        var name = $(this).data('name');
+        bootbox.confirm({
+            title: 'Vorlage loeschen?',
+            message: 'Soll die Vorlage <strong>' + name + '</strong> wirklich geloescht werden? Dies kann nicht rueckgaengig gemacht werden.',
+            buttons: {
+                confirm: { label: 'Loeschen', className: 'btn-danger' },
+                cancel: { label: 'Abbrechen', className: 'btn-default' }
+            },
+            callback: function(result) {
+                if (result) {
+                    ajaxcall("documentTemplates/delete.php", { id: id }, function(data) {
+                        location.reload();
+                    });
+                }
+            }
+        });
+    });
+
+    // ── Save template ──
+    $('#btnSaveTemplate').click(function() {
+        var btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Speichern...');
+        ajaxcall("documentTemplates/save.php", {
+            id: $('#tplId').val(),
+            type: $('#tplType').val(),
+            key: $('#tplKey').val(),
+            name: $('#tplName').val(),
+            language: $('#tplLanguage').val(),
+            css: $('#tplCss').val(),
+            twig_html: $('#tplTwigHtml').val(),
+            is_default: $('#tplIsDefault').is(':checked') ? '1' : '0'
+        }, function(data) {
+            btn.prop('disabled', false).html('<i class="fas fa-save"></i> Speichern');
+            if (data.result) {
+                $('#tplId').val(data.response.id);
+                bootbox.alert({
+                    message: '<i class="fas fa-check text-success"></i> Vorlage erfolgreich gespeichert!',
+                    size: 'small'
+                });
+            }
+        }, function(err) {
+            btn.prop('disabled', false).html('<i class="fas fa-save"></i> Speichern');
+        });
+    });
+
+    // ── Preview ──
+    $('#btnRefreshPreview').click(function() {
+        var btn = $(this);
+        btn.prop('disabled', true);
+        $('#previewStatus').html('<i class="fas fa-spinner fa-spin"></i> Wird geladen...');
+        ajaxcall("documentTemplates/preview.php", {
+            twig_html: $('#tplTwigHtml').val(),
+            css: $('#tplCss').val()
+        }, function(data) {
+            btn.prop('disabled', false);
+            if (data.result) {
+                $('#previewFrame').html(data.response.html);
+                $('#previewStatus').html('<i class="fas fa-check text-success"></i> Vorschau aktualisiert');
+            } else {
+                $('#previewStatus').html('<i class="fas fa-exclamation-triangle text-danger"></i> ' + (data.error ? data.error.message : 'Fehler'));
+            }
+        }, function(err) {
+            btn.prop('disabled', false);
+            $('#previewStatus').html('<i class="fas fa-exclamation-triangle text-danger"></i> Netzwerkfehler');
+        });
+    });
+
+    // Auto-generate key from name
+    $('#tplName').on('input', function() {
+        if ($('#tplId').val() == '0') {
+            var key = $(this).val().toLowerCase()
+                .replace(/[aeiou]/g, function(m) { return m; })
+                .replace(/[^a-z0-9]+/g, '_')
+                .replace(/^_|_$/g, '');
+            $('#tplKey').val(key);
+        }
+    });
+
+    // Tab key support in textareas
+    $('textarea[name="twig_html"], textarea[name="css"]').on('keydown', function(e) {
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            var start = this.selectionStart;
+            var end = this.selectionEnd;
+            var value = $(this).val();
+            $(this).val(value.substring(0, start) + '  ' + value.substring(end));
+            this.selectionStart = this.selectionEnd = start + 2;
+        }
+    });
+});
+</script>
+{% endblock %}

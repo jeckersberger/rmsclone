@@ -79,7 +79,13 @@ if ($user) {
 		exit;
 	} else {
 		$GLOBALS['AUTH']->generateToken($user['users_userid'], false, "Web - Google", "web-session");
-		header("Location: " . (isset($_SESSION['return']) ? $_SESSION['return'] : $CONFIG['ROOTURL']));
+		$redirect = $CONFIG['ROOTURL'];
+		if (isset($_SESSION['return']) && $_SESSION['return']) {
+			$p = parse_url($_SESSION['return']);
+			$r = parse_url($CONFIG['ROOTURL']);
+			if ($p && $r && isset($p['host']) && $p['host'] === $r['host']) $redirect = $_SESSION['return'];
+		}
+		header("Location: " . $redirect);
 		exit;
 	}
 } else {
@@ -87,7 +93,7 @@ if ($user) {
 	$DBLIB->where("users_email", strtolower($userProfile->emailVerified));
 	$user = $DBLIB->getOne("users", ["users.users_suspended", "users.users_userid", "users.users_hash", "users.users_emailVerified"]);
 	if ($user) {
-		$PAGEDATA['ERROR'] = "An AdamRMS account associated with the email address you selected has been found. Please login again using your AdamRMS username & password to link your account to a Google Account in AdamRMS account settings";
+		$PAGEDATA['ERROR'] = "An account associated with the email address you selected has been found. Please login again using your username & password to link your account to a Google Account in account settings";
 		echo $TWIG->render('login/error.twig', $PAGEDATA);
 		exit;
 	}
@@ -127,6 +133,12 @@ if (!$_SESSION['return'] and isset($_SESSION['app-oauth'])) {
 	exit;
 } else {
 	$GLOBALS['AUTH']->generateToken($newUser, false, "Web - Google", "web-session");
-	header("Location: " . (isset($_SESSION['return']) ? $_SESSION['return'] : $CONFIG['ROOTURL']));
+	$redirect = $CONFIG['ROOTURL'];
+	if (isset($_SESSION['return']) && $_SESSION['return']) {
+		$p = parse_url($_SESSION['return']);
+		$r = parse_url($CONFIG['ROOTURL']);
+		if ($p && $r && isset($p['host']) && $p['host'] === $r['host']) $redirect = $_SESSION['return'];
+	}
+	header("Location: " . $redirect);
 	exit;
 }

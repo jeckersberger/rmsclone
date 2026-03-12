@@ -8,31 +8,31 @@
                 <div class="card-header">
                     <h3 class="card-title">
                         {% if search|length > 0 %}
-                            Search results for clients matching <b>{{ search }}</b>
+                            Suchergebnisse fuer <b>{{ search }}</b>
                         {% else %}
-                            Clients
+                            {{ t('clients') }}
                         {% endif %}
                     </h3>
                     <div class="card-tools pull-right">
                         <form class="input-group input-group-sm" method="GET">
                             <div class="input-group-prepend">
                                 {% if includeFuture %}
-                                    <a href="?" type="button" class="btn btn-default">Hide future projects</a>
+                                    <a href="?" type="button" class="btn btn-default">Zukuenftige ausblenden</a>
                                 {% else %}
-                                    <a href="?future" type="button" class="btn btn-default">Include future projects</a>
+                                    <a href="?future" type="button" class="btn btn-default">{{ t('include_future') }}</a>
                                 {% endif %}
                                 {% if includeReleased %}
-                                    <a href="?" type="button" class="btn btn-default">Hide projects where assets are released</a>
+                                    <a href="?" type="button" class="btn btn-default">Freigegebene ausblenden</a>
                                 {% else %}
-                                    <a href="?released" type="button" class="btn btn-default">Include projects where assets are released</a>
+                                    <a href="?released" type="button" class="btn btn-default">{{ t('include_released') }}</a>
                                 {% endif %}
                                 {% if showArchived %}
-                                    <a href="?" type="button" class="btn btn-default">Show active Clients</a>
+                                    <a href="?" type="button" class="btn btn-default">Aktive Kunden anzeigen</a>
                                 {% else %}
-                                    <a href="?archive" type="button" class="btn btn-default">Show archived Clients</a>
+                                    <a href="?archive" type="button" class="btn btn-default">{{ t('archive') }}</a>
                                 {% endif %}
                             </div>
-                            <input type="text" name="q" class="form-control" placeholder="Search" value="{{ search }}" />
+                            <input type="text" name="q" class="form-control" placeholder="Suche" value="{{ search }}" />
                             <div class="input-group-append">
                                 <button type="submit" class="btn btn-default"><i class="fa fa-search"></i></button>
                                 {% if "CLIENTS:CREATE"|instancePermissions %}
@@ -48,14 +48,14 @@
                         <table class="table table-head-fixed table-striped" border="0" style="overflow-x: scroll;">
                             <thead>
                                 <tr>
-                                    <th>Name</th>
-                                    <th>Address</th>
-                                    <th>Phone</th>
-                                    <th>Email</th>
-                                    <th>Website</th>
-                                    <th>Notes</th>
-                                    <th>Total Paid</th>
-                                    <th>To Pay</th>
+                                    <th>{{ t('client_name') }}</th>
+                                    <th>{{ t('client_address') }}</th>
+                                    <th>{{ t('client_phone') }}</th>
+                                    <th>{{ t('client_email') }}</th>
+                                    <th>{{ t('client_website') }}</th>
+                                    <th>{{ t('client_notes') }}</th>
+                                    <th>{{ t('total_payments') }}</th>
+                                    <th>{{ t('total_outstanding') }}</th>
                                     {% if "CLIENTS:EDIT"|instancePermissions %}<th></th>{% endif %}
                                 </tr>
                             </thead>
@@ -92,54 +92,189 @@
                                             {% endif %}
                                         </div>
                                         <div class="modal fade" id="clientModal{{ client.clients_id }}">
-                                            <div class="modal-dialog">
+                                            <div class="modal-dialog modal-lg">
                                                 <div class="modal-content">
                                                     <div class="modal-header">
-                                                        <h4 class="modal-title">Edit {{ client.clients_name }}</h4>
-                                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                        <h4 class="modal-title">{{ client.clients_name }}</h4>
+                                                        <button type="button" class="close" data-dismiss="modal" aria-label="{{ t('close') }}">
                                                             <span aria-hidden="true">&times;</span>
                                                         </button>
                                                     </div>
                                                     <div class="modal-body">
+                                                        <ul class="nav nav-tabs" role="tablist">
+                                                            <li class="nav-item">
+                                                                <a class="nav-link active" data-toggle="tab" href="#clientTab_edit_{{ client.clients_id }}">
+                                                                    <i class="fas fa-edit"></i> Stammdaten
+                                                                </a>
+                                                            </li>
+                                                            <li class="nav-item">
+                                                                <a class="nav-link comm-tab-link" data-toggle="tab" href="#clientTab_comm_{{ client.clients_id }}" data-clientid="{{ client.clients_id }}">
+                                                                    <i class="fas fa-comments"></i> Kommunikation
+                                                                </a>
+                                                            </li>
+                                                        </ul>
+                                                        <div class="tab-content mt-3">
+                                                            {# --- Tab: Stammdaten --- #}
+                                                            <div class="tab-pane active" id="clientTab_edit_{{ client.clients_id }}">
                                                         <form class="clientEdit-form" data-clientid="{{ client.clients_id }}">
                                                             <input type="hidden" name="clients_id" value="{{ client.clients_id }}"/>
                                                             <div class="input-group" style="margin-bottom: 5px;">
                                                                 <div class="input-group-prepend">
-                                                                    <span class="input-group-text">Name</span>
+                                                                    <span class="input-group-text">{{ t('client_name') }}</span>
                                                                 </div>
                                                                 <input type="text" class="form-control" name="clients_name" value="{{ client.clients_name }}">
                                                             </div>
                                                             <div class="input-group" style="margin-bottom: 5px;">
-                                                                <div class="input-group-prepend"><span class="input-group-text">Address</span></div>
+                                                                <div class="input-group-prepend"><span class="input-group-text">{{ t('client_address') }}</span></div>
                                                                 <textarea class="form-control" rows="6" name="clients_address"  placeholder="">{{ client.clients_address }}</textarea>
                                                             </div>
                                                             <div class="input-group" style="margin-bottom: 5px;">
                                                                 <div class="input-group-prepend">
-                                                                    <span class="input-group-text">Website</span>
+                                                                    <span class="input-group-text">{{ t('client_website') }}</span>
                                                                 </div>
                                                                 <input type="text" class="form-control" name="clients_website" value="{{ client.clients_website }}">
                                                             </div>
                                                             <div class="input-group" style="margin-bottom: 5px;">
                                                                 <div class="input-group-prepend">
-                                                                    <span class="input-group-text">Phone</span>
+                                                                    <span class="input-group-text">{{ t('client_phone') }}</span>
                                                                 </div>
                                                                 <input type="text" class="form-control" name="clients_phone" value="{{ client.clients_phone }}">
                                                             </div>
                                                             <div class="input-group" style="margin-bottom: 5px;">
                                                                 <div class="input-group-prepend">
-                                                                    <span class="input-group-text">Email</span>
+                                                                    <span class="input-group-text">{{ t('client_email') }}</span>
                                                                 </div>
                                                                 <input type="text" class="form-control" name="clients_email" value="{{ client.clients_email }}">
                                                             </div>
+                                                            <hr>
                                                             <div class="input-group" style="margin-bottom: 5px;">
-                                                                <div class="input-group-prepend"><span class="input-group-text">Notes</span></div>
+                                                                <div class="input-group-prepend">
+                                                                    <span class="input-group-text">{{ t('client_vat_id') }}</span>
+                                                                </div>
+                                                                <input type="text" class="form-control" name="clients_vatId" value="{{ client.clients_vatId }}" placeholder="DE123456789">
+                                                            </div>
+                                                            <div class="input-group" style="margin-bottom: 5px;">
+                                                                <div class="input-group-prepend">
+                                                                    <span class="input-group-text">{{ t('client_customer_number') }}</span>
+                                                                </div>
+                                                                <input type="text" class="form-control" name="clients_customerNumber" value="{{ client.clients_customerNumber }}" placeholder="KD-0001">
+                                                            </div>
+                                                            <div class="input-group" style="margin-bottom: 5px;">
+                                                                <div class="input-group-prepend">
+                                                                    <span class="input-group-text">{{ t('client_payment_terms') }}</span>
+                                                                </div>
+                                                                <input type="number" min="0" class="form-control" name="clients_paymentTermDays" value="{{ client.clients_paymentTermDays }}" placeholder="Standard verwenden">
+                                                            </div>
+                                                            <hr>
+                                                            <h6><i class="fas fa-globe-europe"></i> EU / Reverse Charge</h6>
+                                                            <div class="custom-control custom-checkbox" style="margin-bottom: 5px;">
+                                                                <input type="hidden" name="clients_isEU" value="0">
+                                                                <input type="checkbox" class="custom-control-input" id="clientIsEU{{ client.clients_id }}" name="clients_isEU" value="1" {% if client.clients_isEU %}checked{% endif %}>
+                                                                <label class="custom-control-label" for="clientIsEU{{ client.clients_id }}">EU-Kunde (Ausland)</label>
+                                                            </div>
+                                                            <div class="custom-control custom-checkbox" style="margin-bottom: 5px;">
+                                                                <input type="hidden" name="clients_reverseCharge" value="0">
+                                                                <input type="checkbox" class="custom-control-input" id="clientReverseCharge{{ client.clients_id }}" name="clients_reverseCharge" value="1" {% if client.clients_reverseCharge %}checked{% endif %}>
+                                                                <label class="custom-control-label" for="clientReverseCharge{{ client.clients_id }}">Reverse-Charge-Verfahren</label>
+                                                            </div>
+                                                            <small class="form-text text-muted" style="margin-bottom: 5px;">
+                                                                <i class="fas fa-info-circle"></i> Reverse Charge nur aktivieren bei B2B-Leistungen an Unternehmen im EU-Ausland mit gueltiger USt-IdNr.
+                                                                Die MwSt. wird dann auf der Rechnung mit 0% ausgewiesen (Art. 196 MwSt-Richtlinie).
+                                                            </small>
+                                                            <hr>
+                                                            <h6><i class="fas fa-truck"></i> Lieferadresse</h6>
+                                                            <div class="input-group" style="margin-bottom: 5px;">
+                                                                <div class="input-group-prepend"><span class="input-group-text">Lieferadresse</span></div>
+                                                                <textarea class="form-control" rows="3" name="clients_deliveryAddress" placeholder="Falls abweichend von Rechnungsadresse">{{ client.clients_deliveryAddress }}</textarea>
+                                                            </div>
+                                                            <div class="input-group" style="margin-bottom: 5px;">
+                                                                <div class="input-group-prepend"><span class="input-group-text">Ansprechpartner</span></div>
+                                                                <input type="text" class="form-control" name="clients_deliveryContact" value="{{ client.clients_deliveryContact }}">
+                                                            </div>
+                                                            <div class="input-group" style="margin-bottom: 5px;">
+                                                                <div class="input-group-prepend"><span class="input-group-text">Telefon Lieferung</span></div>
+                                                                <input type="text" class="form-control" name="clients_deliveryPhone" value="{{ client.clients_deliveryPhone }}">
+                                                            </div>
+                                                            <div class="input-group" style="margin-bottom: 5px;">
+                                                                <div class="input-group-prepend"><span class="input-group-text">Lieferhinweise</span></div>
+                                                                <textarea class="form-control" rows="2" name="clients_deliveryNotes" placeholder="Zufahrt, Anlieferungszeiten, etc.">{{ client.clients_deliveryNotes }}</textarea>
+                                                            </div>
+                                                            <hr>
+                                                            <div class="input-group" style="margin-bottom: 5px;">
+                                                                <div class="input-group-prepend"><span class="input-group-text">{{ t('client_notes') }}</span></div>
                                                                 <textarea class="form-control" rows="3" name="clients_notes"  placeholder="">{{ client.clients_notes }}</textarea>
                                                             </div>
                                                         </form>
+                                                            </div>
+                                                            {# --- Tab: Kommunikation --- #}
+                                                            <div class="tab-pane" id="clientTab_comm_{{ client.clients_id }}">
+                                                                {# Neuen Eintrag anlegen #}
+                                                                <div class="card card-outline card-primary mb-3">
+                                                                    <div class="card-header p-2">
+                                                                        <h6 class="mb-0"><i class="fas fa-plus"></i> Neuer Eintrag</h6>
+                                                                    </div>
+                                                                    <div class="card-body p-2">
+                                                                        <form class="commAdd-form" data-clientid="{{ client.clients_id }}">
+                                                                            <div class="row">
+                                                                                <div class="col-md-4">
+                                                                                    <div class="form-group mb-2">
+                                                                                        <label class="mb-1">Typ</label>
+                                                                                        <select class="form-control form-control-sm" name="type" required>
+                                                                                            <option value="email">E-Mail</option>
+                                                                                            <option value="phone">Telefon</option>
+                                                                                            <option value="meeting">Meeting</option>
+                                                                                            <option value="note">Notiz</option>
+                                                                                            <option value="letter">Brief</option>
+                                                                                        </select>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div class="col-md-4">
+                                                                                    <div class="form-group mb-2">
+                                                                                        <label class="mb-1">Richtung</label>
+                                                                                        <select class="form-control form-control-sm" name="direction">
+                                                                                            <option value="outbound">Ausgehend</option>
+                                                                                            <option value="inbound">Eingehend</option>
+                                                                                        </select>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div class="col-md-4">
+                                                                                    <div class="form-group mb-2">
+                                                                                        <label class="mb-1">Datum</label>
+                                                                                        <input type="datetime-local" class="form-control form-control-sm" name="communication_date">
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="form-group mb-2">
+                                                                                <label class="mb-1">Betreff</label>
+                                                                                <input type="text" class="form-control form-control-sm" name="subject" required placeholder="Betreff eingeben">
+                                                                            </div>
+                                                                            <div class="form-group mb-2">
+                                                                                <label class="mb-1">Ansprechpartner</label>
+                                                                                <input type="text" class="form-control form-control-sm" name="contact_person" placeholder="Name des Ansprechpartners">
+                                                                            </div>
+                                                                            <div class="form-group mb-2">
+                                                                                <label class="mb-1">Inhalt</label>
+                                                                                <textarea class="form-control form-control-sm" name="content" rows="3" placeholder="Details zur Kommunikation..."></textarea>
+                                                                            </div>
+                                                                            <button type="submit" class="btn btn-sm btn-primary">
+                                                                                <i class="fas fa-save"></i> Eintrag speichern
+                                                                            </button>
+                                                                        </form>
+                                                                    </div>
+                                                                </div>
+
+                                                                {# Timeline der Kommunikation #}
+                                                                <div class="comm-timeline" data-clientid="{{ client.clients_id }}">
+                                                                    <div class="text-center text-muted p-3">
+                                                                        <i class="fas fa-spinner fa-spin"></i> Wird geladen...
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>{# /tab-content #}
                                                     </div>
                                                     <div class="modal-footer justify-content-between">
-                                                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                                                        <button type="button" class="btn btn-primary saveClientEdit-button" data-clientid="{{ client.clients_id }}">Save changes</button>
+                                                        <button type="button" class="btn btn-default" data-dismiss="modal">{{ t('close') }}</button>
+                                                        <button type="button" class="btn btn-primary saveClientEdit-button" data-clientid="{{ client.clients_id }}">{{ t('save') }}</button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -151,7 +286,7 @@
                             </tbody>
                         </table>
                     {% else %}
-                        <center><p style="margin: 10px;"><i>No results</i><br/><a href="?">Remove any filters</a></p></center>
+                        <center><p style="margin: 10px;"><i>Keine Ergebnisse</i><br/><a href="?">Filter entfernen</a></p></center>
                     {% endif %}
                 </div>
                 <div class="overlay" id="loadingoverlay">
@@ -187,7 +322,7 @@
                 $("#loadingoverlay").hide();
                 {% if "CLIENTS:CREATE"|instancePermissions %}
                 $("#newClientButton").click(function () {
-                    bootbox.prompt("Enter Client Name", function (result) {
+                    bootbox.prompt("Kundenname eingeben", function (result) {
                         if (result) {
                             ajaxcall("clients/new.php", {"clients_name": result}, function (data) {
                                 location.reload();
@@ -206,15 +341,15 @@
                 $(".archiveButton").click(function () {
                 var id = $(this).data("id");
                 bootbox.confirm({
-                    title: "Are you sure you want to archive this client?",
-                    message: "This will not delete the client, but will prevent it from being used in new projects.",
+                    title: "Sind Sie sicher, dass Sie diesen Kunden archivieren möchten?",
+                    message: "Der Kunde wird nicht gelöscht, kann aber nicht mehr in neuen Projekten verwendet werden.",
                     buttons: {
                         confirm: {
-                            label: 'Yes',
+                            label: 'Ja',
                             className: 'btn-danger'
                         },
                         cancel: {
-                            label: 'No',
+                            label: 'Nein',
                             className: 'btn-success'
                         }
                     },
@@ -230,14 +365,14 @@
             $(".unarchiveButton").click(function () {
                 var id = $(this).data("id");
                 bootbox.confirm({
-                    message: "Are you sure you want to restore this client?",
+                    message: "Sind Sie sicher, dass Sie diesen Kunden wiederherstellen möchten?",
                     buttons: {
                         confirm: {
-                            label: 'Yes',
+                            label: 'Ja',
                             className: 'btn-danger'
                         },
                         cancel: {
-                            label: 'No',
+                            label: 'Nein',
                             className: 'btn-success'
                         }
                     },

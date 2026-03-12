@@ -1,0 +1,121 @@
+{# Packing List panel - embedded in project_index.twig #}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-clipboard-list"></i> {{ t('packing_lists') }}</h3>
+                <div class="card-tools">
+                    <button class="btn btn-sm btn-primary" id="generatePackingListBtn"><i class="fas fa-plus"></i> {{ t('generate_packing_list') }}</button>
+                </div>
+            </div>
+            <div class="card-body" id="packingListBody">
+                <div class="overlay" id="plLoadingOverlay"><i class="fas fa-sync fa-spin fa-3x"></i></div>
+                <div id="packingListContent"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Packing List Detail Modal #}
+<div class="modal fade" id="packingListModal">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="plModalTitle">{{ t('packing_list') }}</h4>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body" id="plModalBody"></div>
+            <div class="modal-footer">
+                <div class="btn-group" id="plStatusBtns">
+                    <button class="btn btn-info plStatusBtn" data-status="ready">{{ t('pl_status_ready') }}</button>
+                    <button class="btn btn-success plStatusBtn" data-status="packed">{{ t('pl_status_packed') }}</button>
+                    <button class="btn btn-primary plStatusBtn" data-status="loaded">{{ t('pl_status_loaded') }}</button>
+                    <button class="btn btn-warning plStatusBtn" data-status="returned">{{ t('pl_status_returned') }}</button>
+                </div>
+                <button type="button" class="btn btn-default" data-dismiss="modal">{{ t('close') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    var projectId = {{ project.projects_id }};
+    var currentListId = null;
+
+    var plStatusLabels = {
+        'draft': '{{ t("status_draft") }}',
+        'ready': '{{ t("pl_status_ready") }}',
+        'packed': '{{ t("pl_status_packed") }}',
+        'loaded': '{{ t("pl_status_loaded") }}',
+        'returned': '{{ t("pl_status_returned") }}'
+    };
+    var plStatusBadges = {
+        'draft': 'secondary', 'ready': 'info', 'packed': 'success',
+        'loaded': 'primary', 'returned': 'warning'
+    };
+
+    function loadPackingLists() {
+        // We don't have a project list endpoint yet, so use the generate endpoint info
+        $('#packingListContent').html('<p class="text-muted text-center">{{ t("click_generate_packing_list") }}</p>');
+        $('#plLoadingOverlay').hide();
+    }
+
+    loadPackingLists();
+
+    $('#generatePackingListBtn').click(function() {
+        bootbox.confirm('{{ t("generate_packing_list_confirm") }}', function(result) {
+            if (result) {
+                ajaxcall('packingLists/generate.php', {project_id: projectId}, function(data) {
+                    if (data.response && data.response.list_id) {
+                        currentListId = data.response.list_id;
+                        openPackingList(currentListId);
+                    }
+                });
+            }
+        });
+    });
+
+    function openPackingList(listId) {
+        ajaxcall('packingLists/get.php', {list_id: listId}, function(data) {
+            if (!data.response) return;
+            var list = data.response;
+            currentListId = listId;
+            $('#plModalTitle').text('{{ t("packing_list") }} - ' + (list.packing_list ? list.packing_list.created_at : ''));
+
+            var html = '<table class="table table-sm table-striped">';
+            html += '<thead><tr><th style="width:40px;"></th><th>{{ t("asset_tag") }}</th><th>{{ t("asset_type") }}</th><th>{{ t("asset_category") }}</th></tr></thead>';
+            html += '<tbody>';
+            if (list.items) {
+                list.items.forEach(function(item) {
+                    var checked = item.is_packed == 1 ? 'checked' : '';
+                    html += '<tr class="' + (item.is_packed == 1 ? 'table-success' : '') + '">';
+                    html += '<td><input type="checkbox" class="plItemCheck" data-item-id="' + item.id + '" ' + checked + '></td>';
+                    html += '<td>' + (item.assets_tag || '-') + '</td>';
+                    html += '<td>' + (item.assetTypes_name || '-') + '</td>';
+                    html += '<td>' + (item.category_name || '-') + '</td>';
+                    html += '</tr>';
+                });
+            }
+            html += '</tbody></table>';
+            $('#plModalBody').html(html);
+            $('#packingListModal').modal('show');
+        }, false);
+    }
+
+    $(document).on('change', '.plItemCheck', function() {
+        var itemId = $(this).data('item-id');
+        ajaxcall('packingLists/togglePacked.php', {item_id: itemId}, function() {}, false);
+        $(this).closest('tr').toggleClass('table-success');
+    });
+
+    $(document).on('click', '.plStatusBtn', function() {
+        var status = $(this).data('status');
+        if (currentListId) {
+            ajaxcall('packingLists/updateStatus.php', {list_id: currentListId, status: status}, function() {
+                bootbox.alert('Status: ' + plStatusLabels[status]);
+            });
+        }
+    });
+});
+</script>

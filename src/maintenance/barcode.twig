@@ -65,10 +65,10 @@
         <div class="col-12 col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">Barcode Scanner</h3>
+                    <h3 class="card-title">Scanner / RFID</h3>
                     <div class="card-tools">
-                        <button class="btn btn-sm btn-danger" title="Stop Scanning" id="barcodeScanResetButton" style="display: none;">Stop Scanning</button>
-                        <a class="btn btn-sm btn-info" href="{{ CONFIG.ROOTURL }}/maintenance/barcodeGenerator.php">Generate/Export Barcodes</a>
+                        <button class="btn btn-sm btn-danger" title="Scannen stoppen" id="barcodeScanResetButton" style="display: none;">Scannen stoppen</button>
+                        <a class="btn btn-sm btn-info" href="{{ CONFIG.ROOTURL }}/maintenance/barcodeGenerator.php">Barcodes generieren/exportieren</a>
                     </div>
                 </div>
                 <div class="card-body" id="barcodeScanVideoCard">
@@ -174,7 +174,7 @@
             }, function (data) {
                 if (data.response.location) {
                     setScanLocation(data.response.location["locationsBarcodes_id"], data.response.location['locations_name'], "barcode")
-                    bootbox.alert("Location set to " + data.response.location['locations_name'], function () {
+                    bootbox.alert("Standort gesetzt auf " + data.response.location['locations_name'], function () {
                         barcodeRequestInProgress = false
                     });
                 } else if (data.response.asset) {
@@ -183,7 +183,7 @@
                         barcodeRequestInProgress = false
                     });
                 } else {
-                    bootbox.alert("Sorry location not found");
+                    bootbox.alert("Standort nicht gefunden");
                     barcodeRequestInProgress = false
                 }
             });
@@ -193,15 +193,15 @@
             ajaxcall("assets/barcodes/search.php", {"text":barcodeValue,"type":barcodeType,"location":barcodeScanLocation.value,"locationType":barcodeScanLocation.type,"scanned": true}, function (assetResult) {
                 if (assetResult.response.asset === false && assetResult.response.location !== false) {
                     bootbox.confirm({
-                        title: "Location Barcode Scanned",
-                        message: 'Would you like to change your location to ' + assetResult.response.location['locations_name'] + '?',
+                        title: "Standort-Barcode gescannt",
+                        message: 'Moechten Sie Ihren Standort aendern auf ' + assetResult.response.location['locations_name'] + '?',
                         buttons: {
                             confirm: {
-                                label: 'Yes',
+                                label: 'Ja',
                                 className: 'btn-danger'
                             },
                             cancel: {
-                                label: 'No',
+                                label: 'Nein',
                                 className: 'btn-default'
                             }
                         
@@ -209,22 +209,22 @@
                     callback: function (result) {
                         if (result) {
                             setScanLocation(assetResult.response.location['barcode']["locationsBarcodes_id"], assetResult.response.location['locations_name'], "barcode")
-                            bootbox.alert("Location set to " + assetResult.response.location['locations_name']);
+                            bootbox.alert("Standort gesetzt auf " + assetResult.response.location['locations_name']);
                         }
                         barcodeRequestInProgress = false
                     }});
                 } else if (assetResult.response.asset === false) {
                     {% if "ASSETS:ASSET_BARCODES:EDIT:ASSOCIATE_UNNASOCIATED_BARCODES_WITH_ASSETS"|instancePermissions %}
                         bootbox.confirm({
-                            title: "Unassociated Barcode",
-                            message: `No asset found with this barcode in {{ USERDATA.instance.instances_name }}.<br/>Would you like to associate the barcode ${barcodeValue} (type ${barcodeType}) with an asset in {{ USERDATA.instance.instances_name }}?`,
+                            title: "Nicht zugeordneter Barcode",
+                            message: `Kein Asset mit diesem Barcode in {{ USERDATA.instance.instances_name }} gefunden.<br/>Moechten Sie den Barcode zuordnen ${barcodeValue} (type ${barcodeType}) with an asset in {{ USERDATA.instance.instances_name }}?`,
                             buttons: {
                                 confirm: {
-                                    label: 'Yes',
+                                    label: 'Ja',
                                     className: 'btn-success'
                                 },
                                 cancel: {
-                                    label: 'No',
+                                    label: 'Nein',
                                     className: 'btn-default'
                                 }
                             },
@@ -232,15 +232,15 @@
                                 if (result) {
                                     if (assetResult.response.assetSuggest != false) {
                                         bootbox.confirm({
-                                            title: "Change Asset Tag",
-                                            message: 'Would you like to assciate this barcode with the asset in {{ USERDATA.instance.instances_name }} that has the Tag ' + assetResult.response.assetSuggest['assets_tag'] + '? The asset is a ' + assetResult.response.assetSuggest['assetTypes_name'] + ' (' + assetResult.response.assetSuggest['manufacturers_name'] + ')',
+                                            title: "Asset-Tag aendern",
+                                            message: 'Moechten Sie diesen Barcode dem Asset in {{ USERDATA.instance.instances_name }} mit dem Tag zuordnen ' + assetResult.response.assetSuggest['assets_tag'] + '? The asset is a ' + assetResult.response.assetSuggest['assetTypes_name'] + ' (' + assetResult.response.assetSuggest['manufacturers_name'] + ')',
                                             buttons: {
                                                 confirm: {
-                                                    label: 'Yes',
+                                                    label: 'Ja',
                                                     className: 'btn-default'
                                                 },
                                                 cancel: {
-                                                    label: 'No - pick a different asset',
+                                                    label: 'Nein - anderes Asset waehlen',
                                                     className: 'btn-default'
                                                 }
                                             
@@ -274,7 +274,7 @@
                             }
                         });
                     {% else %}
-                        bootbox.alert("Sorry you don't have permission to associate barcodes with assets in {{ USERDATA.instance.instances_name }}", function () {
+                        bootbox.alert("Sie haben keine Berechtigung, Barcodes mit Assets in {{ USERDATA.instance.instances_name }} zu verknuepfen", function () {
                             barcodeRequestInProgress = false
                         });
                     {% endif %}
@@ -309,15 +309,15 @@
         }
         function deleteBarcode(barcodeId) {
             bootbox.confirm({
-                title: "Delete Barcode",
-                message: 'Are you sure you wish to delete this barcode? All scan history for this barcode will be lost',
+                title: "Barcode loeschen",
+                message: 'Sind Sie sicher, dass Sie diesen Barcode loeschen moechten? Der gesamte Scanverlauf geht verloren',
                 buttons: {
                     confirm: {
-                        label: 'Yes',
+                        label: 'Ja',
                         className: 'btn-danger'
                     },
                     cancel: {
-                        label: 'No',
+                        label: 'Nein',
                         className: 'btn-success'
                     }
                 
@@ -327,7 +327,7 @@
                     ajaxcall("assets/barcodes/delete.php", {
                         "barcodes_id": barcodeId,
                     }, function (result) {
-                        bootbox.alert("Barcode deleted");
+                        bootbox.alert("Barcode geloescht");
                         $("button.deleteBarcodeButton[data-barcode='" + barcodeId + "']").remove();
                     });
                 }
@@ -421,15 +421,15 @@
                     $('#selectAnAssetToAssign').modal('hide');
                     {% if "ASSETS:EDIT"|instancePermissions %}
                     bootbox.confirm({
-                        title: "Change Asset Tag",
-                        message: 'Would you like to change the assets tag to ' + $("#selectAnAssetToAssign-barcode").val() + '?',
+                        title: "Asset-Tag aendern",
+                        message: 'Moechten Sie den Asset-Tag aendern auf ' + $("#selectAnAssetToAssign-barcode").val() + '?',
                         buttons: {
                             confirm: {
-                                label: 'Yes',
+                                label: 'Ja',
                                 className: 'btn-default'
                             },
                             cancel: {
-                                label: 'No',
+                                label: 'Nein',
                                 className: 'btn-default'
                             }
                     },
@@ -501,7 +501,7 @@
                         }
                         if (err && !(err instanceof ZXing.NotFoundException)) {
                             console.error(err)
-                            bootbox.alert("Sorry - Barcode scanner encountered a problem: " + err, function () {
+                            bootbox.alert("Fehler beim Scannen: " + err, function () {
                                 codeReader.reset()
                             });
                         }
@@ -520,7 +520,7 @@
                     }
                     // Catch all for other errors, Missing camera error should be handled elsewhere
                     console.error(err)
-                    bootbox.alert("Sorry - Barcode scanner encountered a problem: " + err, function () {
+                    bootbox.alert("Fehler beim Scannen: " + err, function () {
                         location.reload()
                     });
                 })

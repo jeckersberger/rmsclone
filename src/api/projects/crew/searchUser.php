@@ -5,7 +5,7 @@ if (!$AUTH->instancePermissionCheck("PROJECTS:PROJECT_CREW:CREATE") or !isset($_
 
 $DBLIB->where("projects.instances_id", $AUTH->data['instance']['instances_id']);
 $DBLIB->where("projects.projects_deleted", 0);
-$DBLIB->where("projects.projects_id", $_POST['projects_id']);
+$DBLIB->where("projects.projects_id", intval($_POST['projects_id']));
 $project = $DBLIB->getone("projects", ["projects_id","projects_name", "projects_dates_use_start","projects_dates_use_end"]);
 if (!$project) finish(false);
 
@@ -15,16 +15,14 @@ $DBLIB->join("userInstances", "users.users_userid=userInstances.users_userid","L
 $DBLIB->join("instancePositions", "userInstances.instancePositions_id=instancePositions.instancePositions_id","LEFT");
 $DBLIB->where("instancePositions.instances_id",  $AUTH->data['instance']['instances_id']);
 $DBLIB->where("userInstances.userInstances_deleted",  0);
-$DBLIB->where("(userInstances.userInstances_archived IS NULL OR userInstances.userInstances_archived >= '" . date('Y-m-d H:i:s') . "')");
+$DBLIB->where("(userInstances.userInstances_archived IS NULL OR userInstances.userInstances_archived >= ?)", [date('Y-m-d H:i:s')]);
 $DBLIB->orderBy("users.users_name1", "ASC");
 $DBLIB->orderBy("users.users_name2", "ASC");
 if (strlen($_POST['term']) > 0) {
+    $searchTerm = '%' . $DBLIB->escape(trim($_POST['term'])) . '%';
     $DBLIB->where("(
-		users_email LIKE '%" . $bCMS->sanitizeStringMYSQL($_POST['term']) . "%'
-		OR users_name1 LIKE '%" . $bCMS->sanitizeStringMYSQL($_POST['term']) . "%'
-		OR users_name2 LIKE '%" . $bCMS->sanitizeStringMYSQL($_POST['term']) . "%'	
-		OR CONCAT( users_name1,  ' ', users_name2 ) LIKE '%" . $bCMS->sanitizeStringMYSQL($_POST['term']) . "%'
-    )");
+        users_email LIKE ? OR users_name1 LIKE ? OR users_name2 LIKE ? OR CONCAT(users_name1, ' ', users_name2) LIKE ?
+    )", [$searchTerm, $searchTerm, $searchTerm, $searchTerm]);
 }
 $users = $DBLIB->get("users", 15, ["users.users_userid", "users.users_name1", "users.users_name2", "users.users_email"]);
 if (!$users) finish(false, ["code" => "LIST-USERS-FAIL", "message"=> "Could not search for Users"]);
@@ -38,9 +36,11 @@ else {
             $DBLIB->join("projects", "crewAssignments.projects_id=projects.projects_id", "LEFT");
             $DBLIB->join("projectsStatuses", "projects.projectsStatuses_id=projectsStatuses.projectsStatuses_id", "LEFT");
             $DBLIB->where("projects.projects_deleted", 0);
-            $DBLIB->where("(crewAssignments.projects_id != " . $project['projects_id'] . ")");
+            $DBLIB->where("crewAssignments.projects_id != ?", [intval($project['projects_id'])]);
             $DBLIB->where("projectsStatuses.projectsStatuses_assetsReleased", 0);
-            $DBLIB->where("((projects_dates_use_start >= '" . $project["projects_dates_use_start"] . "' AND projects_dates_use_start <= '" . $project["projects_dates_use_end"] . "') OR (projects_dates_use_end >= '" . $project["projects_dates_use_start"] . "' AND projects_dates_use_end <= '" . $project["projects_dates_use_end"] . "') OR (projects_dates_use_end >= '" . $project["projects_dates_use_end"] . "' AND projects_dates_use_start <= '" . $project["projects_dates_use_start"] . "'))");
+            $pStart = $project["projects_dates_use_start"];
+            $pEnd = $project["projects_dates_use_end"];
+            $DBLIB->where("((projects_dates_use_start >= ? AND projects_dates_use_start <= ?) OR (projects_dates_use_end >= ? AND projects_dates_use_end <= ?) OR (projects_dates_use_end >= ? AND projects_dates_use_start <= ?))", [$pStart, $pEnd, $pStart, $pEnd, $pEnd, $pStart]);
             $existingAssignments = $DBLIB->get("crewAssignments", null, ["projects.projects_name"]);
             $user['clashes'] = [];
             foreach ($existingAssignments as $assignment) {

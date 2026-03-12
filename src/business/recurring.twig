@@ -1,0 +1,178 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+<div class="row">
+    <div class="col-lg-4">
+        <div class="card card-primary card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-plus-circle"></i> {{ t('create_recurring_template') }}</h3>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label>{{ t('template_name') }}</label>
+                    <input type="text" class="form-control" id="templateName" placeholder="{{ t('template_name') }}">
+                </div>
+                <div class="form-group">
+                    <label>{{ t('source_project') }}</label>
+                    <select class="form-control" id="sourceProject">
+                        <option value="">{{ t('select') }}...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>{{ t('recurrence_type') }}</label>
+                    <select class="form-control" id="recurrenceType">
+                        <option value="daily">{{ t('daily') }}</option>
+                        <option value="weekly" selected>{{ t('weekly') }}</option>
+                        <option value="biweekly">{{ t('biweekly') }}</option>
+                        <option value="monthly">{{ t('monthly') }}</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>{{ t('recurrence_day') }}</label>
+                    <select class="form-control" id="recurrenceDay">
+                        <option value="1">{{ t('monday') }}</option>
+                        <option value="2">{{ t('tuesday') }}</option>
+                        <option value="3">{{ t('wednesday') }}</option>
+                        <option value="4">{{ t('thursday') }}</option>
+                        <option value="5">{{ t('friday') }}</option>
+                        <option value="6">{{ t('saturday') }}</option>
+                        <option value="0">{{ t('sunday') }}</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>{{ t('duration_hours') }}</label>
+                    <input type="number" class="form-control" id="durationHours" value="24" min="1">
+                </div>
+                <div class="form-group">
+                    <label>{{ t('auto_create_days_ahead') }}</label>
+                    <input type="number" class="form-control" id="autoCreateDays" value="7" min="1">
+                </div>
+                <div class="form-group">
+                    <div class="custom-control custom-checkbox">
+                        <input type="checkbox" class="custom-control-input" id="cloneAssetsChk" checked>
+                        <label class="custom-control-label" for="cloneAssetsChk">{{ t('clone_assets') }}</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="custom-control custom-checkbox">
+                        <input type="checkbox" class="custom-control-input" id="cloneCrewChk">
+                        <label class="custom-control-label" for="cloneCrewChk">{{ t('clone_crew') }}</label>
+                    </div>
+                </div>
+                <button class="btn btn-primary btn-block" id="createTemplateBtn"><i class="fas fa-save"></i> {{ t('create') }}</button>
+            </div>
+        </div>
+
+        <div class="card card-success card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-magic"></i> {{ t('generate_upcoming') }}</h3>
+            </div>
+            <div class="card-body text-center">
+                <p class="text-muted">{{ t('generate_upcoming_desc') }}</p>
+                <button class="btn btn-success" id="generateBtn"><i class="fas fa-play"></i> {{ t('generate_now') }}</button>
+                <div id="generateResult" class="mt-2" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-redo"></i> {{ t('recurring_templates') }}</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="overlay" id="templatesLoading"><i class="fas fa-sync fa-spin fa-2x"></i></div>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>{{ t('template_name') }}</th>
+                            <th>{{ t('source_project') }}</th>
+                            <th>{{ t('recurrence_type') }}</th>
+                            <th>{{ t('status') }}</th>
+                            <th>{{ t('actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="templatesBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Load projects for source select
+    ajaxcall('projects/data.php', {}, function(data) {
+        if (data.response && data.response.projects) {
+            data.response.projects.forEach(function(p) {
+                $('#sourceProject').append('<option value="' + p.projects_id + '">' + p.projects_name + '</option>');
+            });
+        }
+    }, false);
+
+    function loadTemplates() {
+        ajaxcall('recurring/list.php', {}, function(data) {
+            if (!data.response) return;
+            var html = '';
+            var templates = data.response.templates || [];
+            if (templates.length > 0) {
+                templates.forEach(function(t) {
+                    html += '<tr>';
+                    html += '<td><strong>' + t.template_name + '</strong></td>';
+                    html += '<td>' + (t.source_name || '-') + '</td>';
+                    html += '<td>' + t.recurrence_type + '</td>';
+                    html += '<td>' + (t.active == 1 ? '<span class="badge badge-success">{{ t("active") }}</span>' : '<span class="badge badge-secondary">{{ t("inactive") }}</span>') + '</td>';
+                    html += '<td>';
+                    html += '<button class="btn btn-sm btn-warning toggleBtn" data-id="' + t.id + '"><i class="fas fa-power-off"></i></button> ';
+                    html += '<button class="btn btn-sm btn-danger deleteBtn" data-id="' + t.id + '"><i class="fas fa-trash"></i></button>';
+                    html += '</td></tr>';
+                });
+            } else {
+                html = '<tr><td colspan="5" class="text-center text-muted">{{ t("no_templates") }}</td></tr>';
+            }
+            $('#templatesBody').html(html);
+            $('#templatesLoading').hide();
+        }, false);
+    }
+    loadTemplates();
+
+    $('#createTemplateBtn').click(function() {
+        var sourceId = $('#sourceProject').val();
+        if (!sourceId) { bootbox.alert('{{ t("select_source_project") }}'); return; }
+        ajaxcall('recurring/create.php', {
+            source_project_id: sourceId,
+            name: $('#templateName').val(),
+            recurrence_type: $('#recurrenceType').val(),
+            recurrence_day: $('#recurrenceDay').val(),
+            duration_hours: $('#durationHours').val(),
+            auto_create_days_ahead: $('#autoCreateDays').val(),
+            clone_assets: $('#cloneAssetsChk').is(':checked') ? 1 : 0,
+            clone_crew: $('#cloneCrewChk').is(':checked') ? 1 : 0
+        }, function() { loadTemplates(); });
+    });
+
+    $(document).on('click', '.toggleBtn', function() {
+        ajaxcall('recurring/toggle.php', {template_id: $(this).data('id')}, function() { loadTemplates(); });
+    });
+
+    $(document).on('click', '.deleteBtn', function() {
+        var id = $(this).data('id');
+        bootbox.confirm('{{ t("delete_template_confirm") }}', function(r) {
+            if (r) ajaxcall('recurring/delete.php', {template_id: id}, function() { loadTemplates(); });
+        });
+    });
+
+    $('#generateBtn').click(function() {
+        ajaxcall('recurring/generate.php', {}, function(data) {
+            if (data.response) {
+                var count = data.response.count || 0;
+                $('#generateResult').show().html(
+                    count > 0
+                    ? '<span class="text-success"><i class="fas fa-check"></i> ' + count + ' {{ t("projects_created") }}</span>'
+                    : '<span class="text-muted">{{ t("no_projects_to_create") }}</span>'
+                );
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

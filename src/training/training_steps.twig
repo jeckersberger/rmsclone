@@ -59,7 +59,7 @@
                                 <td>
                                     {{ step.modulesSteps_name }}
                                     {% if step.modulesSteps_show == 0 %}
-                                    <br/><span class="badge badge-danger">Not Published</span>
+                                    <br/><span class="badge badge-danger">Nicht veroeffentlicht</span>
                                     {% endif %}
                                 </td>
                                 <td>
@@ -131,8 +131,8 @@
                             </form>
                         </div>
                         <div class="modal-footer justify-content-between">
-                            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                            <button type="button" class="btn btn-primary" id="saveNew">Save</button>
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Schliessen</button>
+                            <button type="button" class="btn btn-primary" id="saveNew">Speichern</button>
                         </div>
                     </div>
                 </div>
@@ -205,8 +205,8 @@
                                 </form>
                             </div>
                             <div class="modal-footer justify-content-between">
-                                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                                <button type="button" class="btn btn-primary saveEdit" data-id="{{ step.modulesSteps_id }}">Save</button>
+                                <button type="button" class="btn btn-default" data-dismiss="modal">Schliessen</button>
+                                <button type="button" class="btn btn-primary saveEdit" data-id="{{ step.modulesSteps_id }}">Speichern</button>
                             </div>
                         </div>
                     </div>
@@ -235,11 +235,11 @@
                         message: "Are you sure you want to delete this step?",
                         buttons: {
                             confirm: {
-                                label: 'Yes',
+                                label: 'Ja',
                                 className: 'btn-danger'
                             },
                             cancel: {
-                                label: 'No',
+                                label: 'Nein',
                                 className: 'btn-success'
                             }
                         },

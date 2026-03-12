@@ -1,0 +1,121 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+<div class="row">
+    {# ── Overdue Maintenance ── #}
+    <div class="col-lg-6">
+        <div class="card card-danger card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-exclamation-triangle"></i> {{ t('overdue_maintenance') }}</h3>
+                <span class="badge badge-danger float-right" id="overdueCount">0</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="overlay" id="scheduleLoading"><i class="fas fa-sync fa-spin fa-2x"></i></div>
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th>{{ t('asset_type') }}</th>
+                            <th>{{ t('asset_tag') }}</th>
+                            <th>{{ t('days_overdue') }}</th>
+                            <th>{{ t('last_maintenance') }}</th>
+                            <th>{{ t('actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="overdueBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {# ── Upcoming Maintenance ── #}
+    <div class="col-lg-6">
+        <div class="card card-warning card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-clock"></i> {{ t('upcoming_maintenance') }}</h3>
+                <span class="badge badge-warning float-right" id="upcomingCount">0</span>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th>{{ t('asset_type') }}</th>
+                            <th>{{ t('asset_tag') }}</th>
+                            <th>{{ t('days_until_due') }}</th>
+                            <th>{{ t('interval_days') }}</th>
+                            <th>{{ t('actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="upcomingBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    function formatDate(d) {
+        if (!d) return '-';
+        return new Date(d).toLocaleDateString('de-DE');
+    }
+
+    function loadSchedule() {
+        ajaxcall('maintenance/schedule.php', {}, function(data) {
+            if (!data.response) return;
+            var r = data.response;
+
+            // Overdue
+            $('#overdueCount').text(r.due ? r.due.length : 0);
+            var html = '';
+            if (r.due && r.due.length > 0) {
+                r.due.forEach(function(a) {
+                    html += '<tr>';
+                    html += '<td>' + a.assetTypes_name + '</td>';
+                    html += '<td><strong>#' + (a.assets_tag || '-') + '</strong></td>';
+                    html += '<td><span class="badge badge-danger">' + a.days_since_maintenance + ' {{ t("days") }}</span></td>';
+                    html += '<td>' + formatDate(a.assets_lastMaintenanceDate) + '</td>';
+                    html += '<td><button class="btn btn-sm btn-success markDoneBtn" data-id="' + a.assets_id + '"><i class="fas fa-check"></i> {{ t("mark_done") }}</button></td>';
+                    html += '</tr>';
+                });
+            } else {
+                html = '<tr><td colspan="5" class="text-center text-muted">{{ t("no_overdue_maintenance") }}</td></tr>';
+            }
+            $('#overdueBody').html(html);
+
+            // Upcoming
+            $('#upcomingCount').text(r.upcoming ? r.upcoming.length : 0);
+            html = '';
+            if (r.upcoming && r.upcoming.length > 0) {
+                r.upcoming.forEach(function(a) {
+                    html += '<tr>';
+                    html += '<td>' + a.assetTypes_name + '</td>';
+                    html += '<td><strong>#' + (a.assets_tag || '-') + '</strong></td>';
+                    html += '<td><span class="badge badge-warning">' + a.days_until_due + ' {{ t("days") }}</span></td>';
+                    html += '<td>' + a.assetTypes_maintenanceInterval + ' {{ t("days") }}</td>';
+                    html += '<td><button class="btn btn-sm btn-success markDoneBtn" data-id="' + a.assets_id + '"><i class="fas fa-check"></i> {{ t("mark_done") }}</button></td>';
+                    html += '</tr>';
+                });
+            } else {
+                html = '<tr><td colspan="5" class="text-center text-muted">{{ t("no_upcoming_maintenance") }}</td></tr>';
+            }
+            $('#upcomingBody').html(html);
+            $('#scheduleLoading').hide();
+        }, false);
+    }
+    loadSchedule();
+
+    $(document).on('click', '.markDoneBtn', function() {
+        var assetId = $(this).data('id');
+        bootbox.prompt({
+            title: '{{ t("maintenance_notes") }}',
+            callback: function(notes) {
+                if (notes !== null) {
+                    ajaxcall('maintenance/recordMaintenance.php', {asset_id: assetId, notes: notes}, function() {
+                        loadSchedule();
+                    });
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

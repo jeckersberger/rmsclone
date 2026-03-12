@@ -120,111 +120,61 @@ class bCMS
 
     return 'data: ' . $type . ';base64,' . base64_encode($file['data']);
   }
+  function localFilePath($fileid)
+  {
+    global $DBLIB;
+    $DBLIB->where("s3files_id", intval($fileid));
+    $DBLIB->where("(s3files_meta_deleteOn >= '" . date("Y-m-d H:i:s") . "' OR s3files_meta_deleteOn IS NULL)");
+    $DBLIB->where("s3files_meta_physicallyStored", 1);
+    $file = $DBLIB->getone("s3files", ["s3files_path", "s3files_filename", "s3files_extension"]);
+    if (!$file) return false;
+    $storageRoot = getenv('LOCAL_STORAGE_PATH') ?: '/var/www/html/storage';
+    return $storageRoot . "/" . $file['s3files_path'] . "/" . $file['s3files_filename'] . '.' . $file['s3files_extension'];
+  }
   function s3Passthrough($fileid)
   {
     global $DBLIB;
     $DBLIB->where("s3files_id", intval($fileid));
-    $DBLIB->where("(s3files_meta_deleteOn >= '" . date("Y-m-d H:i:s") . "' OR s3files_meta_deleteOn IS NULL)"); //If the file is to be deleted soon or has been deleted don't let them download it
-    $DBLIB->where("s3files_meta_physicallyStored", 1); //If we've lost the file or deleted it we can't actually let them download it
-    $DBLIB->where("s3files_meta_size", 10485760, "<="); //Limit files to 10mb for this function
+    $DBLIB->where("(s3files_meta_deleteOn >= '" . date("Y-m-d H:i:s") . "' OR s3files_meta_deleteOn IS NULL)");
+    $DBLIB->where("s3files_meta_physicallyStored", 1);
+    $DBLIB->where("s3files_meta_size", 10485760, "<=");
     $file = $DBLIB->getone("s3files", ["s3files_extension", "s3files_id"]);
     if (!$file) return false;
 
-    $url = $this->s3URL($file["s3files_id"], false);
-    if (!$url) return false;
+    $localPath = $this->localFilePath($file["s3files_id"]);
+    if (!$localPath || !file_exists($localPath)) return false;
 
-    $data = file_get_contents($url);
+    $data = file_get_contents($localPath);
     if (!$data) return false;
 
     return [
       "data" => $data,
       "type" => $file["s3files_extension"],
-      "url" => $url
+      "url" => $localPath
     ];
   }
   function s3URL($fileid, $forceDownload = false, $expire = '+10 minutes', $shareKey = false)
   {
     global $DBLIB, $CONFIG, $AUTH, $CONFIGCLASS;
-    /*
-         * File interface for Amazon AWS S3.
-         *  Parameters
-         *      f (required) - the file id as specified in the database
-         *      d (optional, default false) - should a download be forced or should it be displayed in the browser? (if set it will download)
-         *      e (optional, default 1 minute) - when should the link expire? Must be a string describing how long in words basically. If this file type has security features then it will default to 1 minute.
-         */
     $fileid = $this->sanitizeString($fileid);
     if (strlen($fileid) < 1) return false;
     $DBLIB->where("s3files_id", $fileid);
-    $DBLIB->where("(s3files_meta_deleteOn >= '" . date("Y-m-d H:i:s") . "' OR s3files_meta_deleteOn IS NULL)"); //If the file is to be deleted soon or has been deleted don't let them download it
-    $DBLIB->where("s3files_meta_physicallyStored", 1); //If we've lost the file or deleted it we can't actually let them download it
+    $DBLIB->where("(s3files_meta_deleteOn >= '" . date("Y-m-d H:i:s") . "' OR s3files_meta_deleteOn IS NULL)");
+    $DBLIB->where("s3files_meta_physicallyStored", 1);
     $file = $DBLIB->getone("s3files");
     if (!$file) return false;
-    if ($expire == null or $expire === false) $expire = '+1 minute';
-    $file['expiry'] = $expire;
-
 
     // File visibility is based on their type (stored as s3files_meta_type).
-    // @see https://adam-rms.com/docs/v1/contributor/files for full file types 
-    // This list is also used to populate the files deletion suggestor
-    // A file that requiresInstance is one that requires the user to have the same instance as the file to view that file
-    // A file that is secure requires an authenticated user to view it.
-    // By default, a file is both secure and requiresInstance. Types listed below are **exceptions**.
-    // A file that requires an Instance implicitly means that file is secure.
-    // Eg file type 9 (User Thumbnails) are secure, but do not requireInstance
-
     $requireInstance = !in_array($file['s3files_meta_type'], [2, 5, 9, 10, 15, 16, 17]);
     $secure = !in_array($file['s3files_meta_type'], [2, 5, 10, 15, 16, 17]);
 
-    //File has been shared publicly, and the key matches?
-    if ($shareKey and ($shareKey == hash('sha256', $file['s3files_shareKey'] . "|" . $file['s3files_id']))) $secure = false; 
+    if ($shareKey and ($shareKey == hash('sha256', $file['s3files_shareKey'] . "|" . $file['s3files_id']))) $secure = false;
 
     if ($secure and !$GLOBALS['AUTH']->login) return false;
     elseif ($secure and $requireInstance and $file["instances_id"] != $AUTH->data['instance']['instances_id']) return false;
 
-    //Generate the url
-    if ($CONFIGCLASS->get('AWS_CLOUDFRONT_ENABLED') === 'Enabled') {
-      // Create a CloudFront Client to sign the string
-      $CloudFrontClient = new Aws\CloudFront\CloudFrontClient([
-        'profile' => 'default',
-        'version' => '2014-11-06',
-        'region' => 'us-east-2'
-      ]);
-
-      $ResponseContentDisposition = "?response-content-disposition=" . rawurlencode(
-        ($forceDownload ? 'attachment' : 'inline') . '; filename=' . utf8_encode(preg_replace('/[^A-Za-z0-9 _\-]/', '_', $file['s3files_name']) . '.' . $file['s3files_extension'])
-      );
-
-      $signedUrlCannedPolicy = $CloudFrontClient->getSignedUrl([
-        'url' => $CONFIGCLASS->get("AWS_CLOUDFRONT_ENDPOINT") . "/" . $file['s3files_path'] . "/" . $file['s3files_filename'] . '.' . $file['s3files_extension'] . $ResponseContentDisposition,
-        'expires' => strtotime($file['expiry']),
-        'private_key' => str_replace(["BEGIN\nRSA\nPRIVATE\nKEY", "END\nRSA\nPRIVATE\nKEY"], ["BEGIN RSA PRIVATE KEY", "END RSA PRIVATE KEY"], str_replace(" ", "\n", $CONFIGCLASS->get('AWS_CLOUDFRONT_PRIVATEKEY'))),
-        'key_pair_id' => $CONFIGCLASS->get('AWS_CLOUDFRONT_KEYPAIRID')
-      ]);
-      return $signedUrlCannedPolicy;
-    } else {
-      //Download direct from S3
-      $s3Client = new Aws\S3\S3Client([
-        'region' => $CONFIGCLASS->get('AWS_S3_REGION'),
-        'endpoint' => $CONFIGCLASS->get('AWS_S3_BROWSER_ENDPOINT'),
-        'use_path_style_endpoint' => $CONFIGCLASS->get('AWS_S3_ENDPOINT_PATHSTYLE') === 'Enabled',
-        'version' => 'latest',
-        'credentials' => array(
-          'key' => $CONFIGCLASS->get('AWS_S3_KEY'),
-          'secret' => $CONFIGCLASS->get('AWS_S3_SECRET'),
-        )
-      ]);
-
-      $parameters = [
-        'Bucket' => $CONFIGCLASS->get('AWS_S3_BUCKET'),
-        'Key' => $file['s3files_path'] . "/" . $file['s3files_filename'] . '.' . $file['s3files_extension'],
-      ];
-      $parameters['ResponseContentDisposition'] = ($forceDownload ? 'attachment' : 'inline') . '; filename="' . preg_replace('/[^A-Za-z0-9 _\-]/', '_', $file['s3files_name']) . '.' . $file['s3files_extension'] . '"';
-
-      $cmd = $s3Client->getCommand('GetObject', $parameters);
-      $request = $s3Client->createPresignedRequest($cmd, $file['expiry']);
-      $presignedUrl = (string)$request->getUri();
-      return $presignedUrl;
-    }
+    // Return the file API endpoint URL for browser access
+    return $CONFIG['ROOTURL'] . "/api/file/index.php?r&f=" . $file['s3files_id'] . ($forceDownload ? '&d=1' : '');
   }
   function aTag($id)
   {

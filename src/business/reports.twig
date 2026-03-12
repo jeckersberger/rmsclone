@@ -1,0 +1,1068 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+{# Dashboard KPIs #}
+<div class="row" id="kpiRow">
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-info">
+            <div class="inner">
+                <h3 id="kpiRevenue">-</h3>
+                <p>{{ t('revenue_this_year') }}</p>
+            </div>
+            <div class="icon"><i class="fas fa-euro-sign"></i></div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-success">
+            <div class="inner">
+                <h3 id="kpiPaid">-</h3>
+                <p>{{ t('paid_invoices') }}</p>
+            </div>
+            <div class="icon"><i class="fas fa-check-circle"></i></div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-warning">
+            <div class="inner">
+                <h3 id="kpiOutstanding">-</h3>
+                <p>{{ t('total_outstanding') }}</p>
+            </div>
+            <div class="icon"><i class="fas fa-hourglass-half"></i></div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-danger">
+            <div class="inner">
+                <h3 id="kpiOverdue">-</h3>
+                <p>{{ t('overdue_invoices') }}</p>
+            </div>
+            <div class="icon"><i class="fas fa-exclamation-triangle"></i></div>
+        </div>
+    </div>
+</div>
+
+{# KUR Threshold Warning #}
+<div class="row" id="kurWarningRow" style="display:none;">
+    <div class="col-12">
+        <div class="alert alert-warning" id="kurWarningAlert">
+            <i class="fas fa-exclamation-triangle"></i> <span id="kurWarningText"></span>
+        </div>
+    </div>
+</div>
+
+{# Report Tabs #}
+<div class="row">
+    <div class="col-12">
+        <div class="card card-primary card-outline card-outline-tabs">
+            <div class="card-header p-0 border-bottom-0">
+                <ul class="nav nav-tabs" id="reportTabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="tab-revenue" data-toggle="tab" href="#pane-revenue" role="tab">
+                            <i class="fas fa-chart-line"></i> {{ t('revenue_report') }}
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="tab-utilization" data-toggle="tab" href="#pane-utilization" role="tab">
+                            <i class="fas fa-tachometer-alt"></i> Auslastung
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="tab-topclients" data-toggle="tab" href="#pane-topclients" role="tab">
+                            <i class="fas fa-trophy"></i> Top Kunden
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="tab-seasonality" data-toggle="tab" href="#pane-seasonality" role="tab">
+                            <i class="fas fa-calendar-alt"></i> Saisonalität
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="tab-roi" data-toggle="tab" href="#pane-roi" role="tab">
+                            <i class="fas fa-percentage"></i> Equipment ROI
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="tab-compare" data-toggle="tab" href="#pane-compare" role="tab">
+                            <i class="fas fa-exchange-alt"></i> Vergleich
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="reportTabContent">
+
+                    {# ===== TAB 1: Revenue & Outstanding (original) ===== #}
+                    <div class="tab-pane fade show active" id="pane-revenue" role="tabpanel">
+                        <div class="row">
+                            <div class="col-lg-8">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h3 class="card-title"><i class="fas fa-chart-line"></i> {{ t('revenue_report') }}</h3>
+                                        <div class="card-tools">
+                                            <select class="form-control form-control-sm" id="revenueYear" style="width:auto;display:inline-block;">
+                                                {% for y in range("now"|date("Y") - 2, "now"|date("Y")) %}
+                                                    <option value="{{ y }}" {{ y == "now"|date("Y") ? 'selected' : '' }}>{{ y }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <select class="form-control form-control-sm" id="revenueGroupBy" style="width:auto;display:inline-block;">
+                                                <option value="month">{{ t('by_month') }}</option>
+                                                <option value="client">{{ t('by_client') }}</option>
+                                            </select>
+                                            <div class="btn-group ml-1">
+                                                <button class="btn btn-sm btn-outline-success" id="exportRevenueBtn" title="CSV Export"><i class="fas fa-file-csv"></i></button>
+                                                <button class="btn btn-sm btn-outline-primary" onclick="downloadFile('revenue', {year: $('#revenueYear').val(), group_by: $('#revenueGroupBy').val()}, 'xlsx')" title="Excel Export"><i class="fas fa-file-excel"></i></button>
+                                                <button class="btn btn-sm btn-outline-danger" onclick="downloadFile('revenue', {year: $('#revenueYear').val(), group_by: $('#revenueGroupBy').val()}, 'pdf')" title="PDF Export"><i class="fas fa-file-pdf"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <table class="table table-sm table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th id="revGroupHeader">{{ t('month') }}</th>
+                                                    <th class="text-right">{{ t('net_amount') }}</th>
+                                                    <th class="text-right">{{ t('gross_amount') }}</th>
+                                                    <th class="text-right">{{ t('count') }}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="revenueBody"></tbody>
+                                            <tfoot>
+                                                <tr class="font-weight-bold">
+                                                    <td>{{ t('total') }}</td>
+                                                    <td class="text-right" id="revTotalNet">-</td>
+                                                    <td class="text-right" id="revTotalGross">-</td>
+                                                    <td class="text-right" id="revTotalCount">-</td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {# Outstanding Report #}
+                            <div class="col-lg-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h3 class="card-title"><i class="fas fa-clock"></i> {{ t('outstanding_aging') }}</h3>
+                                        <div class="card-tools">
+                                            <button class="btn btn-sm btn-outline-success" id="exportOutstandingBtn" title="CSV Export"><i class="fas fa-file-csv"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <table class="table table-sm">
+                                            <tbody id="agingBody"></tbody>
+                                            <tfoot>
+                                                <tr class="font-weight-bold">
+                                                    <td>{{ t('total') }}</td>
+                                                    <td class="text-right" id="agingTotal">-</td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                {# Quick Actions #}
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h3 class="card-title"><i class="fas fa-bolt"></i> {{ t('quick_actions') }}</h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <a href="{{ CONFIG.ROOTURL }}/business/dunning.php" class="btn btn-warning btn-block mb-2">
+                                            <i class="fas fa-exclamation-triangle"></i> {{ t('dunning_overview') }}
+                                        </a>
+                                        <a href="{{ CONFIG.ROOTURL }}/business/datev.php" class="btn btn-info btn-block mb-2">
+                                            <i class="fas fa-file-csv"></i> {{ t('steuer_export') }}
+                                        </a>
+                                        <a href="{{ CONFIG.ROOTURL }}/business/euer.php" class="btn btn-success btn-block mb-2">
+                                            <i class="fas fa-calculator"></i> {{ t('euer_report') }}
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# ===== TAB 2: Equipment Utilization (Auslastung) ===== #}
+                    <div class="tab-pane fade" id="pane-utilization" role="tabpanel">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-inline">
+                                    <label class="mr-2">Jahr:</label>
+                                    <select class="form-control form-control-sm mr-2" id="utilYear">
+                                        {% for y in range("now"|date("Y") - 2, "now"|date("Y")) %}
+                                            <option value="{{ y }}" {{ y == "now"|date("Y") ? 'selected' : '' }}>{{ y }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <label class="mr-2">Monat:</label>
+                                    <select class="form-control form-control-sm mr-2" id="utilMonth">
+                                        <option value="0">Alle Monate</option>
+                                        {% for m in range(1, 12) %}
+                                            <option value="{{ m }}" {{ m == "now"|date("n") ? 'selected' : '' }}>{{ m }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button class="btn btn-sm btn-primary" id="loadUtilBtn"><i class="fas fa-sync"></i> Laden</button>
+                                </div>
+                            </div>
+                            <div class="col-md-6 text-right">
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-success" onclick="downloadCsv('utilization', getUtilParams())" title="CSV"><i class="fas fa-file-csv"></i></button>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="downloadFile('utilization', getUtilParams(), 'xlsx')" title="Excel"><i class="fas fa-file-excel"></i></button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="downloadFile('utilization', getUtilParams(), 'pdf')" title="PDF"><i class="fas fa-file-pdf"></i></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {# Overview cards #}
+                        <div class="row" id="utilOverviewRow">
+                            <div class="col-md-3">
+                                <div class="info-box bg-info">
+                                    <span class="info-box-icon"><i class="fas fa-boxes"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Equipment gesamt</span>
+                                        <span class="info-box-number" id="utilTotalEquip">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="info-box bg-success">
+                                    <span class="info-box-icon"><i class="fas fa-percentage"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Durchschn. Auslastung</span>
+                                        <span class="info-box-number" id="utilAvgPct">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="info-box bg-warning">
+                                    <span class="info-box-icon"><i class="fas fa-euro-sign"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Gesamtumsatz</span>
+                                        <span class="info-box-number" id="utilTotalRevenue">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="info-box bg-danger">
+                                    <span class="info-box-icon"><i class="fas fa-arrow-down"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Unterausgelastet</span>
+                                        <span class="info-box-number" id="utilUnderutilCount">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            {# Utilization Table #}
+                            <div class="col-lg-8">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h3 class="card-title"><i class="fas fa-tachometer-alt"></i> Auslastung je Equipment</h3>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <table class="table table-sm table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>Equipment</th>
+                                                    <th>Kategorie</th>
+                                                    <th class="text-right">Tage vermietet</th>
+                                                    <th class="text-right">Auslastung</th>
+                                                    <th class="text-right">Umsatz</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="utilBody"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {# Top Performers #}
+                            <div class="col-lg-4">
+                                <div class="card card-success">
+                                    <div class="card-header">
+                                        <h3 class="card-title"><i class="fas fa-star"></i> Top Performer</h3>
+                                        <div class="card-tools">
+                                            <button class="btn btn-sm btn-outline-light" onclick="downloadCsv('top_performers', {year: $('#utilYear').val()})" title="CSV"><i class="fas fa-file-csv"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <table class="table table-sm">
+                                            <tbody id="topPerformersBody"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div class="card card-danger">
+                                    <div class="card-header">
+                                        <h3 class="card-title"><i class="fas fa-arrow-down"></i> Unterausgelastet</h3>
+                                        <div class="card-tools">
+                                            <button class="btn btn-sm btn-outline-light" onclick="downloadCsv('underutilized', {year: $('#utilYear').val()})" title="CSV"><i class="fas fa-file-csv"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <table class="table table-sm">
+                                            <tbody id="underutilizedBody"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# ===== TAB 3: Top Clients ===== #}
+                    <div class="tab-pane fade" id="pane-topclients" role="tabpanel">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-inline">
+                                    <label class="mr-2">Jahr:</label>
+                                    <select class="form-control form-control-sm mr-2" id="tcYear">
+                                        {% for y in range("now"|date("Y") - 2, "now"|date("Y")) %}
+                                            <option value="{{ y }}" {{ y == "now"|date("Y") ? 'selected' : '' }}>{{ y }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <label class="mr-2">Limit:</label>
+                                    <select class="form-control form-control-sm mr-2" id="tcLimit">
+                                        <option value="5">Top 5</option>
+                                        <option value="10" selected>Top 10</option>
+                                        <option value="20">Top 20</option>
+                                        <option value="50">Top 50</option>
+                                    </select>
+                                    <button class="btn btn-sm btn-primary" id="loadTopClientsBtn"><i class="fas fa-sync"></i> Laden</button>
+                                </div>
+                            </div>
+                            <div class="col-md-6 text-right">
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-success" onclick="downloadCsv('top_clients', {year: $('#tcYear').val(), limit: $('#tcLimit').val()})" title="CSV"><i class="fas fa-file-csv"></i></button>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="downloadFile('top_clients', {year: $('#tcYear').val(), limit: $('#tcLimit').val()}, 'xlsx')" title="Excel"><i class="fas fa-file-excel"></i></button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="downloadFile('top_clients', {year: $('#tcYear').val(), limit: $('#tcLimit').val()}, 'pdf')" title="PDF"><i class="fas fa-file-pdf"></i></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h3 class="card-title"><i class="fas fa-trophy"></i> Kunden-Ranking nach Umsatz</h3>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <table class="table table-sm table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:50px">#</th>
+                                                    <th>Kunde</th>
+                                                    <th class="text-right">Projekte</th>
+                                                    <th class="text-right">Umsatz</th>
+                                                    <th class="text-right">Bezahlt</th>
+                                                    <th class="text-right">Offen</th>
+                                                    <th style="width:200px">Anteil</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="topClientsBody"></tbody>
+                                            <tfoot>
+                                                <tr class="font-weight-bold">
+                                                    <td></td>
+                                                    <td>{{ t('total') }}</td>
+                                                    <td class="text-right" id="tcTotalProjects">-</td>
+                                                    <td class="text-right" id="tcTotalRevenue">-</td>
+                                                    <td class="text-right" id="tcTotalPaid">-</td>
+                                                    <td class="text-right" id="tcTotalOpen">-</td>
+                                                    <td></td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# ===== TAB 4: Seasonality (Saisonalität) ===== #}
+                    <div class="tab-pane fade" id="pane-seasonality" role="tabpanel">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-inline">
+                                    <label class="mr-2">Analysezeitraum (Jahre):</label>
+                                    <select class="form-control form-control-sm mr-2" id="seasonYears">
+                                        <option value="2">2 Jahre</option>
+                                        <option value="3" selected>3 Jahre</option>
+                                        <option value="5">5 Jahre</option>
+                                    </select>
+                                    <button class="btn btn-sm btn-primary" id="loadSeasonalityBtn"><i class="fas fa-sync"></i> Laden</button>
+                                </div>
+                            </div>
+                            <div class="col-md-6 text-right">
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-success" onclick="downloadCsv('seasonality', {years: $('#seasonYears').val()})" title="CSV"><i class="fas fa-file-csv"></i></button>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="downloadFile('seasonality', {years: $('#seasonYears').val()}, 'xlsx')" title="Excel"><i class="fas fa-file-excel"></i></button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="downloadFile('seasonality', {years: $('#seasonYears').val()}, 'pdf')" title="PDF"><i class="fas fa-file-pdf"></i></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            {# Peak Months #}
+                            <div class="col-lg-4">
+                                <div class="card card-success">
+                                    <div class="card-header">
+                                        <h3 class="card-title"><i class="fas fa-arrow-up"></i> Peak-Monate</h3>
+                                    </div>
+                                    <div class="card-body" id="peakMonthsContainer">
+                                        <p class="text-muted text-center">Daten werden geladen...</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {# Monthly Overview #}
+                            <div class="col-lg-8">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h3 class="card-title"><i class="fas fa-calendar-alt"></i> Monatlicher Durchschnitt</h3>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <table class="table table-sm table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>Monat</th>
+                                                    <th class="text-right">Durchschn. Umsatz</th>
+                                                    <th class="text-right">Min. Umsatz</th>
+                                                    <th class="text-right">Max. Umsatz</th>
+                                                    <th class="text-right">Analysierte Jahre</th>
+                                                    <th style="width:200px">Tendenz</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="seasonBody"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# ===== TAB 5: Equipment ROI ===== #}
+                    <div class="tab-pane fade" id="pane-roi" role="tabpanel">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <button class="btn btn-sm btn-primary" id="loadRoiBtn"><i class="fas fa-sync"></i> ROI berechnen</button>
+                            </div>
+                            <div class="col-md-6 text-right">
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-success" onclick="downloadCsv('roi')" title="CSV"><i class="fas fa-file-csv"></i></button>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="downloadFile('roi', {}, 'xlsx')" title="Excel"><i class="fas fa-file-excel"></i></button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="downloadFile('roi', {}, 'pdf')" title="PDF"><i class="fas fa-file-pdf"></i></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {# ROI Summary #}
+                        <div class="row" id="roiSummaryRow" style="display:none;">
+                            <div class="col-md-3">
+                                <div class="info-box bg-success">
+                                    <span class="info-box-icon"><i class="fas fa-check"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Profitabel</span>
+                                        <span class="info-box-number" id="roiProfitableCount">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="info-box bg-danger">
+                                    <span class="info-box-icon"><i class="fas fa-times"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Nicht profitabel</span>
+                                        <span class="info-box-number" id="roiUnprofitableCount">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="info-box bg-info">
+                                    <span class="info-box-icon"><i class="fas fa-percentage"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Durchschn. ROI</span>
+                                        <span class="info-box-number" id="roiAvgPct">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="info-box bg-warning">
+                                    <span class="info-box-icon"><i class="fas fa-clock"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Durchschn. Amortisation</span>
+                                        <span class="info-box-number" id="roiAvgPayback">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h3 class="card-title"><i class="fas fa-percentage"></i> ROI je Equipment-Typ</h3>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <table class="table table-sm table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>Equipment</th>
+                                                    <th>Kategorie</th>
+                                                    <th class="text-right">Anzahl</th>
+                                                    <th class="text-right">Kaufpreis</th>
+                                                    <th class="text-right">Tagesrate</th>
+                                                    <th class="text-right">Gesamtumsatz</th>
+                                                    <th class="text-right">ROI %</th>
+                                                    <th class="text-right">Amortisation</th>
+                                                    <th class="text-center">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="roiBody"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# ===== TAB 6: Period Comparison (Vergleich) ===== #}
+                    <div class="tab-pane fade" id="pane-compare" role="tabpanel">
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="card card-outline card-primary">
+                                    <div class="card-header">
+                                        <h3 class="card-title"><i class="fas fa-sliders-h"></i> Zeiträume auswählen</h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-5">
+                                                <h6>Zeitraum 1</h6>
+                                                <div class="form-group row">
+                                                    <label class="col-sm-3 col-form-label">Von:</label>
+                                                    <div class="col-sm-9">
+                                                        <input type="date" class="form-control form-control-sm" id="cmpP1Start"
+                                                               value="{{ "now"|date("Y") - 1 }}-01-01">
+                                                    </div>
+                                                </div>
+                                                <div class="form-group row">
+                                                    <label class="col-sm-3 col-form-label">Bis:</label>
+                                                    <div class="col-sm-9">
+                                                        <input type="date" class="form-control form-control-sm" id="cmpP1End"
+                                                               value="{{ "now"|date("Y") - 1 }}-12-31">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2 d-flex align-items-center justify-content-center">
+                                                <i class="fas fa-exchange-alt fa-2x text-muted"></i>
+                                            </div>
+                                            <div class="col-md-5">
+                                                <h6>Zeitraum 2</h6>
+                                                <div class="form-group row">
+                                                    <label class="col-sm-3 col-form-label">Von:</label>
+                                                    <div class="col-sm-9">
+                                                        <input type="date" class="form-control form-control-sm" id="cmpP2Start"
+                                                               value="{{ "now"|date("Y") }}-01-01">
+                                                    </div>
+                                                </div>
+                                                <div class="form-group row">
+                                                    <label class="col-sm-3 col-form-label">Bis:</label>
+                                                    <div class="col-sm-9">
+                                                        <input type="date" class="form-control form-control-sm" id="cmpP2End"
+                                                               value="{{ "now"|date("Y-m-d") }}">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="text-center mt-2">
+                                            <button class="btn btn-primary" id="loadCompareBtn">
+                                                <i class="fas fa-balance-scale"></i> Zeiträume vergleichen
+                                            </button>
+                                            <div class="btn-group ml-2">
+                                                <button class="btn btn-outline-success btn-sm" onclick="downloadCsv('compare', getCompareParams())" title="CSV"><i class="fas fa-file-csv"></i></button>
+                                                <button class="btn btn-outline-primary btn-sm" onclick="downloadFile('compare', getCompareParams(), 'xlsx')" title="Excel"><i class="fas fa-file-excel"></i></button>
+                                                <button class="btn btn-outline-danger btn-sm" onclick="downloadFile('compare', getCompareParams(), 'pdf')" title="PDF"><i class="fas fa-file-pdf"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row" id="compareResultRow" style="display:none;">
+                            <div class="col-lg-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h3 class="card-title"><i class="fas fa-exchange-alt"></i> Vergleichsergebnis</h3>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <table class="table table-sm table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>Kennzahl</th>
+                                                    <th class="text-right">Zeitraum 1</th>
+                                                    <th class="text-right">Zeitraum 2</th>
+                                                    <th class="text-right">Veränderung</th>
+                                                    <th class="text-center">Tendenz</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="compareBody"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>{# /tab-content #}
+            </div>{# /card-body #}
+        </div>{# /card #}
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    var monthNames = ['{{ t("jan") }}','{{ t("feb") }}','{{ t("mar") }}','{{ t("apr") }}','{{ t("may") }}','{{ t("jun") }}','{{ t("jul") }}','{{ t("aug") }}','{{ t("sep") }}','{{ t("oct") }}','{{ t("nov") }}','{{ t("dec") }}'];
+    var monthNamesFull = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+
+    function formatMoney(val) {
+        return parseFloat(val || 0).toFixed(2).replace('.', ',') + ' \u20AC';
+    }
+
+    function formatPct(val) {
+        return parseFloat(val || 0).toFixed(1).replace('.', ',') + ' %';
+    }
+
+    function changeBadge(val, suffix) {
+        suffix = suffix || '';
+        var num = parseFloat(val || 0);
+        if (num > 0) return '<span class="badge badge-success"><i class="fas fa-arrow-up"></i> +' + num.toFixed(1).replace('.', ',') + suffix + '</span>';
+        if (num < 0) return '<span class="badge badge-danger"><i class="fas fa-arrow-down"></i> ' + num.toFixed(1).replace('.', ',') + suffix + '</span>';
+        return '<span class="badge badge-secondary">0' + suffix + '</span>';
+    }
+
+    // ============================
+    // CSV Export (original)
+    // ============================
+    function downloadCsv(type, extraParams) {
+        var params = $.extend({type: type}, extraParams || {});
+        ajaxcall('reports/export.php', params, function(data) {
+            if (!data.response || !data.response.csv) {
+                bootbox.alert('Export fehlgeschlagen.');
+                return;
+            }
+            var blob = new Blob([atob(data.response.csv)], {type: 'text/csv;charset=utf-8;'});
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = data.response.filename || 'export.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    }
+    window.downloadCsv = downloadCsv;
+
+    // ============================
+    // Excel / PDF Export
+    // ============================
+    function downloadFile(type, extraParams, format) {
+        var params = $.extend({type: type, format: format}, extraParams || {});
+        ajaxcall('reports/export.php', params, function(data) {
+            if (!data.response || !data.response.file) {
+                bootbox.alert('Export fehlgeschlagen.');
+                return;
+            }
+            var mimeTypes = {
+                'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'pdf': 'application/pdf'
+            };
+            var raw = atob(data.response.file);
+            var bytes = new Uint8Array(raw.length);
+            for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+            var blob = new Blob([bytes], {type: mimeTypes[format] || 'application/octet-stream'});
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = data.response.filename || ('export.' + format);
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    }
+    window.downloadFile = downloadFile;
+
+    // ============================
+    // Tab 1: Revenue & Outstanding
+    // ============================
+    function loadKPIs() {
+        ajaxcall('reports/dashboard.php', {}, function(data) {
+            if (!data.response || !data.response.kpis) return;
+            var k = data.response.kpis;
+            $('#kpiRevenue').text(formatMoney(k.revenue_year));
+            $('#kpiPaid').text(k.paid_count || 0);
+            $('#kpiOutstanding').text(formatMoney(k.outstanding_total));
+            $('#kpiOverdue').text(k.overdue_count || 0);
+
+            if (k.kur_warning) {
+                $('#kurWarningText').text(k.kur_warning);
+                $('#kurWarningRow').show();
+            }
+        }, false);
+    }
+
+    function loadRevenue() {
+        var year = $('#revenueYear').val();
+        var groupBy = $('#revenueGroupBy').val();
+        ajaxcall('reports/revenue.php', {year: year, group_by: groupBy}, function(data) {
+            if (!data.response || !data.response.data) return;
+            var rows = data.response.data;
+            var html = '';
+            var totalNet = 0, totalGross = 0, totalCount = 0;
+
+            rows.forEach(function(row) {
+                var label = groupBy === 'month' ? monthNames[(row.month || 1) - 1] : (row.client_name || '-');
+                html += '<tr>';
+                html += '<td>' + label + '</td>';
+                html += '<td class="text-right">' + formatMoney(row.net_total) + '</td>';
+                html += '<td class="text-right">' + formatMoney(row.gross_total) + '</td>';
+                html += '<td class="text-right">' + (row.invoice_count || 0) + '</td>';
+                html += '</tr>';
+                totalNet += parseFloat(row.net_total || 0);
+                totalGross += parseFloat(row.gross_total || 0);
+                totalCount += parseInt(row.invoice_count || 0);
+            });
+
+            $('#revenueBody').html(html || '<tr><td colspan="4" class="text-center text-muted">{{ t("no_data") }}</td></tr>');
+            $('#revTotalNet').text(formatMoney(totalNet));
+            $('#revTotalGross').text(formatMoney(totalGross));
+            $('#revTotalCount').text(totalCount);
+            $('#revGroupHeader').text(groupBy === 'month' ? '{{ t("month") }}' : '{{ t("client") }}');
+        }, false);
+    }
+
+    function loadOutstanding() {
+        ajaxcall('reports/outstanding.php', {}, function(data) {
+            if (!data.response || !data.response.aging) return;
+            var aging = data.response.aging;
+            var bucketLabels = {
+                'current': '{{ t("aging_current") }}',
+                '1_30': '1-30 {{ t("days") }}',
+                '31_60': '31-60 {{ t("days") }}',
+                '61_90': '61-90 {{ t("days") }}',
+                'over_90': '90+ {{ t("days") }}'
+            };
+            var bucketColors = {'current': 'success', '1_30': 'info', '31_60': 'warning', '61_90': 'danger', 'over_90': 'dark'};
+            var html = '';
+            var total = 0;
+
+            Object.keys(aging).forEach(function(key) {
+                var bucket = aging[key];
+                html += '<tr>';
+                html += '<td><span class="badge badge-' + (bucketColors[key] || 'secondary') + '">' + (bucketLabels[key] || key) + '</span> (' + (bucket.count || 0) + ')</td>';
+                html += '<td class="text-right">' + formatMoney(bucket.total) + '</td>';
+                html += '</tr>';
+                total += parseFloat(bucket.total || 0);
+            });
+
+            $('#agingBody').html(html);
+            $('#agingTotal').text(formatMoney(total));
+        }, false);
+    }
+
+    // ============================
+    // Tab 2: Utilization
+    // ============================
+    function getUtilParams() {
+        return {year: $('#utilYear').val(), month: $('#utilMonth').val()};
+    }
+    window.getUtilParams = getUtilParams;
+
+    function loadUtilization() {
+        var year = $('#utilYear').val();
+        var month = $('#utilMonth').val();
+        ajaxcall('reports/utilization.php', {action: 'overview', year: year, month: month}, function(data) {
+            if (!data.response) return;
+            var items = data.response.data || data.response;
+            if (Array.isArray(items)) {
+                var html = '';
+                var totalRev = 0, totalDays = 0, totalAvail = 0, underCount = 0;
+                items.forEach(function(row) {
+                    var pct = parseFloat(row.utilization_pct || 0);
+                    var barClass = pct >= 70 ? 'bg-success' : (pct >= 40 ? 'bg-warning' : 'bg-danger');
+                    html += '<tr>';
+                    html += '<td>' + (row.assetTypes_name || '-') + '</td>';
+                    html += '<td>' + (row.assetCategories_name || '-') + '</td>';
+                    html += '<td class="text-right">' + (row.days_rented || 0) + '</td>';
+                    html += '<td class="text-right"><div class="progress progress-sm" style="min-width:80px"><div class="progress-bar ' + barClass + '" style="width:' + pct + '%"></div></div> ' + formatPct(pct) + '</td>';
+                    html += '<td class="text-right">' + formatMoney(row.revenue) + '</td>';
+                    html += '</tr>';
+                    totalRev += parseFloat(row.revenue || 0);
+                    totalDays += parseInt(row.days_rented || 0);
+                    totalAvail += parseInt(row.days_available || 0);
+                    if (pct < 30) underCount++;
+                });
+                $('#utilBody').html(html || '<tr><td colspan="5" class="text-center text-muted">Keine Daten</td></tr>');
+                $('#utilTotalEquip').text(items.length);
+                $('#utilAvgPct').text(totalAvail > 0 ? formatPct((totalDays / totalAvail) * 100) : '-');
+                $('#utilTotalRevenue').text(formatMoney(totalRev));
+                $('#utilUnderutilCount').text(underCount);
+            }
+        }, false);
+
+        // Top Performers
+        ajaxcall('reports/utilization.php', {action: 'top_performers', year: year}, function(data) {
+            if (!data.response) return;
+            var items = data.response.data || data.response;
+            if (!Array.isArray(items)) return;
+            var html = '';
+            items.slice(0, 5).forEach(function(row, i) {
+                var medals = ['<i class="fas fa-trophy text-warning"></i>', '<i class="fas fa-medal text-secondary"></i>', '<i class="fas fa-medal text-danger"></i>'];
+                html += '<tr>';
+                html += '<td>' + (medals[i] || (i + 1)) + ' ' + (row.assetTypes_name || '-') + '</td>';
+                html += '<td class="text-right">' + formatPct(row.utilization_pct) + '</td>';
+                html += '</tr>';
+            });
+            $('#topPerformersBody').html(html || '<tr><td colspan="2" class="text-muted">Keine Daten</td></tr>');
+        }, false);
+
+        // Underutilized
+        ajaxcall('reports/utilization.php', {action: 'underutilized', year: year}, function(data) {
+            if (!data.response) return;
+            var items = data.response.data || data.response;
+            if (!Array.isArray(items)) return;
+            var html = '';
+            items.slice(0, 5).forEach(function(row) {
+                html += '<tr>';
+                html += '<td><i class="fas fa-exclamation-circle text-danger"></i> ' + (row.assetTypes_name || '-') + '</td>';
+                html += '<td class="text-right">' + formatPct(row.utilization_pct) + '</td>';
+                html += '</tr>';
+            });
+            $('#underutilizedBody').html(html || '<tr><td colspan="2" class="text-muted">Keine Daten</td></tr>');
+        }, false);
+    }
+
+    // ============================
+    // Tab 3: Top Clients
+    // ============================
+    function loadTopClients() {
+        var year = $('#tcYear').val();
+        var limit = $('#tcLimit').val();
+        ajaxcall('reports/topClients.php', {action: 'ranking', year: year, limit: limit}, function(data) {
+            if (!data.response) return;
+            var items = data.response.data || data.response;
+            if (!Array.isArray(items)) return;
+            var html = '';
+            var totalRev = 0, totalPaid = 0, totalProj = 0;
+            var maxRev = 0;
+            items.forEach(function(r) { var v = parseFloat(r.total_revenue || 0); if (v > maxRev) maxRev = v; });
+
+            items.forEach(function(row, i) {
+                var rev = parseFloat(row.total_revenue || 0);
+                var paid = parseFloat(row.paid_revenue || 0);
+                var open = rev - paid;
+                var pctOfMax = maxRev > 0 ? (rev / maxRev * 100) : 0;
+                html += '<tr>';
+                html += '<td><strong>' + (i + 1) + '</strong></td>';
+                html += '<td>' + (row.clients_name || '-') + '</td>';
+                html += '<td class="text-right">' + (row.project_count || 0) + '</td>';
+                html += '<td class="text-right">' + formatMoney(rev) + '</td>';
+                html += '<td class="text-right">' + formatMoney(paid) + '</td>';
+                html += '<td class="text-right">' + formatMoney(open) + '</td>';
+                html += '<td><div class="progress progress-sm"><div class="progress-bar bg-primary" style="width:' + pctOfMax + '%"></div></div></td>';
+                html += '</tr>';
+                totalRev += rev;
+                totalPaid += paid;
+                totalProj += parseInt(row.project_count || 0);
+            });
+
+            $('#topClientsBody').html(html || '<tr><td colspan="7" class="text-center text-muted">Keine Daten</td></tr>');
+            $('#tcTotalProjects').text(totalProj);
+            $('#tcTotalRevenue').text(formatMoney(totalRev));
+            $('#tcTotalPaid').text(formatMoney(totalPaid));
+            $('#tcTotalOpen').text(formatMoney(totalRev - totalPaid));
+        }, false);
+    }
+
+    // ============================
+    // Tab 4: Seasonality
+    // ============================
+    function loadSeasonality() {
+        var years = $('#seasonYears').val();
+        ajaxcall('reports/seasonality.php', {action: 'overview', years: years}, function(data) {
+            if (!data.response) return;
+            var months = data.response.months || data.response.data || [];
+            if (!Array.isArray(months)) return;
+            var html = '';
+            var maxAvg = 0;
+            months.forEach(function(m) { var v = parseFloat(m.avg_revenue || 0); if (v > maxAvg) maxAvg = v; });
+
+            months.forEach(function(m) {
+                var avg = parseFloat(m.avg_revenue || 0);
+                var pctOfMax = maxAvg > 0 ? (avg / maxAvg * 100) : 0;
+                var barClass = pctOfMax >= 75 ? 'bg-success' : (pctOfMax >= 40 ? 'bg-info' : 'bg-warning');
+                html += '<tr>';
+                html += '<td>' + (m.month_name || '-') + '</td>';
+                html += '<td class="text-right">' + formatMoney(avg) + '</td>';
+                html += '<td class="text-right">' + formatMoney(m.min_revenue || 0) + '</td>';
+                html += '<td class="text-right">' + formatMoney(m.max_revenue || 0) + '</td>';
+                html += '<td class="text-right">' + (m.year_count || 0) + '</td>';
+                html += '<td><div class="progress progress-sm"><div class="progress-bar ' + barClass + '" style="width:' + pctOfMax + '%"></div></div></td>';
+                html += '</tr>';
+            });
+
+            $('#seasonBody').html(html || '<tr><td colspan="6" class="text-center text-muted">Keine Daten</td></tr>');
+        }, false);
+
+        // Peak months
+        ajaxcall('reports/seasonality.php', {action: 'peaks', years: years}, function(data) {
+            if (!data.response) return;
+            var peaks = data.response.peaks || data.response.data || [];
+            if (!Array.isArray(peaks) || peaks.length === 0) {
+                $('#peakMonthsContainer').html('<p class="text-muted">Keine Peak-Daten verfügbar.</p>');
+                return;
+            }
+            var html = '<ul class="list-unstyled">';
+            peaks.forEach(function(p, i) {
+                var icon = i === 0 ? 'fas fa-star text-warning' : 'fas fa-arrow-up text-success';
+                html += '<li class="mb-2"><i class="' + icon + '"></i> <strong>' + (p.month_name || 'Monat ' + p.month) + '</strong><br>';
+                html += '<small class="text-muted">Durchschn. ' + formatMoney(p.avg_revenue) + '</small></li>';
+            });
+            html += '</ul>';
+            $('#peakMonthsContainer').html(html);
+        }, false);
+    }
+
+    // ============================
+    // Tab 5: ROI
+    // ============================
+    function loadRoi() {
+        ajaxcall('reports/roi.php', {action: 'all'}, function(data) {
+            if (!data.response) return;
+            var items = data.response.data || data.response;
+            if (!Array.isArray(items)) return;
+            var html = '';
+            var profitCount = 0, unprofitCount = 0, totalRoi = 0, totalPayback = 0, paybackItems = 0;
+
+            items.forEach(function(row) {
+                var roiPct = parseFloat(row.roi_pct || 0);
+                var isProfitable = row.is_profitable || roiPct > 0;
+                var payback = row.payback_months;
+                var statusBadge = isProfitable
+                    ? '<span class="badge badge-success"><i class="fas fa-check"></i> Profitabel</span>'
+                    : '<span class="badge badge-danger"><i class="fas fa-times"></i> Nicht profitabel</span>';
+
+                html += '<tr>';
+                html += '<td>' + (row.assetTypes_name || '-') + '</td>';
+                html += '<td>' + (row.assetCategories_name || '-') + '</td>';
+                html += '<td class="text-right">' + (row.asset_count || 0) + '</td>';
+                html += '<td class="text-right">' + formatMoney(row.purchase_price) + '</td>';
+                html += '<td class="text-right">' + formatMoney(row.day_rate) + '</td>';
+                html += '<td class="text-right">' + formatMoney(row.total_revenue) + '</td>';
+                html += '<td class="text-right">' + formatPct(roiPct) + '</td>';
+                html += '<td class="text-right">' + (payback !== null && payback !== undefined ? parseFloat(payback).toFixed(1).replace('.', ',') + ' Mon.' : '-') + '</td>';
+                html += '<td class="text-center">' + statusBadge + '</td>';
+                html += '</tr>';
+
+                if (isProfitable) profitCount++; else unprofitCount++;
+                totalRoi += roiPct;
+                if (payback !== null && payback !== undefined) { totalPayback += parseFloat(payback); paybackItems++; }
+            });
+
+            $('#roiBody').html(html || '<tr><td colspan="9" class="text-center text-muted">Keine Daten</td></tr>');
+            $('#roiSummaryRow').show();
+            $('#roiProfitableCount').text(profitCount);
+            $('#roiUnprofitableCount').text(unprofitCount);
+            $('#roiAvgPct').text(items.length > 0 ? formatPct(totalRoi / items.length) : '-');
+            $('#roiAvgPayback').text(paybackItems > 0 ? (totalPayback / paybackItems).toFixed(1).replace('.', ',') + ' Mon.' : '-');
+        }, false);
+    }
+
+    // ============================
+    // Tab 6: Period Comparison
+    // ============================
+    function getCompareParams() {
+        return {
+            period1_start: $('#cmpP1Start').val(),
+            period1_end: $('#cmpP1End').val(),
+            period2_start: $('#cmpP2Start').val(),
+            period2_end: $('#cmpP2End').val()
+        };
+    }
+    window.getCompareParams = getCompareParams;
+
+    function loadCompare() {
+        var params = getCompareParams();
+        ajaxcall('reports/compare.php', params, function(data) {
+            if (!data.response) return;
+            var r = data.response;
+            var p1 = r.period1 || {};
+            var p2 = r.period2 || {};
+            var changes = r.changes || {};
+            var html = '';
+
+            var metrics = [
+                {label: 'Umsatz', v1: formatMoney(p1.revenue), v2: formatMoney(p2.revenue), change: changes.revenue_pct, suffix: '%'},
+                {label: 'Kosten', v1: formatMoney(p1.costs), v2: formatMoney(p2.costs), change: changes.costs_pct, suffix: '%'},
+                {label: 'Gewinn', v1: formatMoney(p1.profit), v2: formatMoney(p2.profit), change: changes.profit_pct, suffix: '%'},
+                {label: 'Marge', v1: formatPct(p1.margin_pct), v2: formatPct(p2.margin_pct), change: (p2.margin_pct || 0) - (p1.margin_pct || 0), suffix: ' Pp.'},
+                {label: 'Projekte', v1: p1.project_count || 0, v2: p2.project_count || 0, change: changes.project_diff, suffix: ''},
+                {label: 'Kunden', v1: p1.client_count || 0, v2: p2.client_count || 0, change: changes.client_diff, suffix: ''}
+            ];
+
+            metrics.forEach(function(m) {
+                html += '<tr>';
+                html += '<td><strong>' + m.label + '</strong></td>';
+                html += '<td class="text-right">' + m.v1 + '</td>';
+                html += '<td class="text-right">' + m.v2 + '</td>';
+                html += '<td class="text-right">' + changeBadge(m.change, m.suffix) + '</td>';
+                var num = parseFloat(m.change || 0);
+                var icon = num > 0 ? '<i class="fas fa-arrow-up text-success"></i>' : (num < 0 ? '<i class="fas fa-arrow-down text-danger"></i>' : '<i class="fas fa-equals text-muted"></i>');
+                html += '<td class="text-center">' + icon + '</td>';
+                html += '</tr>';
+            });
+
+            $('#compareBody').html(html);
+            $('#compareResultRow').show();
+        }, false);
+    }
+
+    // ============================
+    // Init & Event Handlers
+    // ============================
+    loadKPIs();
+    loadRevenue();
+    loadOutstanding();
+
+    $('#revenueYear, #revenueGroupBy').change(function() { loadRevenue(); });
+
+    $('#exportRevenueBtn').on('click', function() {
+        downloadCsv('revenue', {year: $('#revenueYear').val(), group_by: $('#revenueGroupBy').val()});
+    });
+
+    $('#exportOutstandingBtn').on('click', function() {
+        downloadCsv('outstanding');
+    });
+
+    // Lazy-load tabs on first click
+    var tabsLoaded = {};
+    $('a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
+        var target = $(e.target).attr('href');
+        if (tabsLoaded[target]) return;
+        tabsLoaded[target] = true;
+
+        switch(target) {
+            case '#pane-utilization': loadUtilization(); break;
+            case '#pane-topclients': loadTopClients(); break;
+            case '#pane-seasonality': loadSeasonality(); break;
+            case '#pane-roi': loadRoi(); break;
+        }
+    });
+
+    // Reload buttons
+    $('#loadUtilBtn').on('click', function() { loadUtilization(); });
+    $('#loadTopClientsBtn').on('click', function() { loadTopClients(); });
+    $('#loadSeasonalityBtn').on('click', function() { loadSeasonality(); });
+    $('#loadRoiBtn').on('click', function() { loadRoi(); });
+    $('#loadCompareBtn').on('click', function() { loadCompare(); });
+});
+</script>
+{% endblock %}

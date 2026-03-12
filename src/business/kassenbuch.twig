@@ -1,0 +1,401 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-cash-register"></i> Kassenbuch</h3>
+                <div class="card-tools">
+                    <button class="btn btn-sm btn-outline-secondary" id="kbPrevMonth"><i class="fas fa-chevron-left"></i></button>
+                    <select class="form-control form-control-sm d-inline-block" id="kbMonth" style="width:auto;">
+                        <option value="1">Januar</option>
+                        <option value="2">Februar</option>
+                        <option value="3">Maerz</option>
+                        <option value="4">April</option>
+                        <option value="5">Mai</option>
+                        <option value="6">Juni</option>
+                        <option value="7">Juli</option>
+                        <option value="8">August</option>
+                        <option value="9">September</option>
+                        <option value="10">Oktober</option>
+                        <option value="11">November</option>
+                        <option value="12">Dezember</option>
+                    </select>
+                    <select class="form-control form-control-sm d-inline-block" id="kbYear" style="width:auto;">
+                        {% for y in range("now"|date("Y") - 2, "now"|date("Y")) %}
+                            <option value="{{ y }}" {{ y == "now"|date("Y") ? 'selected' : '' }}>{{ y }}</option>
+                        {% endfor %}
+                    </select>
+                    <button class="btn btn-sm btn-outline-secondary" id="kbNextMonth"><i class="fas fa-chevron-right"></i></button>
+                    <button class="btn btn-sm btn-success ml-2" id="kbAddBtn"><i class="fas fa-plus"></i> Neuer Eintrag</button>
+                    <button class="btn btn-sm btn-outline-primary ml-1" id="kbExportBtn"><i class="fas fa-file-csv"></i> CSV-Export</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Summary Cards #}
+<div class="row mb-3">
+    <div class="col-lg-3">
+        <div class="small-box bg-light">
+            <div class="inner">
+                <h4 id="kbVortrag">0,00 &euro;</h4>
+                <p>Vortrag</p>
+            </div>
+            <div class="icon"><i class="fas fa-arrow-right"></i></div>
+        </div>
+    </div>
+    <div class="col-lg-3">
+        <div class="small-box bg-success">
+            <div class="inner">
+                <h4 class="text-white" id="kbEinnahmen">0,00 &euro;</h4>
+                <p class="text-white">Einnahmen</p>
+            </div>
+            <div class="icon"><i class="fas fa-arrow-down"></i></div>
+        </div>
+    </div>
+    <div class="col-lg-3">
+        <div class="small-box bg-danger">
+            <div class="inner">
+                <h4 class="text-white" id="kbAusgaben">0,00 &euro;</h4>
+                <p class="text-white">Ausgaben</p>
+            </div>
+            <div class="icon"><i class="fas fa-arrow-up"></i></div>
+        </div>
+    </div>
+    <div class="col-lg-3">
+        <div class="small-box bg-info">
+            <div class="inner">
+                <h4 class="text-white" id="kbSaldo">0,00 &euro;</h4>
+                <p class="text-white">Kassenbestand</p>
+            </div>
+            <div class="icon"><i class="fas fa-wallet"></i></div>
+        </div>
+    </div>
+</div>
+
+{# Entries Table #}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body p-0">
+                <table class="table table-sm table-striped table-hover" id="kbTable">
+                    <thead>
+                        <tr>
+                            <th style="width:100px;">Datum</th>
+                            <th style="width:120px;">Belegnummer</th>
+                            <th>Beschreibung</th>
+                            <th style="width:110px;">Kategorie</th>
+                            <th class="text-right" style="width:110px;">Einnahme</th>
+                            <th class="text-right" style="width:110px;">Ausgabe</th>
+                            <th class="text-right" style="width:110px;">Saldo</th>
+                            <th style="width:80px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="kbBody">
+                        <tr><td colspan="8" class="text-center text-muted">Lade Daten...</td></tr>
+                    </tbody>
+                    <tfoot id="kbFoot"></tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Add/Edit Modal #}
+<div class="modal fade" id="kbModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="kbModalTitle">Neuer Kassenbuch-Eintrag</h5>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="kbEditId" value="">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Datum <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="kbDate" value="{{ "now"|date("Y-m-d") }}">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Betrag <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="number" step="0.01" min="0.01" class="form-control" id="kbAmount" placeholder="0,00">
+                                <div class="input-group-append"><span class="input-group-text">&euro;</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Typ <span class="text-danger">*</span></label>
+                            <select class="form-control" id="kbType">
+                                <option value="einnahme">Einnahme</option>
+                                <option value="ausgabe">Ausgabe</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="form-group">
+                            <label>Beschreibung <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="kbDescription" placeholder="z.B. Bueromaterial, Kundeneinzahlung...">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Kategorie</label>
+                            <select class="form-control" id="kbCategory">
+                                <option value="">-- Keine --</option>
+                                <option value="Bareinnahme">Bareinnahme</option>
+                                <option value="Barausgabe">Barausgabe</option>
+                                <option value="Privateinlage">Privateinlage</option>
+                                <option value="Privatentnahme">Privatentnahme</option>
+                                <option value="Durchlaufender Posten">Durchlaufender Posten</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Belegnummer</label>
+                            <input type="text" class="form-control" id="kbReceiptNumber" placeholder="Automatisch">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Zahlungsart</label>
+                            <select class="form-control" id="kbPaymentMethod">
+                                <option value="">-- Keine --</option>
+                                <option value="Bar">Bar</option>
+                                <option value="EC-Karte">EC-Karte</option>
+                                <option value="Kreditkarte">Kreditkarte</option>
+                                <option value="Ueberweisung">Ueberweisung</option>
+                                <option value="Sonstiges">Sonstiges</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>&nbsp;</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="form-group">
+                            <label>Notizen</label>
+                            <textarea class="form-control" id="kbNotes" rows="2" placeholder="Optionale Bemerkungen..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-primary" id="kbSaveBtn">Speichern</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Aktuellen Monat setzen
+    $('#kbMonth').val({{ "now"|date("n") }});
+
+    function formatMoney(val) {
+        return parseFloat(val || 0).toFixed(2).replace('.', ',') + ' \u20AC';
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr) return '';
+        var d = new Date(dateStr);
+        var dd = ('0' + d.getDate()).slice(-2);
+        var mm = ('0' + (d.getMonth() + 1)).slice(-2);
+        return dd + '.' + mm + '.' + d.getFullYear();
+    }
+
+    function getDateRange() {
+        var y = parseInt($('#kbYear').val());
+        var m = parseInt($('#kbMonth').val());
+        var from = y + '-' + ('0' + m).slice(-2) + '-01';
+        var lastDay = new Date(y, m, 0).getDate();
+        var to = y + '-' + ('0' + m).slice(-2) + '-' + ('0' + lastDay).slice(-2);
+        return {from: from, to: to, year: y, month: m};
+    }
+
+    function loadEntries() {
+        var range = getDateRange();
+        ajaxcall('kassenbuch/list.php', {date_from: range.from, date_to: range.to}, function(data) {
+            if (!data.response) return;
+            var r = data.response;
+            var entries = r.entries || [];
+            var summary = r.summary || {};
+
+            // Summary cards
+            $('#kbVortrag').text(formatMoney(r.previous_balance));
+            $('#kbEinnahmen').text(formatMoney(summary.einnahmen));
+            $('#kbAusgaben').text(formatMoney(summary.ausgaben));
+            $('#kbSaldo').text(formatMoney(summary.final_balance));
+
+            // Table body
+            var html = '';
+            if (entries.length === 0) {
+                html = '<tr><td colspan="8" class="text-center text-muted">Keine Eintraege in diesem Monat.</td></tr>';
+            } else {
+                // Vortrag row
+                html += '<tr class="table-secondary">';
+                html += '<td>' + formatDate(range.from) + '</td>';
+                html += '<td></td>';
+                html += '<td><em>Vortrag</em></td>';
+                html += '<td></td>';
+                html += '<td></td>';
+                html += '<td></td>';
+                html += '<td class="text-right font-weight-bold">' + formatMoney(r.previous_balance) + '</td>';
+                html += '<td></td>';
+                html += '</tr>';
+
+                entries.forEach(function(e) {
+                    html += '<tr>';
+                    html += '<td>' + formatDate(e.entry_date) + '</td>';
+                    html += '<td><small>' + (e.receipt_number || '') + '</small></td>';
+                    html += '<td>' + e.description;
+                    if (e.notes) html += ' <i class="fas fa-sticky-note text-muted" title="' + e.notes.replace(/"/g, '&quot;') + '"></i>';
+                    html += '</td>';
+                    html += '<td><small>' + (e.category || '') + '</small></td>';
+                    html += '<td class="text-right text-success">' + (e.type === 'einnahme' ? formatMoney(e.amount) : '') + '</td>';
+                    html += '<td class="text-right text-danger">' + (e.type === 'ausgabe' ? formatMoney(e.amount) : '') + '</td>';
+                    html += '<td class="text-right font-weight-bold">' + formatMoney(e.saldo) + '</td>';
+                    html += '<td class="text-right">';
+                    html += '<button class="btn btn-xs btn-outline-primary kb-edit" data-id="' + e.id + '" data-entry=\'' + JSON.stringify(e).replace(/'/g, '&#39;') + '\'><i class="fas fa-edit"></i></button> ';
+                    html += '<button class="btn btn-xs btn-outline-danger kb-delete" data-id="' + e.id + '"><i class="fas fa-trash"></i></button>';
+                    html += '</td>';
+                    html += '</tr>';
+                });
+            }
+            $('#kbBody').html(html);
+
+            // Footer totals
+            var footHtml = '<tr class="table-primary font-weight-bold">';
+            footHtml += '<td colspan="4">Summe</td>';
+            footHtml += '<td class="text-right text-success">' + formatMoney(summary.einnahmen) + '</td>';
+            footHtml += '<td class="text-right text-danger">' + formatMoney(summary.ausgaben) + '</td>';
+            footHtml += '<td class="text-right">' + formatMoney(summary.final_balance) + '</td>';
+            footHtml += '<td></td>';
+            footHtml += '</tr>';
+            $('#kbFoot').html(footHtml);
+        }, false);
+    }
+
+    loadEntries();
+
+    // Navigation
+    $('#kbMonth, #kbYear').change(function() { loadEntries(); });
+
+    $('#kbPrevMonth').click(function() {
+        var m = parseInt($('#kbMonth').val());
+        var y = parseInt($('#kbYear').val());
+        m--;
+        if (m < 1) { m = 12; y--; $('#kbYear').val(y); }
+        $('#kbMonth').val(m);
+        loadEntries();
+    });
+
+    $('#kbNextMonth').click(function() {
+        var m = parseInt($('#kbMonth').val());
+        var y = parseInt($('#kbYear').val());
+        m++;
+        if (m > 12) { m = 1; y++; $('#kbYear').val(y); }
+        $('#kbMonth').val(m);
+        loadEntries();
+    });
+
+    // Add entry
+    $('#kbAddBtn').click(function() {
+        $('#kbEditId').val('');
+        $('#kbModalTitle').text('Neuer Kassenbuch-Eintrag');
+        $('#kbDate').val(new Date().toISOString().slice(0, 10));
+        $('#kbAmount').val('');
+        $('#kbType').val('ausgabe');
+        $('#kbDescription').val('');
+        $('#kbCategory').val('');
+        $('#kbReceiptNumber').val('');
+        $('#kbPaymentMethod').val('');
+        $('#kbNotes').val('');
+        $('#kbModal').modal('show');
+    });
+
+    // Edit entry
+    $(document).on('click', '.kb-edit', function() {
+        var e = $(this).data('entry');
+        $('#kbEditId').val(e.id);
+        $('#kbModalTitle').text('Eintrag bearbeiten');
+        $('#kbDate').val(e.entry_date);
+        $('#kbAmount').val(parseFloat(e.amount).toFixed(2));
+        $('#kbType').val(e.type);
+        $('#kbDescription').val(e.description);
+        $('#kbCategory').val(e.category || '');
+        $('#kbReceiptNumber').val(e.receipt_number || '');
+        $('#kbPaymentMethod').val(e.payment_method || '');
+        $('#kbNotes').val(e.notes || '');
+        $('#kbModal').modal('show');
+    });
+
+    // Save entry (add or update)
+    $('#kbSaveBtn').click(function() {
+        var desc = $('#kbDescription').val();
+        var amount = $('#kbAmount').val();
+        var date = $('#kbDate').val();
+
+        if (!desc || !amount || !date) {
+            bootbox.alert('Bitte alle Pflichtfelder ausfuellen (Datum, Betrag, Beschreibung).');
+            return;
+        }
+
+        var editId = $('#kbEditId').val();
+        var endpoint = editId ? 'kassenbuch/update.php' : 'kassenbuch/add.php';
+        var payload = {
+            entry_date: date,
+            description: desc,
+            amount: amount,
+            type: $('#kbType').val(),
+            category: $('#kbCategory').val(),
+            receipt_number: $('#kbReceiptNumber').val(),
+            payment_method: $('#kbPaymentMethod').val(),
+            notes: $('#kbNotes').val()
+        };
+        if (editId) payload.id = editId;
+
+        ajaxcall(endpoint, payload, function(data) {
+            if (data.result) {
+                $('#kbModal').modal('hide');
+                loadEntries();
+            }
+        });
+    });
+
+    // Delete entry
+    $(document).on('click', '.kb-delete', function() {
+        var id = $(this).data('id');
+        bootbox.confirm('Eintrag wirklich loeschen?', function(result) {
+            if (result) {
+                ajaxcall('kassenbuch/delete.php', {id: id}, function(data) {
+                    if (data.result) loadEntries();
+                });
+            }
+        });
+    });
+
+    // CSV Export
+    $('#kbExportBtn').click(function() {
+        var range = getDateRange();
+        window.location.href = '{{ CONFIG.ROOTURL }}/api/kassenbuch/export.php?year=' + range.year + '&month=' + range.month;
+    });
+});
+</script>
+{% endblock %}

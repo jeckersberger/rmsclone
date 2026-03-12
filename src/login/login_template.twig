@@ -134,15 +134,15 @@
 					<div id="masterBox">
 						<a href="{{CONFIG.ROOTURL}}/login/?"><img src="{{ CONFIG.ROOTURL}}/static-assets/img/login/logo.svg" style="height:5em; margin-bottom: 15px; margin-top: 10px;" id="bCMSLogoHeader"/></a>
 						<div class="alert alert-danger" style="border: 0px; text-align: left; display: none;" id="defaultAccountEnabledWarning">
-							<h4>The default super administrator account for {{ CONFIG.PROJECT_NAME }} is enabled</h4>
-							<p>Login to this account and change the password. Default username is <strong>username</strong> and password is <strong>password!</strong></p>
+							<h4>Das Standard-Administratorkonto fuer {{ CONFIG.PROJECT_NAME }} ist aktiviert</h4>
+							<p>Melden Sie sich mit diesem Konto an und aendern Sie das Passwort. Standard-Benutzername ist <strong>username</strong> und Passwort ist <strong>password!</strong></p>
 						</div>
 						{% if CONFIG.DEV %}
 							<div class="alert alert-warning" style="border: 0px; text-align: left;">
-								<h4>{{ CONFIG.PROJECT_NAME }} is running in development mode, and should only be used for testing purposes</h4>
-								<p>Default username is <strong>username</strong> and password is <strong>password!</strong></p>
-								<a type="button" href="/" onclick="javascript:event.target.port=8082" target="_blank" class="btn btn-info btn-sm">Database Editor</a>
-								<a type="button" href="/" onclick="javascript:event.target.port=8083" target="_blank" class="btn btn-info btn-sm">Email Inbox</a>
+								<h4>{{ CONFIG.PROJECT_NAME }} laeuft im Entwicklungsmodus und sollte nur zu Testzwecken verwendet werden</h4>
+								<p>Standard-Benutzername ist <strong>username</strong> und Passwort ist <strong>password!</strong></p>
+								<a type="button" href="/" onclick="javascript:event.target.port=8082" target="_blank" class="btn btn-info btn-sm">Datenbank-Editor</a>
+								<a type="button" href="/" onclick="javascript:event.target.port=8083" target="_blank" class="btn btn-info btn-sm">E-Mail-Posteingang</a>
 							</div>
 						{% endif %}
 						{% block content %}{% endblock %}
@@ -155,9 +155,9 @@
 						{{ VERSION }}
 					</div>
 					<div class="col-8" style="text-align: right;">
-						<a style="margin-right: 15px;" href="https://adam-rms.com">About</a>
+						<a style="margin-right: 15px;" href="#">Info</a>
 {% if CONFIG.LINKS_TERMSOFSERVICEURL %}
-	<a href="{{ CONFIG.LINKS_TERMSOFSERVICEURL }}" target="_blank">Terms &amp; Privacy</a>
+	<a href="{{ CONFIG.LINKS_TERMSOFSERVICEURL }}" target="_blank">AGB &amp; Datenschutz</a>
 {% endif %}
 
 					</div>

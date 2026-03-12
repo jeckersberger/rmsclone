@@ -1,17 +1,17 @@
 <div class="card box-warning">
     <form id="createNewInstanceForm">
     <div class="card-header">
-        <h3 class="card-title">Create new Business</h3>
+        <h3 class="card-title">Neues Unternehmen erstellen</h3>
     </div>
     <!-- /.box-header -->
     <div class="card-body">
 
         <div class="form-group">
-            <label>Business Name</label>
+            <label>Unternehmensname</label>
             <input type="text" required class="form-control" placeholder="{{ CONFIG.PROJECT_NAME }} Hire Services Global" name="instances_name">
         </div>
         <div class="form-group">
-            <label>Address</label>
+            <label>Adresse</label>
             <textarea class="form-control" rows="4" placeholder="" name="instances_address"></textarea>
         </div>
         <div class="form-group">
@@ -27,23 +27,23 @@
                         <i class="fa fa-envelope"></i>
                     </span>
                 </div>
-                <input type="email" class="form-control" placeholder="Email" name="instances_email">
+                <input type="email" class="form-control" placeholder="E-Mail" name="instances_email">
             </div>
         </div>
         <div class="form-group">
             <div class="input-group">
                 <div class="input-group-prepend"><span class="input-group-text"><i class="fa fa-phone"></i></span></div>
-                <input type="phone" class="form-control" placeholder="Phone" name="instances_phone">
+                <input type="phone" class="form-control" placeholder="Telefon" name="instances_phone">
             </div>
         </div>
         <div class="form-group">
             <div class="input-group">
-                <div class="input-group-prepend"><span class="input-group-text">Currency</span></div>
+                <div class="input-group-prepend"><span class="input-group-text">Waehrung</span></div>
                 <select class="form-control" name="instances_config_currency">
                     <option value="USD" label="US dollar">USD</option>
-                    <option value="EUR" label="Euro">EUR</option>
+                    <option value="EUR" selected="selected" label="Euro">EUR</option>
                     <option value="JPY" label="Japanese yen">JPY</option>
-                    <option value="GBP" selected="selected" label="Pound sterling">GBP</option>
+                    <option value="GBP" label="Pound sterling">GBP</option>
                     <option disabled>──────────</option>
                     <option value="AED" label="United Arab Emirates dirham">AED</option>
                     <option value="AFN" label="Afghan afghani">AFN</option>
@@ -209,12 +209,12 @@
         </div>
         <hr/>
         <div class="form-group">
-            <label>Your Role in Business</label>
-            <input type="text" required class="form-control" placeholder="Manager" name="role">
+            <label>Ihre Rolle im Unternehmen</label>
+            <input type="text" required class="form-control" placeholder="Geschaeftsfuehrer" name="role">
         </div>
     </div>
     <div class="card-footer">
-        <button type="submit" class="btn btn-success pull-right">Create</button>
+        <button type="submit" class="btn btn-success pull-right">Erstellen</button>
     </div></form>
 </div>
 <script>
@@ -228,7 +228,7 @@
                         window.location.href = "{{CONFIG.ROOTURL}}?i=" + result.response.instanceid;
                     } else {
                         console.log(result);
-                        bootbox.alert('Error - Could not create a new business - please try again!', function () {
+                        bootbox.alert('Fehler - Unternehmen konnte nicht erstellt werden. Bitte versuchen Sie es erneut!', function () {
                             location.reload();
                         });
                     }

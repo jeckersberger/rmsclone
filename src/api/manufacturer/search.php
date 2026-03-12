@@ -25,9 +25,9 @@ if(!isset($_POST['other_instances_id'])) { //We want all manufacturers if we are
     $assetManufacturers->get ("assets", null, "manufacturers_id");
     $DBLIB->where("manufacturers_id", $assetManufacturers, "IN");
 }
-$DBLIB->where("(manufacturers.instances_id IS NULL OR manufacturers.instances_id = '" . $instanceID . "')");
+$DBLIB->where("(manufacturers.instances_id IS NULL OR manufacturers.instances_id = ?)", [$instanceID]);
 $DBLIB->orderBy("manufacturers_name", "ASC");
-if (isset($_POST['term']) and $_POST['term']) $DBLIB->where("manufacturers_name","%" . $_POST['term'] . "%","LIKE");
+if (isset($_POST['term']) and $_POST['term']) $DBLIB->where("manufacturers_name","%" . $DBLIB->escape($_POST['term']) . "%","LIKE");
 $manufacturers = $DBLIB->get('manufacturers', 15, ["manufacturers.manufacturers_id", "manufacturers.manufacturers_name"]);
 finish(true, null, $manufacturers);
 

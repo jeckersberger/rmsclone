@@ -1,0 +1,88 @@
+# MyRMS - Lokale Entwicklungsumgebung
+# Start:   docker compose up -d
+# Stop:    docker compose down
+# Logs:    docker compose logs -f app
+# DB-Reset: docker compose down -v && docker compose up -d
+#
+# URLs nach dem Start:
+#   App:         http://localhost:8080
+#   phpMyAdmin:  http://localhost:8082
+#   Mailpit:     http://localhost:8083
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/dev/Dockerfile
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html:cached
+      - file_storage:/var/www/html/storage
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DB_HOSTNAME=db
+      - DB_DATABASE=myrms
+      - DB_USERNAME=myrms
+      - DB_PASSWORD=myrms_dev
+      - DB_PORT=3306
+      - DEV_MODE=true
+      - ROOT_URL=http://localhost:8080
+      - CORS_ALLOWED_ORIGIN=http://localhost:8080
+      - CONFIG_ROOTURL=http://localhost:8080
+      - CONFIG_PROJECT_NAME=MyRMS Dev
+      - CONFIG_TIMEZONE=Europe/Berlin
+      - LOCAL_STORAGE_PATH=/var/www/html/storage
+      - CONFIG_FILES_ENABLED=Enabled
+      - CONFIG_EMAILS_ENABLED=Enabled
+      - CONFIG_EMAILS_PROVIDER=SMTP
+      - CONFIG_EMAILS_FROMEMAIL=myrms@localhost.dev
+      - CONFIG_EMAILS_SMTP_SERVER=mailpit
+      - CONFIG_EMAILS_SMTP_PORT=1025
+      - CONFIG_AUTH_JWTKey=A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0C1D2E3F4A5B6C7D8E9F0A1B2
+      - CONFIG_TELEMETRY_NANOID=dev_local_instance_01
+
+  db:
+    image: mysql:8.0
+    command: --default-authentication-plugin=mysql_native_password --innodb-thread-concurrency=0 --sort_buffer_size=512K --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    environment:
+      - MYSQL_DATABASE=myrms
+      - MYSQL_USER=myrms
+      - MYSQL_PASSWORD=myrms_dev
+      - MYSQL_ROOT_PASSWORD=myrms_root_dev
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pmyrms_root_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  phpmyadmin:
+    image: phpmyadmin:5-apache
+    depends_on:
+      - db
+    ports:
+      - "8082:80"
+    environment:
+      - PMA_HOST=db
+      - PMA_USER=myrms
+      - PMA_PASSWORD=myrms_dev
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8083:8025"
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
+volumes:
+  db_data:
+  file_storage:

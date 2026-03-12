@@ -1,9 +1,14 @@
 <?php
 require_once __DIR__ . '/../../apiHead.php';
 
-$stripe = new \Stripe\StripeClient($CONFIGCLASS->get('STRIPE_KEY'));
+$stripeKey = $CONFIGCLASS->get('STRIPE_KEY');
+if (!$stripeKey || strlen($stripeKey) === 0) {
+    finish(true, null, []);
+}
+
+$stripe = new \Stripe\StripeClient($stripeKey);
 $products = $stripe->products->search([
-  'query' => 'active:\'true\' AND metadata[\'showInDashboard\']:\'true\' AND metadata[\'product\']:\'AdamRMS\'',
+  'query' => 'active:\'true\' AND metadata[\'showInDashboard\']:\'true\' AND metadata[\'product\']:\'MyRMS\'',
   'limit' => 100
 ]);
 $productsReturn = [];

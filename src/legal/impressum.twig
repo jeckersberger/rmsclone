@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <title>Impressum - {{ CONFIG.PROJECT_NAME }}</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.0/css/bootstrap.min.css" integrity="sha512-P5MgMn1jBN01asBgU0z60Qk4QxiXo86+wlFahKrsQf37c9cro517WzVSPPV1tDKzhku2iJ2FVgL67wG03SGnNA==" crossorigin="anonymous"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" integrity="sha512-iBBXm8fW90+nuLcSKlbmrPcLa0OT92xO1BIsZ+ywDWZCvqsWgccV3gFoRBv0z+8dLJgyAHIhR35VZc2oM/gI1w==" crossorigin="anonymous"/>
+    <style>
+        body { background-color: #f4f6f9; padding: 20px; }
+        .legal-container { max-width: 800px; margin: 0 auto; }
+        .card { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="legal-container">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-gavel"></i> Impressum</h3>
+            </div>
+            <div class="card-body">
+                <h4>Angaben gemaess &sect;5 TMG</h4>
+
+                <p>
+                    <strong>{{ CONFIG.PROJECT_NAME }}</strong><br>
+                    {% if INSTANCE is defined and INSTANCE.instances_name is defined %}
+                        {{ INSTANCE.instances_name }}<br>
+                    {% endif %}
+                </p>
+
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Hinweis:</strong> Bitte ergaenzen Sie hier Ihre vollstaendigen Angaben gemaess &sect;5 TMG:
+                    <ul class="mt-2 mb-0">
+                        <li>Name und Anschrift des Unternehmens</li>
+                        <li>Vertretungsberechtigte Person(en)</li>
+                        <li>Kontaktdaten (Telefon, E-Mail)</li>
+                        <li>Umsatzsteuer-Identifikationsnummer (falls vorhanden)</li>
+                        <li>Handelsregistereintrag (falls vorhanden)</li>
+                        <li>Zustaendige Aufsichtsbehoerde (falls zutreffend)</li>
+                    </ul>
+                </div>
+
+                <h5>Kontakt</h5>
+                <p>
+                    E-Mail: [E-Mail-Adresse eintragen]<br>
+                    Telefon: [Telefonnummer eintragen]
+                </p>
+
+                <h5>Verantwortlich fuer den Inhalt nach &sect;55 Abs. 2 RStV</h5>
+                <p>[Name und Anschrift eintragen]</p>
+
+                <hr>
+
+                <h5>Haftungsausschluss</h5>
+
+                <h6>Haftung fuer Inhalte</h6>
+                <p>Als Diensteanbieter sind wir gemaess &sect;7 Abs.1 TMG fuer eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich. Nach &sect;&sect;8 bis 10 TMG sind wir als Diensteanbieter jedoch nicht verpflichtet, uebermittelte oder gespeicherte fremde Informationen zu ueberwachen oder nach Umstaenden zu forschen, die auf eine rechtswidrige Taetigkeit hinweisen.</p>
+
+                <h6>Haftung fuer Links</h6>
+                <p>Unser Angebot enthaelt Links zu externen Websites Dritter, auf deren Inhalte wir keinen Einfluss haben. Deshalb koennen wir fuer diese fremden Inhalte auch keine Gewaehr uebernehmen. Fuer die Inhalte der verlinkten Seiten ist stets der jeweilige Anbieter oder Betreiber der Seiten verantwortlich.</p>
+
+                <h6>Urheberrecht</h6>
+                <p>Die durch die Seitenbetreiber erstellten Inhalte und Werke auf diesen Seiten unterliegen dem deutschen Urheberrecht. Die Vervielfaeltigung, Bearbeitung, Verbreitung und jede Art der Verwertung ausserhalb der Grenzen des Urheberrechtes beduerfen der schriftlichen Zustimmung des jeweiligen Autors bzw. Erstellers.</p>
+            </div>
+            <div class="card-footer text-center">
+                <a href="{{ CONFIG.ROOTURL }}/login/" class="btn btn-default"><i class="fas fa-arrow-left"></i> Zurueck zur Anmeldung</a>
+                <a href="{{ CONFIG.ROOTURL }}/legal/datenschutz.php" class="btn btn-default"><i class="fas fa-shield-alt"></i> Datenschutzerklaerung</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

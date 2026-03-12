@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<style>
+  /* ── Reset & Base ── */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 9pt; color: #333; line-height: 1.4; }
+
+  /* ── Page Layout ── */
+  .page { width: 100%; padding: 15mm 20mm 25mm 20mm; }
+
+  /* ── Header ── */
+  .header { display: table; width: 100%; margin-bottom: 8mm; }
+  .header-left { display: table-cell; width: 60%; vertical-align: top; }
+  .header-right { display: table-cell; width: 40%; vertical-align: top; text-align: right; }
+  .company-name { font-size: 16pt; font-weight: bold; color: #2c3e50; margin-bottom: 2mm; }
+  .company-address { font-size: 8pt; color: #666; line-height: 1.5; }
+
+  /* ── Absender-Zeile ── */
+  .sender-line { font-size: 7pt; color: #888; border-bottom: 0.5pt solid #ccc; padding-bottom: 1mm; margin-bottom: 3mm; display: inline-block; }
+
+  /* ── Empfaenger ── */
+  .recipient { margin-bottom: 10mm; min-height: 30mm; }
+  .recipient-name { font-weight: bold; }
+
+  /* ── Dokumenttitel ── */
+  .doc-title { font-size: 14pt; font-weight: bold; color: #2c3e50; margin-bottom: 6mm; }
+
+  /* ── Mahnstufe-Banner ── */
+  .dunning-banner { padding: 3mm 5mm; margin-bottom: 6mm; border-radius: 1mm; }
+  .dunning-banner.level-0 { background: #fef9e7; border: 0.5pt solid #f9e79f; color: #7d6608; }
+  .dunning-banner.level-1 { background: #fef5e7; border: 0.5pt solid #f5cba7; color: #935116; }
+  .dunning-banner.level-2 { background: #fdedec; border: 0.5pt solid #f5b7b1; color: #922b21; }
+  .dunning-banner.level-3 { background: #f9ebea; border: 0.5pt solid #e6b0aa; color: #78281f; }
+  .dunning-banner strong { font-size: 10pt; }
+
+  /* ── Meta-Block ── */
+  .meta-table { width: 100%; margin-bottom: 6mm; border-collapse: collapse; }
+  .meta-table td { padding: 1.5mm 3mm; font-size: 8.5pt; vertical-align: top; }
+  .meta-table .label { color: #666; width: 40%; }
+  .meta-table .value { font-weight: bold; }
+  .meta-row { display: table; width: 100%; margin-bottom: 6mm; }
+  .meta-left { display: table-cell; width: 50%; vertical-align: top; }
+  .meta-right { display: table-cell; width: 50%; vertical-align: top; }
+
+  /* ── Brieftext ── */
+  .letter-body { margin-bottom: 6mm; font-size: 9.5pt; line-height: 1.6; }
+  .letter-body p { margin-bottom: 3mm; }
+
+  /* ── Forderungsaufstellung ── */
+  .claim-table { width: 70%; border-collapse: collapse; margin-bottom: 6mm; margin-top: 4mm; }
+  .claim-table td { padding: 2mm 3mm; font-size: 9pt; border-bottom: 0.3pt solid #e0e0e0; }
+  .claim-table .label { color: #555; width: 55%; }
+  .claim-table .value { text-align: right; font-weight: bold; width: 45%; }
+  .claim-table .grand-total td { border-top: 1.5pt solid #2c3e50; font-size: 11pt; padding-top: 2.5mm; color: #2c3e50; font-weight: bold; }
+  .claim-table .fee td { color: #c0392b; }
+
+  /* ── Zahlungsinformationen ── */
+  .payment-info { margin-bottom: 6mm; }
+  .payment-info h4 { font-size: 9pt; color: #2c3e50; margin-bottom: 2mm; }
+  .payment-info table { border-collapse: collapse; }
+  .payment-info td { padding: 1mm 3mm; font-size: 8.5pt; }
+  .payment-info .label { color: #666; }
+
+  /* ── Frist-Hinweis ── */
+  .deadline-box { background: #eaf2f8; border: 0.5pt solid #aed6f1; padding: 3mm 5mm; margin-bottom: 6mm; border-radius: 1mm; }
+  .deadline-box strong { color: #1a5276; }
+
+  /* ── Urgency ── */
+  .urgency-box { background: #fdedec; border: 1pt solid #e74c3c; padding: 3mm 5mm; margin-bottom: 6mm; border-radius: 1mm; font-weight: bold; color: #922b21; font-size: 8.5pt; }
+
+  /* ── Fusszeile ── */
+  .footer-block { border-top: 1pt solid #2c3e50; padding-top: 4mm; margin-top: 8mm; }
+  .footer-columns { display: table; width: 100%; }
+  .footer-col { display: table-cell; width: 33.33%; vertical-align: top; font-size: 7pt; color: #666; line-height: 1.6; padding-right: 5mm; }
+  .footer-col:last-child { padding-right: 0; }
+  .footer-col strong { color: #333; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  {# ══════ KOPFBEREICH ══════ #}
+  <div class="header">
+    <div class="header-left">
+      {% if logo %}
+        <img src="{{ logo }}" alt="{{ business.instances_name }}" style="max-width: 180px; max-height: 60px; margin-bottom: 3mm;">
+      {% else %}
+        <div class="company-name">{{ business.instances_name }}</div>
+      {% endif %}
+      <div class="company-address">
+        {{ business.instances_address|nl2br }}
+        {% if business.instances_phone %}<br>Tel: {{ business.instances_phone }}{% endif %}
+        {% if business.instances_email %}<br>{{ business.instances_email }}{% endif %}
+        {% if business.instances_website %}<br>{{ business.instances_website }}{% endif %}
+      </div>
+    </div>
+    <div class="header-right">
+      <div style="font-size: 20pt; font-weight: bold; color: #c0392b;">{{ level_texts.title }}</div>
+    </div>
+  </div>
+
+  {# ══════ ABSENDERZEILE + EMPFAENGER ══════ #}
+  <div class="sender-line">
+    {{ business.instances_name }} &middot; {{ business.instances_address|replace({"\n": ", ", "\r": ""}) }}
+  </div>
+  <div class="recipient">
+    {% if client.clients_name %}<div class="recipient-name">{{ client.clients_name }}</div>{% endif %}
+    {% if client.clients_address %}{{ client.clients_address|nl2br }}{% endif %}
+    {% if client.clients_customerNumber %}<br>Kunden-Nr.: {{ client.clients_customerNumber }}{% endif %}
+  </div>
+
+  {# ══════ MAHNSTUFE-BANNER ══════ #}
+  <div class="dunning-banner level-{{ dunning.level }}">
+    <strong>{{ level_texts.title }}</strong>
+    &ndash; Mahnstufe {{ dunning.level }} von 3
+  </div>
+
+  {# ══════ METADATEN ══════ #}
+  <div class="meta-row">
+    <div class="meta-left">
+      <table class="meta-table">
+        <tr><td class="label">Datum:</td><td class="value">{{ dunning.date }}</td></tr>
+        <tr><td class="label">Unsere Rechnungsnr.:</td><td class="value">{{ invoice.doc_number }}</td></tr>
+        <tr><td class="label">Rechnungsdatum:</td><td class="value">{{ invoice.doc_date }}</td></tr>
+        <tr><td class="label">Faellig seit:</td><td class="value">{{ invoice.due_date }}</td></tr>
+      </table>
+    </div>
+    <div class="meta-right">
+      <table class="meta-table">
+        {% if business.instances_taxNumber %}<tr><td class="label">Steuernummer:</td><td class="value">{{ business.instances_taxNumber }}</td></tr>{% endif %}
+        {% if business.instances_vatId %}<tr><td class="label">USt-IdNr.:</td><td class="value">{{ business.instances_vatId }}</td></tr>{% endif %}
+        <tr><td class="label">Tage ueberfaellig:</td><td class="value" style="color: #c0392b;">{{ dunning.days_overdue }} Tage</td></tr>
+      </table>
+    </div>
+  </div>
+
+  {# ══════ BRIEFTEXT ══════ #}
+  <div class="letter-body">
+    <p>{{ level_texts.greeting }}</p>
+    <p>{{ level_texts.intro }}</p>
+    <p>{{ level_texts.body }}</p>
+  </div>
+
+  {# ══════ FORDERUNGSAUFSTELLUNG ══════ #}
+  <table class="claim-table">
+    <tr>
+      <td class="label">Rechnungsbetrag (Rg. {{ invoice.doc_number }}):</td>
+      <td class="value">{{ invoice.gross_amount|numberDe }} &euro;</td>
+    </tr>
+    {% if dunning.fee_amount > 0 %}
+    <tr class="fee">
+      <td class="label">Mahngebuehr (Stufe {{ dunning.level }}):</td>
+      <td class="value">{{ dunning.fee_amount|numberDe }} &euro;</td>
+    </tr>
+    {% endif %}
+    {% if dunning.interest_amount > 0 %}
+    <tr class="fee">
+      <td class="label">Verzugszinsen ({{ dunning.interest_rate|numberDe(1) }} % p.a., {{ dunning.days_overdue }} Tage):</td>
+      <td class="value">{{ dunning.interest_amount|numberDe }} &euro;</td>
+    </tr>
+    {% endif %}
+    <tr class="grand-total">
+      <td class="label">Gesamtbetrag:</td>
+      <td class="value">{{ dunning.total_due|numberDe }} &euro;</td>
+    </tr>
+  </table>
+
+  {# ══════ ZAHLUNGSFRIST ══════ #}
+  <div class="deadline-box">
+    <strong>Zahlungsfrist:</strong> Bitte ueberweisen Sie den Gesamtbetrag von <strong>{{ dunning.total_due|numberDe }} &euro;</strong>
+    bis spaetestens <strong>{{ payment_deadline }}</strong> auf das unten genannte Konto.
+  </div>
+
+  {# ══════ DRINGLICHKEITSHINWEIS (nur Stufe 2+3) ══════ #}
+  {% if dunning.level >= 2 and level_texts.tone is defined %}
+  <div class="urgency-box">
+    {% if dunning.level == 2 %}
+      Hinweis: Bei weiterem Zahlungsverzug werden wir Verzugszinsen berechnen und gegebenenfalls rechtliche Schritte einleiten.
+    {% elseif dunning.level == 3 %}
+      LETZTE MAHNUNG: Sollte der Betrag nicht fristgerecht eingehen, leiten wir ohne weitere Ankuendigung das gerichtliche Mahnverfahren ein!
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# ══════ ZAHLUNGSINFORMATIONEN ══════ #}
+  {% if business.instances_bankIban or business.instances_bankName %}
+  <div class="payment-info">
+    <h4>Bankverbindung</h4>
+    <table>
+      {% if business.instances_bankName %}<tr><td class="label">Bank:</td><td>{{ business.instances_bankName }}</td></tr>{% endif %}
+      {% if business.instances_bankIban %}<tr><td class="label">IBAN:</td><td><strong>{{ business.instances_bankIban }}</strong></td></tr>{% endif %}
+      {% if business.instances_bankBic %}<tr><td class="label">BIC:</td><td>{{ business.instances_bankBic }}</td></tr>{% endif %}
+      <tr><td class="label">Kontoinhaber:</td><td>{{ business.instances_name }}</td></tr>
+      <tr><td class="label">Verwendungszweck:</td><td><strong>{{ invoice.doc_number }}</strong></td></tr>
+    </table>
+  </div>
+  {% endif %}
+
+  {# ══════ SCHLUSSTEXT ══════ #}
+  <div class="letter-body">
+    <p>{{ level_texts.closing }}</p>
+    <p style="margin-top: 6mm;">Mit freundlichen Gruessen</p>
+    <p style="margin-top: 8mm;">{{ business.instances_name }}
+    {% if business.instances_ceoName %}<br>{{ business.instances_ceoName }}{% endif %}
+    </p>
+  </div>
+
+  {# ══════ FUSSZEILE ══════ #}
+  <div class="footer-block">
+    <div class="footer-columns">
+      <div class="footer-col">
+        <strong>{{ business.instances_name }}</strong><br>
+        {{ business.instances_address|nl2br }}
+        {% if business.instances_phone %}<br>Tel: {{ business.instances_phone }}{% endif %}
+        {% if business.instances_email %}<br>{{ business.instances_email }}{% endif %}
+      </div>
+      <div class="footer-col">
+        {% if business.instances_ceoName %}<strong>Inhaber:</strong> {{ business.instances_ceoName }}<br>{% endif %}
+        {% if business.instances_taxNumber %}<strong>Steuernr.:</strong> {{ business.instances_taxNumber }}<br>{% endif %}
+        {% if business.instances_vatId %}<strong>USt-IdNr.:</strong> {{ business.instances_vatId }}<br>{% endif %}
+        {% if business.instances_companyRegNumber %}<strong>Handelsregister:</strong> {{ business.instances_companyRegNumber }}<br>{% endif %}
+        {% if business.instances_courtOfJurisdiction %}<strong>Gerichtsstand:</strong> {{ business.instances_courtOfJurisdiction }}{% endif %}
+      </div>
+      <div class="footer-col">
+        {% if business.instances_bankName %}<strong>{{ business.instances_bankName }}</strong><br>{% endif %}
+        {% if business.instances_bankIban %}<strong>IBAN:</strong> {{ business.instances_bankIban }}<br>{% endif %}
+        {% if business.instances_bankBic %}<strong>BIC:</strong> {{ business.instances_bankBic }}{% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

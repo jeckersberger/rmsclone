@@ -53,14 +53,20 @@ if ($user) {
 	//Log them in successfully - duplicated below for signup
 
 	$GLOBALS['AUTH']->generateToken($user['users_userid'], false, "Web - Microsoft", "web-session");
-	header("Location: " . (isset($_SESSION['return']) ? $_SESSION['return'] : $CONFIG['ROOTURL']));
+	$redirect = $CONFIG['ROOTURL'];
+	if (isset($_SESSION['return']) && $_SESSION['return']) {
+		$p = parse_url($_SESSION['return']);
+		$r = parse_url($CONFIG['ROOTURL']);
+		if ($p && $r && isset($p['host']) && $p['host'] === $r['host']) $redirect = $_SESSION['return'];
+	}
+	header("Location: " . $redirect);
 	exit;
 } else {
 	//See if an email is found, but not linked to microsoft. We don't want to auto-link them because its a good attack vector, so instead prompt a password login and then link in account settings.
 	$DBLIB->where("users_email", strtolower($userProfile->email));
 	$user = $DBLIB->getOne("users", ["users.users_suspended", "users.users_userid", "users.users_hash"]);
 	if ($user) {
-		$PAGEDATA['ERROR'] = "An AdamRMS account associated with the email address you selected has been found. Please login again using your AdamRMS username & password to link your account to a Microsoft Account in AdamRMS account settings";
+		$PAGEDATA['ERROR'] = "An account associated with the email address you selected has been found. Please login again using your username & password to link your account to a Microsoft Account in account settings";
 		echo $TWIG->render('login/error.twig', $PAGEDATA);
 		exit;
 	}
@@ -100,6 +106,12 @@ if (!$_SESSION['return'] and isset($_SESSION['app-oauth'])) {
 	exit;
 } else {
 	$GLOBALS['AUTH']->generateToken($newUser, false, "Web - Microsoft", "web-session");
-	header("Location: " . (isset($_SESSION['return']) ? $_SESSION['return'] : $CONFIG['ROOTURL']));
+	$redirect = $CONFIG['ROOTURL'];
+	if (isset($_SESSION['return']) && $_SESSION['return']) {
+		$p = parse_url($_SESSION['return']);
+		$r = parse_url($CONFIG['ROOTURL']);
+		if ($p && $r && isset($p['host']) && $p['host'] === $r['host']) $redirect = $_SESSION['return'];
+	}
+	header("Location: " . $redirect);
 	exit;
 }

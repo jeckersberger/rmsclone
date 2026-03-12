@@ -1,0 +1,188 @@
+{% set THISWIDGETNAME = 'aiQueue' %}
+
+<div class="card statsWidget" data-widgetname="{{ THISWIDGETNAME }}">
+    <div class="card-header bg-gradient-info">
+        <h3 class="card-title"><i class="fas fa-robot"></i> KI-Aktionen</h3>
+        <div class="card-tools">
+            {% if WIDGETS.checkUser(THISWIDGETNAME) %}
+                <button type="button" class="btn btn-tool removeWidgetButton" data-widgetname="{{ THISWIDGETNAME }}" title="Vom Dashboard entfernen">
+                    <i class="fas fa-times"></i>
+                </button>
+            {% else %}
+                <button type="button" class="btn btn-tool addWidgetButton" data-widgetname="{{ THISWIDGETNAME }}" title="Zum Dashboard hinzufuegen">
+                    <i class="fas fa-plus"></i>
+                </button>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="p-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span><i class="fas fa-clock text-warning"></i> Wartend auf Bestaetigung</span>
+                <span class="badge badge-warning" id="aiQueuePending">-</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span><i class="fas fa-check text-success"></i> Heute automatisch</span>
+                <span class="badge badge-success" id="aiQueueAutoToday">-</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-tasks text-info"></i> Heute gesamt</span>
+                <span class="badge badge-info" id="aiQueueTotalToday">-</span>
+            </div>
+        </div>
+        <div id="aiQueuePendingList" class="border-top" style="max-height: 300px; overflow-y: auto;"></div>
+    </div>
+    <div class="card-footer text-center p-2">
+        <a href="#" onclick="$('#aiQueueModal').modal('show'); return false;" class="text-info">Alle KI-Aktionen anzeigen &raquo;</a>
+    </div>
+</div>
+
+{# AI Queue Full Modal #}
+<div class="modal fade" id="aiQueueModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="fas fa-robot"></i> KI-Aktionen</h5>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body p-0">
+                <ul class="nav nav-tabs" role="tablist">
+                    <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#aiTabPending">Wartend</a></li>
+                    <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#aiTabActivity">Aktivitaet</a></li>
+                </ul>
+                <div class="tab-content">
+                    <div class="tab-pane fade show active p-3" id="aiTabPending">
+                        <div id="aiQueuePendingFull"></div>
+                    </div>
+                    <div class="tab-pane fade p-3" id="aiTabActivity">
+                        <div id="aiQueueActivityFull"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    loadAiQueueWidget();
+});
+
+function loadAiQueueWidget() {
+    $.post('{{ CONFIG.ROOTURL }}/api/ai/queue.php', { action: 'stats' }, function(resp) {
+        if (!resp.result || !resp.response) return;
+        var s = resp.response;
+        $('#aiQueuePending').text(s.pending || 0);
+        $('#aiQueueAutoToday').text(s.today_auto || 0);
+        $('#aiQueueTotalToday').text(s.today_total || 0);
+
+        // Badge im Pending-Count hervorheben
+        if (s.pending > 0) {
+            $('#aiQueuePending').removeClass('badge-warning').addClass('badge-danger');
+        }
+    });
+
+    // Pending items
+    $.post('{{ CONFIG.ROOTURL }}/api/ai/queue.php', { action: 'pending', limit: 5 }, function(resp) {
+        if (!resp.result || !resp.response) return;
+        var items = resp.response.items || [];
+        var html = '';
+        if (items.length === 0) {
+            html = '<div class="p-3 text-muted text-center"><small>Keine wartenden Aktionen</small></div>';
+        }
+        items.forEach(function(item) {
+            var typeIcon = getActionIcon(item.action_type);
+            html += '<div class="d-flex align-items-center p-2 border-bottom">';
+            html += '<span class="mr-2">' + typeIcon + '</span>';
+            html += '<div class="flex-grow-1" style="min-width:0;">';
+            html += '<div style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;">' + (item.title || '') + '</div>';
+            html += '<small class="text-muted">' + (item.description || '').substring(0, 80) + '</small>';
+            html += '</div>';
+            html += '<div class="ml-2 text-nowrap">';
+            html += '<button class="btn btn-xs btn-success" onclick="approveAiAction(' + item.id + ')" title="Genehmigen"><i class="fas fa-check"></i></button> ';
+            html += '<button class="btn btn-xs btn-danger" onclick="rejectAiAction(' + item.id + ')" title="Ablehnen"><i class="fas fa-times"></i></button>';
+            html += '</div>';
+            html += '</div>';
+        });
+        $('#aiQueuePendingList').html(html);
+    });
+}
+
+function getActionIcon(type) {
+    var icons = {
+        'send_email': '<i class="fas fa-envelope text-primary"></i>',
+        'send_reminder': '<i class="fas fa-bell text-warning"></i>',
+        'send_dunning': '<i class="fas fa-exclamation-triangle text-danger"></i>',
+        'send_quote': '<i class="fas fa-file-alt text-info"></i>',
+        'send_invoice': '<i class="fas fa-file-invoice text-success"></i>',
+        'categorize_email': '<i class="fas fa-tag text-info"></i>',
+        'flag_maintenance': '<i class="fas fa-wrench text-warning"></i>',
+        'assign_email_project': '<i class="fas fa-project-diagram text-primary"></i>',
+    };
+    return icons[type] || '<i class="fas fa-robot text-secondary"></i>';
+}
+
+function approveAiAction(id) {
+    bootbox.confirm('Aktion genehmigen und ausfuehren?', function(result) {
+        if (!result) return;
+        $.post('{{ CONFIG.ROOTURL }}/api/ai/queue.php', { action: 'approve', id: id }, function(resp) {
+            if (resp.result) {
+                bootbox.alert('<i class="fas fa-check text-success"></i> Aktion ausgefuehrt.');
+                loadAiQueueWidget();
+            } else {
+                bootbox.alert('Fehler: ' + (resp.error ? resp.error.message : 'Unbekannt'));
+            }
+        });
+    });
+}
+
+function rejectAiAction(id) {
+    bootbox.prompt('Grund fuer Ablehnung (optional):', function(reason) {
+        if (reason === null) return;
+        $.post('{{ CONFIG.ROOTURL }}/api/ai/queue.php', { action: 'reject', id: id, reason: reason }, function(resp) {
+            if (resp.result) loadAiQueueWidget();
+        });
+    });
+}
+
+// Modal full load
+$('#aiQueueModal').on('show.bs.modal', function() {
+    $.post('{{ CONFIG.ROOTURL }}/api/ai/queue.php', { action: 'pending', limit: 50 }, function(resp) {
+        if (!resp.result) return;
+        var items = resp.response.items || [];
+        var html = '';
+        if (items.length === 0) html = '<p class="text-muted text-center">Keine wartenden Aktionen.</p>';
+        items.forEach(function(item) {
+            var payload = item.payload || {};
+            html += '<div class="card card-outline card-warning mb-2">';
+            html += '<div class="card-header p-2"><h5 class="card-title" style="font-size:14px;">' + getActionIcon(item.action_type) + ' ' + (item.title || '') + '</h5>';
+            html += '<div class="card-tools">';
+            html += '<button class="btn btn-xs btn-success" onclick="approveAiAction(' + item.id + ')"><i class="fas fa-check"></i> Genehmigen</button> ';
+            html += '<button class="btn btn-xs btn-danger" onclick="rejectAiAction(' + item.id + ')"><i class="fas fa-times"></i> Ablehnen</button>';
+            html += '</div></div>';
+            html += '<div class="card-body p-2"><small class="text-muted">' + (item.description || '') + '</small>';
+            if (payload.body) html += '<div class="mt-2 p-2 bg-light" style="max-height:150px;overflow:auto;font-size:12px;">' + payload.body + '</div>';
+            html += '</div></div>';
+        });
+        $('#aiQueuePendingFull').html(html);
+    });
+
+    $.post('{{ CONFIG.ROOTURL }}/api/ai/queue.php', { action: 'activity', limit: 30 }, function(resp) {
+        if (!resp.result) return;
+        var items = resp.response.items || [];
+        var html = '<table class="table table-sm table-striped"><thead><tr><th>Aktion</th><th>Typ</th><th>Status</th><th>Datum</th></tr></thead><tbody>';
+        items.forEach(function(item) {
+            var statusBadge = {'pending':'warning','approved':'info','executed':'success','auto_executed':'secondary','rejected':'danger','error':'dark'};
+            var statusLabel = {'pending':'Wartend','approved':'Genehmigt','executed':'Ausgefuehrt','auto_executed':'Automatisch','rejected':'Abgelehnt','error':'Fehler'};
+            html += '<tr>';
+            html += '<td style="font-size:13px;">' + (item.title || '') + '</td>';
+            html += '<td>' + getActionIcon(item.action_type) + '</td>';
+            html += '<td><span class="badge badge-' + (statusBadge[item.status] || 'secondary') + '">' + (statusLabel[item.status] || item.status) + '</span></td>';
+            html += '<td><small>' + (item.created_at || '') + '</small></td>';
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+        $('#aiQueueActivityFull').html(html);
+    });
+});
+</script>

@@ -1,0 +1,133 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+<div class="row">
+    <div class="col-lg-10 offset-lg-1">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-cloud-download-alt"></i> Cloud-Buchhaltung Export</h3>
+            </div>
+            <div class="card-body">
+                <p>Exportieren Sie Ihre Rechnungen und Kundendaten fuer den Import in lexoffice oder sevDesk.</p>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Zeitraum von</label>
+                            <input type="date" class="form-control" id="exportFrom" value="{{ "now"|date("Y") }}-01-01">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Zeitraum bis</label>
+                            <input type="date" class="form-control" id="exportTo" value="{{ "now"|date("Y-m-d") }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# lexoffice #}
+        <div class="card card-outline card-primary">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-file-code"></i> lexoffice</h3>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Export im JSON-Format, kompatibel mit der lexoffice Public API.</p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <i class="fas fa-file-invoice fa-3x text-primary mb-3"></i>
+                                <h5>Rechnungen</h5>
+                                <p class="text-muted small">Alle Rechnungen und Gutschriften im gewaehlten Zeitraum</p>
+                                <button class="btn btn-primary btn-block cloudExportBtn" data-provider="lexoffice" data-type="invoices">
+                                    <i class="fas fa-download"></i> JSON herunterladen
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <i class="fas fa-address-book fa-3x text-info mb-3"></i>
+                                <h5>Kontakte</h5>
+                                <p class="text-muted small">Alle Kundenstammdaten als lexoffice-Kontakte</p>
+                                <button class="btn btn-info btn-block cloudExportBtn" data-provider="lexoffice" data-type="contacts">
+                                    <i class="fas fa-download"></i> JSON herunterladen
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# sevDesk #}
+        <div class="card card-outline card-success">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-file-csv"></i> sevDesk</h3>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Export im CSV-Format, kompatibel mit dem sevDesk-Import.</p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <i class="fas fa-file-invoice-dollar fa-3x text-success mb-3"></i>
+                                <h5>Rechnungen</h5>
+                                <p class="text-muted small">Alle Rechnungen und Gutschriften im gewaehlten Zeitraum</p>
+                                <button class="btn btn-success btn-block cloudExportBtn" data-provider="sevdesk" data-type="invoices">
+                                    <i class="fas fa-download"></i> CSV herunterladen
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <i class="fas fa-users fa-3x text-warning mb-3"></i>
+                                <h5>Kontakte</h5>
+                                <p class="text-muted small">Alle Kundenstammdaten fuer sevDesk-Import</p>
+                                <button class="btn btn-warning btn-block cloudExportBtn" data-provider="sevdesk" data-type="contacts">
+                                    <i class="fas fa-download"></i> CSV herunterladen
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Hinweise #}
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-info-circle"></i> Hinweise</h3>
+            </div>
+            <div class="card-body">
+                <ul>
+                    <li><strong>lexoffice:</strong> Die JSON-Datei kann ueber die lexoffice API (POST /v1/invoices) importiert werden oder manuell in lexoffice eingepflegt werden.</li>
+                    <li><strong>sevDesk:</strong> Die CSV-Datei kann direkt ueber den sevDesk-Import (Einstellungen &rarr; Import) hochgeladen werden.</li>
+                    <li>Kontakte-Exporte sind zeitraumunabhaengig und enthalten alle aktiven Kunden.</li>
+                    <li>Bereits in der Buchhaltungssoftware vorhandene Eintraege werden beim Import in der Regel erkannt und uebersprungen.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.cloudExportBtn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var provider = this.dataset.provider;
+            var type = this.dataset.type;
+            var from = document.getElementById('exportFrom').value;
+            var to = document.getElementById('exportTo').value;
+
+            var url = '/api/cloudAccounting/export.php?provider=' + provider + '&type=' + type + '&from=' + from + '&to=' + to;
+            window.location.href = url;
+        });
+    });
+});
+</script>
+{% endblock %}

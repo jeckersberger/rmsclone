@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 9pt; color: #333; line-height: 1.4; }
+  .page { width: 100%; padding: 15mm 20mm 25mm 20mm; }
+
+  .header { display: table; width: 100%; margin-bottom: 8mm; }
+  .header-left { display: table-cell; width: 60%; vertical-align: top; }
+  .header-right { display: table-cell; width: 40%; vertical-align: top; text-align: right; }
+  .company-name { font-size: 16pt; font-weight: bold; color: #2c3e50; margin-bottom: 2mm; }
+  .company-address { font-size: 8pt; color: #666; line-height: 1.5; }
+
+  .sender-line { font-size: 7pt; color: #888; border-bottom: 0.5pt solid #ccc; padding-bottom: 1mm; margin-bottom: 3mm; display: inline-block; }
+  .recipient { margin-bottom: 10mm; min-height: 30mm; }
+  .recipient-name { font-weight: bold; }
+
+  .doc-title { font-size: 14pt; font-weight: bold; color: #2c3e50; margin-bottom: 6mm; }
+
+  .meta-table { width: 100%; margin-bottom: 6mm; border-collapse: collapse; }
+  .meta-table td { padding: 1.5mm 3mm; font-size: 8.5pt; vertical-align: top; }
+  .meta-table .label { color: #666; width: 35%; }
+  .meta-table .value { font-weight: bold; }
+  .meta-left { display: table-cell; width: 50%; vertical-align: top; }
+  .meta-right { display: table-cell; width: 50%; vertical-align: top; }
+  .meta-row { display: table; width: 100%; margin-bottom: 6mm; }
+
+  .project-header { background: #2c3e50; color: white; padding: 2.5mm 4mm; font-size: 9pt; font-weight: bold; margin-top: 4mm; margin-bottom: 0; }
+  .project-meta { background: #ecf0f1; padding: 2mm 4mm; font-size: 8pt; color: #555; margin-bottom: 2mm; }
+
+  .items-table { width: 100%; border-collapse: collapse; margin-bottom: 2mm; }
+  .items-table th { background: #34495e; color: white; padding: 2mm 3mm; font-size: 8pt; text-align: left; font-weight: 600; }
+  .items-table th.right, .items-table td.right { text-align: right; }
+  .items-table td { padding: 2mm 3mm; font-size: 8.5pt; border-bottom: 0.3pt solid #e0e0e0; vertical-align: top; }
+  .items-table tr:nth-child(even) td { background: #f9f9f9; }
+  .items-table .note { font-size: 7.5pt; color: #888; font-style: italic; }
+
+  .project-subtotal td { background: #ebedef; font-weight: bold; font-size: 8.5pt; padding: 1.5mm 3mm; border-bottom: 0.5pt solid #bdc3c7; color: #2c3e50; }
+
+  .totals-table { width: 45%; margin-left: auto; border-collapse: collapse; margin-bottom: 6mm; margin-top: 4mm; }
+  .totals-table td { padding: 1.5mm 3mm; font-size: 9pt; }
+  .totals-table .label { text-align: right; color: #666; width: 60%; }
+  .totals-table .value { text-align: right; font-weight: bold; width: 40%; }
+  .totals-table .grand-total td { border-top: 1.5pt solid #2c3e50; font-size: 11pt; padding-top: 2.5mm; color: #2c3e50; }
+  .totals-table .discount td { color: #c0392b; }
+  .totals-table .kur-row td { font-size: 7.5pt; font-weight: normal; color: #888; font-style: italic; }
+
+  .kur-notice { background: #fef9e7; border: 0.5pt solid #f9e79f; padding: 3mm; font-size: 8pt; margin-bottom: 4mm; border-radius: 1mm; }
+  .reverse-charge-notice { background: #eaf2f8; border: 0.5pt solid #aed6f1; padding: 3mm; font-size: 8pt; margin-bottom: 4mm; border-radius: 1mm; }
+
+  .payment-info { margin-bottom: 6mm; }
+  .payment-info h4 { font-size: 9pt; color: #2c3e50; margin-bottom: 2mm; }
+  .payment-info table { border-collapse: collapse; }
+  .payment-info td { padding: 1mm 3mm; font-size: 8.5pt; }
+  .payment-info .label { color: #666; }
+
+  .footer-block { border-top: 1pt solid #2c3e50; padding-top: 4mm; margin-top: 8mm; }
+  .footer-columns { display: table; width: 100%; }
+  .footer-col { display: table-cell; width: 33.33%; vertical-align: top; font-size: 7pt; color: #666; line-height: 1.6; padding-right: 5mm; }
+  .footer-col:last-child { padding-right: 0; }
+  .footer-col strong { color: #333; }
+
+  .summary-box { background: #f8f9fa; border: 0.5pt solid #dee2e6; padding: 3mm 4mm; margin-bottom: 4mm; border-radius: 1mm; }
+  .summary-box h4 { font-size: 9pt; color: #2c3e50; margin-bottom: 2mm; }
+  .summary-table { width: 100%; border-collapse: collapse; }
+  .summary-table td { padding: 1mm 3mm; font-size: 8.5pt; }
+  .summary-table .label { color: #666; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  {# ====== KOPFBEREICH ====== #}
+  <div class="header">
+    <div class="header-left">
+      {% if logo %}
+        <img src="{{ logo }}" alt="{{ business.instances_name }}" style="max-width: 180px; max-height: 60px; margin-bottom: 3mm;">
+      {% else %}
+        <div class="company-name">{{ business.instances_name }}</div>
+      {% endif %}
+      <div class="company-address">
+        {{ business.instances_address|nl2br }}
+        {% if business.instances_phone %}<br>Tel: {{ business.instances_phone }}{% endif %}
+        {% if business.instances_email %}<br>{{ business.instances_email }}{% endif %}
+      </div>
+    </div>
+    <div class="header-right">
+      <div style="font-size: 20pt; font-weight: bold; color: #2c3e50;">Sammelrechnung</div>
+    </div>
+  </div>
+
+  {# ====== ABSENDERZEILE + EMPFAENGER ====== #}
+  <div class="sender-line">
+    {{ business.instances_name }} &middot; {{ business.instances_address|replace({"\n": ", ", "\r": ""}) }}
+  </div>
+  <div class="recipient">
+    {% if client.clients_name %}<div class="recipient-name">{{ client.clients_name }}</div>{% endif %}
+    {% if client.clients_address %}{{ client.clients_address|nl2br }}{% endif %}
+    {% if client.clients_vatId %}<br>USt-IdNr.: {{ client.clients_vatId }}{% endif %}
+    {% if client.clients_customerNumber %}<br>Kunden-Nr.: {{ client.clients_customerNumber }}{% endif %}
+  </div>
+
+  {# ====== METADATEN ====== #}
+  <div class="meta-row">
+    <div class="meta-left">
+      <table class="meta-table">
+        <tr><td class="label">Rechnungsnummer:</td><td class="value">{{ doc.number }}</td></tr>
+        <tr><td class="label">Datum:</td><td class="value">{{ doc.date|dateDe }}</td></tr>
+        <tr><td class="label">Zahlungsziel:</td><td class="value">{{ doc.payment_term_days }} Tage ({{ doc.due_date|dateDe }})</td></tr>
+        <tr><td class="label">Projekte:</td><td class="value">{{ project_summaries|length }}</td></tr>
+      </table>
+    </div>
+    <div class="meta-right">
+      <table class="meta-table">
+        {% if business.instances_taxNumber %}<tr><td class="label">Steuernummer:</td><td class="value">{{ business.instances_taxNumber }}</td></tr>{% endif %}
+        {% if business.instances_vatId %}<tr><td class="label">USt-IdNr.:</td><td class="value">{{ business.instances_vatId }}</td></tr>{% endif %}
+      </table>
+    </div>
+  </div>
+
+  {# ====== PROJEKTUEBERSICHT ====== #}
+  <div class="summary-box">
+    <h4>Zusammenfassung der Projekte</h4>
+    <table class="summary-table">
+      {% for ps in project_summaries %}
+      <tr>
+        <td style="width: 5%;">{{ loop.index }}.</td>
+        <td style="width: 45%; font-weight: bold;">{{ ps.project_name }}</td>
+        <td style="width: 30%;">{{ ps.date_start|dateDe }} &ndash; {{ ps.date_end|dateDe }}</td>
+        <td style="width: 20%; text-align: right; font-weight: bold;">{{ ps.subtotal|numberDe }} &euro;</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  {# ====== POSITIONEN PRO PROJEKT ====== #}
+  {% set current_project = '' %}
+  {% set pos = 1 %}
+  {% set project_subtotal = 0 %}
+
+  <table class="items-table">
+    <thead>
+      <tr>
+        <th style="width:6%;">Pos.</th>
+        <th style="width:34%;">Bezeichnung</th>
+        <th class="right" style="width:8%;">Menge</th>
+        <th style="width:8%;">Einheit</th>
+        <th class="right" style="width:14%;">Einzelpreis</th>
+        <th class="right" style="width:8%;">Tage</th>
+        <th class="right" style="width:16%;">Gesamt (netto)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for line in lines %}
+        {# Projekt-Trenner #}
+        {% if line.project_name != current_project %}
+          {% if current_project != '' %}
+            <tr class="project-subtotal">
+              <td></td>
+              <td colspan="5">Zwischensumme {{ current_project }}</td>
+              <td class="right">{{ project_subtotal|numberDe }} &euro;</td>
+            </tr>
+            {% set project_subtotal = 0 %}
+          {% endif %}
+          {% set current_project = line.project_name %}
+          <tr>
+            <td colspan="7" style="background: #2c3e50; color: white; font-weight: bold; padding: 2.5mm 4mm; font-size: 9pt;">
+              {{ current_project }}
+            </td>
+          </tr>
+        {% endif %}
+
+        <tr>
+          <td>{{ pos }}</td>
+          <td>
+            {{ line.name }}
+            {% if line.note %}<div class="note">{{ line.note }}</div>{% endif %}
+          </td>
+          <td class="right">{{ line.qty|numberDe(0) }}</td>
+          <td>{{ line.unit }}</td>
+          <td class="right">{% if line.day_price is not null %}{{ line.day_price|numberDe }} &euro;{% else %}-{% endif %}</td>
+          <td class="right">{% if line.is_daily %}{{ line.days }}{% endif %}</td>
+          <td class="right">{{ line.total|numberDe }} &euro;</td>
+        </tr>
+        {% set pos = pos + 1 %}
+        {% set project_subtotal = project_subtotal + line.total %}
+      {% endfor %}
+
+      {# Letzte Projekt-Zwischensumme #}
+      {% if current_project != '' %}
+        <tr class="project-subtotal">
+          <td></td>
+          <td colspan="5">Zwischensumme {{ current_project }}</td>
+          <td class="right">{{ project_subtotal|numberDe }} &euro;</td>
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
+
+  {# ====== SUMMENBLOCK ====== #}
+  <table class="totals-table">
+    <tr>
+      <td class="label">Zwischensumme (netto):</td>
+      <td class="value">{{ totals.subtotal|numberDe }} &euro;</td>
+    </tr>
+    {% if totals.discount > 0 %}
+    <tr class="discount">
+      <td class="label">Rabatt ({{ totals.discount_pct|numberDe(1) }} %):</td>
+      <td class="value">&minus;{{ totals.discount|numberDe }} &euro;</td>
+    </tr>
+    <tr>
+      <td class="label">Nettobetrag:</td>
+      <td class="value">{{ totals.net|numberDe }} &euro;</td>
+    </tr>
+    {% endif %}
+    {% if totals.kur %}
+    <tr class="kur-row">
+      <td class="label" colspan="2">{{ totals.kur_notice }}</td>
+    </tr>
+    {% elseif totals.reverse_charge %}
+    <tr class="kur-row">
+      <td class="label" colspan="2">{{ totals.reverse_charge_notice }}</td>
+    </tr>
+    {% else %}
+    <tr>
+      <td class="label">MwSt. {{ totals.vat_rate|numberDe(1) }} %:</td>
+      <td class="value">{{ totals.vat|numberDe }} &euro;</td>
+    </tr>
+    {% endif %}
+    <tr class="grand-total">
+      <td class="label">{% if totals.kur %}Gesamtbetrag:{% else %}Bruttobetrag:{% endif %}</td>
+      <td class="value">{{ totals.gross|numberDe }} &euro;</td>
+    </tr>
+  </table>
+
+  {# ====== KUR/RC HINWEIS ====== #}
+  {% if totals.kur %}
+  <div class="kur-notice">
+    <strong>Hinweis:</strong> {{ totals.kur_notice }}
+  </div>
+  {% endif %}
+  {% if totals.reverse_charge %}
+  <div class="reverse-charge-notice">
+    <strong>Hinweis:</strong> {{ totals.reverse_charge_notice }}
+  </div>
+  {% endif %}
+
+  {# ====== ZAHLUNGSINFORMATIONEN ====== #}
+  {% if business.instances_bankIban or business.instances_bankName %}
+  <div class="payment-info">
+    <h4>Zahlungsinformationen</h4>
+    <table>
+      {% if business.instances_bankName %}<tr><td class="label">Bank:</td><td>{{ business.instances_bankName }}</td></tr>{% endif %}
+      {% if business.instances_bankIban %}<tr><td class="label">IBAN:</td><td>{{ business.instances_bankIban }}</td></tr>{% endif %}
+      {% if business.instances_bankBic %}<tr><td class="label">BIC:</td><td>{{ business.instances_bankBic }}</td></tr>{% endif %}
+      <tr><td class="label">Verwendungszweck:</td><td><strong>{{ doc.number }}</strong></td></tr>
+    </table>
+    {% if doc.skonto_rate > 0 and doc.skonto_days > 0 %}
+    <p style="margin-top: 3mm; font-size: 8.5pt; color: #2c3e50;">
+      <strong>Skonto:</strong> Bei Zahlung innerhalb von {{ doc.skonto_days }} Tagen (bis {{ doc.skonto_date }})
+      gewaehren wir {{ doc.skonto_rate|numberDe }}% Skonto.
+      Rechnungsbetrag nach Skontoabzug: <strong>{{ totals.skonto_gross|numberDe }} &euro;</strong>
+    </p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# ====== FUSSZEILE ====== #}
+  <div class="footer-block">
+    <div class="footer-columns">
+      <div class="footer-col">
+        <strong>{{ business.instances_name }}</strong><br>
+        {{ business.instances_address|nl2br }}
+        {% if business.instances_phone %}<br>Tel: {{ business.instances_phone }}{% endif %}
+        {% if business.instances_email %}<br>{{ business.instances_email }}{% endif %}
+      </div>
+      <div class="footer-col">
+        {% if business.instances_ceoName %}<strong>Inhaber:</strong> {{ business.instances_ceoName }}<br>{% endif %}
+        {% if business.instances_taxNumber %}<strong>Steuernr.:</strong> {{ business.instances_taxNumber }}<br>{% endif %}
+        {% if business.instances_vatId %}<strong>USt-IdNr.:</strong> {{ business.instances_vatId }}<br>{% endif %}
+        {% if business.instances_companyRegNumber %}<strong>Handelsregister:</strong> {{ business.instances_companyRegNumber }}<br>{% endif %}
+      </div>
+      <div class="footer-col">
+        {% if business.instances_bankName %}<strong>{{ business.instances_bankName }}</strong><br>{% endif %}
+        {% if business.instances_bankIban %}<strong>IBAN:</strong> {{ business.instances_bankIban }}<br>{% endif %}
+        {% if business.instances_bankBic %}<strong>BIC:</strong> {{ business.instances_bankBic }}{% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

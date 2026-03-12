@@ -1,0 +1,383 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-file-invoice-dollar"></i> Umsatzsteuervoranmeldung (UStVA)</h3>
+                <div class="card-tools">
+                    <select class="form-control form-control-sm d-inline-block" id="ustvaMonth" style="width:auto;">
+                        <option value="1">Januar</option>
+                        <option value="2">Februar</option>
+                        <option value="3">M&auml;rz</option>
+                        <option value="4">April</option>
+                        <option value="5">Mai</option>
+                        <option value="6">Juni</option>
+                        <option value="7">Juli</option>
+                        <option value="8">August</option>
+                        <option value="9">September</option>
+                        <option value="10">Oktober</option>
+                        <option value="11">November</option>
+                        <option value="12">Dezember</option>
+                    </select>
+                    <select class="form-control form-control-sm d-inline-block ml-1" id="ustvaYear" style="width:auto;">
+                        {% for y in range("now"|date("Y") - 2, "now"|date("Y")) %}
+                            <option value="{{ y }}" {{ y == "now"|date("Y") ? 'selected' : '' }}>{{ y }}</option>
+                        {% endfor %}
+                    </select>
+                    <button class="btn btn-sm btn-primary ml-2" id="ustvaCalcBtn"><i class="fas fa-sync-alt"></i> Berechnen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Hinweis ELSTER #}
+<div class="row">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i>
+            Bitte &uuml;bermitteln Sie die UStVA &uuml;ber Ihr <strong>ELSTER-Portal</strong> (<a href="https://www.elster.de" target="_blank">www.elster.de</a>).
+            Die hier berechneten Werte dienen als Grundlage f&uuml;r Ihre Meldung.
+        </div>
+    </div>
+</div>
+
+{# Status Badge #}
+<div class="row" id="ustvaStatusRow" style="display:none;">
+    <div class="col-12">
+        <div class="alert" id="ustvaStatusAlert">
+            <span id="ustvaStatusText"></span>
+        </div>
+    </div>
+</div>
+
+{# UStVA Formular #}
+<div class="row">
+    <div class="col-lg-10 offset-lg-1">
+        <div class="card">
+            <div class="card-header bg-dark">
+                <h3 class="card-title text-white"><i class="fas fa-file-alt"></i> UStVA-Kennzahlen - <span id="ustvaPeriodTitle"></span></h3>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-bordered mb-0">
+                    <thead class="thead-light">
+                        <tr>
+                            <th style="width:80px;">Kz.</th>
+                            <th>Bezeichnung</th>
+                            <th style="width:200px;" class="text-right">Bemessungsgrundlage (&euro;)</th>
+                            <th style="width:180px;" class="text-right">Steuer (&euro;)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="table-secondary">
+                            <td colspan="4"><strong>Steuerpflichtige Ums&auml;tze</strong> (Lieferungen und sonstige Leistungen einschl. unentgeltlicher Wertabgaben)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>81</strong></td>
+                            <td>zum Steuersatz von 19 %</td>
+                            <td class="text-right">
+                                <input type="text" class="form-control form-control-sm text-right ustva-field" id="ustvaKz81" data-kz="kz81" placeholder="0,00">
+                            </td>
+                            <td class="text-right">
+                                <input type="text" class="form-control form-control-sm text-right ustva-field" id="ustvaKz81Tax" data-kz="kz81_tax" placeholder="0,00">
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>86</strong></td>
+                            <td>zum Steuersatz von 7 %</td>
+                            <td class="text-right">
+                                <input type="text" class="form-control form-control-sm text-right ustva-field" id="ustvaKz86" data-kz="kz86" placeholder="0,00">
+                            </td>
+                            <td class="text-right">
+                                <input type="text" class="form-control form-control-sm text-right ustva-field" id="ustvaKz86Tax" data-kz="kz86_tax" placeholder="0,00">
+                            </td>
+                        </tr>
+
+                        <tr class="table-secondary">
+                            <td colspan="4"><strong>Steuerfreie Ums&auml;tze mit Vorsteuerabzug</strong></td>
+                        </tr>
+                        <tr>
+                            <td><strong>21</strong></td>
+                            <td>Innergemeinschaftliche Lieferungen (&sect; 4 Nr. 1b UStG)</td>
+                            <td class="text-right">
+                                <input type="text" class="form-control form-control-sm text-right ustva-field" id="ustvaKz21" data-kz="kz21" placeholder="0,00">
+                            </td>
+                            <td class="text-right text-muted">-</td>
+                        </tr>
+
+                        <tr class="table-secondary">
+                            <td colspan="4"><strong>Nicht steuerbare Ums&auml;tze</strong></td>
+                        </tr>
+                        <tr>
+                            <td><strong>41</strong></td>
+                            <td>Nicht steuerbare Ums&auml;tze (Reverse Charge / Leistungsort nicht im Inland)</td>
+                            <td class="text-right">
+                                <input type="text" class="form-control form-control-sm text-right ustva-field" id="ustvaKz41" data-kz="kz41" placeholder="0,00">
+                            </td>
+                            <td class="text-right text-muted">-</td>
+                        </tr>
+
+                        <tr class="table-secondary">
+                            <td colspan="4"><strong>Abziehbare Vorsteuerbetr&auml;ge</strong></td>
+                        </tr>
+                        <tr>
+                            <td><strong>66</strong></td>
+                            <td>Vorsteuerbetr&auml;ge aus Rechnungen von anderen Unternehmern (&sect; 15 Abs. 1 Satz 1 Nr. 1 UStG)</td>
+                            <td class="text-right text-muted">-</td>
+                            <td class="text-right">
+                                <input type="text" class="form-control form-control-sm text-right ustva-field" id="ustvaKz66" data-kz="kz66" placeholder="0,00">
+                            </td>
+                        </tr>
+
+                        <tr class="table-active font-weight-bold" style="border-top:3px double #333;">
+                            <td><strong>83</strong></td>
+                            <td><strong>Verbleibende Umsatzsteuer-Vorauszahlung / Umsatzsteuer-&Uuml;berschuss</strong></td>
+                            <td class="text-right text-muted">-</td>
+                            <td class="text-right">
+                                <input type="text" class="form-control form-control-sm text-right font-weight-bold ustva-field" id="ustvaKz83" data-kz="kz83" placeholder="0,00" style="font-size:1.1em;">
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-0">
+                            <label>ELSTER-Referenznummer</label>
+                            <input type="text" class="form-control" id="ustvaElsterRef" placeholder="z.B. 20260301234567890">
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-right pt-4">
+                        <button class="btn btn-secondary" id="ustvaSaveBtn"><i class="fas fa-save"></i> Als Entwurf speichern</button>
+                        <button class="btn btn-success ml-2" id="ustvaSubmitBtn"><i class="fas fa-paper-plane"></i> Als &uuml;bermittelt markieren</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Jahresuebersicht #}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-calendar-alt"></i> Jahres&uuml;bersicht <span id="ustvaOverviewYear"></span></h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered table-striped mb-0">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th>Monat</th>
+                                <th class="text-right">Kz. 81 (19%)</th>
+                                <th class="text-right">Steuer 81</th>
+                                <th class="text-right">Kz. 86 (7%)</th>
+                                <th class="text-right">Steuer 86</th>
+                                <th class="text-right">Kz. 21 (IG)</th>
+                                <th class="text-right">Kz. 41 (RC)</th>
+                                <th class="text-right">Kz. 66 (VSt)</th>
+                                <th class="text-right font-weight-bold">Kz. 83 (Zahllast)</th>
+                                <th class="text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ustvaOverviewBody"></tbody>
+                        <tfoot class="font-weight-bold" id="ustvaOverviewFoot"></tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    var monthNames = ['Januar','Februar','M\u00e4rz','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+    var currentReportId = null;
+    var currentStatus = null;
+
+    // Aktuellen Monat vorwaehlen
+    $('#ustvaMonth').val({{ "now"|date("n") }});
+
+    function formatMoney(val) {
+        var n = parseFloat(val || 0);
+        return n.toFixed(2).replace('.', ',');
+    }
+
+    function parseMoney(str) {
+        if (!str) return 0;
+        return parseFloat(String(str).replace(/\./g, '').replace(',', '.')) || 0;
+    }
+
+    function statusBadge(status) {
+        if (status === 'submitted') return '<span class="badge badge-success">\u00DCbermittelt</span>';
+        if (status === 'draft') return '<span class="badge badge-warning">Entwurf</span>';
+        return '<span class="badge badge-secondary">-</span>';
+    }
+
+    function loadUstva() {
+        var year = $('#ustvaYear').val();
+        var month = $('#ustvaMonth').val();
+        $('#ustvaPeriodTitle').text(monthNames[month - 1] + ' ' + year);
+
+        ajaxcall('ustva/calculate.php', {year: year, month: month}, function(data) {
+            if (!data.response) return;
+            var calc = data.response.calculated;
+            var saved = data.response.saved;
+
+            // Gespeicherte Werte bevorzugen, sonst berechnete
+            var source = saved || calc;
+            $('#ustvaKz81').val(formatMoney(source.kz81));
+            $('#ustvaKz81Tax').val(formatMoney(source.kz81_tax));
+            $('#ustvaKz86').val(formatMoney(source.kz86));
+            $('#ustvaKz86Tax').val(formatMoney(source.kz86_tax));
+            $('#ustvaKz21').val(formatMoney(source.kz21));
+            $('#ustvaKz41').val(formatMoney(source.kz41));
+            $('#ustvaKz66').val(formatMoney(source.kz66));
+            $('#ustvaKz83').val(formatMoney(source.kz83));
+
+            // Status
+            currentReportId = saved ? saved.id : null;
+            currentStatus = saved ? saved.status : null;
+
+            if (saved) {
+                $('#ustvaStatusRow').show();
+                if (saved.status === 'submitted') {
+                    $('#ustvaStatusAlert').removeClass('alert-warning alert-info').addClass('alert-success');
+                    $('#ustvaStatusText').html('<i class="fas fa-check-circle"></i> Dieser Bericht wurde als <strong>\u00fcbermittelt</strong> markiert.' +
+                        (saved.elster_reference ? ' ELSTER-Ref.: <code>' + saved.elster_reference + '</code>' : ''));
+                    $('#ustvaElsterRef').val(saved.elster_reference || '');
+                    // Felder deaktivieren bei uebermitteltem Bericht
+                    $('.ustva-field').prop('readonly', true);
+                    $('#ustvaSaveBtn, #ustvaSubmitBtn').prop('disabled', true);
+                } else {
+                    $('#ustvaStatusAlert').removeClass('alert-success alert-info').addClass('alert-warning');
+                    $('#ustvaStatusText').html('<i class="fas fa-pencil-alt"></i> Entwurf gespeichert.');
+                    $('#ustvaElsterRef').val(saved.elster_reference || '');
+                    $('.ustva-field').prop('readonly', false);
+                    $('#ustvaSaveBtn, #ustvaSubmitBtn').prop('disabled', false);
+                }
+            } else {
+                $('#ustvaStatusRow').hide();
+                $('#ustvaElsterRef').val('');
+                $('.ustva-field').prop('readonly', false);
+                $('#ustvaSaveBtn, #ustvaSubmitBtn').prop('disabled', false);
+            }
+        }, false);
+
+        // Jahresuebersicht laden
+        loadOverview(year);
+    }
+
+    function loadOverview(year) {
+        $('#ustvaOverviewYear').text(year);
+        ajaxcall('ustva/list.php', {year: year}, function(data) {
+            if (!data.response || !data.response.overview) return;
+            var overview = data.response.overview;
+            var html = '';
+            var totals = {kz81:0, kz81_tax:0, kz86:0, kz86_tax:0, kz21:0, kz41:0, kz66:0, kz83:0};
+
+            overview.forEach(function(m) {
+                totals.kz81 += parseFloat(m.kz81 || 0);
+                totals.kz81_tax += parseFloat(m.kz81_tax || 0);
+                totals.kz86 += parseFloat(m.kz86 || 0);
+                totals.kz86_tax += parseFloat(m.kz86_tax || 0);
+                totals.kz21 += parseFloat(m.kz21 || 0);
+                totals.kz41 += parseFloat(m.kz41 || 0);
+                totals.kz66 += parseFloat(m.kz66 || 0);
+                totals.kz83 += parseFloat(m.kz83 || 0);
+
+                var kz83class = parseFloat(m.kz83 || 0) >= 0 ? '' : 'text-success';
+                html += '<tr>';
+                html += '<td>' + monthNames[(m.month || 1) - 1] + '</td>';
+                html += '<td class="text-right">' + formatMoney(m.kz81) + '</td>';
+                html += '<td class="text-right">' + formatMoney(m.kz81_tax) + '</td>';
+                html += '<td class="text-right">' + formatMoney(m.kz86) + '</td>';
+                html += '<td class="text-right">' + formatMoney(m.kz86_tax) + '</td>';
+                html += '<td class="text-right">' + formatMoney(m.kz21) + '</td>';
+                html += '<td class="text-right">' + formatMoney(m.kz41) + '</td>';
+                html += '<td class="text-right">' + formatMoney(m.kz66) + '</td>';
+                html += '<td class="text-right font-weight-bold ' + kz83class + '">' + formatMoney(m.kz83) + '</td>';
+                html += '<td class="text-center">' + statusBadge(m.status) + '</td>';
+                html += '</tr>';
+            });
+            $('#ustvaOverviewBody').html(html);
+
+            // Summenzeile
+            var footHtml = '<tr>';
+            footHtml += '<td>Gesamt</td>';
+            footHtml += '<td class="text-right">' + formatMoney(totals.kz81) + '</td>';
+            footHtml += '<td class="text-right">' + formatMoney(totals.kz81_tax) + '</td>';
+            footHtml += '<td class="text-right">' + formatMoney(totals.kz86) + '</td>';
+            footHtml += '<td class="text-right">' + formatMoney(totals.kz86_tax) + '</td>';
+            footHtml += '<td class="text-right">' + formatMoney(totals.kz21) + '</td>';
+            footHtml += '<td class="text-right">' + formatMoney(totals.kz41) + '</td>';
+            footHtml += '<td class="text-right">' + formatMoney(totals.kz66) + '</td>';
+            footHtml += '<td class="text-right">' + formatMoney(totals.kz83) + '</td>';
+            footHtml += '<td></td>';
+            footHtml += '</tr>';
+            $('#ustvaOverviewFoot').html(footHtml);
+        }, false);
+    }
+
+    function getFormData() {
+        return {
+            year: $('#ustvaYear').val(),
+            month: $('#ustvaMonth').val(),
+            kz81: parseMoney($('#ustvaKz81').val()),
+            kz81_tax: parseMoney($('#ustvaKz81Tax').val()),
+            kz86: parseMoney($('#ustvaKz86').val()),
+            kz86_tax: parseMoney($('#ustvaKz86Tax').val()),
+            kz21: parseMoney($('#ustvaKz21').val()),
+            kz41: parseMoney($('#ustvaKz41').val()),
+            kz66: parseMoney($('#ustvaKz66').val()),
+            kz83: parseMoney($('#ustvaKz83').val()),
+        };
+    }
+
+    // Laden
+    loadUstva();
+    $('#ustvaYear, #ustvaMonth').change(function() { loadUstva(); });
+    $('#ustvaCalcBtn').click(function() { loadUstva(); });
+
+    // Als Entwurf speichern
+    $('#ustvaSaveBtn').click(function() {
+        var fd = getFormData();
+        ajaxcall('ustva/save.php', fd, function(data) {
+            if (data.response && data.response.id) {
+                currentReportId = data.response.id;
+                currentStatus = 'draft';
+                bootbox.alert('UStVA-Entwurf wurde gespeichert.');
+                loadUstva();
+            }
+        });
+    });
+
+    // Als uebermittelt markieren
+    $('#ustvaSubmitBtn').click(function() {
+        var ref = $('#ustvaElsterRef').val().trim();
+        if (!ref) {
+            bootbox.alert('Bitte geben Sie die ELSTER-Referenznummer ein.');
+            return;
+        }
+
+        // Erst speichern falls noetig, dann als uebermittelt markieren
+        var fd = getFormData();
+        ajaxcall('ustva/save.php', fd, function(data) {
+            if (!data.response || !data.response.id) return;
+            var rId = data.response.id;
+
+            bootbox.confirm('M\u00f6chten Sie diesen UStVA-Bericht als \u00fcbermittelt markieren?<br><br>ELSTER-Referenz: <strong>' + ref + '</strong>', function(ok) {
+                if (!ok) return;
+                ajaxcall('ustva/submit.php', {report_id: rId, elster_reference: ref}, function() {
+                    bootbox.alert('Bericht wurde als \u00fcbermittelt markiert.');
+                    loadUstva();
+                });
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

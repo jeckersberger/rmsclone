@@ -47,4 +47,4 @@ if ($AUTH->data['instance']["instancePositions_id"] && $AUTH->data['instance']["
 
 $PAGEDATA['WIDGETS'] = new statsWidgets(explode(",", $AUTH->data['users_widgets']), false);
 
-echo $TWIG->render('dashboard.twig', $PAGEDATA);
+echo $TWIG->render('dashboard_enhanced.twig', $PAGEDATA);

@@ -1,0 +1,283 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-calculator"></i> {{ t('euer_report') }}</h3>
+                <div class="card-tools">
+                    <select class="form-control form-control-sm" id="euerYear" style="width:auto;display:inline-block;">
+                        {% for y in range("now"|date("Y") - 2, "now"|date("Y")) %}
+                            <option value="{{ y }}" {{ y == "now"|date("Y") ? 'selected' : '' }}>{{ y }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# KUR Warning #}
+<div class="row" id="euerKurWarning" style="display:none;">
+    <div class="col-12">
+        <div class="alert alert-warning" id="euerKurAlert">
+            <i class="fas fa-exclamation-triangle"></i> <span id="euerKurText"></span>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    {# Summary #}
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header bg-success">
+                <h3 class="card-title text-white"><i class="fas fa-arrow-down"></i> {{ t('euer_income') }}</h3>
+            </div>
+            <div class="card-body">
+                <h2 class="text-success" id="euerTotalIncome">-</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header bg-danger">
+                <h3 class="card-title text-white"><i class="fas fa-arrow-up"></i> {{ t('euer_expenses') }}</h3>
+            </div>
+            <div class="card-body">
+                <h2 class="text-danger" id="euerTotalExpenses">-</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header bg-info">
+                <h3 class="card-title text-white"><i class="fas fa-equals"></i> {{ t('euer_profit') }}</h3>
+            </div>
+            <div class="card-body">
+                <h2 id="euerProfit">-</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    {# Income Categories #}
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">{{ t('euer_income_categories') }}</h3>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>{{ t('category') }}</th>
+                            <th class="text-right">{{ t('amount') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="euerIncomeBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {# Expense Categories #}
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">{{ t('euer_expense_categories') }}</h3>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>{{ t('category') }}</th>
+                            <th class="text-right">{{ t('amount') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="euerExpenseBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Monthly Summary #}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">{{ t('monthly_summary') }}</h3>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>{{ t('month') }}</th>
+                            <th class="text-right">{{ t('euer_income') }}</th>
+                            <th class="text-right">{{ t('euer_expenses') }}</th>
+                            <th class="text-right">{{ t('euer_profit') }}</th>
+                            <th class="text-right">{{ t('euer_running_total') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="euerMonthlyBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Add Manual Booking #}
+<div class="row">
+    <div class="col-lg-8 offset-lg-2">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-plus"></i> {{ t('add_manual_booking') }}</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>{{ t('category') }}</label>
+                            <select class="form-control" id="bookingCategory"></select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>{{ t('amount') }}</label>
+                            <input type="number" step="0.01" class="form-control" id="bookingAmount" placeholder="0.00">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>{{ t('date') }}</label>
+                            <input type="date" class="form-control" id="bookingDate" value="{{ "now"|date("Y-m-d") }}">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label>&nbsp;</label>
+                            <button class="btn btn-primary btn-block" id="addBookingBtn">{{ t('add') }}</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="form-group">
+                            <label>{{ t('description') }}</label>
+                            <input type="text" class="form-control" id="bookingDescription" placeholder="{{ t('booking_description_placeholder') }}">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>{{ t('reference') }}</label>
+                            <input type="text" class="form-control" id="bookingReference" placeholder="{{ t('booking_reference_placeholder') }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    var monthNames = ['{{ t("jan") }}','{{ t("feb") }}','{{ t("mar") }}','{{ t("apr") }}','{{ t("may") }}','{{ t("jun") }}','{{ t("jul") }}','{{ t("aug") }}','{{ t("sep") }}','{{ t("oct") }}','{{ t("nov") }}','{{ t("dec") }}'];
+
+    function formatMoney(val) {
+        return parseFloat(val || 0).toFixed(2).replace('.', ',') + ' \u20AC';
+    }
+
+    function loadEuer() {
+        var year = $('#euerYear').val();
+        ajaxcall('euer/report.php', {year: year}, function(data) {
+            if (!data.response) return;
+            var r = data.response;
+
+            // Summary
+            $('#euerTotalIncome').text(formatMoney(r.total_income));
+            $('#euerTotalExpenses').text(formatMoney(r.total_expenses));
+            var profit = parseFloat(r.total_income || 0) - parseFloat(r.total_expenses || 0);
+            $('#euerProfit').text(formatMoney(profit)).removeClass('text-success text-danger').addClass(profit >= 0 ? 'text-success' : 'text-danger');
+
+            // KUR Warning
+            if (r.kur_warning) {
+                $('#euerKurText').text(r.kur_warning);
+                $('#euerKurWarning').show();
+            } else {
+                $('#euerKurWarning').hide();
+            }
+
+            // Categories
+            var incHtml = '', expHtml = '';
+            if (r.categories) {
+                r.categories.forEach(function(cat) {
+                    var row = '<tr><td>' + cat.name + '</td><td class="text-right">' + formatMoney(cat.total) + '</td></tr>';
+                    if (cat.type === 'income') incHtml += row;
+                    else expHtml += row;
+                });
+            }
+            $('#euerIncomeBody').html(incHtml || '<tr><td colspan="2" class="text-muted text-center">-</td></tr>');
+            $('#euerExpenseBody').html(expHtml || '<tr><td colspan="2" class="text-muted text-center">-</td></tr>');
+
+            // Monthly
+            var monthHtml = '';
+            var runningTotal = 0;
+            if (r.monthly) {
+                r.monthly.forEach(function(m) {
+                    var monthProfit = parseFloat(m.income || 0) - parseFloat(m.expenses || 0);
+                    runningTotal += monthProfit;
+                    monthHtml += '<tr>';
+                    monthHtml += '<td>' + monthNames[(m.month || 1) - 1] + '</td>';
+                    monthHtml += '<td class="text-right text-success">' + formatMoney(m.income) + '</td>';
+                    monthHtml += '<td class="text-right text-danger">' + formatMoney(m.expenses) + '</td>';
+                    monthHtml += '<td class="text-right ' + (monthProfit >= 0 ? 'text-success' : 'text-danger') + '">' + formatMoney(monthProfit) + '</td>';
+                    monthHtml += '<td class="text-right">' + formatMoney(runningTotal) + '</td>';
+                    monthHtml += '</tr>';
+                });
+            }
+            $('#euerMonthlyBody').html(monthHtml || '<tr><td colspan="5" class="text-muted text-center">-</td></tr>');
+
+            // Populate categories dropdown for manual booking
+            var catOpts = '<option value="">{{ t("select_category") }}</option>';
+            if (r.all_categories) {
+                r.all_categories.forEach(function(cat) {
+                    catOpts += '<option value="' + cat.id + '">' + cat.name + ' (' + (cat.type === 'income' ? '{{ t("euer_income") }}' : '{{ t("euer_expenses") }}') + ')</option>';
+                });
+            }
+            $('#bookingCategory').html(catOpts);
+        }, false);
+    }
+
+    loadEuer();
+    $('#euerYear').change(function() { loadEuer(); });
+
+    // Add manual booking
+    $('#addBookingBtn').click(function() {
+        var catId = $('#bookingCategory').val();
+        var amount = $('#bookingAmount').val();
+        var date = $('#bookingDate').val();
+        var desc = $('#bookingDescription').val();
+        var ref = $('#bookingReference').val();
+
+        if (!catId || !amount || !date) {
+            bootbox.alert('{{ t("fill_required_fields") }}');
+            return;
+        }
+
+        ajaxcall('euer/addBooking.php', {
+            category_id: catId,
+            amount: amount,
+            booking_date: date,
+            description: desc,
+            reference: ref
+        }, function() {
+            loadEuer();
+            $('#bookingAmount').val('');
+            $('#bookingDescription').val('');
+            $('#bookingReference').val('');
+        });
+    });
+});
+</script>
+{% endblock %}

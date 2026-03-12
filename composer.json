@@ -7,7 +7,7 @@
   ],
   "require": {
     "adam-rms/mysqli-database-class": "dev-main",
-    "twig/twig": "v3.7.*",
+    "twig/twig": "^3.14",
     "ezyang/htmlpurifier": "v4.18.*",
     "sendgrid/sendgrid": "v8.1.*",
     "phpoffice/phpspreadsheet": "1.29.*",
@@ -35,9 +35,27 @@
     "nyholm/psr7": "^1.8",
     "phpmailer/phpmailer": "^6.9",
     "wildbit/postmark-php": "^6.0",
-    "lasserafn/php-initial-avatar-generator": "^4.4"
+    "lasserafn/php-initial-avatar-generator": "^4.4",
+    "dompdf/dompdf": "^2.0",
+    "jejik/mt940": "^0.6.3"
   },
-  "scripts": {},
+  "autoload": {
+    "classmap": [
+      "src/services/",
+      "src/common/libs/"
+    ]
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^10.0",
+    "friendsofphp/php-cs-fixer": "^3.0",
+    "phpstan/phpstan": "^1.10"
+  },
+  "scripts": {
+    "test": "phpunit",
+    "cs-check": "php-cs-fixer fix --dry-run --diff",
+    "cs-fix": "php-cs-fixer fix",
+    "analyse": "phpstan analyse"
+  },
   "license": "AGPL-3.0-only",
   "config": {
     "allow-plugins": {

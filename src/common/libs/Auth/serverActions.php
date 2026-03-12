@@ -9,7 +9,7 @@ $serverActions = [
     'Dependencies' => null,
     'Comment' => null,
     'Supported Token Types' => ["web-session"],
-    'LEGACY-Description' => 'Edit any asset type - even those written by AdamRMS',
+    'LEGACY-Description' => 'Edit any asset type - even those written by MyRMS',
     'LEGACY-ID' => 19,
     'LEGACY-Sort Rank' => 16,
   ],

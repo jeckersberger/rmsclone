@@ -1,0 +1,106 @@
+# ==============================================================================
+# MyRMS - Staging Environment
+# ==============================================================================
+#
+# Usage:
+#   cp .env.staging.example .env.staging
+#   docker compose -f docker-compose.staging.yml --env-file .env.staging up -d
+#
+# Unterschiede zu Produktion:
+# - Debug-Modus aktiviert
+# - Keine SSL-Zertifikate (HTTP only)
+# - Eigene Datenbank (staging_myrms)
+# - Seeding mit Testdaten moeglich
+# - Reduzierte Ressourcen-Limits
+#
+# ==============================================================================
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: myrms-staging-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DB_HOSTNAME=db
+      - DB_DATABASE=${DB_DATABASE:-staging_myrms}
+      - DB_USERNAME=${DB_USERNAME:-myrms_staging}
+      - DB_PASSWORD=${DB_PASSWORD:-staging_password}
+      - DB_PORT=3306
+      - DEV_MODE=true
+      - ROOT_URL=${ROOT_URL:-http://localhost:8080}
+      - CORS_ALLOWED_ORIGIN=${ROOT_URL:-http://localhost:8080}
+      - CONFIG_PROJECT_NAME=MyRMS [STAGING]
+      - CONFIG_TIMEZONE=Europe/Berlin
+      - LOCAL_STORAGE_PATH=/var/www/html/storage
+      - CONFIG_FILES_ENABLED=Enabled
+      - CONFIG_EMAILS_ENABLED=Disabled
+      - CONFIG_AUTH_JWTKey=${CONFIG_AUTH_JWTKey:-staging-jwt-key-not-for-production}
+    volumes:
+      - staging_storage:/var/www/html/storage
+      - ./src:/var/www/html/src:ro
+    ports:
+      - "${APP_PORT:-8080}:80"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:80/api/health.php"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  db:
+    image: mysql:8.0
+    container_name: myrms-staging-db
+    restart: unless-stopped
+    command: >-
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - staging_db:/var/lib/mysql
+    environment:
+      - MYSQL_DATABASE=${DB_DATABASE:-staging_myrms}
+      - MYSQL_USER=${DB_USERNAME:-myrms_staging}
+      - MYSQL_PASSWORD=${DB_PASSWORD:-staging_password}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-staging_root_pw}
+    ports:
+      - "${DB_PORT:-13306}:3306"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-staging_root_pw}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # phpMyAdmin fuer Staging-DB Zugriff
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: myrms-staging-pma
+    restart: unless-stopped
+    environment:
+      - PMA_HOST=db
+      - PMA_USER=root
+      - PMA_PASSWORD=${MYSQL_ROOT_PASSWORD:-staging_root_pw}
+    ports:
+      - "${PMA_PORT:-8081}:80"
+    depends_on:
+      - db
+
+volumes:
+  staging_db:
+    driver: local
+  staging_storage:
+    driver: local

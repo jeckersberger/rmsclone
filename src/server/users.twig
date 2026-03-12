@@ -10,12 +10,12 @@
 	<div class="row">
 		<div class="col-lg-6 offset-lg-3 col-md-12">
 			<div class="alert alert-warning alert-dismissible">
-				<h5><i class="icon fas fa-info"></i> Server-Wide Configuration</h5>
-				You are modifying settings and configuration that affect the whole of the {{ CONFIG.PROJECT_NAME }} Server, including all businesses (instances) running on it. Please be careful when making changes here.
+				<h5><i class="icon fas fa-info"></i> Serverweite Konfiguration</h5>
+				Sie ändern Einstellungen, die den gesamten {{ CONFIG.PROJECT_NAME }} Server betreffen, einschließlich aller Unternehmen (Instanzen), die darauf laufen. Bitte seien Sie vorsichtig bei Änderungen.
 			</div>
             <div class="alert alert-warning alert-dismissible" style="border: 0px; margin-bottom: 15px;">
-                <h4><i class="fa fa-exclamation"></i> You have permission to view E-Mail addresses in this list</h4>
-                Please use caution and do not divulge these email addresses as per appropriate privacy policies
+                <h4><i class="fa fa-exclamation"></i> Sie haben Berechtigung, E-Mail-Adressen in dieser Liste anzuzeigen</h4>
+                Bitte gehen Sie vorsichtig mit diesen E-Mail-Adressen um und beachten Sie die geltenden Datenschutzrichtlinien
             </div>
 		</div>
 	</div>
@@ -25,14 +25,14 @@
                 <div class="card-header">
                     <h3 class="card-title">
                         {% if search|length > 0 %}
-                            Search results for users matching <b>{{ search }}</b>
+                            Suchergebnisse für Benutzer <b>{{ search }}</b>
                         {% else %}
-                            Users
+                            Benutzer
                         {% endif %}
                     </h3>
                     <div class="card-tools pull-right">
                         <!--<form class="input-group input-group-sm" style="width: 150px;" method="GET">
-                            <input type="text" name="q" class="form-control pull-right" placeholder="Search" value="{{ search }}" />
+                            <input type="text" name="q" class="form-control pull-right" placeholder="Suche" value="{{ search }}" />
                             <div class="input-group-append">
                                 <button type="submit" class="btn btn-default"><i class="fa fa-search"></i></button>
                             </div>
@@ -44,15 +44,15 @@
                         <table class="table table-head-fixed" id="userTable" border="0" style="overflow-x: scroll;">
                             <thead>
                             <tr>
-                                <th>Username</th>
-                                <th>Firstname</th>
-                                <th data-searchable="false">Lastname</th>
-                                <th>Email</th>
-                                <th data-orderable="false">Roles</th>
-                                <th data-orderable="false">Instances</th>
-                                <th data-searchable="false">Accepted TOS</th>
-                                <th data-searchable="false">Last Login</th>
-                                <th data-searchable="false">Last Page View</th>
+                                <th>Benutzername</th>
+                                <th>Vorname</th>
+                                <th data-searchable="false">Nachname</th>
+                                <th>E-Mail</th>
+                                <th data-orderable="false">Rollen</th>
+                                <th data-orderable="false">Unternehmen</th>
+                                <th data-searchable="false">AGB akzeptiert</th>
+                                <th data-searchable="false">Letzter Login</th>
+                                <th data-searchable="false">Letzte Seitenansicht</th>
                                 <th data-orderable="false"></th>
                             </tr>
                             </thead>
@@ -68,7 +68,7 @@
                                     <td>{{ user["users_email"] }} {{ user["users_emailVerified"] == 1 ? '<i class="fa fa-check-square-o">' : null }}</td>
                                     <td>
                                         {% if user.users_suspended == '1' %}
-                                            <span class="badge bg-danger">Suspended</span><br/>
+                                            <span class="badge bg-danger">Gesperrt</span><br/>
                                         {% endif %}
                                         {% if user.currentPositions|length > 0 %}
                                             {% for position in user.currentPositions %}
@@ -83,11 +83,11 @@
                                     </td>
                                     <td>
                                         {% if user.instances|length < 1 %}
-                                            <span class="badge bg-warning">No instances</span><br/>
+                                            <span class="badge bg-warning">Keine Unternehmen</span><br/>
                                         {% endif %}
                                         {% for instance in user.instances %}
                                             {% if instance.userInstances_archived != null and instance.userInstances_archived|date('Y-m-d H:i:s') <= "now"|date('Y-m-d H:i:s') %}
-                                                <span class="badge bg-danger">Archived</span>
+                                                <span class="badge bg-danger">Archiviert</span>
                                             {% endif %}
                                             {{ instance.instances_name }} ({{ instance.instances_planName }}) - {{ instance.userInstances_label }} ({{ instance.instancePositions_displayName }})<br/>
                                         {% endfor %}
@@ -104,7 +104,7 @@
                                     <td>
                                         <div class="btn-group">
                                         {% if "USERS:VIEW:MAILINGS"|serverPermissions %}
-                                            <button type="button" title="View Mailings for user" class="btn btn-info"
+                                            <button type="button" title="Mailings für Benutzer anzeigen" class="btn btn-info"
                                                     data-toggle="modal"
                                                     data-target="#useremailmodal{{ user["users_userid"] }}"
                                             {% if user.emails|length < 1 %}disabled{% endif %}><i
@@ -113,13 +113,13 @@
                                         {% if user.users_userid != USERDATA.users_userid %}
                                             {% if "USERS:EDIT"|serverPermissions %}
                                                 <a href="{{ CONFIG.ROOTURL }}/user.php?id={{ user["users_userid"] }}"
-                                                   type="button" title="Edit user" class="btn btn-default"><i
+                                                   type="button" title="Benutzer bearbeiten" class="btn btn-default"><i
                                                             class="fa fa-pencil-alt"></i></a>
                                             {% endif %}
                                             {% if user.users_suspended == '0' %}
                                                 <!--Destroy all user tokens-->
                                                 {% if "VIEW-AUDIT-LOG"|serverPermissions %}
-                                                    <button type="button" title="Log User out on all devices"
+                                                    <button type="button" title="Benutzer auf allen Geräten abmelden"
                                                             class="btn btn-danger logoutbutton"
                                                             data-userid="{{ user.users_userid }}"><i
                                                                 class="fa fa-sign-out-alt"></i></button>
@@ -131,19 +131,19 @@
                                                         class="btn btn-{{ user.users_suspended == '1' ? 'success' : 'danger' }} suspenduser"
                                                         data-suspendval="{{ user.users_suspended == '1' ? '0' : '1' }}"
                                                         data-userid="{{ user.users_userid }}"
-                                                        title="{{ user.users_suspended == '0' ? 'Suspend user' : 'Un-Suspend user' }}">
+                                                        title="{{ user.users_suspended == '0' ? 'Benutzer sperren' : 'Benutzer entsperren' }}">
                                                     <i class="fa fa-times-circle"></i></button>
                                             {% endif %}
                                             {% if "USERS:DELETE"|serverPermissions %}
                                                 <button type="button"
                                                         class="btn btn-danger deleteuser"
                                                         data-userid="{{ user.users_userid }}"
-                                                        title="Delete User">
+                                                        title="Benutzer löschen">
                                                     <i class="fa fa-trash"></i></button>
                                             {% endif %}
                                             {% if "USERS:VIEW_SITE_AS"|serverPermissions %}
                                                 <a href="{{ CONFIG.ROOTURL }}/api/account/viewSiteAs.php?userid={{ user["users_userid"] }}"
-                                                   title="Login as User">
+                                                   title="Als Benutzer anmelden">
                                                     <button type="button" class="btn btn-default"><i
                                                                 class="fa fa-sign-in-alt"></i></button>
                                                 </a>
@@ -170,7 +170,7 @@
                         });
                         </script>
                     {% else %}
-                        <center><p style="margin: 10px;"><i>No results</i><br/><a href="?">Remove any filters</a></p></center>
+                        <center><p style="margin: 10px;"><i>Keine Ergebnisse</i><br/><a href="?">Filter entfernen</a></p></center>
                     {% endif %}
                 </div>
                 <div class="overlay" id="loadingoverlay">
@@ -185,7 +185,7 @@
                         <div class="modal-content">
                             <div class="modal-header">
                                 <h4 class="modal-title"> E-Mails
-                                    to {{ user["users_name1"] }} {{ user["users_name2"] }}</h4>
+                                    an {{ user["users_name1"] }} {{ user["users_name2"] }}</h4>
                                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                     <span aria-hidden="true">&times;</span>
                                 </button>
@@ -202,8 +202,8 @@
                             </div>
                             <div class="modal-footer">
                                 <a href="{{ CONFIG.ROOTURL }}/api/account/emailViewer.php?email={{ user.email_ids }}"
-                                   class="btn btn-default">Output All</a>
-                                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                   class="btn btn-default">Alle ausgeben</a>
+                                <button type="button" class="btn btn-default" data-dismiss="modal">Schließen</button>
                             </div>
                         </div>
                     </div>
@@ -251,7 +251,7 @@
                             if (result == '1') {
                                 $("#loadingoverlay").hide();
                             } else {
-                                bootbox.alert("Sorry - Operation could not be completed! Please reload the page")
+                                bootbox.alert("Vorgang konnte nicht abgeschlossen werden! Bitte laden Sie die Seite neu")
                             }
                         }
                     });
@@ -264,11 +264,11 @@
                         url: "{{ CONFIG.ROOTURL }}/api/account/suspend.php?userid=" + $(this).data("userid") + '&suspendval=' + $(this).data("suspendval"),
                         success: function (result) {
                             if (result == '1') {
-                                bootbox.alert("Success", function () {
+                                bootbox.alert("Erfolgreich", function () {
                                     location.reload();
                                 });
                             } else {
-                                bootbox.alert("Sorry - Operation could not be completed! Please reload the page", function () {
+                                bootbox.alert("Vorgang konnte nicht abgeschlossen werden! Bitte laden Sie die Seite neu", function () {
                                     location.reload();
                                 });
                             }
@@ -280,14 +280,14 @@
                 $(".deleteuser").click(function () {
                     var userid = $(this).data("userid");
                     bootbox.confirm({
-                        message: "Are you sure you wish to delete this user?",
+                        message: "Sind Sie sicher, dass Sie diesen Benutzer löschen möchten?",
                         buttons: {
                             confirm: {
-                                label: 'Yes',
+                                label: 'Ja',
                                 className: 'btn-danger'
                             },
                             cancel: {
-                                label: 'No',
+                                label: 'Nein',
                                 className: 'btn-success'
                             }
                         },

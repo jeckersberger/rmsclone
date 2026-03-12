@@ -105,7 +105,7 @@
                             {% endembed %}
                         </div>
                         <div class="modal-footer justify-content-between">
-                            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Schliessen</button>
                         </div>
                     </div>
                 </div>
@@ -116,14 +116,14 @@
             $(".acceptButton").click(function () {
                 var id = $(this).data("id");
                 bootbox.confirm({
-                    message: "Are you sure you want accept this application and give this candidate the role?",
+                    message: "Sind Sie sicher, dass Sie diese Bewerbung annehmen und dem Kandidaten die Rolle zuweisen moechten?",
                     buttons: {
                         confirm: {
-                            label: 'Yes',
+                            label: 'Ja',
                             className: 'btn-success'
                         },
                         cancel: {
-                            label: 'No',
+                            label: 'Nein',
                             className: 'btn-danger'
                         }
                     },
@@ -139,7 +139,7 @@
             $(".rejectButton").click(function () {
                 var id = $(this).data("id");
                 bootbox.prompt({
-                    title: "Rejection message to be emailed to candidate",
+                    title: "Ablehnungsnachricht, die dem Kandidaten per E-Mail gesendet wird",
                     inputType: 'textarea',
                     callback: function (result) {
                         if (result) {

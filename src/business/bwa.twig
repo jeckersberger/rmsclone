@@ -1,0 +1,623 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+
+{# ═══════ Steuerung ═══════ #}
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-chart-bar"></i> BWA - Betriebswirtschaftliche Auswertung</h3>
+                <div class="card-tools">
+                    <button class="btn btn-sm btn-outline-secondary" id="bwaPrintBtn" title="Drucken / PDF">
+                        <i class="fas fa-print"></i> Drucken / PDF
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row align-items-end">
+                    <div class="col-md-3">
+                        <div class="form-group mb-0">
+                            <label>Ansicht</label>
+                            <select class="form-control" id="bwaMode">
+                                <option value="monthly">Monatsauswertung</option>
+                                <option value="annual">Jahresuebersicht</option>
+                                <option value="compare">Periodenvergleich</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group mb-0">
+                            <label>Jahr</label>
+                            <select class="form-control" id="bwaYear">
+                                {% for y in range("now"|date("Y") - 3, "now"|date("Y")) %}
+                                    <option value="{{ y }}" {{ y == "now"|date("Y") ? 'selected' : '' }}>{{ y }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2" id="bwaMonthGroup">
+                        <div class="form-group mb-0">
+                            <label>Monat</label>
+                            <select class="form-control" id="bwaMonth">
+                                <option value="1">Januar</option>
+                                <option value="2">Februar</option>
+                                <option value="3">Maerz</option>
+                                <option value="4">April</option>
+                                <option value="5">Mai</option>
+                                <option value="6">Juni</option>
+                                <option value="7">Juli</option>
+                                <option value="8">August</option>
+                                <option value="9">September</option>
+                                <option value="10">Oktober</option>
+                                <option value="11">November</option>
+                                <option value="12">Dezember</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {# Vergleichsfelder #}
+                    <div class="col-md-2 bwaCompareFields" style="display:none;">
+                        <div class="form-group mb-0">
+                            <label>Vergleich: Jahr</label>
+                            <select class="form-control" id="bwaYear2">
+                                {% for y in range("now"|date("Y") - 3, "now"|date("Y")) %}
+                                    <option value="{{ y }}" {{ y == ("now"|date("Y") - 1) ? 'selected' : '' }}>{{ y }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2 bwaCompareFields" style="display:none;">
+                        <div class="form-group mb-0">
+                            <label>Vergleich: Monat</label>
+                            <select class="form-control" id="bwaMonth2">
+                                <option value="1">Januar</option>
+                                <option value="2">Februar</option>
+                                <option value="3">Maerz</option>
+                                <option value="4">April</option>
+                                <option value="5">Mai</option>
+                                <option value="6">Juni</option>
+                                <option value="7">Juli</option>
+                                <option value="8">August</option>
+                                <option value="9">September</option>
+                                <option value="10">Oktober</option>
+                                <option value="11">November</option>
+                                <option value="12">Dezember</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="col-md-1">
+                        <button class="btn btn-primary btn-block" id="bwaLoadBtn">
+                            <i class="fas fa-sync"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ═══════ Monatsauswertung ═══════ #}
+<div id="bwaMonthlyView" style="display:none;">
+    {# Kennzahlen-Karten #}
+    <div class="row">
+        <div class="col-lg-3">
+            <div class="small-box bg-success">
+                <div class="inner">
+                    <h3 id="bwaRevenue">0,00 &euro;</h3>
+                    <p>Umsatzerloese</p>
+                </div>
+                <div class="icon"><i class="fas fa-euro-sign"></i></div>
+            </div>
+        </div>
+        <div class="col-lg-3">
+            <div class="small-box bg-info">
+                <div class="inner">
+                    <h3 id="bwaRohertrag">0,00 &euro;</h3>
+                    <p>Rohertrag</p>
+                </div>
+                <div class="icon"><i class="fas fa-layer-group"></i></div>
+            </div>
+        </div>
+        <div class="col-lg-3">
+            <div class="small-box bg-warning">
+                <div class="inner">
+                    <h3 id="bwaExpenses">0,00 &euro;</h3>
+                    <p>Gesamtaufwendungen</p>
+                </div>
+                <div class="icon"><i class="fas fa-arrow-up"></i></div>
+            </div>
+        </div>
+        <div class="col-lg-3">
+            <div class="small-box" id="bwaEbitBox">
+                <div class="inner">
+                    <h3 id="bwaEbit">0,00 &euro;</h3>
+                    <p>EBIT / Betriebsergebnis</p>
+                </div>
+                <div class="icon"><i class="fas fa-chart-line"></i></div>
+            </div>
+        </div>
+    </div>
+
+    {# BWA-Tabelle (DATEV-Struktur) #}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-table"></i> BWA-Positionen <span id="bwaPeriodLabel" class="text-muted ml-2"></span></h3>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm table-striped" id="bwaMonthlyTable">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th style="width:60%;">Position</th>
+                                <th class="text-right" style="width:20%;">Betrag</th>
+                                <th class="text-right" style="width:20%;">% vom Umsatz</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bwaMonthlyBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ═══════ Jahresuebersicht ═══════ #}
+<div id="bwaAnnualView" style="display:none;">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-calendar-alt"></i> Jahresuebersicht <span id="bwaAnnualYearLabel" class="text-muted ml-2"></span></h3>
+                </div>
+                <div class="card-body p-0" style="overflow-x:auto;">
+                    <table class="table table-sm table-bordered table-striped" id="bwaAnnualTable">
+                        <thead class="thead-dark" id="bwaAnnualHead"></thead>
+                        <tbody id="bwaAnnualBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Umsatz/Gewinn-Trend Chart #}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-chart-area"></i> Umsatz- und Ergebnistrend</h3>
+                </div>
+                <div class="card-body">
+                    <canvas id="bwaTrendChart" height="80"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ═══════ Periodenvergleich ═══════ #}
+<div id="bwaCompareView" style="display:none;">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-exchange-alt"></i> Periodenvergleich <span id="bwaCompareLabel" class="text-muted ml-2"></span></h3>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm table-striped" id="bwaCompareTable">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th>Position</th>
+                                <th class="text-right" id="bwaCompareH1">Periode 1</th>
+                                <th class="text-right" id="bwaCompareH2">Periode 2</th>
+                                <th class="text-right">Differenz</th>
+                                <th class="text-right">% Aenderung</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bwaCompareBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Vergleichs-Chart #}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-chart-bar"></i> Vergleich - Visualisierung</h3>
+                </div>
+                <div class="card-body">
+                    <canvas id="bwaCompareChart" height="80"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ═══════ Lade-Indikator ═══════ #}
+<div id="bwaLoading" class="text-center py-5" style="display:none;">
+    <i class="fas fa-spinner fa-spin fa-3x text-muted"></i>
+    <p class="text-muted mt-2">BWA wird generiert...</p>
+</div>
+
+{# Chart.js #}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    var trendChart = null;
+    var compareChart = null;
+    var monthNames = ['Jan','Feb','Mrz','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+    var monthNamesFull = ['Januar','Februar','Maerz','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+
+    // Aktuellen Monat vorselektieren
+    $('#bwaMonth').val(new Date().getMonth() + 1);
+    $('#bwaMonth2').val(new Date().getMonth() + 1);
+
+    function formatMoney(val) {
+        return parseFloat(val || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.').replace(/\.(\d{2})$/, ',$1') + ' \u20AC';
+    }
+
+    function formatMoneyShort(val) {
+        return parseFloat(val || 0).toFixed(2).replace('.', ',');
+    }
+
+    function pctOfRevenue(val, revenue) {
+        if (!revenue || revenue === 0) return '-';
+        return ((val / revenue) * 100).toFixed(1).replace('.', ',') + ' %';
+    }
+
+    // BWA-Positionen Labels
+    var posLabels = {
+        'umsatzerloese': 'Umsatzerloese',
+        'materialaufwand': 'Materialaufwand / Fremdleistungen',
+        'rohertrag': 'Rohertrag / Rohergebnis',
+        'personalkosten': 'Personalkosten',
+        'raumkosten': 'Raumkosten',
+        'sonstige_aufwendungen': 'Sonstige betriebl. Aufwendungen',
+        'abschreibungen': 'Abschreibungen',
+        'gesamt_aufwendungen': 'Gesamtaufwendungen',
+        'betriebsergebnis': 'Betriebsergebnis',
+        'ebit': 'EBIT'
+    };
+
+    // Ansicht-Wechsel
+    $('#bwaMode').change(function() {
+        var mode = $(this).val();
+        if (mode === 'annual') {
+            $('#bwaMonthGroup').hide();
+            $('.bwaCompareFields').hide();
+        } else if (mode === 'compare') {
+            $('#bwaMonthGroup').show();
+            $('.bwaCompareFields').show();
+        } else {
+            $('#bwaMonthGroup').show();
+            $('.bwaCompareFields').hide();
+        }
+    });
+
+    // Laden
+    $('#bwaLoadBtn').click(function() { loadBwa(); });
+    $('#bwaYear').change(function() { loadBwa(); });
+    $('#bwaMonth').change(function() { if ($('#bwaMode').val() === 'monthly') loadBwa(); });
+
+    function loadBwa() {
+        var mode = $('#bwaMode').val();
+        var params = {
+            mode: mode,
+            year: $('#bwaYear').val(),
+            month: $('#bwaMonth').val()
+        };
+
+        if (mode === 'compare') {
+            params.year1 = $('#bwaYear2').val();
+            params.month1 = $('#bwaMonth2').val();
+            params.year2 = params.year;
+            params.month2 = params.month;
+        }
+
+        // Views ausblenden
+        $('#bwaMonthlyView, #bwaAnnualView, #bwaCompareView').hide();
+        $('#bwaLoading').show();
+
+        ajaxcall('bwa/generate.php', params, function(data) {
+            $('#bwaLoading').hide();
+            if (!data.response) return;
+            var r = data.response;
+
+            if (mode === 'monthly') renderMonthly(r);
+            else if (mode === 'annual') renderAnnual(r);
+            else if (mode === 'compare') renderCompare(r);
+        }, false);
+    }
+
+    // ──────── Monatsauswertung ────────
+    function renderMonthly(bwa) {
+        $('#bwaMonthlyView').show();
+        $('#bwaPeriodLabel').text(bwa.period || '');
+
+        // Kennzahlen
+        $('#bwaRevenue').html(formatMoney(bwa.umsatzerloese));
+        $('#bwaRohertrag').html(formatMoney(bwa.rohertrag));
+        $('#bwaExpenses').html(formatMoney(bwa.gesamt_aufwendungen));
+        $('#bwaEbit').html(formatMoney(bwa.ebit));
+        $('#bwaEbitBox').removeClass('bg-success bg-danger').addClass(bwa.ebit >= 0 ? 'bg-success' : 'bg-danger');
+
+        // BWA-Tabelle
+        var rev = bwa.umsatzerloese || 0;
+        var rows = [
+            {label: 'Umsatzerloese', val: bwa.umsatzerloese, bold: true, cls: 'text-success'},
+            {label: 'Sonstige betriebliche Ertraege', val: bwa.sonstige_ertraege, indent: true},
+            {label: 'Gesamtleistung', val: bwa.gesamtleistung, bold: true, border: true},
+            {sep: true},
+            {label: 'Materialaufwand / Fremdleistungen', val: bwa.materialaufwand, cls: 'text-danger'},
+            {label: 'Rohertrag / Rohergebnis', val: bwa.rohertrag, bold: true, border: true},
+            {sep: true},
+            {label: 'Personalkosten', val: bwa.personalkosten, cls: 'text-danger'},
+            {label: 'Raumkosten', val: bwa.raumkosten, cls: 'text-danger'},
+            {label: 'Sonstige betriebl. Aufwendungen', val: bwa.sonstige_aufwendungen, cls: 'text-danger'},
+            {label: 'Abschreibungen', val: bwa.abschreibungen, cls: 'text-danger'},
+            {sep: true},
+            {label: 'Gesamtaufwendungen', val: bwa.gesamt_aufwendungen, bold: true, cls: 'text-danger', border: true},
+            {sep: true},
+            {label: 'Betriebsergebnis', val: bwa.betriebsergebnis, bold: true, cls: bwa.betriebsergebnis >= 0 ? 'text-success' : 'text-danger', border: true, big: true},
+            {label: 'EBIT', val: bwa.ebit, bold: true, cls: bwa.ebit >= 0 ? 'text-success' : 'text-danger', big: true},
+        ];
+
+        var html = '';
+        rows.forEach(function(r) {
+            if (r.sep) {
+                html += '<tr><td colspan="3" style="height:4px;padding:0;"></td></tr>';
+                return;
+            }
+            var style = '';
+            if (r.bold) style += 'font-weight:bold;';
+            if (r.border) style += 'border-top:2px solid #333;';
+            if (r.big) style += 'font-size:1.1em;';
+            if (r.indent) style += 'padding-left:30px;';
+
+            html += '<tr style="' + style + '">';
+            html += '<td class="' + (r.cls || '') + '">' + r.label + '</td>';
+            html += '<td class="text-right ' + (r.cls || '') + '">' + formatMoney(r.val) + '</td>';
+            html += '<td class="text-right text-muted">' + pctOfRevenue(r.val, rev) + '</td>';
+            html += '</tr>';
+        });
+        $('#bwaMonthlyBody').html(html);
+    }
+
+    // ──────── Jahresuebersicht ────────
+    function renderAnnual(data) {
+        $('#bwaAnnualView').show();
+        $('#bwaAnnualYearLabel').text(data.year);
+
+        // Kopfzeile
+        var headHtml = '<tr><th class="sticky-left">Position</th>';
+        for (var m = 1; m <= 12; m++) {
+            headHtml += '<th class="text-right">' + monthNames[m-1] + '</th>';
+        }
+        headHtml += '<th class="text-right bg-secondary text-white">Summe</th>';
+        headHtml += '<th class="text-right bg-secondary text-white">&Oslash;</th></tr>';
+        $('#bwaAnnualHead').html(headHtml);
+
+        // Zeilen
+        var posKeys = ['umsatzerloese','materialaufwand','rohertrag','personalkosten','raumkosten','sonstige_aufwendungen','abschreibungen','gesamt_aufwendungen','betriebsergebnis','ebit'];
+
+        var bodyHtml = '';
+        posKeys.forEach(function(key) {
+            var isSummary = (key === 'rohertrag' || key === 'gesamt_aufwendungen' || key === 'betriebsergebnis' || key === 'ebit');
+            var style = isSummary ? 'font-weight:bold;' : '';
+            if (key === 'betriebsergebnis' || key === 'ebit') style += 'border-top:2px solid #333;';
+            if (key === 'rohertrag' || key === 'gesamt_aufwendungen') style += 'border-top:1px solid #666;';
+
+            bodyHtml += '<tr style="' + style + '">';
+            bodyHtml += '<td class="sticky-left">' + posLabels[key] + '</td>';
+
+            for (var m = 1; m <= 12; m++) {
+                var val = data.months[m] ? data.months[m][key] || 0 : 0;
+                var cls = '';
+                if (key === 'betriebsergebnis' || key === 'ebit') cls = val >= 0 ? 'text-success' : 'text-danger';
+                bodyHtml += '<td class="text-right ' + cls + '">' + formatMoneyShort(val) + '</td>';
+            }
+
+            var totalVal = data.totals[key] || 0;
+            var avgVal = data.averages[key] || 0;
+            bodyHtml += '<td class="text-right bg-light font-weight-bold">' + formatMoneyShort(totalVal) + '</td>';
+            bodyHtml += '<td class="text-right bg-light">' + formatMoneyShort(avgVal) + '</td>';
+            bodyHtml += '</tr>';
+
+            if (key === 'rohertrag' || key === 'gesamt_aufwendungen') {
+                bodyHtml += '<tr><td colspan="15" style="height:4px;padding:0;"></td></tr>';
+            }
+        });
+        $('#bwaAnnualBody').html(bodyHtml);
+
+        // Trend-Chart
+        renderTrendChart(data);
+    }
+
+    function renderTrendChart(data) {
+        if (trendChart) trendChart.destroy();
+
+        var labels = [];
+        var revenueData = [];
+        var resultData = [];
+        for (var m = 1; m <= 12; m++) {
+            labels.push(monthNames[m-1]);
+            var mv = data.months[m] || {};
+            revenueData.push(mv.umsatzerloese || 0);
+            resultData.push(mv.betriebsergebnis || 0);
+        }
+
+        var ctx = document.getElementById('bwaTrendChart').getContext('2d');
+        trendChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Umsatzerloese',
+                        data: revenueData,
+                        backgroundColor: 'rgba(40, 167, 69, 0.6)',
+                        borderColor: 'rgba(40, 167, 69, 1)',
+                        borderWidth: 1,
+                        order: 2
+                    },
+                    {
+                        label: 'Betriebsergebnis',
+                        data: resultData,
+                        type: 'line',
+                        borderColor: 'rgba(0, 123, 255, 1)',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 4,
+                        order: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(val) { return val.toLocaleString('de-DE') + ' \u20AC'; }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                return ctx.dataset.label + ': ' + parseFloat(ctx.raw).toLocaleString('de-DE', {minimumFractionDigits: 2}) + ' \u20AC';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // ──────── Periodenvergleich ────────
+    function renderCompare(data) {
+        $('#bwaCompareView').show();
+        $('#bwaCompareLabel').text(data.period1.label + '  vs.  ' + data.period2.label);
+        $('#bwaCompareH1').text(data.period1.label);
+        $('#bwaCompareH2').text(data.period2.label);
+
+        var posKeys = ['umsatzerloese','materialaufwand','rohertrag','personalkosten','raumkosten','sonstige_aufwendungen','abschreibungen','gesamt_aufwendungen','betriebsergebnis','ebit'];
+
+        var bodyHtml = '';
+        var chartLabels = [];
+        var chartData1 = [];
+        var chartData2 = [];
+
+        posKeys.forEach(function(key) {
+            var c = data.comparison[key];
+            if (!c) return;
+            var isSummary = (key === 'rohertrag' || key === 'gesamt_aufwendungen' || key === 'betriebsergebnis' || key === 'ebit');
+            var style = isSummary ? 'font-weight:bold;' : '';
+            if (key === 'betriebsergebnis' || key === 'ebit') style += 'border-top:2px solid #333;';
+
+            var diffCls = c.difference > 0 ? 'text-success' : (c.difference < 0 ? 'text-danger' : '');
+            var pctCls = c.pct_change > 0 ? 'text-success' : (c.pct_change < 0 ? 'text-danger' : '');
+            // Fuer Aufwendungen: Steigerung ist schlecht
+            if (['materialaufwand','personalkosten','raumkosten','sonstige_aufwendungen','abschreibungen','gesamt_aufwendungen'].indexOf(key) >= 0) {
+                diffCls = c.difference < 0 ? 'text-success' : (c.difference > 0 ? 'text-danger' : '');
+                pctCls = c.pct_change < 0 ? 'text-success' : (c.pct_change > 0 ? 'text-danger' : '');
+            }
+
+            var arrow = c.pct_change > 0 ? '<i class="fas fa-arrow-up"></i>' : (c.pct_change < 0 ? '<i class="fas fa-arrow-down"></i>' : '');
+
+            bodyHtml += '<tr style="' + style + '">';
+            bodyHtml += '<td>' + posLabels[key] + '</td>';
+            bodyHtml += '<td class="text-right">' + formatMoney(c.period1) + '</td>';
+            bodyHtml += '<td class="text-right">' + formatMoney(c.period2) + '</td>';
+            bodyHtml += '<td class="text-right ' + diffCls + '">' + formatMoney(c.difference) + '</td>';
+            bodyHtml += '<td class="text-right ' + pctCls + '">' + arrow + ' ' + c.pct_change.toFixed(1).replace('.', ',') + ' %</td>';
+            bodyHtml += '</tr>';
+
+            chartLabels.push(posLabels[key]);
+            chartData1.push(c.period1);
+            chartData2.push(c.period2);
+        });
+        $('#bwaCompareBody').html(bodyHtml);
+
+        // Vergleichs-Chart
+        renderCompareChart(data, chartLabels, chartData1, chartData2);
+    }
+
+    function renderCompareChart(data, labels, data1, data2) {
+        if (compareChart) compareChart.destroy();
+
+        var ctx = document.getElementById('bwaCompareChart').getContext('2d');
+        compareChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: data.period1.label,
+                        data: data1,
+                        backgroundColor: 'rgba(108, 117, 125, 0.6)',
+                        borderColor: 'rgba(108, 117, 125, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: data.period2.label,
+                        data: data2,
+                        backgroundColor: 'rgba(0, 123, 255, 0.6)',
+                        borderColor: 'rgba(0, 123, 255, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        ticks: {
+                            callback: function(val) { return val.toLocaleString('de-DE') + ' \u20AC'; }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                return ctx.dataset.label + ': ' + parseFloat(ctx.raw).toLocaleString('de-DE', {minimumFractionDigits: 2}) + ' \u20AC';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Drucken / PDF
+    $('#bwaPrintBtn').click(function() {
+        window.print();
+    });
+
+    // Initial laden
+    loadBwa();
+});
+</script>
+
+<style>
+@media print {
+    .main-sidebar, .main-header, .main-footer, .card-tools, #bwaLoadBtn,
+    .bwaCompareFields, #bwaMode, .form-group { display: none !important; }
+    .content-wrapper { margin-left: 0 !important; }
+    .small-box { page-break-inside: avoid; }
+    .card { page-break-inside: avoid; border: 1px solid #ddd !important; }
+}
+.sticky-left { position: sticky; left: 0; background: #fff; z-index: 1; }
+thead .sticky-left { background: #343a40; color: #fff; }
+</style>
+
+{% endblock %}

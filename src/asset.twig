@@ -21,13 +21,13 @@
                         <h3 class="profile-username text-center">{{ assets[0].assets_tag|aTag }}</h3>
                         {% if assets[0].assets_endDate is not null and assets[0].assets_endDate|date("U") <= "now"|date("U")  %}
                             <div class="alert alert-danger">
-                                <h5> <i class="fas fa-archive"></i> Asset Archived</h5>
-                                Asset was {{ assets[0].assets_archived }} on {{ assets[0].assets_endDate|date("d/M/Y") }}
+                                <h5> <i class="fas fa-archive"></i> Asset archiviert</h5>
+                                Asset wurde {{ assets[0].assets_archived }} am {{ assets[0].assets_endDate|date("d/M/Y") }}
                             </div>
                         {% endif %}
                         {% if assets[0]['link'] %}
                             <div class="callout callout-success">
-                                Asset is linked to asset <a href="{{ CONFIG.ROOTURL }}/asset.php?id={{ assets[0]['link']['assetTypes_id'] }}&instance={{ASSET_INSTANCE.instances_id}}&asset={{ assets[0]['link']['assets_id'] }}">{{ assets[0]['link']['assets_tag']|aTag }} ({{ assets[0]['link']['assetTypes_name'] }})</a>
+                                Asset ist verknüpft mit Asset <a href="{{ CONFIG.ROOTURL }}/asset.php?id={{ assets[0]['link']['assetTypes_id'] }}&instance={{ASSET_INSTANCE.instances_id}}&asset={{ assets[0]['link']['assets_id'] }}">{{ assets[0]['link']['assets_tag']|aTag }} ({{ assets[0]['link']['assetTypes_name'] }})</a>
                             </div>
                         {% endif %}
                         {% if assets[0]['assets_notes']|length > 0 %}
@@ -44,20 +44,20 @@
                                 {% endif %}
                             {% endfor %}
                             <li class="list-group-item">
-                                <b>Mass</b> <span class="float-right text-primary">{{ (assets[0]['assets_mass'] ? assets[0]['assets_mass']|mass : (asset.assetTypes_mass != "" and asset.assetTypes_mass != 0 ? asset.assetTypes_mass|mass : '?')) }}</span>
+                                <b>Gewicht</b> <span class="float-right text-primary">{{ (assets[0]['assets_mass'] ? assets[0]['assets_mass']|mass : (asset.assetTypes_mass != "" and asset.assetTypes_mass != 0 ? asset.assetTypes_mass|mass : '?')) }}</span>
                             </li>
                             <li class="list-group-item">
-                                <b>Value</b> <span class="float-right text-primary">{{ (assets[0]['assets_value'] ?: asset.assetTypes_value)|money(ASSET_INSTANCE['instances_config_currency']) }}</span>
+                                <b>Wert</b> <span class="float-right text-primary">{{ (assets[0]['assets_value'] ?: asset.assetTypes_value)|money(ASSET_INSTANCE['instances_config_currency']) }}</span>
                             </li>
                             <li class="list-group-item">
-                                <b>Day Rate</b> <span class="float-right text-primary">{{ (assets[0]['assets_dayRate'] ?: asset.assetTypes_dayRate)|money(ASSET_INSTANCE['instances_config_currency']) }}</span>
+                                <b>Tagessatz</b> <span class="float-right text-primary">{{ (assets[0]['assets_dayRate'] ?: asset.assetTypes_dayRate)|money(ASSET_INSTANCE['instances_config_currency']) }}</span>
                             </li>
                             <li class="list-group-item">
-                                <b>Week Rate</b> <span class="float-right text-primary">{{ (assets[0]['assets_weekRate'] ?: asset.assetTypes_weekRate)|money(ASSET_INSTANCE['instances_config_currency']) }}</span>
+                                <b>Wochensatz</b> <span class="float-right text-primary">{{ (assets[0]['assets_weekRate'] ?: asset.assetTypes_weekRate)|money(ASSET_INSTANCE['instances_config_currency']) }}</span>
                             </li>
                             {% if assets[0]['storage_location'] %}
                             <li class="list-group-item">
-                                <b>Storage Location</b>
+                                <b>Lagerort</b>
                                 {% if "LOCATIONS:VIEW"|instancePermissions %}
                                     <a class="float-right" href="{{ CONFIG.ROOTURL }}/location/">{{assets[0]['storage_location'][0]['locations_name']}}</a>
                                 {% else %}
@@ -67,10 +67,10 @@
                             {% endif %}
                         </ul>
                         {% if "ASSETS:ARCHIVE"|instancePermissions and (assets[0].assets_endDate is null or assets[0].assets_endDate|date("U") > "now"|date("U"))  and ASSET_INSTANCE.instances_id == USERDATA.instance.instances_id  %}
-                        <button class="btn btn-warning btn-block archiveAssetButton" data-assetid="{{ assets[0]['assets_id'] }}" style="margin-bottom: 10px;">Archive</button>
+                        <button class="btn btn-warning btn-block archiveAssetButton" data-assetid="{{ assets[0]['assets_id'] }}" style="margin-bottom: 10px;">Archivieren</button>
                         {% endif %}
                         {% if "ASSETS:DELETE"|instancePermissions and ASSET_INSTANCE.instances_id == USERDATA.instance.instances_id  %}
-                        <button class="btn btn-danger btn-block deleteAssetButton" data-assetid="{{ assets[0]['assets_id'] }}" style="margin-bottom: 10px;">Delete</button>
+                        <button class="btn btn-danger btn-block deleteAssetButton" data-assetid="{{ assets[0]['assets_id'] }}" style="margin-bottom: 10px;">Löschen</button>
                         {% endif %}
                     </div>
                 </div>
@@ -94,30 +94,30 @@
                     <ul class="list-group list-group-unbordered mb-3">
                         {% if asset.assetTypes_productLink != null %}
                         <li class="list-group-item">
-                            <b>Product Web Link</b> <a class="float-right" href="{{ asset.assetTypes_productLink }}" target="_blank">{{ asset.assetTypes_productLink|length > 25 ? asset.assetTypes_productLink|slice(0, 25) ~ '...': asset.assetTypes_productLink  }}</a>
+                            <b>Produktlink</b> <a class="float-right" href="{{ asset.assetTypes_productLink }}" target="_blank">{{ asset.assetTypes_productLink|length > 25 ? asset.assetTypes_productLink|slice(0, 25) ~ '...': asset.assetTypes_productLink  }}</a>
                         </li>
                         {% endif %}
                         <li class="list-group-item">
-                            <b>Category</b> {{ asset.assetCategoriesGroups_name }} - {{ asset.assetCategories_name }}
+                            <b>Kategorie</b> {{ asset.assetCategoriesGroups_name }} - {{ asset.assetCategories_name }}
                         </li>
                         <li class="list-group-item">
-                            <b>Manufacturer</b> {{ asset.manufacturers_name }}
+                            <b>Hersteller</b> {{ asset.manufacturers_name }}
                         </li>
                         <li class="list-group-item">
-                            <b>Mass</b> <span class="float-right text-primary">{{asset.assetTypes_mass != "" and asset.assetTypes_mass != 0 ? asset.assetTypes_mass|mass : "?" }}</span>
+                            <b>Gewicht</b> <span class="float-right text-primary">{{asset.assetTypes_mass != "" and asset.assetTypes_mass != 0 ? asset.assetTypes_mass|mass : "?" }}</span>
                         </li>
                         <li class="list-group-item">
-                            <b>Value</b> <span class="float-right text-primary">{{ asset.assetTypes_value|money(ASSET_INSTANCE['instances_config_currency']) }}</span>
+                            <b>Wert</b> <span class="float-right text-primary">{{ asset.assetTypes_value|money(ASSET_INSTANCE['instances_config_currency']) }}</span>
                         </li>
                         <li class="list-group-item">
-                            <b>Day Rate</b> <span class="float-right text-primary">{{ asset.assetTypes_dayRate|money(ASSET_INSTANCE['instances_config_currency']) }}</span>
+                            <b>Tagessatz</b> <span class="float-right text-primary">{{ asset.assetTypes_dayRate|money(ASSET_INSTANCE['instances_config_currency']) }}</span>
                         </li>
                         <li class="list-group-item">
-                            <b>Week Rate</b> <span class="float-right text-primary">{{ asset.assetTypes_weekRate|money(ASSET_INSTANCE['instances_config_currency']) }}</span>
+                            <b>Wochensatz</b> <span class="float-right text-primary">{{ asset.assetTypes_weekRate|money(ASSET_INSTANCE['instances_config_currency']) }}</span>
                         </li>
                     </ul>
                     {% if asset.oneasset %}
-                        <a href="?id={{asset.assetTypes_id}}" class="btn btn-info btn-block"><b>View All</b></a>
+                        <a href="?id={{asset.assetTypes_id}}" class="btn btn-info btn-block"><b>Alle anzeigen</b></a>
                     {% endif %}
                     
                 </div>
@@ -128,7 +128,7 @@
         <div class="col-md-9">
             {% if ASSET_INSTANCE.instances_id != USERDATA.instance.instances_id %}
                 <div class="alert alert-info">
-                    <h5>Showing assets from business {{ ASSET_INSTANCE.instances_name }}</h5>
+                    <h5>Assets von Unternehmen {{ ASSET_INSTANCE.instances_name }} anzeigen</h5>
                 </div>
             {% endif %}
             {% if assets|length == 1 %}
@@ -149,7 +149,7 @@
                 {% if assets[0]['linkedToThis'] %}
                     <div class="card">
                         <div class="card-header">
-                            <h3 class="card-title">Assets linked to this asset</h3>
+                            <h3 class="card-title">Mit diesem Asset verknüpfte Assets</h3>
                         </div>
                         <div class="card-body p-0">
                             <table class="table table-sm">
@@ -157,6 +157,7 @@
                                 <tr>
                                     <th>ID</th>
                                     <th>Name</th>
+
                                 </tr>
                                 </thead>
                                 <tbody>
@@ -187,11 +188,11 @@
                 <div class="card-header p-2">
                     <ul class="nav nav-pills">
                         <li class="nav-item"><a class="nav-link active" href="#calendarBoxAsset" data-toggle="tab"><i class="far fa-calendar-alt"></i></a></li>
-                        {% if "ASSETS:EDIT"|instancePermissions %}<li class="nav-item"><a class="nav-link" href="#editAsset" data-toggle="tab">Edit {{ assets[0].assets_tag|aTag }}</a></li>{% endif %}
-                        {% if CONFIG.FILES_ENABLED == "Enabled" and USERDATA.instance.instances_storageEnabled == 1 and "ASSETS:ASSET_FILE_ATTACHMENTS:VIEW"|instancePermissions %}<li class="nav-item"><a class="nav-link" href="#files" data-toggle="tab">Asset Files</a></li>{% endif %}
-                        <li class="nav-item"><a class="nav-link" href="#location" data-toggle="tab">Location</a></li>
+                        {% if "ASSETS:EDIT"|instancePermissions %}<li class="nav-item"><a class="nav-link" href="#editAsset" data-toggle="tab">Bearbeiten {{ assets[0].assets_tag|aTag }}</a></li>{% endif %}
+                        {% if CONFIG.FILES_ENABLED == "Enabled" and USERDATA.instance.instances_storageEnabled == 1 and "ASSETS:ASSET_FILE_ATTACHMENTS:VIEW"|instancePermissions %}<li class="nav-item"><a class="nav-link" href="#files" data-toggle="tab">Asset-Dateien</a></li>{% endif %}
+                        <li class="nav-item"><a class="nav-link" href="#location" data-toggle="tab">Standort</a></li>
                         {% if "ASSETS:ASSET_BARCODES:VIEW"|instancePermissions %}<li class="nav-item"><a class="nav-link" href="#barcodes" data-toggle="tab">Barcodes</a></li>{% endif %}
-                        {% if  "MAINTENANCE_JOBS:VIEW"|instancePermissions %}<li class="nav-item"><a class="nav-link" href="#maintenance" data-toggle="tab">Maintenance</a></li>{% endif %}
+                        {% if  "MAINTENANCE_JOBS:VIEW"|instancePermissions %}<li class="nav-item"><a class="nav-link" href="#maintenance" data-toggle="tab">Wartung</a></li>{% endif %}
                     </ul>
                 </div><!-- /.card-header -->
                 <div class="card-body" style="padding: 0;">
@@ -212,11 +213,11 @@
                                     var calendar = new Calendar(calendarEl, {
                                         themeSystem: 'bootstrap',
                                         buttonText:  {
-                                            today:    'Today',
-                                            month:    'Month',
-                                            week:     'Week',
-                                            day:      'Day',
-                                            list:     'List'
+                                            today:    'Heute',
+                                            month:    'Monat',
+                                            week:     'Woche',
+                                            day:      'Tag',
+                                            list:     'Liste'
                                         },
                                         headerToolbar : {
                                             left  : 'prev,next today',
@@ -266,12 +267,12 @@
                                     <div class="card-header p-2">
                                         <ul class="nav nav-pills">
                                             <li class="nav-item"><a class="nav-link active" href="#editAssetDetails" data-toggle="tab">Details</a></li>
-                                            <li class="nav-item"><a class="nav-link" href="#linked" data-toggle="tab">Asset Link</a></li>
-                                            <li class="nav-item"><a class="nav-link" href="#groups" data-toggle="tab">Groups</a></li>
-                                            {% if assetFieldsLength > 0 %}<li class="nav-item"><a class="nav-link" href="#editAssetFields" data-toggle="tab">Custom Fields</a></li>{% endif %}
-                                            {% if "ASSETS:EDIT:OVVERRIDES"|instancePermissions %}<li class="nav-item"><a class="nav-link" href="#editAssetDetailsOverrides" data-toggle="tab">Asset Type Overrides</a></li>{% endif %}
-                                            <li class="nav-item"><a class="nav-link" href="#editAssetType" data-toggle="tab">Change Type</a></li>
-                                            {% if "ASSETS:TRANSFER"|instancePermissions and assets[0].assets_endDate is null %}<li class="nav-item"><a class="nav-link" href="#moveAsset" data-toggle="tab">Transfer Asset</a></li>{% endif %}
+                                            <li class="nav-item"><a class="nav-link" href="#linked" data-toggle="tab">Asset-Verknüpfung</a></li>
+                                            <li class="nav-item"><a class="nav-link" href="#groups" data-toggle="tab">Gruppen</a></li>
+                                            {% if assetFieldsLength > 0 %}<li class="nav-item"><a class="nav-link" href="#editAssetFields" data-toggle="tab">Benutzerdefinierte Felder</a></li>{% endif %}
+                                            {% if "ASSETS:EDIT:OVVERRIDES"|instancePermissions %}<li class="nav-item"><a class="nav-link" href="#editAssetDetailsOverrides" data-toggle="tab">Asset-Typ-Überschreibungen</a></li>{% endif %}
+                                            <li class="nav-item"><a class="nav-link" href="#editAssetType" data-toggle="tab">Typ ändern</a></li>
+                                            {% if "ASSETS:TRANSFER"|instancePermissions and assets[0].assets_endDate is null %}<li class="nav-item"><a class="nav-link" href="#moveAsset" data-toggle="tab">Asset übertragen</a></li>{% endif %}
                                         </ul>
                                     </div><!-- /.card-header -->
                                     <div class="card-body" style="padding: 0;">
@@ -279,20 +280,20 @@
                                             <div class="active tab-pane" style="padding: 1.25rem" id="editAssetDetails">
                                                 <form id="editAssetDetailsForm">
                                                     <div class="input-group">
-                                                        <div class="input-group-prepend"><span class="input-group-text">Asset ID</span></div>
+                                                        <div class="input-group-prepend"><span class="input-group-text">Asset-ID</span></div>
                                                         <input class="form-control" name="assets_tag" value="{{ assets[0]['assets_tag'] }}" />
                                                     </div>
                                                     <div class="input-group">
-                                                        <div class="input-group-prepend"><span class="input-group-text">Asset Notes</span></div>
+                                                        <div class="input-group-prepend"><span class="input-group-text">Asset-Notizen</span></div>
                                                         <textarea class="form-control" rows="2" name="assets_notes" placeholder="">{{ assets[0]['assets_notes'] }}</textarea>
                                                     </div>
                                                     <div class="input-group">
                                                         <div class="input-group-prepend">
-                                                            <span class="input-group-text">Storage Location</span>
+                                                            <span class="input-group-text">Lagerort</span>
                                                         </div>
                                                         <select class="form-control select2bs4" name="assets_storageLocation" id="editAssetStoredLocation">
                                                             {% if assets[0]['storage_location'] == [] %}
-                                                                <option value="" disabled selected>No Location Selected....</option>
+                                                                <option value="" disabled selected>Kein Standort ausgewählt....</option>
                                                             {% endif %}
                                                             {% for location in locations %}
                                                                 <option value="{{ location.locations_id }}" {{ assets[0]['storage_location'][0]['locations_id'] == location.locations_id ? 'selected' }} {{ location.locations_archived == 1 ? 'disabled' }}>{{ location.locations_archived == 1 ? '[Archived] ' }}{{ location.locations_name }}</option>
@@ -305,15 +306,15 @@
                                                         </select>
                                                     </div>
                                                 </form>
-                                                <button class="btn btn-default float-right" id="saveAssetSettingsButton" style="margin-top:10px;margin-bottom:10px;">Save</button>
+                                                <button class="btn btn-default float-right" id="saveAssetSettingsButton" style="margin-top:10px;margin-bottom:10px;">Speichern</button>
                                             </div>
                                             <div class="tab-pane" style="padding: 1.25rem" id="linked">
                                                 <div class="callout">
-                                                    Linking this asset to another means that whenever that asset is added to a project this asset is also added. For example, you might link an assets power supply to the asset
+                                                    Wenn Sie dieses Asset mit einem anderen verknüpfen, wird es automatisch zum Projekt hinzugefügt, wenn das andere Asset hinzugefügt wird. Beispielsweise können Sie das Netzteil eines Assets mit dem Asset verknüpfen
                                                 </div>
                                                 {% if USERDATA.instance.instances_config_linkedDefaultDiscount > 0 %}
                                                     <div class="callout callout-danger">
-                                                        When linked assets are added to a project they are discounted by {{ USERDATA.instance.instances_config_linkedDefaultDiscount }}% by default
+                                                        Wenn verknüpfte Assets zu einem Projekt hinzugefügt werden, erhalten sie standardmäßig {{ USERDATA.instance.instances_config_linkedDefaultDiscount }}% Rabatt
                                                     </div>
                                                 {% endif %}
                                                 <select class="form-control select2bs4 assetSelect2" id="assetLinkChange">
@@ -321,9 +322,9 @@
                                                         <option value="{{ assets[0]['assets_linkedTo'] }}" selected>{{ assets[0]['link']['assets_tag']|aTag }} ({{ assets[0]['link']['assetTypes_name'] }})</option>
                                                     {% endif %}
                                                 </select>
-                                                <button class="btn btn-default float-right" id="saveAssetLinkChangeButton" style="margin-top:10px;margin-bottom:10px;">Save</button>
+                                                <button class="btn btn-default float-right" id="saveAssetLinkChangeButton" style="margin-top:10px;margin-bottom:10px;">Speichern</button>
                                                 {% if assets[0]['assets_linkedTo'] %}
-                                                    <button class="btn btn-warning float-right" id="removeAssetLinkChangeButton" style="margin-top:10px;margin-bottom:10px;">Remove Link</button>
+                                                    <button class="btn btn-warning float-right" id="removeAssetLinkChangeButton" style="margin-top:10px;margin-bottom:10px;">Verknüpfung entfernen</button>
                                                 {% endif %}
 
                                             </div>
@@ -345,18 +346,18 @@
                                                         {% endif %}
                                                     {% endfor %}
                                                 </form>
-                                                <button class="btn btn-default float-right" id="saveAssetDefinableFieldButton" style="margin-top:10px;margin-bottom:10px;">Save</button>
+                                                <button class="btn btn-default float-right" id="saveAssetDefinableFieldButton" style="margin-top:10px;margin-bottom:10px;">Speichern</button>
                                             </div>
                                             {% if "ASSETS:EDIT:OVVERRIDES"|instancePermissions %}
                                                 <div class="tab-pane" style="padding: 1.25rem" id="editAssetDetailsOverrides">
                                                     <div class="callout">
-                                                        Overriding the details of the asset means that these settings below will take precedence over the properties for the type - this allows you to have multiple assets within a type with different masses for example
+                                                        Das Überschreiben der Asset-Details bedeutet, dass die folgenden Einstellungen Vorrang vor den Typ-Eigenschaften haben - so können Sie beispielsweise mehrere Assets eines Typs mit unterschiedlichem Gewicht haben
                                                     </div>
                                                     <form id="editAssetDetailsOverridesForm">
                                                         <div class="input-group">
                                                             <div class="input-group-prepend">
                                                     <span class="input-group-text">
-                                                      Mass
+                                                      Gewicht
                                                     </span>
                                                             </div>
                                                             <input type="number" step="0.001" min="0" name="assets_mass" value="{{ assets[0].assets_mass }}" class="form-control" />
@@ -367,7 +368,7 @@
                                                         <div class="input-group">
                                                             <div class="input-group-prepend">
                                                     <span class="input-group-text">
-                                                      Value - {{ moneySymbol() }}
+                                                      Wert - {{ moneySymbol() }}
                                                     </span>
                                                             </div>
                                                             <input type="number" step="0.001" min="0" name="assets_value" value="{{ assets[0].assets_value|moneyDecimal }}" class="form-control" />
@@ -376,7 +377,7 @@
                                                         <div class="input-group">
                                                             <div class="input-group-prepend">
                                                     <span class="input-group-text">
-                                                      Day Rate - {{ moneySymbol() }}
+                                                      Tagessatz - {{ moneySymbol() }}
                                                     </span>
                                                             </div>
                                                             <input type="number" step="0.001" min="0" name="assets_dayRate" value="{{ assets[0].assets_dayRate|moneyDecimal }}" class="form-control"  />
@@ -384,47 +385,47 @@
                                                         <div class="input-group">
                                                             <div class="input-group-prepend">
                                                             <span class="input-group-text">
-                                                              Weekly Rate - {{ moneySymbol() }}
+                                                              Wochensatz - {{ moneySymbol() }}
                                                             </span>
                                                             </div>
                                                             <input type="number" step="0.001" min="0" name="assets_weekRate" class="form-control" value="{{ assets[0].assets_weekRate|moneyDecimal }}" />
                                                         </div>
                                                     </form>
-                                                    <button class="btn btn-default float-right" id="editAssetDetailsOverridesButton" style="margin-top:10px;margin-bottom:10px;">Save</button>
+                                                    <button class="btn btn-default float-right" id="editAssetDetailsOverridesButton" style="margin-top:10px;margin-bottom:10px;">Speichern</button>
                                                 </div>
                                             {% endif %}
                                             <div class="tab-pane" style="padding: 1.25rem" id="editAssetType">
                                                 <div class="callout callout-danger">
-                                                    Changing the asset type for this asset can have significant implications especially with cost of existing projects and definable fields
+                                                    Das Ändern des Asset-Typs kann erhebliche Auswirkungen haben, insbesondere auf die Kosten bestehender Projekte und definierbare Felder
                                                 </div>
                                                 <select class="form-control  select2bs4 assetSelect2" id="assetTypeChange" placeholder="{{ asset.assetTypes_name }}" value="{{ asset.assetTypes_id }}"></select>
-                                                <button class="btn btn-default float-right" id="saveAssetTypeChangeButton" style="margin-top:10px;margin-bottom:10px;">Save</button>
+                                                <button class="btn btn-default float-right" id="saveAssetTypeChangeButton" style="margin-top:10px;margin-bottom:10px;">Speichern</button>
                                             </div>
                                             {% if "ASSETS:TRANSFER"|instancePermissions %}
                                             <div class="tab-pane" style="padding: 1.25rem" id="moveAsset">
                                                 <div class="callout callout-danger">
-                                                    <p>Transferring an asset to another business will archive it in this business, which will affect existing projects. When transferring, the following paramenters are not copied across to the other business: maintenance jobs, flags/blocks, file attachments, images, assignments to projects, barcodes, barcode scans &amp; groups</p>
-                                                    <p>You can only transfer assets if you have the <code>ASSETS:TRANSFER</code> permission for the business you are transfering the asset into.</p> 
+                                                    <p>Das Übertragen eines Assets an ein anderes Unternehmen archiviert es in diesem Unternehmen, was sich auf bestehende Projekte auswirkt. Beim Übertragen werden folgende Parameter nicht übernommen: Wartungsaufträge, Markierungen/Sperrungen, Dateianhänge, Bilder, Projektzuweisungen, Barcodes, Barcode-Scans &amp; Gruppen</p>
+                                                    <p>Sie können Assets nur übertragen, wenn Sie die <code>ASSETS:TRANSFER</code>-Berechtigung für das Zielunternehmen haben.</p> 
                                                 </div>
                                                 <div class="form-group">
-                                                    <label for="assetMigrateInstance">Business to transfer asset to</label>
-                                                    <select class="form-control select2bs4" id="assetMigrateInstance" placeholder="Select an Instance"></select>
+                                                    <label for="assetMigrateInstance">Zielunternehmen für die Übertragung</label>
+                                                    <select class="form-control select2bs4" id="assetMigrateInstance" placeholder="Instanz auswählen"></select>
                                                 </div>
                                                 <div class="form-group" style="display: none;">
-                                                    <label for="assetMigrateAssetType">Asset Type for asset in new business</label>
-                                                    <select class="form-control select2bs4" id="assetMigrateAssetType" placeholder="Select an Asset Type"></select>
+                                                    <label for="assetMigrateAssetType">Asset-Typ für Asset im neuen Unternehmen</label>
+                                                    <select class="form-control select2bs4" id="assetMigrateAssetType" placeholder="Asset-Typ auswählen"></select>
                                                 </div>
                                                 <div class="form-group mt-2" style="display: none;">
-                                                    <label for="assetMigrateManufacturer">New Asset Type Manufacturer</label>
-                                                    <select class="form-control select2bs4" id="assetMigrateManufacturer" placeholder="Select a Manufacturer" aria-describedby="assetMigrateManufacturerHelp"></select>
-                                                    <small id="assetMigrateManufacturerHelp" class="form-text text-muted">Select the manufacturer that this copied asset type should use</small>
+                                                    <label for="assetMigrateManufacturer">Hersteller des neuen Asset-Typs</label>
+                                                    <select class="form-control select2bs4" id="assetMigrateManufacturer" placeholder="Hersteller auswählen" aria-describedby="assetMigrateManufacturerHelp"></select>
+                                                    <small id="assetMigrateManufacturerHelp" class="form-text text-muted">Wählen Sie den Hersteller für diesen kopierten Asset-Typ</small>
                                                 </div>
                                                 <div class="form-group" style="display: none;">
-                                                    <label for="assetMigrateCategory">New Asset Type Category</label>
-                                                    <select class="form-control select2bs4" id="assetMigrateCategory" placeholder="Select a Category" aria-describedby="assetMigrateCategoryHelp"></select>
-                                                    <small id="assetMigrateCategoryHelp" class="form-text text-muted">Which category should this asset type be placed in?</small>
+                                                    <label for="assetMigrateCategory">Kategorie des neuen Asset-Typs</label>
+                                                    <select class="form-control select2bs4" id="assetMigrateCategory" placeholder="Kategorie auswählen" aria-describedby="assetMigrateCategoryHelp"></select>
+                                                    <small id="assetMigrateCategoryHelp" class="form-text text-muted">In welche Kategorie soll dieser Asset-Typ eingeordnet werden?</small>
                                                 </div> 
-                                                <button class="btn btn-default float-right" id="assetMigrate" style="margin-top:10px;margin-bottom:10px;">Migrate</button>                 
+                                                <button class="btn btn-default float-right" id="assetMigrate" style="margin-top:10px;margin-bottom:10px;">Migrieren</button>                 
                                             </div>
                                             {% endif %}
                                         </div>
@@ -438,7 +439,7 @@
                             <div class="tab-pane" style="padding: 1.25rem"  id="files">
                                 {% if "ASSETS:ASSET_FILE_ATTACHMENTS:CREATE"|instancePermissions %}
                                     <div class="callout callout-default">
-                                        Use this area to store files relevant to one asset such as an order confirmation or purchase invoice
+                                        Verwenden Sie diesen Bereich, um Dateien zu speichern, die für ein Asset relevant sind, wie z.B. eine Auftragsbestätigung oder Rechnung
                                     </div>
 {% embed 'assets/templates/uppy.twig' with {'type': 'ASSET-FILE', 'paste': false, 'typeId': 4, 'subTypeId': assets[0]['assets_id'], 'imagesOnly': false } %}
 
@@ -460,16 +461,16 @@
                                 <thead>
                                 <tr>
                                     <th>
-                                        Timestamp
+                                        Zeitstempel
                                     </th>
                                     <th>
-                                        Location
+                                        Standort
                                     </th>
                                     <th>
-                                        Type
+                                        Typ
                                     </th>
                                     <th>
-                                        User
+                                        Benutzer
                                     </th>
                                 </tr>
                                 </thead>
@@ -483,14 +484,14 @@
                                             {% if scan.locations_name %}
                                                 {{ scan.locations_name }}
                                             {% elseif scan.assetTypes_name %}
-                                                Inside asset {{  scan.assetTypes_name }} ({{ scan.assets_tag }})
+                                                In Asset {{  scan.assetTypes_name }} ({{ scan.assets_tag }})
                                             {% elseif scan.assetsBarcodes_customLocation %}
                                                 {{  scan.assetsBarcodes_customLocation }}
                                             {% endif %}
                                             <br/><small>{{ scan.assetsBarcodesScans_validation }}</small>
                                         </td>
                                         <td>
-                                            {% if scan.assetsBarcodesScans_barcodeWasScanned == "1" %}Barcode scanned{% else %}Location set manually{% endif %}
+                                            {% if scan.assetsBarcodesScans_barcodeWasScanned == "1" %}Barcode gescannt{% else %}Standort manuell festgelegt{% endif %}
                                         </td>
                                         <td>
                                             <a href="{{ CONFIG.ROOTURL }}/user.php?id={{ scan.users_userid }}">{{ scan.users_name1 ~ " " ~ scan.users_name2 }}</a>
@@ -501,12 +502,12 @@
                             </table>
                             {% if "LOCATIONS:VIEW"|instancePermissions and assets[0].barcodes[0] %}
                             <div class="callout callout-info m-2">
-                                <p>Use the buttons below to set the location of this asset without scanning a barcode.</p>
+                                <p>Verwenden Sie die Schaltflächen unten, um den Standort dieses Assets ohne Barcode-Scan festzulegen.</p>
                             </div>
                             <div class="btn-group m-2">
-                                <button class="btn btn-info" id="setAssetLocationButton">Manually pick location from list</button>
-                                <button class="btn btn-info" id="setAssetLocationAssetButton">Manually set location to be within another Asset</button>
-                                <button class="btn btn-info" id="setCustomLocationButton">Manually set Custom Location</button>
+                                <button class="btn btn-info" id="setAssetLocationButton">Standort aus Liste auswählen</button>
+                                <button class="btn btn-info" id="setAssetLocationAssetButton">Standort in einem anderen Asset festlegen</button>
+                                <button class="btn btn-info" id="setCustomLocationButton">Benutzerdefinierten Standort festlegen</button>
                             </div>
                             {% endif %}
                         </div>
@@ -519,19 +520,19 @@
 
                                         </th>
                                         <th>
-                                            Barcode value
+                                            Barcode-Wert
                                         </th>
                                         <th>
-                                            Type
+                                            Typ
                                         </th>
                                         <th>
-                                            Notes
+                                            Notizen
                                         </th>
                                         <th>
-                                            Creator
+                                            Ersteller
                                         </th>
                                         <th>
-                                            Last Scanned
+                                            Zuletzt gescannt
                                         </th>
                                         <th style="width:1%;">
 
@@ -559,7 +560,7 @@
                                                 </a>
                                                 <br/>
                                                 <small>
-                                                    Created {{barcode.assetsBarcodes_added|date("d M Y h:i:sa")}}
+                                                    Erstellt {{barcode.assetsBarcodes_added|date("d M Y h:i:sa")}}
                                                 </small>
                                             </td>
                                             <td>
@@ -567,12 +568,12 @@
                                                     {% if barcode.latestScan.locations_name %}
                                                         {{ barcode.latestScan.locations_name }}
                                                     {% elseif barcode.latestScan.assetTypes_name %}
-                                                        Inside asset {{  barcode.latestScan.assetTypes_name }} ({{ barcode.latestScan.assets_tag }})
+                                                        In Asset {{  barcode.latestScan.assetTypes_name }} ({{ barcode.latestScan.assets_tag }})
                                                     {% elseif barcode.latestScan.assetsBarcodes_customLocation %}
                                                         {{  barcode.latestScan.assetsBarcodes_customLocation }}
                                                         <br/>
                                                         <small>
-                                                           Location was entered as text
+                                                           Standort wurde als Text eingegeben
                                                         </small>
                                                     {% endif %}
                                                     <br/>
@@ -580,12 +581,12 @@
                                                         <a href="{{ CONFIG.ROOTURL }}/user.php?id={{ barcode.latestScan.users_userid }}">{{ barcode.latestScan.users_name1 ~ " " ~ barcode.latestScan.users_name2 }}</a> {{ barcode.latestScan.assetsBarcodesScans_timestamp|date("d/M/Y G:i:s") }}
                                                     </small>
                                                 {% else %}
-                                                    <i>Never scanned</i>
+                                                    <i>Nie gescannt</i>
                                                 {% endif %}
                                             </td>
                                             <td>
                                                 {% if "ASSETS:ASSET_BARCODES:DELETE"|instancePermissions %}
-                                                    <button title="Delete" class="btn btn-sm btn-danger deleteBarcodeButton" data-barcodeid="{{ barcode['assetsBarcodes_id'] }}"><i class="fa fa-trash"></i></button>
+                                                    <button title="Löschen" class="btn btn-sm btn-danger deleteBarcodeButton" data-barcodeid="{{ barcode['assetsBarcodes_id'] }}"><i class="fa fa-trash"></i></button>
                                                 {% endif %}
                                             </td>
                                         </tr>
@@ -593,7 +594,7 @@
                                     </tbody>
                                 </table>
                                 {% if ASSET_INSTANCE.instances_id == USERDATA.instance.instances_id %}
-                                     <a class="btn btn-default btn-block" href="{{ CONFIG.ROOTURL }}/maintenance/barcodeGenerator.php?id={{assets[0].assets_id}}">Generate/Export Barcodes</a>
+                                     <a class="btn btn-default btn-block" href="{{ CONFIG.ROOTURL }}/maintenance/barcodeGenerator.php?id={{assets[0].assets_id}}">Barcodes generieren/exportieren</a>
                                 {% endif %}
                             </div>
                         {% endif %}
@@ -602,10 +603,10 @@
                                 <div class="card" style="margin-bottom:0;">
                                     <div class="card-header p-2">
                                         <ul class="nav nav-pills">
-                                            <li class="nav-item"><a class="nav-link" href="#maintenance-newJob" data-toggle="tab">New Job</a></li>
-                                            <li class="nav-item"><a class="nav-link active" href="#maintenance-flags" data-toggle="tab">Blocks &amp; Flags</a></li>
-                                            <li class="nav-item"><a class="nav-link" href="#maintenance-jobsOutstanding" data-toggle="tab">Jobs Outstanding</a></li>
-                                            <li class="nav-item"><a class="nav-link" href="#maintenance-jobsCompleted" data-toggle="tab">Jobs Completed</a></li>
+                                            <li class="nav-item"><a class="nav-link" href="#maintenance-newJob" data-toggle="tab">Neuer Auftrag</a></li>
+                                            <li class="nav-item"><a class="nav-link active" href="#maintenance-flags" data-toggle="tab">Sperrungen &amp; Markierungen</a></li>
+                                            <li class="nav-item"><a class="nav-link" href="#maintenance-jobsOutstanding" data-toggle="tab">Offene Aufträge</a></li>
+                                            <li class="nav-item"><a class="nav-link" href="#maintenance-jobsCompleted" data-toggle="tab">Abgeschlossene Aufträge</a></li>
                                         </ul>
                                     </div><!-- /.card-header -->
                                     <div class="card-body" style="padding: 0;">
@@ -622,17 +623,17 @@
                                                         <input type="text" class="form-control" disabled value="{{ assets[0].assets_tag|aTag }}" />
                                                     </div>
                                                     <div class="input-group">
-                                                        <div class="input-group-prepend"><span class="input-group-text">Title</span></div>
+                                                        <div class="input-group-prepend"><span class="input-group-text">Titel</span></div>
                                                         <input type="text" class="form-control" name="maintenanceJobs_title" id="maintenanceJobstitle" placeholder="Drum revolve key missing" />
                                                     </div>
                                                     <div class="input-group">
-                                                        <div class="input-group-prepend"><span class="input-group-text">Fault Description</span></div>
-                                                        <textarea class="form-control" rows="5" name="maintenanceJobs_faultDescription" id="maintenanceJobsfaultDescription" placeholder="Details of the fault"></textarea>
+                                                        <div class="input-group-prepend"><span class="input-group-text">Fehlerbeschreibung</span></div>
+                                                        <textarea class="form-control" rows="5" name="maintenanceJobs_faultDescription" id="maintenanceJobsfaultDescription" placeholder="Details des Fehlers"></textarea>
                                                     </div>
                                                     <div class="input-group">
                                                         <div class="input-group-prepend">
                                                             <span class="input-group-text">
-                                                              Priority
+                                                              Priorität
                                                             </span>
                                                         </div>
                                                         <select class="form-control" name="maintenanceJobs_priority">
@@ -642,13 +643,13 @@
                                                         </select>
                                                     </div>
                                                     <div class="input-group">
-                                                        <label>Tag Users</label>
-                                                        <select class="form-control" multiple="multiple" placeholder="Select users to be tagged for updates in the job" id="tagUserInJob">
+                                                        <label>Benutzer markieren</label>
+                                                        <select class="form-control" multiple="multiple" placeholder="Benutzer für Aktualisierungen im Auftrag auswählen" id="tagUserInJob">
                                                         </select>
                                                     </div>
                                                 </form>
 
-                                                <button class="btn btn-default float-right" id="addNewJobButton" style="margin-top:10px;margin-bottom:10px;">Save</button>
+                                                <button class="btn btn-default float-right" id="addNewJobButton" style="margin-top:10px;margin-bottom:10px;">Speichern</button>
                                             </div>
                                             <div class="active tab-pane" style="padding: 1.25rem" id="maintenance-flags">
                                                 {% for flag in assets[0].flagsblocks.BLOCK %}
@@ -674,16 +675,16 @@
                                                             #
                                                         </th>
                                                         <th>
-                                                            Title
+                                                            Titel
                                                         </th>
                                                         <th style="width: 5%">
-                                                            Creator
+                                                            Ersteller
                                                         </th>
                                                         <th style="width: 5%">
-                                                            Assigned
+                                                            Zugewiesen
                                                         </th>
                                                         <th style="width: 8%" class="text-center">
-                                                            Priority
+                                                            Priorität
                                                         </th>
                                                         <th style="width: 8%" class="text-center">
                                                             Status
@@ -709,7 +710,7 @@
                                                                     </a>
                                                                     <br/>
                                                                     <small>
-                                                                        Created {{job.maintenanceJobs_timestamp_added|date("d M Y h:i:sa")}}
+                                                                        Erstellt {{job.maintenanceJobs_timestamp_added|date("d M Y h:i:sa")}}
                                                                     </small>
                                                                 </td>
                                                                 <td>
@@ -743,7 +744,7 @@
                                                                     {% if job.maintenanceJobsStatuses_name %}
                                                                         <span class="badge badge-default">{{ job.maintenanceJobsStatuses_name }}</span>
                                                                     {% else %}
-                                                                        <span class="badge badge-default">Awaiting Sorting</span>
+                                                                        <span class="badge badge-default">Warten auf Sortierung</span>
                                                                     {% endif %}
                                                                 </td>
                                                                 <td >
@@ -770,16 +771,16 @@
                                                             #
                                                         </th>
                                                         <th>
-                                                            Title
+                                                            Titel
                                                         </th>
                                                         <th style="width: 5%">
-                                                            Creator
+                                                            Ersteller
                                                         </th>
                                                         <th style="width: 5%">
-                                                            Assigned
+                                                            Zugewiesen
                                                         </th>
                                                         <th style="width: 8%" class="text-center">
-                                                            Priority
+                                                            Priorität
                                                         </th>
                                                         <th style="width: 8%" class="text-center">
                                                             Status
@@ -805,7 +806,7 @@
                                                                     </a>
                                                                     <br/>
                                                                     <small>
-                                                                        Created {{job.maintenanceJobs_timestamp_added|date("d M Y h:i:sa")}}
+                                                                        Erstellt {{job.maintenanceJobs_timestamp_added|date("d M Y h:i:sa")}}
                                                                     </small>
                                                                 </td>
                                                                 <td>
@@ -839,7 +840,7 @@
                                                                     {% if job.maintenanceJobsStatuses_name %}
                                                                         <span class="badge badge-default">{{ job.maintenanceJobsStatuses_name }}</span>
                                                                     {% else %}
-                                                                        <span class="badge badge-default">Awaiting Sorting</span>
+                                                                        <span class="badge badge-default">Warten auf Sortierung</span>
                                                                     {% endif %}
                                                                 </td>
                                                                 <td >
@@ -873,7 +874,7 @@
                 <div class="card-header p-2">
                     <ul class="nav nav-pills">
                         {% if asset.oneasset %}
-                            <li class="nav-item"><a class="nav-link" href="?id={{asset.assetTypes_id}}&instance={{ASSET_INSTANCE.instances_id}}">View All</a></li>
+                            <li class="nav-item"><a class="nav-link" href="?id={{asset.assetTypes_id}}&instance={{ASSET_INSTANCE.instances_id}}">Alle anzeigen</a></li>
                         {% elseif assets|length > 1 %}
                             <li class="nav-item"><a class="nav-link" href="#assets" data-toggle="tab">Assets</a></li>
                         {% endif %}
@@ -884,13 +885,13 @@
 
 
                         {% if "ASSETS:ASSET_TYPES:EDIT"|instancePermissions and ASSET_INSTANCE.instances_id == USERDATA.instance.instances_id  %}
-                            <li class="nav-item"><a class="nav-link" href="#settings" data-toggle="tab">Edit Type</a></li>
+                            <li class="nav-item"><a class="nav-link" href="#settings" data-toggle="tab">Typ bearbeiten</a></li>
                         {% endif %}
                         {% if CONFIG.FILES_ENABLED == "Enabled" and USERDATA.instance.instances_storageEnabled == 1 and "ASSETS:ASSET_TYPE_FILE_ATTACHMENTS:VIEW"|instancePermissions and ASSET_INSTANCE.instances_id == USERDATA.instance.instances_id  %}
-                            <li class="nav-item"><a class="nav-link" href="#typeFiles" data-toggle="tab">Type Files</a></li>
+                            <li class="nav-item"><a class="nav-link" href="#typeFiles" data-toggle="tab">Typ-Dateien</a></li>
                         {% endif %}
                         {% if "ASSETS:ASSET_BARCODES:VIEW"|instancePermissions  and ASSET_INSTANCE.instances_id == USERDATA.instance.instances_id %}
-                            <li class="nav-item"><a class="nav-link" href="{{ CONFIG.ROOTURL }}/maintenance/barcodeGenerator.php?type={{ asset.assetTypes_id }}">Generate/Export Barcodes</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{{ CONFIG.ROOTURL }}/maintenance/barcodeGenerator.php?type={{ asset.assetTypes_id }}">Barcodes generieren/exportieren</a></li>
                         {% endif %}
                     </ul>
                 </div><!-- /.card-header -->
@@ -903,11 +904,11 @@
                                     {% for field in asset.fields %}
                                         <th>{{ field }}</th>
                                     {% endfor %}
-                                    <th>Notes</th>
-                                    <th>Value</th>
-                                    <th>Cost/day</th>
-                                    <th>Cost/week</th>
-                                    <th title="File attachments"><i class="fas fa-paperclip"></i></th>
+                                    <th>Notizen</th>
+                                    <th>Wert</th>
+                                    <th>Kosten/Tag</th>
+                                    <th>Kosten/Woche</th>
+                                    <th title="Dateianhänge"><i class="fas fa-paperclip"></i></th>
                                     <th style="width:1%"><i class="fas fa-flag"></i></th>
                                     <th style="width:1%"><i class="fas fa-ban"></i></th>
                                     <th style="width:30px;"></th>
@@ -939,14 +940,14 @@
                                         <td>
                                             <div class="btn-group">
                                                 {% if "ASSETS:ARCHIVE"|instancePermissions and (thisasset.assets_endDate is null or thisasset.assets_endDate|date("U") > "now"|date("U"))  and ASSET_INSTANCE.instances_id == USERDATA.instance.instances_id %}
-                                                    <button title="Archive" class="btn btn-sm btn-warning archiveAssetButton" data-assetid="{{ thisasset['assets_id'] }}"><i class="fas fa-archive"></i></button>
+                                                    <button title="Archivieren" class="btn btn-sm btn-warning archiveAssetButton" data-assetid="{{ thisasset['assets_id'] }}"><i class="fas fa-archive"></i></button>
                                                 {% endif %}
                                                 {% if "ASSETS:DELETE"|instancePermissions and ASSET_INSTANCE.instances_id == USERDATA.instance.instances_id  %}
-                                                    <button title="Delete" class="btn btn-sm btn-danger deleteAssetButton" data-assetid="{{ thisasset['assets_id'] }}"><i class="fa fa-trash"></i></button>
+                                                    <button title="Löschen" class="btn btn-sm btn-danger deleteAssetButton" data-assetid="{{ thisasset['assets_id'] }}"><i class="fa fa-trash"></i></button>
                                                 {% endif %}
 
 
-                                                <a class="btn btn-sm btn-info" title="View" href="?id={{ asset.assetTypes_id }}&asset={{ thisasset.assets_id }}&instance={{ASSET_INSTANCE.instances_id}}"><i class="far fa-arrow-alt-circle-right"></i></a>
+                                                <a class="btn btn-sm btn-info" title="Anzeigen" href="?id={{ asset.assetTypes_id }}&asset={{ thisasset.assets_id }}&instance={{ASSET_INSTANCE.instances_id}}"><i class="far fa-arrow-alt-circle-right"></i></a>
                                                 </div>
                                         </td>
                                     </tr>
@@ -971,11 +972,11 @@
                                     var calendar = new Calendar(calendarEl, {
                                         themeSystem: 'bootstrap',
                                         buttonText:  {
-                                            today:    'Today',
-                                            month:    'Month',
-                                            week:     'Week',
-                                            day:      'Day',
-                                            list:     'List'
+                                            today:    'Heute',
+                                            month:    'Monat',
+                                            week:     'Woche',
+                                            day:      'Tag',
+                                            list:     'Liste'
                                         },
                                         headerToolbar : {
                                             left  : 'prev,next today',
@@ -1026,7 +1027,7 @@
                                 <div class="card-header p-2">
                                     <ul class="nav nav-pills">
                                         <li class="nav-item"><a class="nav-link active" href="#details" data-toggle="tab">Details</a></li>
-                                        <li class="nav-item"><a class="nav-link" href="#fields" data-toggle="tab">Custom Fields</a></li>
+                                        <li class="nav-item"><a class="nav-link" href="#fields" data-toggle="tab">Benutzerdefinierte Felder</a></li>
                                         <li class="nav-item"><a class="nav-link" href="#thumbnail" data-toggle="tab">Thumbnails</a></li>
                                     </ul>
                                 </div><!-- /.card-header -->
@@ -1044,17 +1045,17 @@
                                                 <input type="text" class="form-control" name="assetTypes_name" value="{{ asset.assetTypes_name}}" id="addNewType-name" />
                                             </div>
                                             <div class="input-group">
-                                                <div class="input-group-prepend"><span class="input-group-text">Description</span></div>
+                                                <div class="input-group-prepend"><span class="input-group-text">Beschreibung</span></div>
                                                 <textarea class="form-control" rows="3" name="assetTypes_description" id="addNewType-description"  placeholder="">{{ asset.assetTypes_description}}</textarea>
                                             </div>
                                             <div class="input-group">
-                                                <div class="input-group-prepend"><span class="input-group-text">Product Link</span></div>
+                                                <div class="input-group-prepend"><span class="input-group-text">Produktlink</span></div>
                                                 <input type="url" class="form-control" name="assetTypes_productLink" value="{{ asset.assetTypes_productLink }}" id="addNewType-productLink" maxlength="499" />
                                             </div>
                                             <div class="input-group">
                                                 <div class="input-group-prepend">
                                                     <span class="input-group-text">
-                                                      Mass
+                                                      Gewicht
                                                     </span>
                                                 </div>
                                                 <input type="number" step="0.001" min="0" name="assetTypes_mass" value="{{ asset.assetTypes_mass}}" class="form-control" id="addNewType-mass" />
@@ -1065,7 +1066,7 @@
                                             <div class="input-group">
                                                 <div class="input-group-prepend">
                                                     <span class="input-group-text">
-                                                      Value - {{ moneySymbol() }}
+                                                      Wert - {{ moneySymbol() }}
                                                     </span>
                                                 </div>
                                                 <input type="number" step="0.001" min="0" name="assetTypes_value" value="{{ asset.assetTypes_value|moneyDecimal }}" class="form-control" id="addNewType-value" />
@@ -1074,58 +1075,58 @@
                                             <div class="input-group">
                                                 <div class="input-group-prepend">
                                                     <span class="input-group-text">
-                                                      Day Rate - {{ moneySymbol() }}
+                                                      Tagessatz - {{ moneySymbol() }}
                                                     </span>
                                                 </div>
                                                 <input type="number" step="0.001" min="0" name="assetTypes_dayRate" value="{{ asset.assetTypes_dayRate|moneyDecimal }}" class="form-control" id="addNewType-dayRate" />
                                                 <div class="input-group-append">
-                                                    <div class="input-group-text" id="addNewType-dayRate-guide">Guide 2% of value</div>
+                                                    <div class="input-group-text" id="addNewType-dayRate-guide">Richtwert 2% des Werts</div>
                                                 </div>
                                             </div>
                                             <div class="input-group">
                                                 <div class="input-group-prepend">
                                                     <span class="input-group-text">
-                                                      Weekly Rate - {{ moneySymbol() }}
+                                                      Wochensatz - {{ moneySymbol() }}
                                                     </span>
                                                 </div>
                                                 <input type="number" step="0.001" min="0" name="assetTypes_weekRate" class="form-control" value="{{ asset.assetTypes_weekRate|moneyDecimal }}" id="addNewType-weekRate" />
                                                 <div class="input-group-append">
-                                                    <div class="input-group-text" id="addNewType-weekRate-guide">Guide 6% of value</div>
+                                                    <div class="input-group-text" id="addNewType-weekRate-guide">Richtwert 6% des Werts</div>
                                                 </div>
                                             </div>
                                             <div class="form-group">
-                                                <label>Category</label>
+                                                <label>Kategorie</label>
                                                 <select class="form-control  select2bs4 assetSelect2" id="category" name="assetCategories_id">
                                                     {% for category in categories %}
                                                         <option  {%  if category.assetCategories_id == asset.assetCategories_id %} selected {% endif %} value="{{ category.assetCategories_id }}">{{ category.assetCategoriesGroups_name }} - {{ category.assetCategories_name }}</option>
                                                     {% endfor %}
                                                 </select>
                                             </div>
-                                            <label>Manufacturer</label>
+                                            <label>Hersteller</label>
                                             <select class="form-control  select2bs4 assetSelect2" id="manufacturer">
                                                 {% for manufacturer in manufacturers %}
                                                     <option {%  if manufacturer.manufacturers_id == asset.manufacturers_id %} selected {% endif %} value="{{ manufacturer.manufacturers_id }}">{{ manufacturer.manufacturers_name }}</option>
                                                 {% endfor %}
                                             </select>
                                             </form>
-                                            <button class="btn btn-default float-right" id="saveSettingsButton" style="margin-top:10px;margin-bottom:10px;">Save</button>
+                                            <button class="btn btn-default float-right" id="saveSettingsButton" style="margin-top:10px;margin-bottom:10px;">Speichern</button>
                                         </div>
                                         <div class="tab-pane" style="padding: 1.25rem" id="fields">
                                             <div class="callout callout-info">
-                                                <p>Definable fields are specific attributes for assets of this type - for a lighting fixture this might be the lens fitted</p>
+                                                <p>Definierbare Felder sind spezifische Attribute für Assets dieses Typs - bei einer Leuchte könnte dies die eingesetzte Linse sein</p>
                                             </div>
                                             <form id="editDefinableFieldsType">
                                             {% for field in asset.fields %}
                                                 <div class="input-group definableFieldsGroup" data-fieldcount="{{loop.index}}">
-                                                    <div class="input-group-prepend"><span class="input-group-text">Definable Field {{loop.index}}</span></div>
+                                                    <div class="input-group-prepend"><span class="input-group-text">Definierbares Feld {{loop.index}}</span></div>
                                                     <input type="text" class="definableFieldsInput form-control" name="asset_definableFields_{{ loop.index }}" value="{{field}}" data-fieldcount="{{loop.index}}" />
                                                 </div>
                                             {% endfor %}
                                             </form>
                                             <div class="callout callout-danger">
-                                                <p>Leave a field blank to delete it</p>
+                                                <p>Lassen Sie ein Feld leer, um es zu löschen</p>
                                             </div>
-                                            <button class="btn btn-default float-right" id="saveTypeDefinableFieldButton" style="margin-top:10px;margin-bottom:10px;">Save</button>
+                                            <button class="btn btn-default float-right" id="saveTypeDefinableFieldButton" style="margin-top:10px;margin-bottom:10px;">Speichern</button>
                                         </div>
                                         <div class="tab-pane" style="padding: 1.25rem" id="thumbnail">
 {% if CONFIG.FILES_ENABLED == "Enabled" and USERDATA.instance.instances_storageEnabled == 1 and "ASSETS:ASSET_TYPE_FILE_ATTACHMENTS:CREATE"|instancePermissions %}
@@ -1152,8 +1153,8 @@
                         {% elseif "ASSETS:ASSET_TYPES:EDIT"|instancePermissions %}
                         <div class="tab-pane" style="padding: 1.25rem" id="settings">
                             <div class="alert alert-info" role="alert">
-<h4 class="alert-heading">Asset type maintained by the {{ CONFIG.PROJECT_NAME }}</h4>Sorry - this asset type is shared between a number of different businesses as a pre-defined template, to edit it please
-<a href="{{ CONFIG.LINKS_SUPPORTURL }}">get in touch with support</a>
+<h4 class="alert-heading">Asset-Typ wird von {{ CONFIG.PROJECT_NAME }} verwaltet</h4>Dieser Asset-Typ wird als vordefinierte Vorlage von mehreren Unternehmen gemeinsam genutzt. Um ihn zu bearbeiten, bitte
+<a href="{{ CONFIG.LINKS_SUPPORTURL }}">den Support kontaktieren</a>
 
                             </div>
                         </div>
@@ -1164,7 +1165,7 @@
                         <div class="tab-pane" style="padding: 1.25rem"  id="typeFiles">
                             {% if "ASSETS:ASSET_TYPE_FILE_ATTACHMENTS:CREATE"|instancePermissions %}
                             <div class="callout callout-default">
-                                Use this area to store files relevant to all assets of this type such as instruction manuals
+                                Verwenden Sie diesen Bereich, um Dateien zu speichern, die für alle Assets dieses Typs relevant sind, wie z.B. Bedienungsanleitungen
                             </div>
 {% embed 'assets/templates/uppy.twig' with {'type': 'ASSET-TYPE-FILE', 'paste': false, 'typeId': 3, 'subTypeId': asset.assetTypes_id, 'imagesOnly': false } %}
 
@@ -1186,10 +1187,10 @@
                                 <div class="card" style="margin-bottom:0;">
                                     <div class="card-header p-2">
                                         <ul class="nav nav-pills">
-                                            <li class="nav-item"><a class="nav-link" href="#maintenance-newJob" data-toggle="tab">New Job</a></li>
-                                            <li class="nav-item"><a class="nav-link active" href="#maintenance-flags" data-toggle="tab">Blocks &amp; Flags</a></li>
-                                            <li class="nav-item"><a class="nav-link" href="#maintenance-jobsOutstanding" data-toggle="tab">Jobs Outstanding</a></li>
-                                            <li class="nav-item"><a class="nav-link" href="#maintenance-jobsCompleted" data-toggle="tab">Jobs Completed</a></li>
+                                            <li class="nav-item"><a class="nav-link" href="#maintenance-newJob" data-toggle="tab">Neuer Auftrag</a></li>
+                                            <li class="nav-item"><a class="nav-link active" href="#maintenance-flags" data-toggle="tab">Sperrungen &amp; Markierungen</a></li>
+                                            <li class="nav-item"><a class="nav-link" href="#maintenance-jobsOutstanding" data-toggle="tab">Offene Aufträge</a></li>
+                                            <li class="nav-item"><a class="nav-link" href="#maintenance-jobsCompleted" data-toggle="tab">Abgeschlossene Aufträge</a></li>
                                         </ul>
                                     </div><!-- /.card-header -->
                                     <div class="card-body" style="padding: 0;">
@@ -1206,17 +1207,17 @@
                                                         <input type="text" class="form-control" disabled value="{{ assets[0].assets_tag|aTag }}" />
                                                     </div>
                                                     <div class="input-group">
-                                                        <div class="input-group-prepend"><span class="input-group-text">Title</span></div>
+                                                        <div class="input-group-prepend"><span class="input-group-text">Titel</span></div>
                                                         <input type="text" class="form-control" name="maintenanceJobs_title" id="maintenanceJobstitle" placeholder="Drum revolve key missing" />
                                                     </div>
                                                     <div class="input-group">
-                                                        <div class="input-group-prepend"><span class="input-group-text">Fault Description</span></div>
-                                                        <textarea class="form-control" rows="5" name="maintenanceJobs_faultDescription" id="maintenanceJobsfaultDescription" placeholder="Details of the fault"></textarea>
+                                                        <div class="input-group-prepend"><span class="input-group-text">Fehlerbeschreibung</span></div>
+                                                        <textarea class="form-control" rows="5" name="maintenanceJobs_faultDescription" id="maintenanceJobsfaultDescription" placeholder="Details des Fehlers"></textarea>
                                                     </div>
                                                     <div class="input-group">
                                                         <div class="input-group-prepend">
                                                             <span class="input-group-text">
-                                                              Priority
+                                                              Priorität
                                                             </span>
                                                         </div>
                                                         <select class="form-control" name="maintenanceJobs_priority">
@@ -1226,13 +1227,13 @@
                                                         </select>
                                                     </div>
                                                     <div class="input-group">
-                                                        <label>Tag Users</label>
-                                                        <select class="form-control" multiple="multiple" placeholder="Select users to be tagged for updates in the job" id="tagUserInJob">
+                                                        <label>Benutzer markieren</label>
+                                                        <select class="form-control" multiple="multiple" placeholder="Benutzer für Aktualisierungen im Auftrag auswählen" id="tagUserInJob">
                                                         </select>
                                                     </div>
                                                 </form>
 
-                                                <button class="btn btn-default float-right" id="addNewJobButton" style="margin-top:10px;margin-bottom:10px;">Save</button>
+                                                <button class="btn btn-default float-right" id="addNewJobButton" style="margin-top:10px;margin-bottom:10px;">Speichern</button>
                                             </div>
                                             <div class="active tab-pane" style="padding: 1.25rem" id="maintenance-flags">
                                                 {% for flag in assets[0].flagsblocks.BLOCK %}
@@ -1258,16 +1259,16 @@
                                                             #
                                                         </th>
                                                         <th>
-                                                            Title
+                                                            Titel
                                                         </th>
                                                         <th style="width: 5%">
-                                                            Creator
+                                                            Ersteller
                                                         </th>
                                                         <th style="width: 5%">
-                                                            Assigned
+                                                            Zugewiesen
                                                         </th>
                                                         <th style="width: 8%" class="text-center">
-                                                            Priority
+                                                            Priorität
                                                         </th>
                                                         <th style="width: 8%" class="text-center">
                                                             Status
@@ -1293,7 +1294,7 @@
                                                                 </a>
                                                                 <br/>
                                                                 <small>
-                                                                    Created {{job.maintenanceJobs_timestamp_added|date("d M Y h:i:sa")}}
+                                                                    Erstellt {{job.maintenanceJobs_timestamp_added|date("d M Y h:i:sa")}}
                                                                 </small>
                                                             </td>
                                                             <td>
@@ -1327,7 +1328,7 @@
                                                                 {% if job.maintenanceJobsStatuses_name %}
                                                                     <span class="badge badge-default">{{ job.maintenanceJobsStatuses_name }}</span>
                                                                 {% else %}
-                                                                    <span class="badge badge-default">Awaiting Sorting</span>
+                                                                    <span class="badge badge-default">Warten auf Sortierung</span>
                                                                 {% endif %}
                                                             </td>
                                                             <td >
@@ -1354,16 +1355,16 @@
                                                             #
                                                         </th>
                                                         <th>
-                                                            Title
+                                                            Titel
                                                         </th>
                                                         <th style="width: 5%">
-                                                            Creator
+                                                            Ersteller
                                                         </th>
                                                         <th style="width: 5%">
-                                                            Assigned
+                                                            Zugewiesen
                                                         </th>
                                                         <th style="width: 8%" class="text-center">
-                                                            Priority
+                                                            Priorität
                                                         </th>
                                                         <th style="width: 8%" class="text-center">
                                                             Status
@@ -1389,7 +1390,7 @@
                                                                     </a>
                                                                     <br/>
                                                                     <small>
-                                                                        Created {{job.maintenanceJobs_timestamp_added|date("d M Y h:i:sa")}}
+                                                                        Erstellt {{job.maintenanceJobs_timestamp_added|date("d M Y h:i:sa")}}
                                                                     </small>
                                                                 </td>
                                                                 <td>
@@ -1423,7 +1424,7 @@
                                                                     {% if job.maintenanceJobsStatuses_name %}
                                                                         <span class="badge badge-default">{{ job.maintenanceJobsStatuses_name }}</span>
                                                                     {% else %}
-                                                                        <span class="badge badge-default">Awaiting Sorting</span>
+                                                                        <span class="badge badge-default">Warten auf Sortierung</span>
                                                                     {% endif %}
                                                                 </td>
                                                                 <td >
@@ -1459,20 +1460,20 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h4 class="modal-title">Set Asset Location to another Asset</h4>
+                    <h4 class="modal-title">Asset-Standort auf ein anderes Asset setzen</h4>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
                 <div class="modal-body">
-                    <p>Set this asset's location to another asset - for example if it is stored within a flight case or storage box</p>
+                    <p>Setzen Sie den Standort dieses Assets auf ein anderes Asset - z.B. wenn es in einem Flightcase oder einer Aufbewahrungsbox gelagert wird</p>
                     <div class="input-group my-3">
-                        <select class="form-control" multiple="multiple" id="setAssetLocationAssetModal-assets" placeholder="Enter asset tags here"></select>
+                        <select class="form-control" multiple="multiple" id="setAssetLocationAssetModal-assets" placeholder="Asset-Kennzeichen hier eingeben"></select>
                     </div>
                     
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" id="setAssetLocationAssetModal-button">Set location</button>
+                    <button type="button" class="btn btn-primary" id="setAssetLocationAssetModal-button">Standort festlegen</button>
                 </div>
             </div>
         </div>
@@ -1511,14 +1512,14 @@
                 $(".deleteAssetButton").click(function () {
                     var assetid = $(this).data("assetid");
                     bootbox.confirm({
-                        message: "Are you sure you wish to delete this asset?",
+                        message: "Möchten Sie dieses Asset wirklich löschen?",
                         buttons: {
                             confirm: {
-                                label: 'Yes',
+                                label: 'Ja',
                                 className: 'btn-danger'
                             },
                             cancel: {
-                                label: 'No',
+                                label: 'Nein',
                                 className: 'btn-success'
                             }
                         },
@@ -1537,29 +1538,29 @@
                     var assetid = $(this).data("assetid");
                     var date;
                     bootbox.prompt({
-                        title: "When would you like the asset to be archived?",
+                        title: "Wann soll das Asset archiviert werden?",
                         inputType: 'date',
                         callback: function (result) {
                             if (result) {
                                 date = result;
                                 bootbox.prompt({
-                                    title: "Why is this asset being archived?",
+                                    title: "Warum wird dieses Asset archiviert?",
                                     inputType: 'select',
                                     inputOptions: [
                                         {
-                                            text: 'Being Sold',
+                                            text: 'Wird verkauft',
                                             value: 'sold',
                                         },
                                         {
-                                            text: 'End of Life - being destroyed',
+                                            text: 'Lebensende - wird entsorgt',
                                             value: 'destroyed',
                                         },
                                         {
-                                            text: 'Missing/Lost',
+                                            text: 'Vermisst/Verloren',
                                             value: 'lost',
                                         },
                                         {
-                                            text: 'Permanent Loan',
+                                            text: 'Dauerleihgabe',
                                             value: 'loaned permanently',
                                         }
                                     ],
@@ -1580,14 +1581,14 @@
                 $(".deleteBarcodeButton").click(function () {
                     var barcodeid = $(this).data("barcodeid");
                     bootbox.confirm({
-                        message: "Are you sure you wish to delete this barcode? All scan history for this barcode will be lost",
+                        message: "Möchten Sie diesen Barcode wirklich löschen? Der gesamte Scan-Verlauf geht verloren",
                         buttons: {
                             confirm: {
-                                label: 'Yes',
+                                label: 'Ja',
                                 className: 'btn-danger'
                             },
                             cancel: {
-                                label: 'No',
+                                label: 'Nein',
                                 className: 'btn-success'
                             }
                         },
@@ -1654,7 +1655,7 @@
                     minimumInputLength: 1,
                     width: '100%',
                     minimumResultsForSearch: 1,
-                    placeholder: "Search for asset types",
+                    placeholder: "Nach Asset-Typen suchen",
                     ajax: {
                         url: "{{ CONFIG.ROOTURL }}/api/assets/searchType.php",
                         dataType: "json",
@@ -1706,7 +1707,7 @@
                     minimumInputLength: 1,
                     width: '100%',
                     minimumResultsForSearch: 1,
-                    placeholder: "Search for assets",
+                    placeholder: "Nach Assets suchen",
                     ajax: {
                         url: "{{ CONFIG.ROOTURL }}/api/assets/searchAssets.php",
                         dataType: "json",
@@ -1779,7 +1780,7 @@
                     minimumInputLength: 1,
                     width: '100%',
                     minimumResultsForSearch: 1,
-                    placeholder: "Enter group name to search",
+                    placeholder: "Gruppenname eingeben",
                     ajax: {
                         url: "{{ CONFIG.ROOTURL }}/api/groups/search.php",
                         dataType: "json",
@@ -1830,7 +1831,7 @@
                     minimumInputLength: 1,
                     width: '100%',
                     minimumResultsForSearch: 1,
-                    placeholder: "Enter name to search for users",
+                    placeholder: "Name eingeben, um Benutzer zu suchen",
                     ajax: {
                         url: "{{ CONFIG.ROOTURL }}/api/maintenance/searchUser.php",
                         dataType: "json",
@@ -1875,7 +1876,7 @@
                     minimumInputLength: 0,
                     width: '100%',
                     minimumResultsForSearch: 1,
-                    placeholder: "Search for a Business",
+                    placeholder: "Nach einem Unternehmen suchen",
                     ajax: {
                         url: "{{ CONFIG.ROOTURL }}/api/instances/list.php",
                         dataType: "json",
@@ -1920,7 +1921,7 @@
                         minimumInputLength: 0,
                         width: '100%',
                         minimumResultsForSearch: 1,
-                        placeholder: "Search for an Asset Type",
+                        placeholder: "Nach einem Asset-Typ suchen",
                         ajax: {
                             url: "{{ CONFIG.ROOTURL }}/api/assets/searchType.php?other_instances_id=" + id,
                             dataType: "json",
@@ -1942,13 +1943,13 @@
                                     return {
                                         // add "Other" to the end of the list
                                         results: [...responseData, {
-                                            text: "Copy the existing asset type ({{asset.assetTypes_name|escape("js")}}) into business",
+                                            text: "Bestehenden Asset-Typ ({{asset.assetTypes_name|escape("js")}}) ins Unternehmen kopieren",
                                             id: "-1"
                                         }]
                                     };
                                 } else return {
                                     results: [{
-                                            text: "Copy the existing asset type ({{asset.assetTypes_name|escape("js")}}) into business",
+                                            text: "Bestehenden Asset-Typ ({{asset.assetTypes_name|escape("js")}}) ins Unternehmen kopieren",
                                             id: "-1"
                                         }]
                                 };
@@ -1976,7 +1977,7 @@
                             minimumInputLength: 0,
                             width: '100%',
                             minimumResultsForSearch: 1,
-                            placeholder: "Search for a Manufacturer",
+                            placeholder: "Nach einem Hersteller suchen",
                             ajax: {
                                 url: "{{ CONFIG.ROOTURL }}/api/manufacturer/search.php?other_instances_id=" + instanceId,
                                 dataType: "json",
@@ -1998,13 +1999,13 @@
                                         return {
                                         // add "Other" to the end of the list
                                         results: [...responseData,{
-                                            text: "Copy {{ asset.manufacturers_name|escape("js") }} into business",
+                                            text: "{{ asset.manufacturers_name|escape("js") }} ins Unternehmen kopieren",
                                             id: "-1"
                                         }]
                                     };
                                     } else return {
                                         results: [{
-                                            text: "Copy {{ asset.manufacturers_name|escape("js") }} into business",
+                                            text: "{{ asset.manufacturers_name|escape("js") }} ins Unternehmen kopieren",
                                             id: "-1"
                                         }]
                                     };
@@ -2018,7 +2019,7 @@
                             minimumInputLength: 0,
                             width: '100%',
                             minimumResultsForSearch: 1,
-                            placeholder: "Search for a Category",
+                            placeholder: "Nach einer Kategorie suchen",
                             ajax: {
                                 url: "{{ CONFIG.ROOTURL }}/api/categories/search.php?other_instances_id=" + instanceId,
                                 dataType: "json",
@@ -2078,14 +2079,14 @@
                         }
                     }
                     bootbox.confirm({
-                        message: "Are you sure you wish to transfer this asset?",
+                        message: "Möchten Sie dieses Asset wirklich übertragen?",
                         buttons: {
                             confirm: {
-                                label: 'Yes',
+                                label: 'Ja',
                                 className: 'btn-danger'
                             },
                             cancel: {
-                                label: 'No',
+                                label: 'Nein',
                                 className: 'btn-success'
                             }
                         },
@@ -2105,7 +2106,7 @@
                 {% if "LOCATIONS:VIEW"|instancePermissions and assets[0].barcodes[0] %}
                 $("#setAssetLocationButton").on("click", function () {
                     bootbox.prompt({
-                        title: "Set Asset Location",
+                        title: "Asset-Standort festlegen",
                         inputType: "select",
                         inputOptions: [
                         {% for location in locations %}
@@ -2123,7 +2124,7 @@
                                     "locationType": "Custom",
                                     "location": result,
                                     "scanned": false,
-                                    "validation": "Location selected from list"
+                                    "validation": "Standort aus Liste ausgewählt"
                                 }
                                 ajaxcall('assets/barcodes/search.php', args, () => {location.reload()});
                             }
@@ -2132,7 +2133,7 @@
                 });
                 $("#setCustomLocationButton").on("click", function () {
                     bootbox.prompt({
-                        title: "Set Custom Location for Asset",
+                        title: "Benutzerdefinierten Standort für Asset festlegen",
                         callback: function (result) {
                             if(result ){
                                 const args = {
@@ -2141,7 +2142,7 @@
                                     "locationType": "Custom",
                                     "location": result,
                                     "scanned": false,
-                                    "validation": "Location manually entered"
+                                    "validation": "Standort manuell eingegeben"
                                 }
                                 ajaxcall('assets/barcodes/search.php', args, () => {location.reload()});
                             }
@@ -2159,7 +2160,7 @@
                     width: '100%',
 
                     minimumResultsForSearch: 1,
-                    placeholder: "Enter asset numbers to search for assets",
+                    placeholder: "Asset-Nummern eingeben, um nach Assets zu suchen",
                     ajax: {
                         url: "{{ CONFIG.ROOTURL }}/api/assets/searchAssets.php",
                         dataType: "json",
@@ -2193,7 +2194,7 @@
                         "locationType": "asset",
                         "location": $("#setAssetLocationAssetModal-assets").val(),
                         "scanned": false,
-                        "validation": "Asset selected from list"
+                        "validation": "Asset aus Liste ausgewählt"
                     }
                     ajaxcall('assets/barcodes/search.php', args, () => {location.reload()});
                 });

@@ -178,9 +178,9 @@
                         <textarea type="text" class="form-control" placeholder="Anything you'd like to add?" name="projectsVacantRolesApplications_applicantComment" rows="3"></textarea>
                     </div>
                     <hr/>
-                    <p>Please check your application carefully before submitting, you cannot modify it after submission</p>
+                    <p>Bitte pruefen Sie Ihre Bewerbung sorgfaeltig, Sie koennen sie nach dem Absenden nicht mehr aendern</p>
                     {% if role.projectsVacantRoles_privateToPM == 1 %}
-                    <p>This application will only be shared with the Project Manager of the Project who can choose who to share your application with later. Currently the project manager, {{ role.users_name1 ~ " " ~ role.users_name2 }}, has not chosen to share it with anyone, but they could change this or the project manager could change. Please contact them if you have any questions.</p>
+                    <p>Diese Bewerbung wird nur mit dem Projektleiter des Projekts geteilt who can choose who to share your application with later. Currently the project manager, {{ role.users_name1 ~ " " ~ role.users_name2 }}, has not chosen to share it with anyone, but they could change this or the project manager could change. Bitte kontaktieren Sie diesen bei Fragen.</p>
                     {% elseif role.canViewApplications %}
                     <p>This application will be shared the current project manager and whoever they chose to share it with - please contact them if you have any questions. <br/>Currently they are sharing it with:
                     <ul>
@@ -237,7 +237,7 @@
             formData.push({"name": "projectsVacantRolesApplications_questionAnswers", "value":JSON.stringify(questions)});
 
             ajaxcall("projects/crew/crewRoles/apply.php", {formData}, function (data) {
-                bootbox.alert("Application Successfully Submitted", function(){
+                bootbox.alert("Bewerbung erfolgreich eingereicht", function(){
                     window.location.href = "{{CONFIG.ROOTURL}}/project/crew/vacancies.php";
                 });
             });

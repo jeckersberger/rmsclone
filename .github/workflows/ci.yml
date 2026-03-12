@@ -1,0 +1,139 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # --------------------------------------------------------------------------
+  # PHP Lint - Syntax check all PHP files
+  # --------------------------------------------------------------------------
+  php-lint:
+    name: PHP Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mysqli, pdo_mysql, intl, zip, gd
+
+      - name: PHP syntax check
+        run: |
+          echo "Checking PHP syntax..."
+          errors=0
+          while IFS= read -r -d '' file; do
+            if ! php -l "$file" > /dev/null 2>&1; then
+              php -l "$file"
+              errors=$((errors + 1))
+            fi
+          done < <(find src/ -name '*.php' -print0)
+
+          if [ "$errors" -gt 0 ]; then
+            echo "Found $errors file(s) with syntax errors"
+            exit 1
+          fi
+          echo "All PHP files passed syntax check"
+
+  # --------------------------------------------------------------------------
+  # Migration Dry-Run - Verify Phinx migrations can be applied
+  # --------------------------------------------------------------------------
+  migration-check:
+    name: Migration Dry-Run
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: adamrms_test
+          MYSQL_USER: adamrms
+          MYSQL_PASSWORD: test_password
+          MYSQL_ROOT_PASSWORD: root_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -proot_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mysqli, pdo_mysql, intl, zip, gd
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Run Phinx migrations (dry-run)
+        env:
+          DB_HOSTNAME: 127.0.0.1
+          DB_DATABASE: adamrms_test
+          DB_USERNAME: adamrms
+          DB_PASSWORD: test_password
+          DB_PORT: 3306
+        run: |
+          php vendor/bin/phinx migrate -e production --dry-run
+          echo "Migration dry-run passed"
+
+  # --------------------------------------------------------------------------
+  # Smoke Test - Build container and verify health endpoint
+  # --------------------------------------------------------------------------
+  smoke-test:
+    name: Smoke Test
+    runs-on: ubuntu-latest
+    needs: [php-lint]
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Build and start services
+        run: |
+          docker compose up -d --build --wait
+        timeout-minutes: 5
+
+      - name: Wait for services to be ready
+        run: |
+          echo "Waiting for application to start..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8080/api/health.php > /dev/null 2>&1; then
+              echo "Application is ready"
+              break
+            fi
+            echo "  Attempt $i/30 - waiting..."
+            sleep 5
+          done
+
+      - name: Health endpoint check
+        run: |
+          RESPONSE=$(curl -sf http://localhost:8080/api/health.php)
+          echo "Health response: $RESPONSE"
+
+          STATUS=$(echo "$RESPONSE" | jq -r '.status // "unknown"')
+          echo "Status: $STATUS"
+
+          # Database check may fail in CI (expected with dev compose), but
+          # the endpoint itself must be reachable and return valid JSON.
+          if [ -z "$RESPONSE" ]; then
+            echo "ERROR: Health endpoint returned empty response"
+            exit 1
+          fi
+
+          echo "Smoke test passed"
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs --tail=50

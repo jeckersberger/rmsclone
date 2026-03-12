@@ -5,8 +5,8 @@
 	<div class="row">
 		<div class="col-lg-6 offset-lg-3 col-md-12">
 			<div class="alert alert-danger alert-dismissible">
-				<h5><i class="icon fas fa-info"></i> Server-Wide Configuration</h5>
-				You are modifying settings and configuration that affect the whole of the {{ CONFIG.PROJECT_NAME }} Server, including all businesses (instances) running on it. Please be careful when making changes here.
+				<h5><i class="icon fas fa-info"></i> Serverweite Konfiguration</h5>
+				Sie aendern Einstellungen, die den gesamten {{ CONFIG.PROJECT_NAME }}-Server betreffen, einschliesslich aller darauf laufenden Betriebe (Instanzen). Bitte seien Sie vorsichtig.
 			</div>
 		</div>
 	</div>
@@ -15,12 +15,12 @@
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">
-                        Server Configuration
+                        Server-Konfiguration
                     </h3>
                 </div>
                 <div class="card-body">
                     {% if errors %}
-                    <p style="color: red;">Could not save - please check the details below</p>
+                    <p style="color: red;">Konnte nicht gespeichert werden - bitte pruefen Sie die Details</p>
                     {% endif %}
 	                <form method="post">
                         {% set currentgroup = "" %}
@@ -46,7 +46,7 @@
                             {% endif %}
                         {% endfor %}
                         <br/><br/>
-                        <input type="submit" value="Save" class="form-control btn btn-danger"><input type="hidden" name="changingConfigUsingConfigFormTwig" value="true"/>
+                        <input type="submit" value="Speichern" class="form-control btn btn-danger"><input type="hidden" name="changingConfigUsingConfigFormTwig" value="true"/>
                     </form>
                 </div>
                 <div class="overlay" id="loadingoverlay">
@@ -62,11 +62,11 @@
                         url: "{{ CONFIG.ROOTURL }}/api/account/suspend.php?userid=" + $(this).data("userid") + '&suspendval=' + $(this).data("suspendval"),
                         success: function (result) {
                             if (result == '1') {
-                                bootbox.alert("Success", function () {
+                                bootbox.alert("Erfolgreich", function () {
                                     location.reload();
                                 });
                             } else {
-                                bootbox.alert("Sorry - Operation could not be completed! Please reload the page", function () {
+                                bootbox.alert("Vorgang konnte nicht abgeschlossen werden! Bitte laden Sie die Seite neu", function () {
                                     location.reload();
                                 });
                             }

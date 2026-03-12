@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Asset Labels</title>
+    <style>
+        @page { size: 51mm 25mm; margin: 0; }
+        @media print {
+            body { margin: 0; }
+            .no-print { display: none !important; }
+            .label { page-break-after: always; }
+            .label:last-child { page-break-after: avoid; }
+        }
+        body { font-family: Arial, Helvetica, sans-serif; margin: 0; padding: 0; background: #f4f6f9; }
+        .controls { padding: 16px; text-align: center; background: #343a40; color: #fff; }
+        .controls button { margin: 4px; padding: 10px 20px; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; }
+        .controls .btn-print { background: #007bff; color: #fff; }
+        .controls .btn-zpl { background: #ffc107; color: #333; }
+        .controls .btn-back { background: #6c757d; color: #fff; }
+
+        .labels-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; padding: 16px; }
+
+        .label {
+            width: 51mm; height: 25mm;
+            border: 1px solid #ccc; border-radius: 4px;
+            background: #fff; padding: 2mm;
+            display: flex; align-items: center;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        .label .qr {
+            width: 20mm; height: 20mm; flex-shrink: 0; margin-right: 2mm;
+        }
+        .label .qr img { width: 100%; height: 100%; }
+        .label .info { flex: 1; overflow: hidden; }
+        .label .info .tag { font-size: 12pt; font-weight: bold; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .label .info .type { font-size: 7pt; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .label .info .meta { font-size: 6pt; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .label .info .company { font-size: 5pt; color: #999; margin-top: 1mm; }
+    </style>
+</head>
+<body>
+    <div class="controls no-print">
+        <h2><i class="fas fa-tag"></i> {{ assets|length }} Labels</h2>
+        <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Print Labels (HTML)</button>
+        <button class="btn-zpl" onclick="downloadZPL()"><i class="fas fa-download"></i> Download ZPL (Zebra)</button>
+        <button class="btn-back" onclick="history.back()"><i class="fas fa-arrow-left"></i> Back</button>
+        <p style="font-size:12px;margin-top:8px;opacity:0.7;">
+            Tip: For Zebra label printers, download the ZPL file and send it to the printer
+        </p>
+    </div>
+
+    <div class="labels-container">
+        {% for a in assets %}
+        <div class="label">
+            <div class="qr">
+                {# QR code via QR server API #}
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ (baseUrl ~ '/asset/?id=' ~ a.assets_id)|url_encode }}" alt="QR">
+            </div>
+            <div class="info">
+                <div class="tag">{{ a.assets_tag ?? ('#' ~ a.assets_id) }}</div>
+                <div class="type">{{ a.assetTypes_name ?? '' }}</div>
+                {% if a.manufacturers_name %}
+                <div class="meta">{{ a.manufacturers_name }}</div>
+                {% endif %}
+                {% if a.assetCategories_name %}
+                <div class="meta">{{ a.assetCategories_name }}</div>
+                {% endif %}
+                <div class="company">{{ businessName }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+    function downloadZPL() {
+        var ids = '{{ assets|map(a => a.assets_id)|join(",") }}';
+        window.location.href = '{{ baseUrl }}/mobile/labels.php?ids=' + ids + '&format=zpl';
+    }
+    </script>
+</body>
+</html>

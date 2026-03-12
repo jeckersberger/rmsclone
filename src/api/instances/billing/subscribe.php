@@ -1,10 +1,15 @@
 <?php
 require_once __DIR__ . '/../../apiHeadSecure.php';
 
+$stripeKey = $CONFIGCLASS->get('STRIPE_KEY');
+if (!$stripeKey || strlen($stripeKey) === 0) {
+    finish(false, ["message" => "Stripe-Billing ist nicht konfiguriert. Bitte unter Server-Admin > Konfiguration > Billing den Stripe-Key hinterlegen."]);
+}
+
 if (!isset($_POST['price_id']) or !isset($_POST['currency'])) die("No price_id provided.");
 if ($AUTH->data['users_userid'] !== $AUTH->data['instance']['instances_billingUser']) die("Sorry, you are not the billing contact for this business, please contact support.");
 
-\Stripe\Stripe::setApiKey($CONFIGCLASS->get('STRIPE_KEY'));
+\Stripe\Stripe::setApiKey($stripeKey);
 
 $checkout_session = \Stripe\Checkout\Session::create([
   'line_items' => [[
@@ -24,7 +29,7 @@ $checkout_session = \Stripe\Checkout\Session::create([
     'metadata' => [
       'instance_id' => $AUTH->data['instance']['instances_id'],
     ],
-    'description' => 'AdamRMS Subscription for ' . $AUTH->data['instance']['instances_name'],
+    'description' => 'MyRMS Subscription for ' . $AUTH->data['instance']['instances_name'],
     'trial_settings' => ['end_behavior' => ['missing_payment_method' => 'pause']],
     'trial_period_days' => 7,
   ],

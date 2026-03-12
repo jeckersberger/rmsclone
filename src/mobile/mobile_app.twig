@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#343a40">
+    <link rel="manifest" href="{{ CONFIG.ROOTURL }}/static-assets/manifest.json">
+    <link rel="apple-touch-icon" href="{{ CONFIG.ROOTURL }}/static-assets/img/icons/apple-icon-180x180.png">
+    <title>{{ CONFIG.PROJECT_NAME }}</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="{{ CONFIG.ROOTURL }}/static-assets/css/adminlte.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.4.1/js/bootstrap.bundle.min.js"></script>
+
+    <style>
+        :root { --primary: #007bff; --dark: #343a40; --success: #28a745; --info: #17a2b8; --warning: #ffc107; --danger: #dc3545; }
+        * { -webkit-tap-highlight-color: transparent; }
+        body { background: #f4f6f9; padding-top: 56px; padding-bottom: 66px; -webkit-font-smoothing: antialiased; }
+        .mobile-header { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: var(--dark); color: #fff; padding: 0 16px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+        .mobile-header h1 { font-size: 18px; margin: 0; font-weight: 600; }
+        .mobile-header .header-actions a { color: rgba(255,255,255,0.7); margin-left: 16px; font-size: 18px; }
+        .mobile-header .header-actions a:hover { color: #fff; }
+        .mobile-header .back-btn { color: #fff; margin-right: 10px; font-size: 18px; display: none; cursor: pointer; }
+
+        /* Bottom Nav */
+        .mobile-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000; background: #fff; border-top: 1px solid #dee2e6; display: flex; padding-bottom: env(safe-area-inset-bottom); }
+        .mobile-nav a { flex: 1; text-align: center; padding: 6px 0 4px; color: #6c757d; text-decoration: none; font-size: 10px; transition: color 0.15s; }
+        .mobile-nav a.active { color: var(--primary); font-weight: 600; }
+        .mobile-nav a i { display: block; font-size: 20px; margin-bottom: 2px; }
+
+        /* Pages */
+        .mobile-page { display: none; padding: 12px; min-height: calc(100vh - 122px); }
+        .mobile-page.active { display: block; }
+
+        /* Cards */
+        .mobile-card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); cursor: pointer; transition: box-shadow 0.15s; }
+        .mobile-card:active { box-shadow: 0 1px 6px rgba(0,0,0,0.15); }
+        .mobile-card h3 { font-size: 15px; margin: 0 0 4px; font-weight: 600; }
+        .mobile-card .meta { font-size: 12px; color: #6c757d; }
+
+        /* List Items */
+        .mobile-list-item { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
+        .mobile-list-item:last-child { border-bottom: none; }
+        .mobile-list-item:active { background: #f8f9fa; }
+        .mobile-list-item .icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 12px; font-size: 18px; color: #fff; flex-shrink: 0; }
+        .mobile-list-item .info { flex: 1; min-width: 0; }
+        .mobile-list-item .info h4 { font-size: 14px; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .mobile-list-item .info p { font-size: 12px; color: #6c757d; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .mobile-list-item .chevron { color: #ccc; font-size: 14px; }
+
+        /* Stats Grid */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+        .stat-card { background: #fff; border-radius: 12px; padding: 14px 12px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .stat-card .stat-num { font-size: 24px; font-weight: 700; color: var(--dark); line-height: 1; }
+        .stat-card .stat-label { font-size: 11px; color: #6c757d; margin-top: 4px; }
+
+        /* Quick Actions */
+        .quick-actions { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+        .quick-action { background: #fff; border-radius: 12px; padding: 12px 8px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08); text-decoration: none; color: #333; transition: transform 0.1s; }
+        .quick-action:active { transform: scale(0.95); }
+        .quick-action i { font-size: 24px; display: block; margin-bottom: 4px; }
+        .quick-action span { font-size: 11px; line-height: 1.2; display: block; }
+
+        /* Search */
+        .search-bar { padding: 8px 12px; background: #fff; border-radius: 10px; border: 1px solid #dee2e6; display: flex; align-items: center; margin-bottom: 12px; }
+        .search-bar input { border: none; outline: none; flex: 1; font-size: 15px; margin-left: 8px; background: transparent; }
+
+        /* Category Pills */
+        .category-pills { display: flex; overflow-x: auto; gap: 8px; margin-bottom: 12px; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+        .category-pills::-webkit-scrollbar { display: none; }
+        .category-pill { white-space: nowrap; padding: 6px 14px; border-radius: 20px; background: #fff; border: 1px solid #dee2e6; font-size: 13px; color: #495057; cursor: pointer; flex-shrink: 0; }
+        .category-pill.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+        /* Forms */
+        .mobile-form .form-group { margin-bottom: 12px; }
+        .mobile-form label { font-size: 13px; font-weight: 600; color: #495057; }
+        .mobile-form .form-control { border-radius: 8px; font-size: 15px; padding: 10px 12px; }
+
+        /* Detail View */
+        .detail-header { background: #fff; margin: -12px -12px 12px; padding: 20px 16px; border-radius: 0 0 16px 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+        .detail-header h2 { font-size: 20px; margin: 0 0 4px; font-weight: 700; }
+        .detail-header .detail-meta { font-size: 13px; color: #6c757d; }
+        .detail-section { margin-bottom: 16px; }
+        .detail-section h5 { font-size: 14px; font-weight: 600; color: #495057; margin-bottom: 8px; }
+        .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-row .label { color: #6c757d; }
+        .detail-row .value { font-weight: 500; text-align: right; }
+
+        /* Badge */
+        .m-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; color: #fff; }
+
+        /* Status dot */
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+
+        /* FAB */
+        .mobile-fab { position: fixed; bottom: 80px; right: 16px; width: 56px; height: 56px; border-radius: 28px; background: var(--primary); color: #fff; border: none; box-shadow: 0 4px 12px rgba(0,123,255,0.4); font-size: 24px; z-index: 999; }
+
+        /* Empty State */
+        .empty-state { text-align: center; padding: 40px 20px; color: #adb5bd; }
+        .empty-state i { font-size: 48px; margin-bottom: 12px; }
+        .empty-state p { font-size: 14px; }
+
+        /* Pull to refresh indicator */
+        .pull-indicator { text-align: center; padding: 8px; color: #6c757d; font-size: 12px; display: none; }
+
+        /* Loading spinner */
+        .loading { text-align: center; padding: 20px; }
+        .loading i { font-size: 24px; color: var(--primary); }
+
+        /* Swipe hint */
+        @media (max-width: 380px) {
+            .quick-actions { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+    {# ═══ Header ═══ #}
+    <div class="mobile-header">
+        <div style="display:flex;align-items:center;">
+            <span class="back-btn" id="backBtn" onclick="goBack()"><i class="fas fa-arrow-left"></i></span>
+            <h1 id="headerTitle"><i class="fas fa-warehouse"></i> {{ CONFIG.PROJECT_NAME }}</h1>
+        </div>
+        <div class="header-actions">
+            <a href="#" onclick="showPage('page-scanner')"><i class="fas fa-qrcode"></i></a>
+            <a href="{{ CONFIG.ROOTURL }}/"><i class="fas fa-desktop"></i></a>
+        </div>
+    </div>
+
+    {# ═══════════════════════════════════════ #}
+    {# ═══ DASHBOARD ═══ #}
+    {# ═══════════════════════════════════════ #}
+    <div class="mobile-page active" id="page-dashboard">
+        <div class="stats-grid">
+            <div class="stat-card" onclick="showPage('page-projects')">
+                <div class="stat-num">{{ stats.projects }}</div>
+                <div class="stat-label">Projekte</div>
+            </div>
+            <div class="stat-card" onclick="showPage('page-equipment')">
+                <div class="stat-num">{{ stats.assets }}</div>
+                <div class="stat-label">Equipment</div>
+            </div>
+            <div class="stat-card" onclick="showPage('page-clients')">
+                <div class="stat-num">{{ stats.clients }}</div>
+                <div class="stat-label">Kunden</div>
+            </div>
+        </div>
+
+        <div class="quick-actions">
+            <a href="#" class="quick-action" onclick="showPage('page-new-project')">
+                <i class="fas fa-plus-circle text-primary"></i>
+                <span>Neues Projekt</span>
+            </a>
+            <a href="#" class="quick-action" onclick="showPage('page-new-client')">
+                <i class="fas fa-user-plus text-success"></i>
+                <span>Neuer Kunde</span>
+            </a>
+            <a href="#" class="quick-action" onclick="showPage('page-scanner')">
+                <i class="fas fa-qrcode text-info"></i>
+                <span>Scanner</span>
+            </a>
+            <a href="#" class="quick-action" onclick="showPage('page-labels')">
+                <i class="fas fa-print text-warning"></i>
+                <span>Labels</span>
+            </a>
+        </div>
+
+        <h5 style="margin: 12px 0 8px; font-weight: 600;">Aktive Projekte</h5>
+        {% for p in recentProjects %}
+        <div class="mobile-card" onclick="loadProjectDetail({{ p.projects_id }})">
+            <h3><span class="status-dot" style="background:{{ p.projectsStatuses_backgroundColour }}"></span>{{ p.projects_name }}</h3>
+            <div class="meta">
+                {% if p.clients_name %}{{ p.clients_name }} &middot; {% endif %}
+                {{ p.projectsStatuses_name }}
+                {% if p.projects_dates_use_start %} &middot; {{ p.projects_dates_use_start|date("d.m.Y") }}{% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state"><i class="fas fa-folder-open"></i><p>Keine aktiven Projekte</p></div>
+        {% endfor %}
+    </div>
+
+    {# ═══════════════════════════════════════ #}
+    {# ═══ PROJEKTE ═══ #}
+    {# ═══════════════════════════════════════ #}
+    <div class="mobile-page" id="page-projects">
+        <div class="search-bar">
+            <i class="fas fa-search text-muted"></i>
+            <input type="text" id="projectSearch" placeholder="Projekt suchen...">
+        </div>
+        <div id="projectList">
+            {% for p in recentProjects %}
+            <div class="mobile-list-item project-item" data-name="{{ p.projects_name|lower }}" onclick="loadProjectDetail({{ p.projects_id }})">
+                <div class="icon" style="background:{{ p.projectsStatuses_backgroundColour ?? '#6c757d' }}">
+                    <i class="fas fa-folder-open"></i>
+                </div>
+                <div class="info">
+                    <h4>{{ p.projects_name }}</h4>
+                    <p>{{ p.clients_name ?? '-' }} &middot; {{ p.projectsStatuses_name }}</p>
+                </div>
+                <i class="fas fa-chevron-right chevron"></i>
+            </div>
+            {% endfor %}
+        </div>
+        <button class="mobile-fab" onclick="showPage('page-new-project')"><i class="fas fa-plus"></i></button>
+    </div>
+
+    {# ═══════════════════════════════════════ #}
+    {# ═══ PROJEKT-DETAIL ═══ #}
+    {# ═══════════════════════════════════════ #}
+    <div class="mobile-page" id="page-project-detail">
+        <div id="projectDetailContent">
+            <div class="loading"><i class="fas fa-spinner fa-spin"></i></div>
+        </div>
+    </div>
+
+    {# ═══════════════════════════════════════ #}
+    {# ═══ EQUIPMENT ═══ #}
+    {# ═══════════════════════════════════════ #}
+    <div class="mobile-page" id="page-equipment">
+        <div class="search-bar">
+            <i class="fas fa-search text-muted"></i>
+            <input type="text" id="equipmentSearch" placeholder="Equipment suchen...">
+        </div>
+        <div class="category-pills">
+            <span class="category-pill active" data-cat="all" onclick="filterEquipment('all', this)">Alle</span>
+            {% for cat in assetCategories %}
+            <span class="category-pill" data-cat="{{ cat.assetCategories_id }}" onclick="filterEquipment({{ cat.assetCategories_id }}, this)">{{ cat.assetCategories_name }}</span>
+            {% endfor %}
+        </div>
+        <div id="equipmentList">
+            <div class="loading"><i class="fas fa-spinner fa-spin"></i> Laden...</div>
+        </div>
+        <div id="equipmentPagination" style="text-align:center;padding:8px;"></div>
+    </div>
+
+    {# ═══════════════════════════════════════ #}
+    {# ═══ EQUIPMENT-DETAIL ═══ #}
+    {# ═══════════════════════════════════════ #}
+    <div class="mobile-page" id="page-equipment-detail">
+        <div id="equipmentDetailContent">
+            <div class="loading"><i class="fas fa-spinner fa-spin"></i></div>
+        </div>
+    </div>
+
+    {# ═══════════════════════════════════════ #}
+    {# ═══ KUNDEN ═══ #}
+    {# ═══════════════════════════════════════ #}
+    <div class="mobile-page" id="page-clients">
+        <div class="search-bar">
+            <i class="fas fa-search text-muted"></i>
+            <input type="text" id="clientSearch" placeholder="Kunde suchen...">
+        </div>
+        <div id="clientList">
+            {% for c in clients %}
+            <div class="mobile-list-item client-item" data-name="{{ c.clients_name|lower }}">
+                <div class="icon" style="background:var(--success)"><i class="fas fa-user"></i></div>
+                <div class="info">
+                    <h4>{{ c.clients_name }}</h4>
+                    <p>
+                        {% if c.clients_email %}{{ c.clients_email }}{% endif %}
+                        {% if c.clients_phone %} &middot; {{ c.clients_phone }}{% endif %}
+                    </p>
+                </div>
+                <div style="display:flex;gap:8px;">
+                    {% if c.clients_phone %}<a href="tel:{{ c.clients_phone }}" class="btn btn-sm btn-outline-success" style="border-radius:8px;" onclick="event.stopPropagation()"><i class="fas fa-phone"></i></a>{% endif %}
+                    {% if c.clients_email %}<a href="mailto:{{ c.clients_email }}" class="btn btn-sm btn-outline-primary" style="border-radius:8px;" onclick="event.stopPropagation()"><i class="fas fa-envelope"></i></a>{% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <button class="mobile-fab" onclick="showPage('page-new-client')"><i class="fas fa-plus"></i></button>
+    </div>
+
+    {# ═══════════════════════════════════════ #}
+    {# ═══ MEHR (Extras) ═══ #}
+    {# ═══════════════════════════════════════ #}
+    <div class="mobile-page" id="page-more">
+        <div class="mobile-card" onclick="showPage('page-scanner')">
+            <div class="mobile-list-item" style="padding:4px 0;border:none;">
+                <div class="icon" style="background:var(--info)"><i class="fas fa-qrcode"></i></div>
+                <div class="info"><h4>QR-Code Scanner</h4><p>Equipment per Kamera scannen</p></div>
+                <i class="fas fa-chevron-right chevron"></i>
+            </div>
+        </div>
+        <div class="mobile-card" onclick="showPage('page-labels')">
+            <div class="mobile-list-item" style="padding:4px 0;border:none;">
+                <div class="icon" style="background:var(--warning)"><i class="fas fa-print"></i></div>
+                <div class="info"><h4>Labels drucken</h4><p>QR-Labels erstellen und drucken</p></div>
+                <i class="fas fa-chevron-right chevron"></i>
+            </div>
+        </div>
+        <div class="mobile-card" onclick="showPage('page-documents')">
+            <div class="mobile-list-item" style="padding:4px 0;border:none;">
+                <div class="icon" style="background:var(--danger)"><i class="fas fa-file-invoice"></i></div>
+                <div class="info"><h4>Dokumente</h4><p>Rechnungen, Angebote, Lieferscheine</p></div>
+                <i class="fas fa-chevron-right chevron"></i>
+            </div>
+        </div>
+        <div class="mobile-card" onclick="showPage('page-new-project')">
+            <div class="mobile-list-item" style="padding:4px 0;border:none;">
+                <div class="icon" style="background:var(--primary)"><i class="fas fa-plus-circle"></i></div>
+                <div class="info"><h4>Neues Projekt</h4><p>Projekt schnell anlegen</p></div>
+                <i class="fas fa-chevron-right chevron"></i>
+            </div>
+        </div>
+        <div class="mobile-card" onclick="showPage('page-new-client')">
+            <div class="mobile-list-item" style="padding:4px 0;border:none;">
+                <div class="icon" style="background:var(--success)"><i class="fas fa-user-plus"></i></div>
+                <div class="info"><h4>Neuer Kunde</h4><p>Kundendaten erfassen</p></div>
+                <i class="fas fa-chevron-right chevron"></i>
+            </div>
+        </div>
+        <div class="mobile-card" onclick="window.location='{{ CONFIG.ROOTURL }}/'">
+            <div class="mobile-list-item" style="padding:4px 0;border:none;">
+                <div class="icon" style="background:var(--dark)"><i class="fas fa-desktop"></i></div>
+                <div class="info"><h4>Desktop-Ansicht</h4><p>Zur vollen Anwendung wechseln</p></div>
+                <i class="fas fa-chevron-right chevron"></i>
+            </div>
+        </div>
+    </div>
+
+    {# ═══════════════════════════════════════ #}
+    {# ═══ DOKUMENTE ═══ #}
+    {# ═══════════════════════════════════════ #}
+    <div class="mobile-page" id="page-documents">
+        <div class="category-pills">
+            <span class="category-pill active" onclick="loadDocuments('all', this)">Alle</span>
+            <span class="category-pill" onclick="loadDocuments('invoice', this)">Rechnungen</span>
+            <span class="category-pill" onclick="loadDocuments('quote', this)">Angebote</span>
+            <span class="category-pill" onclick="loadDocuments('delivery', this)">Lieferscheine</span>
+        </div>
+        <div id="documentsList">
+            <div class="empty-state"><i class="fas fa-file-invoice"></i><p>Dokumente werden geladen...</p></div>
+        </div>
+    </div>
+
+    {# ═══════════════════════════════════════ #}
+    {# ═══ NEUES PROJEKT ═══ #}
+    {# ═══════════════════════════════════════ #}
+    <div class="mobile-page" id="page-new-project">
+        <div class="mobile-card">
+            <h3><i class="fas fa-plus text-primary"></i> Neues Projekt</h3>
+            <form class="mobile-form" id="newProjectForm">
+                <div class="form-group">
+                    <label>Projektname</label>
+                    <input type="text" class="form-control" name="projects_name" required placeholder="z.B. Firmenfeier Müller GmbH">
+                </div>
+                <div class="form-group">
+                    <label>Kunde</label>
+                    <select class="form-control" name="clients_id">
+                        <option value="">-- Kein Kunde --</option>
+                        {% for c in clients %}
+                        <option value="{{ c.clients_id }}">{{ c.clients_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Projekttyp</label>
+                    <select class="form-control" name="projectsTypes_id">
+                        {% for t in projectTypes %}
+                        <option value="{{ t.projectsTypes_id }}">{{ t.projectsTypes_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <div class="form-group">
+                        <label>Nutzung Start</label>
+                        <input type="datetime-local" class="form-control" name="projects_dates_use_start">
+                    </div>
+                    <div class="form-group">
+                        <label>Nutzung Ende</label>
+                        <input type="datetime-local" class="form-control" name="projects_dates_use_end">
+                    </div>
+                    <div class="form-group">
+                        <label>Lieferbeginn</label>
+                        <input type="datetime-local" class="form-control" name="projects_dates_deliver_start">
+                    </div>
+                    <div class="form-group">
+                        <label>Lieferende</label>
+                        <input type="datetime-local" class="form-control" name="projects_dates_deliver_end">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block btn-lg" style="border-radius:10px;">
+                    <i class="fas fa-check"></i> Projekt anlegen
+                </button>
+            </form>
+        </div>
+    </div>
+
+    {# ═══════════════════════════════════════ #}
+    {# ═══ NEUER KUNDE ═══ #}
+    {# ═══════════════════════════════════════ #}
+    <div class="mobile-page" id="page-new-client">
+        <div class="mobile-card">
+            <h3><i class="fas fa-user-plus text-success"></i> Neuer Kunde</h3>
+            <form class="mobile-form" id="newClientForm">
+                <div class="form-group">
+                    <label>Firmenname / Name</label>
+                    <input type="text" class="form-control" name="clients_name" required placeholder="Firma / Name">
+                </div>
+                <div class="form-group">
+                    <label>E-Mail</label>
+                    <input type="email" class="form-control" name="clients_email" placeholder="mail@beispiel.de">
+                </div>
+                <div class="form-group">
+                    <label>Telefon</label>
+                    <input type="tel" class="form-control" name="clients_phone" placeholder="+49 ...">
+                </div>
+                <div class="form-group">
+                    <label>Adresse</label>
+                    <textarea class="form-control" name="clients_address" rows="3" placeholder="Straße, PLZ Ort"></textarea>
+                </div>
+                <button type="submit" class="btn btn-success btn-block btn-lg" style="border-radius:10px;">
+                    <i class="fas fa-check"></i> Kunde anlegen
+                </button>
+            </form>
+        </div>
+    </div>
+
+    {# ═══════════════════════════════════════ #}
+    {# ═══ QR SCANNER ═══ #}
+    {# ═══════════════════════════════════════ #}
+    <div class="mobile-page" id="page-scanner">
+        <div class="mobile-card text-center">
+            <h3><i class="fas fa-qrcode text-info"></i> QR-Code Scanner</h3>
+            <p class="text-muted" style="font-size:13px;">Equipment-Labels und Barcodes scannen</p>
+            <div id="scannerPreview" style="width:100%;max-width:400px;margin:0 auto;background:#000;border-radius:12px;overflow:hidden;">
+                <video id="scannerVideo" style="width:100%;display:block;" playsinline></video>
+            </div>
+            <div id="scanResult" class="mt-3" style="display:none;">
+                <div class="alert alert-success" style="border-radius:10px;"><strong>Erkannt:</strong> <span id="scanResultText"></span></div>
+            </div>
+            <button class="btn btn-info btn-block mt-3" id="startScanBtn" style="border-radius:10px;">
+                <i class="fas fa-camera"></i> Scanner starten
+            </button>
+        </div>
+    </div>
+
+    {# ═══════════════════════════════════════ #}
+    {# ═══ LABELS ═══ #}
+    {# ═══════════════════════════════════════ #}
+    <div class="mobile-page" id="page-labels">
+        <div class="mobile-card">
+            <h3><i class="fas fa-print text-warning"></i> Labels drucken</h3>
+            <div class="search-bar" style="margin-top:12px;">
+                <i class="fas fa-search text-muted"></i>
+                <input type="text" id="labelAssetSearch" placeholder="Equipment suchen...">
+            </div>
+            <div id="labelAssetResults"></div>
+            <hr>
+            <h5>Druckwarteschlange <span class="badge badge-info" id="labelQueueCount">0</span></h5>
+            <div id="labelQueueList"><p class="text-muted" style="font-size:13px;">Noch keine Labels ausgewählt</p></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;">
+                <button class="btn btn-warning btn-lg" id="printLabelsBtn" style="border-radius:10px;" disabled>
+                    <i class="fas fa-print"></i> HTML
+                </button>
+                <button class="btn btn-dark btn-lg" id="printLabelsZplBtn" style="border-radius:10px;" disabled>
+                    <i class="fas fa-barcode"></i> ZPL
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {# ═══════════════════════════════════════ #}
+    {# ═══ BOTTOM NAVIGATION ═══ #}
+    {# ═══════════════════════════════════════ #}
+    <nav class="mobile-nav">
+        <a href="#" class="active" onclick="showPage('page-dashboard')">
+            <i class="fas fa-home"></i>Start
+        </a>
+        <a href="#" onclick="showPage('page-projects')">
+            <i class="fas fa-folder-open"></i>Projekte
+        </a>
+        <a href="#" onclick="showPage('page-equipment')">
+            <i class="fas fa-box"></i>Equipment
+        </a>
+        <a href="#" onclick="showPage('page-clients')">
+            <i class="fas fa-users"></i>Kunden
+        </a>
+        <a href="#" onclick="showPage('page-more')">
+            <i class="fas fa-ellipsis-h"></i>Mehr
+        </a>
+    </nav>
+
+    <script>
+    var ROOT = '{{ CONFIG.ROOTURL }}';
+    var pageHistory = ['page-dashboard'];
+    var currentEquipmentPage = 1;
+    var currentEquipmentCategory = 'all';
+    var currentEquipmentSearch = '';
+
+    // ═══ Navigation ═══
+    var navPages = {'page-dashboard':0, 'page-projects':1, 'page-equipment':2, 'page-clients':3, 'page-more':4};
+    var subPages = ['page-project-detail','page-equipment-detail','page-new-project','page-new-client','page-scanner','page-labels','page-documents'];
+
+    function showPage(pageId, pushHistory) {
+        if (pushHistory !== false) pageHistory.push(pageId);
+        $('.mobile-page').removeClass('active');
+        $('#' + pageId).addClass('active');
+
+        // Nav highlight
+        $('.mobile-nav a').removeClass('active');
+        if (navPages[pageId] !== undefined) {
+            $('.mobile-nav a').eq(navPages[pageId]).addClass('active');
+        } else {
+            // Sub-pages: highlight parent
+            if (pageId === 'page-project-detail' || pageId === 'page-new-project') $('.mobile-nav a').eq(1).addClass('active');
+            else if (pageId === 'page-equipment-detail') $('.mobile-nav a').eq(2).addClass('active');
+            else if (pageId === 'page-new-client') $('.mobile-nav a').eq(3).addClass('active');
+            else $('.mobile-nav a').eq(4).addClass('active');
+        }
+
+        // Back button
+        var isSubPage = subPages.indexOf(pageId) !== -1;
+        $('#backBtn').toggle(isSubPage);
+        $('#headerTitle').text(isSubPage ? getPageTitle(pageId) : '{{ CONFIG.PROJECT_NAME }}');
+        if (!isSubPage) $('#headerTitle').html('<i class="fas fa-warehouse"></i> {{ CONFIG.PROJECT_NAME }}');
+
+        // Auto-load
+        if (pageId === 'page-equipment' && $('#equipmentList .mobile-list-item').length === 0) loadEquipment();
+        if (pageId === 'page-documents' && $('#documentsList .mobile-list-item').length === 0) loadDocuments('all');
+
+        window.scrollTo(0, 0);
+    }
+
+    function getPageTitle(pageId) {
+        var titles = {
+            'page-project-detail': 'Projekt',
+            'page-equipment-detail': 'Equipment',
+            'page-new-project': 'Neues Projekt',
+            'page-new-client': 'Neuer Kunde',
+            'page-scanner': 'QR-Scanner',
+            'page-labels': 'Labels drucken',
+            'page-documents': 'Dokumente'
+        };
+        return titles[pageId] || '';
+    }
+
+    function goBack() {
+        pageHistory.pop();
+        var prev = pageHistory[pageHistory.length - 1] || 'page-dashboard';
+        showPage(prev, false);
+    }
+
+    // ═══ API Helper ═══
+    function api(path, data, callback, errorCallback) {
+        $.ajax({
+            url: ROOT + '/api/' + path,
+            type: 'POST', data: data, cache: false,
+            success: function(r) {
+                if (r.result && callback) callback(r);
+                else if (errorCallback) errorCallback(r);
+                else if (r.error) showToast(r.error.message || 'Fehler', 'danger');
+            },
+            error: function() {
+                if (errorCallback) errorCallback();
+                else showToast('Verbindungsfehler', 'danger');
+            }
+        });
+    }
+
+    // ═══ Toast Notification ═══
+    function showToast(msg, type) {
+        type = type || 'info';
+        var colors = {success:'#28a745',danger:'#dc3545',info:'#17a2b8',warning:'#ffc107'};
+        var t = $('<div style="position:fixed;top:64px;left:12px;right:12px;background:'+colors[type]+';color:#fff;padding:12px 16px;border-radius:10px;z-index:9999;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,0.2);text-align:center;">'+msg+'</div>');
+        $('body').append(t);
+        setTimeout(function() { t.fadeOut(300, function() { t.remove(); }); }, 2500);
+    }
+
+    // ═══ Search Filters ═══
+    $('#projectSearch').on('input', function() {
+        var q = $(this).val().toLowerCase();
+        $('.project-item').each(function() { $(this).toggle($(this).data('name').indexOf(q) !== -1); });
+    });
+    $('#clientSearch').on('input', function() {
+        var q = $(this).val().toLowerCase();
+        $('.client-item').each(function() { $(this).toggle($(this).data('name').indexOf(q) !== -1); });
+    });
+
+    // ═══ Equipment ═══
+    var equipmentSearchTimer;
+    $('#equipmentSearch').on('input', function() {
+        clearTimeout(equipmentSearchTimer);
+        var q = $(this).val();
+        currentEquipmentSearch = q;
+        currentEquipmentPage = 1;
+        equipmentSearchTimer = setTimeout(function() { loadEquipment(); }, 300);
+    });
+
+    function filterEquipment(catId, el) {
+        $('.category-pill').removeClass('active');
+        $(el).addClass('active');
+        currentEquipmentCategory = catId;
+        currentEquipmentPage = 1;
+        loadEquipment();
+    }
+
+    function loadEquipment(page) {
+        page = page || 1;
+        currentEquipmentPage = page;
+        var data = { page: page, pageLimit: 20, abridgedList: true };
+        if (currentEquipmentSearch) data.term = currentEquipmentSearch;
+        if (currentEquipmentCategory !== 'all') data.category = currentEquipmentCategory;
+
+        $('#equipmentList').html('<div class="loading"><i class="fas fa-spinner fa-spin"></i> Laden...</div>');
+
+        api('assets/list.php', data, function(r) {
+            var html = '';
+            var assets = r.response ? r.response.assets : (r.assets || []);
+            if (!assets || assets.length === 0) {
+                html = '<div class="empty-state"><i class="fas fa-box-open"></i><p>Kein Equipment gefunden</p></div>';
+            } else {
+                assets.forEach(function(type) {
+                    html += '<div class="mobile-card" onclick="loadEquipmentDetail(' + type.assetTypes_id + ')">';
+                    html += '<div style="display:flex;align-items:center;">';
+                    if (type.thumbnails && type.thumbnails.length > 0) {
+                        html += '<img src="' + type.thumbnails[0].url + '" style="width:50px;height:50px;border-radius:8px;object-fit:cover;margin-right:12px;" onerror="this.style.display=\'none\'">';
+                    } else {
+                        html += '<div class="icon" style="background:var(--info);margin-right:12px;"><i class="fas fa-box"></i></div>';
+                    }
+                    html += '<div style="flex:1;min-width:0;">';
+                    html += '<h3 style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(type.assetTypes_name || '') + '</h3>';
+                    html += '<div class="meta">';
+                    if (type.assetCategories_name) html += type.assetCategories_name + ' &middot; ';
+                    if (type.manufacturers_name) html += type.manufacturers_name + ' &middot; ';
+                    html += type.count + ' Stk.';
+                    if (type.assetTypes_dayRate_format) html += ' &middot; ' + type.assetTypes_dayRate_format + '/Tag';
+                    html += '</div></div>';
+                    html += '<i class="fas fa-chevron-right chevron" style="margin-left:8px;"></i>';
+                    html += '</div></div>';
+                });
+            }
+            $('#equipmentList').html(html);
+
+            // Pagination
+            var pagination = r.response ? r.response.pagination : (r.pagination || {});
+            var pagHtml = '';
+            if (pagination.total > 1) {
+                for (var i = 1; i <= pagination.total; i++) {
+                    var cls = i == currentEquipmentPage ? 'btn-primary' : 'btn-outline-secondary';
+                    pagHtml += '<button class="btn btn-sm ' + cls + ' m-1" style="border-radius:8px;min-width:36px;" onclick="loadEquipment(' + i + ')">' + i + '</button>';
+                }
+            }
+            $('#equipmentPagination').html(pagHtml);
+        });
+    }
+
+    function loadEquipmentDetail(typeId) {
+        showPage('page-equipment-detail');
+        $('#equipmentDetailContent').html('<div class="loading"><i class="fas fa-spinner fa-spin"></i></div>');
+
+        api('assets/list.php', { assetTypes_id: typeId, pageLimit: 1 }, function(r) {
+            var assets = r.response ? r.response.assets : (r.assets || []);
+            if (!assets || assets.length === 0) {
+                $('#equipmentDetailContent').html('<div class="empty-state"><p>Equipment nicht gefunden</p></div>');
+                return;
+            }
+            var type = assets[0];
+            var html = '<div class="detail-header">';
+            if (type.thumbnails && type.thumbnails.length > 0) {
+                html += '<div style="margin:-8px -4px 12px;overflow-x:auto;white-space:nowrap;">';
+                type.thumbnails.forEach(function(t) {
+                    html += '<img src="' + t.url + '" style="height:120px;border-radius:10px;margin-right:8px;object-fit:cover;" onerror="this.style.display=\'none\'">';
+                });
+                html += '</div>';
+            }
+            html += '<h2>' + escHtml(type.assetTypes_name || '') + '</h2>';
+            html += '<div class="detail-meta">';
+            if (type.assetCategories_name) html += '<span class="m-badge" style="background:var(--info);">' + type.assetCategories_name + '</span> ';
+            if (type.manufacturers_name) html += type.manufacturers_name;
+            html += '</div></div>';
+
+            // Info
+            html += '<div class="mobile-card"><div class="detail-section">';
+            html += '<h5>Details</h5>';
+            html += '<div class="detail-row"><span class="label">Anzahl</span><span class="value">' + type.count + ' Stk.</span></div>';
+            if (type.assetTypes_dayRate_format) html += '<div class="detail-row"><span class="label">Tagesrate</span><span class="value">' + type.assetTypes_dayRate_format + '</span></div>';
+            if (type.assetTypes_weekRate_format) html += '<div class="detail-row"><span class="label">Wochenrate</span><span class="value">' + type.assetTypes_weekRate_format + '</span></div>';
+            if (type.assetTypes_value_format) html += '<div class="detail-row"><span class="label">Wert</span><span class="value">' + type.assetTypes_value_format + '</span></div>';
+            if (type.assetTypes_mass_format) html += '<div class="detail-row"><span class="label">Gewicht</span><span class="value">' + type.assetTypes_mass_format + '</span></div>';
+            html += '</div></div>';
+
+            // Individual assets
+            if (type.tags && type.tags.length > 0) {
+                html += '<div class="mobile-card"><div class="detail-section"><h5>Einzelstücke (' + type.tags.length + ')</h5>';
+                type.tags.forEach(function(tag) {
+                    var tagLabel = tag.assets_tag_format || tag.assets_tag || '#' + tag.assets_id;
+                    html += '<div class="mobile-list-item" style="cursor:default;">';
+                    html += '<div class="icon" style="background:var(--dark);font-size:12px;">' + tagLabel + '</div>';
+                    html += '<div class="info"><h4>' + tagLabel + '</h4>';
+                    if (tag.assets_notes) html += '<p>' + escHtml(tag.assets_notes).substring(0, 60) + '</p>';
+                    html += '</div>';
+                    html += '<button class="btn btn-sm btn-outline-warning" style="border-radius:8px;" onclick="addToLabelQueue(' + tag.assets_id + ',\'' + escHtml(tagLabel) + '\',\'' + escHtml(type.assetTypes_name || '') + '\');showToast(\'Label hinzugefügt\',\'success\');"><i class="fas fa-tag"></i></button>';
+                    html += '</div>';
+                });
+                html += '</div></div>';
+            }
+
+            // Link to desktop
+            html += '<a href="' + ROOT + '/asset/?id=' + (type.tags && type.tags.length > 0 ? type.tags[0].assets_id : '') + '" class="btn btn-outline-secondary btn-block" style="border-radius:10px;margin-bottom:12px;"><i class="fas fa-desktop"></i> In Desktop-Ansicht öffnen</a>';
+
+            $('#equipmentDetailContent').html(html);
+        });
+    }
+
+    // ═══ Project Detail ═══
+    function loadProjectDetail(projectId) {
+        showPage('page-project-detail');
+        $('#projectDetailContent').html('<div class="loading"><i class="fas fa-spinner fa-spin"></i></div>');
+
+        // Find project in preloaded data
+        var projects = [
+            {% for p in recentProjects %}
+            {
+                id: {{ p.projects_id }},
+                name: {{ p.projects_name|json_encode|raw }},
+                client: {{ p.clients_name|json_encode|raw }},
+                clientId: {{ p.clients_id ?? 'null' }},
+                status: {{ p.projectsStatuses_name|json_encode|raw }},
+                statusColor: '{{ p.projectsStatuses_backgroundColour }}',
+                useStart: {{ p.projects_dates_use_start ? ("'" ~ p.projects_dates_use_start|date("d.m.Y H:i") ~ "'")|raw : 'null' }},
+                useEnd: {{ p.projects_dates_use_end ? ("'" ~ p.projects_dates_use_end|date("d.m.Y H:i") ~ "'")|raw : 'null' }},
+                deliverStart: {{ p.projects_dates_deliver_start ? ("'" ~ p.projects_dates_deliver_start|date("d.m.Y H:i") ~ "'")|raw : 'null' }},
+                deliverEnd: {{ p.projects_dates_deliver_end ? ("'" ~ p.projects_dates_deliver_end|date("d.m.Y H:i") ~ "'")|raw : 'null' }},
+                desc: {{ p.projects_description|json_encode|raw }}
+            },
+            {% endfor %}
+        ];
+
+        var proj = projects.find(function(p) { return p.id === projectId; });
+        if (!proj) {
+            // Fallback: open in desktop
+            window.location = ROOT + '/project/?id=' + projectId;
+            return;
+        }
+
+        var html = '<div class="detail-header">';
+        html += '<h2>' + escHtml(proj.name) + '</h2>';
+        html += '<div class="detail-meta">';
+        html += '<span class="m-badge" style="background:' + (proj.statusColor || '#6c757d') + ';">' + escHtml(proj.status || '') + '</span>';
+        if (proj.client) html += ' &middot; ' + escHtml(proj.client);
+        html += '</div></div>';
+
+        // Dates
+        html += '<div class="mobile-card"><div class="detail-section"><h5><i class="fas fa-calendar"></i> Termine</h5>';
+        if (proj.useStart) html += '<div class="detail-row"><span class="label">Nutzung Start</span><span class="value">' + proj.useStart + '</span></div>';
+        if (proj.useEnd) html += '<div class="detail-row"><span class="label">Nutzung Ende</span><span class="value">' + proj.useEnd + '</span></div>';
+        if (proj.deliverStart) html += '<div class="detail-row"><span class="label">Lieferbeginn</span><span class="value">' + proj.deliverStart + '</span></div>';
+        if (proj.deliverEnd) html += '<div class="detail-row"><span class="label">Lieferende</span><span class="value">' + proj.deliverEnd + '</span></div>';
+        if (!proj.useStart && !proj.useEnd && !proj.deliverStart && !proj.deliverEnd) html += '<p class="text-muted" style="font-size:13px;">Keine Termine eingetragen</p>';
+        html += '</div></div>';
+
+        // Description
+        if (proj.desc) {
+            html += '<div class="mobile-card"><div class="detail-section"><h5><i class="fas fa-align-left"></i> Beschreibung</h5>';
+            html += '<p style="font-size:14px;white-space:pre-wrap;">' + escHtml(proj.desc) + '</p>';
+            html += '</div></div>';
+        }
+
+        // Action buttons
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">';
+        html += '<a href="' + ROOT + '/project/?id=' + proj.id + '" class="btn btn-outline-primary" style="border-radius:10px;"><i class="fas fa-desktop"></i> Desktop</a>';
+        html += '<a href="' + ROOT + '/project/?id=' + proj.id + '#finance" class="btn btn-outline-success" style="border-radius:10px;"><i class="fas fa-file-invoice-dollar"></i> Finanzen</a>';
+        html += '</div>';
+
+        $('#projectDetailContent').html(html);
+    }
+
+    // ═══ Documents ═══
+    function loadDocuments(type, el) {
+        if (el) {
+            $('.category-pill').removeClass('active');
+            $(el).addClass('active');
+        }
+        $('#documentsList').html('<div class="loading"><i class="fas fa-spinner fa-spin"></i> Laden...</div>');
+
+        // Use projects list to find documents - link to desktop for now
+        var html = '<div class="empty-state">';
+        html += '<i class="fas fa-file-invoice"></i>';
+        html += '<p>Dokumente sind in der Desktop-Ansicht unter<br>Projekt > Finanzen verfügbar.</p>';
+        html += '<a href="' + ROOT + '/" class="btn btn-primary" style="border-radius:10px;margin-top:8px;"><i class="fas fa-desktop"></i> Zur Desktop-Ansicht</a>';
+        html += '</div>';
+        $('#documentsList').html(html);
+    }
+
+    // ═══ Create Project ═══
+    $('#newProjectForm').submit(function(e) {
+        e.preventDefault();
+        var data = {};
+        $(this).serializeArray().forEach(function(f) { data[f.name] = f.value; });
+        var btn = $(this).find('button[type=submit]');
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Wird angelegt...');
+        api('projects/new.php', data, function(r) {
+            showToast('Projekt angelegt!', 'success');
+            if (r.response && r.response.projects_id) {
+                setTimeout(function() { location.reload(); }, 500);
+            } else {
+                location.reload();
+            }
+        }, function() {
+            btn.prop('disabled', false).html('<i class="fas fa-check"></i> Projekt anlegen');
+        });
+    });
+
+    // ═══ Create Client ═══
+    $('#newClientForm').submit(function(e) {
+        e.preventDefault();
+        var data = {};
+        $(this).serializeArray().forEach(function(f) { data[f.name] = f.value; });
+        var btn = $(this).find('button[type=submit]');
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Wird angelegt...');
+        api('clients/new.php', data, function(r) {
+            showToast('Kunde angelegt!', 'success');
+            setTimeout(function() { location.reload(); }, 500);
+        }, function() {
+            btn.prop('disabled', false).html('<i class="fas fa-check"></i> Kunde anlegen');
+        });
+    });
+
+    // ═══ Label Print Queue ═══
+    var labelQueue = [];
+
+    $('#labelAssetSearch').on('input', function() {
+        var q = $(this).val();
+        if (q.length < 2) { $('#labelAssetResults').html(''); return; }
+        api('assets/searchAssets.php', {term: q}, function(r) {
+            var html = '';
+            var items = r.response || [];
+            if (Array.isArray(items)) {
+                items.forEach(function(a) {
+                    html += '<div class="mobile-list-item" onclick="addToLabelQueue(' + a.assets_id + ',\'' + escHtml(a.assets_tag || '') + '\',\'' + escHtml(a.assetTypes_name || '') + '\')">';
+                    html += '<div class="icon" style="background:var(--info)"><i class="fas fa-box"></i></div>';
+                    html += '<div class="info"><h4>' + escHtml(a.assets_tag || '#' + a.assets_id) + '</h4><p>' + escHtml(a.assetTypes_name || '') + '</p></div>';
+                    html += '<i class="fas fa-plus text-primary"></i></div>';
+                });
+            }
+            $('#labelAssetResults').html(html || '<p class="text-muted" style="padding:8px;font-size:13px;">Nichts gefunden</p>');
+        });
+    });
+
+    function addToLabelQueue(id, tag, typeName) {
+        if (labelQueue.find(function(l) { return l.id === id; })) return;
+        labelQueue.push({id: id, tag: tag, typeName: typeName});
+        updateLabelQueue();
+    }
+
+    function removeLabelItem(id) {
+        labelQueue = labelQueue.filter(function(l) { return l.id !== id; });
+        updateLabelQueue();
+    }
+
+    function updateLabelQueue() {
+        var html = '';
+        labelQueue.forEach(function(l) {
+            html += '<div class="mobile-list-item">';
+            html += '<div class="icon" style="background:var(--warning)"><i class="fas fa-tag"></i></div>';
+            html += '<div class="info"><h4>' + escHtml(l.tag) + '</h4><p>' + escHtml(l.typeName) + '</p></div>';
+            html += '<button class="btn btn-sm btn-danger" style="border-radius:8px;" onclick="removeLabelItem(' + l.id + ')"><i class="fas fa-times"></i></button>';
+            html += '</div>';
+        });
+        $('#labelQueueList').html(html || '<p class="text-muted" style="font-size:13px;">Noch keine Labels ausgewählt</p>');
+        $('#labelQueueCount').text(labelQueue.length);
+        $('#printLabelsBtn, #printLabelsZplBtn').prop('disabled', labelQueue.length === 0);
+    }
+
+    $('#printLabelsBtn').click(function() {
+        var ids = labelQueue.map(function(l) { return l.id; });
+        window.open(ROOT + '/mobile/labels.php?ids=' + ids.join(','), '_blank');
+    });
+    $('#printLabelsZplBtn').click(function() {
+        var ids = labelQueue.map(function(l) { return l.id; });
+        window.open(ROOT + '/mobile/labels.php?ids=' + ids.join(',') + '&format=zpl', '_blank');
+    });
+
+    function escHtml(s) {
+        if (!s) return '';
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+    // ═══ QR Scanner ═══
+    var scanning = false;
+    $('#startScanBtn').click(function() {
+        if (scanning) return;
+        scanning = true;
+        $(this).html('<i class="fas fa-spinner fa-spin"></i> Scanner aktiv...').prop('disabled', true);
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showToast('Kamera nicht verfügbar', 'danger');
+            scanning = false;
+            $(this).html('<i class="fas fa-camera"></i> Scanner starten').prop('disabled', false);
+            return;
+        }
+
+        navigator.mediaDevices.getUserMedia({video: {facingMode: 'environment'}})
+        .then(function(stream) {
+            var video = document.getElementById('scannerVideo');
+            video.srcObject = stream;
+            video.play();
+
+            if ('BarcodeDetector' in window) {
+                var detector = new BarcodeDetector({formats: ['qr_code', 'code_128', 'ean_13']});
+                var scanInterval = setInterval(function() {
+                    detector.detect(video).then(function(barcodes) {
+                        if (barcodes.length > 0) {
+                            clearInterval(scanInterval);
+                            stream.getTracks().forEach(function(t) { t.stop(); });
+                            scanning = false;
+                            var code = barcodes[0].rawValue;
+                            $('#scanResultText').text(code);
+                            $('#scanResult').show();
+                            handleScanResult(code);
+                        }
+                    }).catch(function() {});
+                }, 500);
+            } else {
+                showToast('QR-Erkennung nicht verfügbar. Bitte Chrome nutzen.', 'warning');
+                stream.getTracks().forEach(function(t) { t.stop(); });
+                scanning = false;
+                $('#startScanBtn').html('<i class="fas fa-camera"></i> Scanner starten').prop('disabled', false);
+            }
+        })
+        .catch(function(err) {
+            showToast('Kamerazugriff verweigert', 'danger');
+            scanning = false;
+            $('#startScanBtn').html('<i class="fas fa-camera"></i> Scanner starten').prop('disabled', false);
+        });
+    });
+
+    function handleScanResult(code) {
+        var assetTag = code;
+        if (code.indexOf('/asset/') !== -1) {
+            assetTag = code.split('/asset/').pop().split('?')[0];
+        }
+        api('assets/searchAssets.php', {term: assetTag}, function(r) {
+            var items = r.response || [];
+            if (items.length > 0) {
+                showToast('Equipment gefunden!', 'success');
+                loadEquipmentDetail(items[0].assetTypes_id);
+            } else {
+                showToast('Equipment "' + assetTag + '" nicht gefunden', 'warning');
+                $('#startScanBtn').html('<i class="fas fa-camera"></i> Erneut scannen').prop('disabled', false);
+            }
+        });
+    }
+
+    // ═══ PWA Service Worker ═══
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register(ROOT + '/static-assets/sw.js');
+    }
+
+    // ═══ Handle back button (Android) ═══
+    window.addEventListener('popstate', function(e) {
+        if (pageHistory.length > 1) {
+            e.preventDefault();
+            goBack();
+        }
+    });
+    </script>
+</body>
+</html>

@@ -19,7 +19,7 @@ class MaintenanceJobsStatusesSeeder extends AbstractSeed
             [
                 "maintenanceJobsStatuses_id" => 1,
                 "instances_id" => null,
-                "maintenanceJobsStatuses_name" => "Received",
+                "maintenanceJobsStatuses_name" => "Eingegangen",
                 "maintenanceJobsStatuses_order" => 1,
                 "maintenanceJobsStatuses_deleted" => 0,
                 "maintenanceJobsStatuses_showJobInMainList" => 1
@@ -27,7 +27,7 @@ class MaintenanceJobsStatusesSeeder extends AbstractSeed
             [
                 "maintenanceJobsStatuses_id" => 2,
                 "instances_id" => null,
-                "maintenanceJobsStatuses_name" => "Closed",
+                "maintenanceJobsStatuses_name" => "Abgeschlossen",
                 "maintenanceJobsStatuses_order" => 99,
                 "maintenanceJobsStatuses_deleted" => 0,
                 "maintenanceJobsStatuses_showJobInMainList" => 0

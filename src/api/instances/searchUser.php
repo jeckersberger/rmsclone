@@ -8,10 +8,10 @@ $DBLIB->where("users.users_suspended", 0);
 $DBLIB->where("(
     SELECT COUNT(*) FROM userInstances
     LEFT JOIN instancePositions ON userInstances.instancePositions_id=instancePositions.instancePositions_id
-    WHERE userInstances.users_userid=users.users_userid AND (userInstances.userInstances_archived IS NULL OR userInstances.userInstances_archived >= '" . date('Y-m-d H:i:s') . "')
+    WHERE userInstances.users_userid=users.users_userid AND (userInstances.userInstances_archived IS NULL OR userInstances.userInstances_archived >= ?)
     AND userInstances.userInstances_deleted = '0'
-    AND instancePositions.instances_id = '" . $AUTH->data['instance']['instances_id'] . "' 
-    ) < 1");
+    AND instancePositions.instances_id = ?
+    ) < 1", [date('Y-m-d H:i:s'), $AUTH->data['instance']['instances_id']]);
 /*$DBLIB->where("(
 		users_email LIKE '%" . $bCMS->sanitizeStringMYSQL($_POST['term']) . "%'
 		OR users_name1 LIKE '%" . $bCMS->sanitizeStringMYSQL($_POST['term']) . "%'

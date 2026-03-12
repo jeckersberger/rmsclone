@@ -5,6 +5,46 @@ use Money\Currencies\ISOCurrencies;
 use Money\Formatter\IntlMoneyFormatter;
 use Money\Formatter\DecimalMoneyFormatter;
 
+// ── i18n: Translation system ──
+require_once __DIR__ . '/i18n/Translator.php';
+$_instanceLocale = 'de_DE'; // Default locale
+if (isset($AUTH) && $AUTH->login && isset($AUTH->data['instance']['instances_locale'])) {
+    $_instanceLocale = $AUTH->data['instance']['instances_locale'] ?: 'de_DE';
+}
+$GLOBALS['TRANSLATOR'] = new Translator($_instanceLocale);
+
+// Twig function: {{ t('key') }} or {{ t('key', {name: 'Max'}) }}
+$TWIG->addFunction(new \Twig\TwigFunction('t', function (string $key, array $params = []) {
+    return $GLOBALS['TRANSLATOR']->t($key, $params);
+}));
+
+// Twig filter: {{ 'key'|t }}
+$TWIG->addFilter(new \Twig\TwigFilter('t', function (string $key, array $params = []) {
+    return $GLOBALS['TRANSLATOR']->t($key, $params);
+}));
+
+// ── German date format filter: {{ date_value|dateDe }} => "28.02.2026" ──
+$TWIG->addFilter(new \Twig\TwigFilter('dateDe', function ($datetime, string $format = 'd.m.Y') {
+    if ($datetime instanceof \DateTimeInterface) return $datetime->format($format);
+    if (is_string($datetime) && strlen($datetime) > 0) return date($format, strtotime($datetime));
+    return '';
+}));
+
+// ── German number format: {{ 1234.56|numberDe }} => "1.234,56" ──
+$TWIG->addFilter(new \Twig\TwigFilter('numberDe', function ($value, int $decimals = 2) {
+    return number_format((float)$value, $decimals, ',', '.');
+}));
+
+// ── German money format: {{ amount|moneyDe }} => "1.234,56 EUR" ──
+$TWIG->addFilter(new \Twig\TwigFilter('moneyDe', function ($variable, $currency = false) {
+    global $AUTH;
+    if (!is_object($variable)) $variable = new Money($variable, new Currency(($currency ?: $AUTH->data['instance']['instances_config_currency'])));
+    $currencies = new ISOCurrencies();
+    $numberFormatter = new NumberFormatter('de_DE', NumberFormatter::CURRENCY);
+    $moneyFormatter = new IntlMoneyFormatter($numberFormatter, $currencies);
+    return $moneyFormatter->format($variable);
+}));
+
 $TWIG->addFilter(new \Twig\TwigFilter('timeago', function ($datetime) {
     $time = time() - strtotime($datetime);
     $units = array (
@@ -196,7 +236,8 @@ $TWIG->addFilter(new \Twig\TwigFilter('money', function ($variable,$currency = f
     global $AUTH;
     if (!is_object($variable)) $variable = new Money($variable, new Currency(($currency ?: $AUTH->data['instance']['instances_config_currency'])));
     $currencies = new ISOCurrencies();
-    $numberFormatter = new NumberFormatter('en_GB', NumberFormatter::CURRENCY);
+    $locale = (isset($AUTH->data['instance']['instances_locale']) && $AUTH->data['instance']['instances_locale']) ? $AUTH->data['instance']['instances_locale'] : 'de_DE';
+    $numberFormatter = new NumberFormatter($locale, NumberFormatter::CURRENCY);
     $moneyFormatter = new IntlMoneyFormatter($numberFormatter, $currencies);
     return $moneyFormatter->format($variable);
 }));
@@ -216,11 +257,15 @@ $TWIG->addFilter(new \Twig\TwigFilter('moneyPositive', function ($variable) {
 $TWIG->addFunction(new \Twig\TwigFunction('moneySymbol', function ($currency = false) {
     global $AUTH;
     $currencyCode = $currency ?: $AUTH->data['instance']['instances_config_currency'];
-    $numberFormatter = new NumberFormatter('en_GB' . "@currency=$currencyCode", NumberFormatter::CURRENCY);
+    $locale = (isset($AUTH->data['instance']['instances_locale']) && $AUTH->data['instance']['instances_locale']) ? $AUTH->data['instance']['instances_locale'] : 'de_DE';
+    $numberFormatter = new NumberFormatter($locale . "@currency=$currencyCode", NumberFormatter::CURRENCY);
     $symbol = $numberFormatter->getSymbol(NumberFormatter::CURRENCY_SYMBOL);
     return $symbol;
 }));
 $TWIG->addFilter(new \Twig\TwigFilter('mass', function ($variable) {
+    global $AUTH;
+    $locale = (isset($AUTH->data['instance']['instances_locale']) && $AUTH->data['instance']['instances_locale']) ? $AUTH->data['instance']['instances_locale'] : 'de_DE';
+    if ($locale === 'de_DE') return number_format((float)$variable, 2, ',', '.') . " kg";
     return number_format((float)$variable, 2, '.', '') . "kg";
 }));
 $TWIG->addFilter(new \Twig\TwigFilter('nbsp', function ($string) {

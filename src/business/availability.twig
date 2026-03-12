@@ -1,0 +1,147 @@
+{% extends "assets/template.twig" %}
+{% block htmlIncludes %}
+    <link href='https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.css' rel='stylesheet' />
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.js'></script>
+{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-calendar-check"></i> {{ t('availability_calendar') }}</h3>
+                <div class="card-tools">
+                    <div class="input-group input-group-sm" style="width: 250px; display: inline-flex;">
+                        <select id="assetTypeFilter" class="form-control form-control-sm">
+                            <option value="">{{ t('all_asset_types') }}</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="availabilityCalendar"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Timeline Table View ── #}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-list"></i> {{ t('availability_list') }}</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="overlay" id="listLoading"><i class="fas fa-sync fa-spin fa-2x"></i></div>
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th>{{ t('asset_type') }}</th>
+                            <th>{{ t('asset_tag') }}</th>
+                            <th>{{ t('project') }}</th>
+                            <th>{{ t('client') }}</th>
+                            <th>{{ t('project_start') }}</th>
+                            <th>{{ t('project_end') }}</th>
+                            <th>{{ t('status') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="availabilityListBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    var currentTypeFilter = '';
+
+    function formatDate(d) {
+        if (!d) return '-';
+        var dt = new Date(d);
+        return ('0'+dt.getDate()).slice(-2) + '.' + ('0'+(dt.getMonth()+1)).slice(-2) + '.' + dt.getFullYear();
+    }
+
+    function loadAvailability(dateFrom, dateTo) {
+        var params = {};
+        if (dateFrom) params.date_from = dateFrom;
+        if (dateTo) params.date_to = dateTo;
+        if (currentTypeFilter) params.asset_type_id = currentTypeFilter;
+
+        ajaxcall('availability/overview.php', params, function(data) {
+            if (!data.response) return;
+            var r = data.response;
+
+            // Populate filter dropdown (only once)
+            if ($('#assetTypeFilter option').length <= 1 && r.asset_types) {
+                r.asset_types.forEach(function(at) {
+                    $('#assetTypeFilter').append('<option value="' + at.assetTypes_id + '">' + (at.assetCategories_name ? at.assetCategories_name + ' - ' : '') + at.assetTypes_name + '</option>');
+                });
+            }
+
+            // Update calendar
+            $('#availabilityCalendar').fullCalendar('removeEvents');
+            if (r.events) {
+                var calEvents = r.events.map(function(e) {
+                    return {
+                        title: e.asset_type + (e.asset_tag ? ' #' + e.asset_tag : '') + ' - ' + e.project_name,
+                        start: e.start,
+                        end: e.end,
+                        color: e.color || '#007bff',
+                        url: '{{ CONFIG.ROOTURL }}/project/?id=' + e.project_id
+                    };
+                });
+                $('#availabilityCalendar').fullCalendar('addEventSource', calEvents);
+            }
+
+            // Update list
+            var html = '';
+            if (r.events && r.events.length > 0) {
+                r.events.forEach(function(e) {
+                    html += '<tr>';
+                    html += '<td>' + (e.asset_type || '-') + '</td>';
+                    html += '<td>' + (e.asset_tag || '-') + '</td>';
+                    html += '<td><a href="{{ CONFIG.ROOTURL }}/project/?id=' + e.project_id + '">' + e.project_name + '</a></td>';
+                    html += '<td>' + (e.client_name || '-') + '</td>';
+                    html += '<td>' + formatDate(e.start) + '</td>';
+                    html += '<td>' + formatDate(e.end) + '</td>';
+                    html += '<td><span class="badge" style="background-color:' + (e.color || '#6c757d') + ';color:#fff;">' + (e.status || '-') + '</span></td>';
+                    html += '</tr>';
+                });
+            } else {
+                html = '<tr><td colspan="7" class="text-center text-muted">{{ t("no_bookings") }}</td></tr>';
+            }
+            $('#availabilityListBody').html(html);
+            $('#listLoading').hide();
+        }, false);
+    }
+
+    // Initialize FullCalendar
+    $('#availabilityCalendar').fullCalendar({
+        locale: 'de',
+        defaultView: 'month',
+        header: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'month,agendaWeek,listWeek'
+        },
+        eventClick: function(event) {
+            if (event.url) {
+                window.location.href = event.url;
+                return false;
+            }
+        },
+        viewRender: function(view) {
+            loadAvailability(view.start.format('YYYY-MM-DD'), view.end.format('YYYY-MM-DD'));
+        }
+    });
+
+    // Filter change
+    $('#assetTypeFilter').on('change', function() {
+        currentTypeFilter = $(this).val();
+        var view = $('#availabilityCalendar').fullCalendar('getView');
+        loadAvailability(view.start.format('YYYY-MM-DD'), view.end.format('YYYY-MM-DD'));
+    });
+});
+</script>
+{% endblock %}

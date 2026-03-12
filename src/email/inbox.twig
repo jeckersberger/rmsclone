@@ -1,0 +1,573 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+
+{# Statistik-Boxen #}
+<div class="row">
+    <div class="col-md-3 col-sm-6">
+        <div class="info-box bg-info">
+            <span class="info-box-icon"><i class="fas fa-envelope"></i></span>
+            <div class="info-box-content">
+                <span class="info-box-text">Gesamt</span>
+                <span class="info-box-number" id="statTotal">-</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="info-box bg-warning">
+            <span class="info-box-icon"><i class="fas fa-envelope-open"></i></span>
+            <div class="info-box-content">
+                <span class="info-box-text">Ungelesen</span>
+                <span class="info-box-number" id="statUnread">-</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="info-box bg-success">
+            <span class="info-box-icon"><i class="fas fa-paperclip"></i></span>
+            <div class="info-box-content">
+                <span class="info-box-text">Mit Anhang</span>
+                <span class="info-box-number" id="statAttachments">-</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="info-box bg-primary">
+            <span class="info-box-icon"><i class="fas fa-robot"></i></span>
+            <div class="info-box-content">
+                <span class="info-box-text">KI-verarbeitet</span>
+                <span class="info-box-number" id="statAiProcessed">-</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Filter & Suche #}
+<div class="row">
+    <div class="col-12">
+        <div class="card collapsed-card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-filter"></i> Filter</h3>
+                <div class="card-tools">
+                    <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>Suche</label>
+                            <input type="text" class="form-control" id="filterSearch" placeholder="Betreff, Absender...">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label>Von</label>
+                            <input type="date" class="form-control" id="filterFrom">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label>Bis</label>
+                            <input type="date" class="form-control" id="filterTo">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label>Status</label>
+                            <select class="form-control" id="filterUnread">
+                                <option value="">Alle</option>
+                                <option value="1">Nur ungelesene</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-1">
+                        <div class="form-group">
+                            <label>Kategorie</label>
+                            <select class="form-control" id="filterCategory">
+                                <option value="">Alle</option>
+                                <option value="anfrage">Anfrage</option>
+                                <option value="buchung">Buchung</option>
+                                <option value="reklamation">Reklamation</option>
+                                <option value="rechnung">Rechnung</option>
+                                <option value="allgemein">Allgemein</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label>&nbsp;</label>
+                            <button class="btn btn-primary btn-block" onclick="loadEmails(1)"><i class="fas fa-search"></i> Filtern</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# E-Mail Liste #}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-inbox"></i> Posteingang</h3>
+                <div class="card-tools">
+                    {% if "EMAIL_INBOX:EDIT"|instancePermissions %}
+                    <button class="btn btn-sm btn-primary" onclick="openCompose()"><i class="fas fa-pen"></i> Neue E-Mail</button>
+                    {% endif %}
+                    <button class="btn btn-sm btn-outline-secondary" onclick="loadEmails(currentPage)" title="Aktualisieren"><i class="fas fa-sync"></i></button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="overlay" id="loadingOverlay"><i class="fas fa-sync fa-spin fa-3x"></i></div>
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped" id="emailTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 30px"></th>
+                                <th style="width: 200px">Absender</th>
+                                <th>Betreff</th>
+                                <th style="width: 90px">KI-Kategorie</th>
+                                <th style="width: 150px">Datum</th>
+                                <th style="width: 30px"></th>
+                                <th style="width: 100px">Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody id="emailList">
+                            <tr><td colspan="7" class="text-center text-muted p-4">Laden...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer clearfix">
+                <div class="float-left text-muted" id="paginationInfo">-</div>
+                <ul class="pagination pagination-sm m-0 float-right" id="pagination"></ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# E-Mail Detail Modal #}
+<div class="modal fade" id="emailDetailModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="emailDetailSubject">E-Mail</h5>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Von:</strong> <span id="emailDetailFrom"></span>
+                    </div>
+                    <div class="col-md-6 text-right">
+                        <strong>Datum:</strong> <span id="emailDetailDate"></span>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>An:</strong> <span id="emailDetailTo"></span>
+                    </div>
+                    <div class="col-md-6 text-right" id="emailAiInfo" style="display:none;">
+                        <span class="badge badge-secondary" id="emailAiCategory"></span>
+                        <span class="badge" id="emailAiPriority"></span>
+                    </div>
+                </div>
+                {# AI Summary #}
+                <div id="emailAiSummary" class="alert alert-light" style="display:none; font-size: 13px;">
+                    <i class="fas fa-robot text-info"></i> <strong>KI-Zusammenfassung:</strong> <span id="emailAiSummaryText"></span>
+                </div>
+                <div id="emailDetailAttachments" class="mb-3" style="display:none;">
+                    <strong>Anhaenge:</strong>
+                    <div id="emailDetailAttachmentList" class="mt-1"></div>
+                </div>
+                <hr>
+                <div id="emailDetailBody" style="max-height: 500px; overflow-y: auto;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="btnReply"><i class="fas fa-reply"></i> Antworten</button>
+                <button type="button" class="btn btn-outline-info" id="btnAiDraft" title="KI-Antwort generieren"><i class="fas fa-robot"></i> KI-Antwort</button>
+                {% if "EMAIL_INBOX:EDIT"|instancePermissions or "PROJECTS:VIEW"|instancePermissions %}
+                <button type="button" class="btn btn-outline-info" id="btnAssignProject" onclick="assignProject()"><i class="fas fa-project-diagram"></i> Projekt zuordnen</button>
+                {% endif %}
+                {% if "EMAIL_INBOX:EDIT"|instancePermissions or "USERS:VIEW:MAILINGS"|instancePermissions %}
+                <button type="button" class="btn btn-outline-secondary" id="btnToggleRead"><i class="fas fa-eye-slash"></i> Ungelesen</button>
+                {% endif %}
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Schliessen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Compose Modal #}
+<div class="modal fade" id="composeModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="composeTitle"><i class="fas fa-pen"></i> Neue E-Mail</h5>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <form id="composeForm">
+                    <input type="hidden" name="reply_to" id="composeReplyTo" value="0">
+                    <div class="form-group">
+                        <label>An</label>
+                        <input type="email" class="form-control" name="to" id="composeTo" required placeholder="empfaenger@beispiel.de">
+                    </div>
+                    <div class="form-group">
+                        <label>Name (optional)</label>
+                        <input type="text" class="form-control" name="to_name" id="composeToName" placeholder="Max Mustermann">
+                    </div>
+                    <div class="form-group">
+                        <label>Betreff</label>
+                        <input type="text" class="form-control" name="subject" id="composeSubject" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Nachricht</label>
+                        <textarea class="form-control" name="body" id="composeBody" rows="12" style="font-family: Arial, sans-serif;"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-info" onclick="aiDraftCompose()"><i class="fas fa-robot"></i> KI-Entwurf</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-primary" id="composeSendBtn" onclick="sendCompose()"><i class="fas fa-paper-plane"></i> Senden</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+var currentPage = 1;
+var currentEmailId = null;
+var currentEmailData = null;
+
+var categoryBadges = {
+    'anfrage': 'badge-info',
+    'buchung': 'badge-success',
+    'reklamation': 'badge-danger',
+    'rechnung': 'badge-warning',
+    'allgemein': 'badge-secondary',
+    'spam': 'badge-dark'
+};
+var categoryLabels = {
+    'anfrage': 'Anfrage',
+    'buchung': 'Buchung',
+    'reklamation': 'Reklamation',
+    'rechnung': 'Rechnung',
+    'allgemein': 'Allgemein',
+    'spam': 'Spam'
+};
+var priorityBadges = {
+    'hoch': 'badge-danger',
+    'mittel': 'badge-warning',
+    'niedrig': 'badge-secondary'
+};
+
+$(document).ready(function() {
+    loadEmails(1);
+    $('#filterSearch').on('keypress', function(e) { if (e.which === 13) loadEmails(1); });
+});
+
+function loadEmails(page) {
+    currentPage = page;
+    $('#loadingOverlay').show();
+
+    var params = { page: page, limit: 25 };
+    var search = $('#filterSearch').val();
+    var from = $('#filterFrom').val();
+    var to = $('#filterTo').val();
+    var unread = $('#filterUnread').val();
+    var category = $('#filterCategory').val();
+
+    if (search) params.search = search;
+    if (from) params.from = from;
+    if (to) params.to = to;
+    if (unread) params.unread = unread;
+    if (category) params.category = category;
+
+    $.get('{{ CONFIG.ROOTURL }}/api/emailInbox/list.php', params, function(resp) {
+        $('#loadingOverlay').hide();
+        if (!resp.result) {
+            $('#emailList').html('<tr><td colspan="7" class="text-center text-danger p-4">Fehler beim Laden.</td></tr>');
+            return;
+        }
+
+        var emails = resp.response.emails;
+        var pag = resp.response.pagination;
+        $('#statTotal').text(pag.total);
+
+        var html = '';
+        if (emails.length === 0) {
+            html = '<tr><td colspan="7" class="text-center text-muted p-4">Keine E-Mails gefunden.</td></tr>';
+        }
+
+        for (var i = 0; i < emails.length; i++) {
+            var e = emails[i];
+            var isUnread = !parseInt(e.emailReceived_isRead);
+            var fontWeight = isUnread ? 'font-weight: bold;' : '';
+            var date = new Date(e.emailReceived_date);
+            var dateStr = date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+            html += '<tr style="cursor:pointer; ' + fontWeight + '" onclick="viewEmail(' + e.emailReceived_id + ')" class="' + (isUnread ? 'table-warning' : '') + '">';
+            html += '<td>' + (isUnread ? '<i class="fas fa-circle text-warning" style="font-size: 8px;"></i>' : '') + '</td>';
+            html += '<td>' + escHtml(e.emailReceived_fromName || e.emailReceived_fromEmail) + '</td>';
+            html += '<td>' + escHtml(e.emailReceived_subject || '(Kein Betreff)');
+            if (parseInt(e.emailReceived_hasAttachments)) html += ' <i class="fas fa-paperclip text-muted"></i>';
+            if (e.projects_id) html += ' <span class="badge badge-info" title="Projekt zugeordnet"><i class="fas fa-project-diagram"></i></span>';
+            if (e.ai_summary) html += ' <span class="badge badge-light" title="' + escHtml(e.ai_summary) + '"><i class="fas fa-robot text-info"></i></span>';
+            html += '</td>';
+
+            // AI Category
+            var cat = e.ai_category || '';
+            if (cat && categoryLabels[cat]) {
+                html += '<td><span class="badge ' + (categoryBadges[cat] || 'badge-secondary') + '">' + categoryLabels[cat] + '</span></td>';
+            } else {
+                html += '<td></td>';
+            }
+
+            html += '<td>' + dateStr + '</td>';
+            html += '<td>' + (parseInt(e.emailReceived_hasAttachments) ? '<i class="fas fa-paperclip"></i>' : '') + '</td>';
+            html += '<td>';
+            html += '<button class="btn btn-xs btn-outline-primary" onclick="event.stopPropagation(); viewEmail(' + e.emailReceived_id + ')" title="Anzeigen"><i class="fas fa-eye"></i></button> ';
+            html += '<button class="btn btn-xs btn-outline-success" onclick="event.stopPropagation(); replyToEmail(' + e.emailReceived_id + ')" title="Antworten"><i class="fas fa-reply"></i></button>';
+            html += '</td>';
+            html += '</tr>';
+        }
+
+        $('#emailList').html(html);
+
+        // Pagination
+        var pagHtml = '';
+        var totalPages = pag.pages;
+        if (totalPages > 1) {
+            if (page > 1) pagHtml += '<li class="page-item"><a class="page-link" href="#" onclick="loadEmails(' + (page-1) + '); return false;">&laquo;</a></li>';
+            var startP = Math.max(1, page - 3);
+            var endP = Math.min(totalPages, page + 3);
+            for (var p = startP; p <= endP; p++) {
+                pagHtml += '<li class="page-item ' + (p === page ? 'active' : '') + '"><a class="page-link" href="#" onclick="loadEmails(' + p + '); return false;">' + p + '</a></li>';
+            }
+            if (page < totalPages) pagHtml += '<li class="page-item"><a class="page-link" href="#" onclick="loadEmails(' + (page+1) + '); return false;">&raquo;</a></li>';
+        }
+        $('#pagination').html(pagHtml);
+        $('#paginationInfo').text('Seite ' + pag.page + ' von ' + Math.max(1, totalPages) + ' (' + pag.total + ' E-Mails)');
+    }).fail(function() {
+        $('#loadingOverlay').hide();
+        $('#emailList').html('<tr><td colspan="7" class="text-center text-danger p-4">Verbindungsfehler.</td></tr>');
+    });
+
+    $.get('{{ CONFIG.ROOTURL }}/api/emailInbox/list.php', { unread: 1, limit: 1 }, function(resp) {
+        if (resp.result) $('#statUnread').text(resp.response.pagination.total);
+    });
+}
+
+function viewEmail(id) {
+    currentEmailId = id;
+    $.get('{{ CONFIG.ROOTURL }}/api/emailInbox/view.php', { id: id }, function(resp) {
+        if (!resp.result) { bootbox.alert('E-Mail konnte nicht geladen werden.'); return; }
+
+        var email = resp.response.email;
+        var attachments = resp.response.attachments;
+        currentEmailData = email;
+
+        $('#emailDetailSubject').text(email.emailReceived_subject || '(Kein Betreff)');
+        $('#emailDetailFrom').html(escHtml(email.emailReceived_fromName) + ' &lt;' + escHtml(email.emailReceived_fromEmail) + '&gt;');
+        $('#emailDetailTo').html(escHtml(email.emailReceived_toEmail));
+        var date = new Date(email.emailReceived_date);
+        $('#emailDetailDate').text(date.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }));
+
+        // AI Info
+        if (email.ai_category || email.ai_priority) {
+            $('#emailAiInfo').show();
+            var cat = email.ai_category || '';
+            $('#emailAiCategory').attr('class', 'badge ' + (categoryBadges[cat] || 'badge-secondary')).text(categoryLabels[cat] || cat || '-');
+            var pri = email.ai_priority || '';
+            $('#emailAiPriority').attr('class', 'badge ' + (priorityBadges[pri] || '')).text(pri ? ('Prioritaet: ' + pri) : '');
+        } else {
+            $('#emailAiInfo').hide();
+        }
+
+        // AI Summary
+        if (email.ai_summary) {
+            $('#emailAiSummaryText').text(email.ai_summary);
+            $('#emailAiSummary').show();
+        } else {
+            $('#emailAiSummary').hide();
+        }
+
+        // Body
+        if (email.emailReceived_bodyHtml) {
+            var iframe = '<iframe id="emailIframe" style="width:100%; border:none; min-height:300px;" sandbox="allow-same-origin"></iframe>';
+            $('#emailDetailBody').html(iframe);
+            var doc = document.getElementById('emailIframe').contentWindow.document;
+            doc.open();
+            doc.write('<html><head><style>body{font-family:Arial,sans-serif;font-size:14px;color:#333;}</style></head><body>' + email.emailReceived_bodyHtml + '</body></html>');
+            doc.close();
+            setTimeout(function() { $('#emailIframe').height(Math.min(doc.body.scrollHeight + 30, 500)); }, 200);
+        } else {
+            $('#emailDetailBody').html('<pre style="white-space: pre-wrap;">' + escHtml(email.emailReceived_bodyText || '') + '</pre>');
+        }
+
+        // Attachments
+        if (attachments && attachments.length > 0) {
+            $('#emailDetailAttachments').show();
+            var attHtml = '';
+            for (var a = 0; a < attachments.length; a++) {
+                var att = attachments[a];
+                attHtml += '<a href="{{ CONFIG.ROOTURL }}/api/emailInbox/downloadAttachment.php?id=' + att.emailAttachment_id + '" class="btn btn-sm btn-outline-secondary mr-1 mb-1" target="_blank">';
+                attHtml += '<i class="fas fa-download"></i> ' + escHtml(att.emailAttachment_filename) + ' (' + formatBytes(att.emailAttachment_size) + ')';
+                attHtml += '</a>';
+            }
+            $('#emailDetailAttachmentList').html(attHtml);
+        } else {
+            $('#emailDetailAttachments').hide();
+        }
+
+        // Toggle Read
+        var isRead = parseInt(email.emailReceived_isRead);
+        $('#btnToggleRead').html(isRead ? '<i class="fas fa-eye-slash"></i> Ungelesen' : '<i class="fas fa-eye"></i> Gelesen');
+        $('#btnToggleRead').off('click').on('click', function() { toggleRead(id, isRead ? 0 : 1); });
+
+        // Reply button
+        $('#btnReply').off('click').on('click', function() {
+            $('#emailDetailModal').modal('hide');
+            replyToEmail(id);
+        });
+
+        // AI Draft button
+        $('#btnAiDraft').off('click').on('click', function() {
+            $('#emailDetailModal').modal('hide');
+            replyToEmail(id, true);
+        });
+
+        $('#emailDetailModal').modal('show');
+        loadEmails(currentPage);
+    });
+}
+
+// ═══ COMPOSE ═══
+function openCompose(to, toName, subject, body, replyTo) {
+    $('#composeTo').val(to || '');
+    $('#composeToName').val(toName || '');
+    $('#composeSubject').val(subject || '');
+    $('#composeBody').val(body || '');
+    $('#composeReplyTo').val(replyTo || 0);
+    $('#composeTitle').html(replyTo ? '<i class="fas fa-reply"></i> Antworten' : '<i class="fas fa-pen"></i> Neue E-Mail');
+    $('#composeModal').modal('show');
+}
+
+function replyToEmail(emailId, useAi) {
+    $.get('{{ CONFIG.ROOTURL }}/api/emailInbox/view.php', { id: emailId }, function(resp) {
+        if (!resp.result) return;
+        var email = resp.response.email;
+        var subject = email.emailReceived_subject || '';
+        if (!subject.match(/^Re:/i)) subject = 'Re: ' + subject;
+
+        var quotedText = '\n\n--- Urspruengliche Nachricht ---\n' +
+            'Von: ' + (email.emailReceived_fromName || '') + ' <' + (email.emailReceived_fromEmail || '') + '>\n' +
+            'Datum: ' + email.emailReceived_date + '\n\n' +
+            (email.emailReceived_bodyText || '').substring(0, 2000);
+
+        if (useAi) {
+            // KI-Entwurf generieren
+            openCompose(email.emailReceived_fromEmail, email.emailReceived_fromName, subject, 'KI-Entwurf wird generiert...', emailId);
+            $.post('{{ CONFIG.ROOTURL }}/api/ai/emailDraft.php', {
+                context: (email.emailReceived_bodyText || '').substring(0, 3000),
+                subject: email.emailReceived_subject,
+                type: 'reply'
+            }, function(aiResp) {
+                if (aiResp.result && aiResp.response && aiResp.response.draft) {
+                    $('#composeBody').val(aiResp.response.draft + quotedText);
+                } else {
+                    $('#composeBody').val(quotedText);
+                    bootbox.alert('KI-Entwurf konnte nicht generiert werden.');
+                }
+            }).fail(function() {
+                $('#composeBody').val(quotedText);
+            });
+        } else {
+            openCompose(email.emailReceived_fromEmail, email.emailReceived_fromName, subject, quotedText, emailId);
+        }
+    });
+}
+
+function sendCompose() {
+    var data = {};
+    $('#composeForm').serializeArray().forEach(function(f) { data[f.name] = f.value; });
+
+    if (!data.to || !data.subject) {
+        bootbox.alert('Bitte Empfaenger und Betreff angeben.');
+        return;
+    }
+
+    $('#composeSendBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Sende...');
+
+    $.post('{{ CONFIG.ROOTURL }}/api/emailInbox/compose.php', data, function(resp) {
+        $('#composeSendBtn').prop('disabled', false).html('<i class="fas fa-paper-plane"></i> Senden');
+        if (resp.result) {
+            $('#composeModal').modal('hide');
+            bootbox.alert('<i class="fas fa-check text-success"></i> E-Mail gesendet!');
+            loadEmails(currentPage);
+        } else {
+            bootbox.alert('Fehler: ' + (resp.error ? resp.error.message : 'Unbekannt'));
+        }
+    }).fail(function() {
+        $('#composeSendBtn').prop('disabled', false).html('<i class="fas fa-paper-plane"></i> Senden');
+        bootbox.alert('Verbindungsfehler');
+    });
+}
+
+function aiDraftCompose() {
+    var subject = $('#composeSubject').val();
+    var to = $('#composeToName').val() || $('#composeTo').val();
+    if (!subject && !to) {
+        bootbox.alert('Bitte zuerst Betreff oder Empfaenger angeben.');
+        return;
+    }
+    $.post('{{ CONFIG.ROOTURL }}/api/ai/emailDraft.php', {
+        subject: subject,
+        recipient: to,
+        type: 'new'
+    }, function(resp) {
+        if (resp.result && resp.response && resp.response.draft) {
+            $('#composeBody').val(resp.response.draft);
+        } else {
+            bootbox.alert('KI-Entwurf konnte nicht generiert werden.');
+        }
+    });
+}
+
+function toggleRead(id, read) {
+    $.post('{{ CONFIG.ROOTURL }}/api/emailInbox/markRead.php', { id: id, read: read }, function(resp) {
+        if (resp.result) { $('#emailDetailModal').modal('hide'); loadEmails(currentPage); }
+    });
+}
+
+function assignProject() {
+    bootbox.prompt({
+        title: 'Projekt-ID eingeben (0 = Zuordnung entfernen)',
+        inputType: 'number',
+        callback: function(result) {
+            if (result === null) return;
+            $.post('{{ CONFIG.ROOTURL }}/api/emailInbox/assignProject.php', {
+                id: currentEmailId, project_id: parseInt(result)
+            }, function(resp) {
+                if (resp.result) { bootbox.alert('Projekt zugeordnet.'); loadEmails(currentPage); }
+                else bootbox.alert('Fehler: ' + (resp.error && resp.error.message ? resp.error.message : 'Unbekannt'));
+            });
+        }
+    });
+}
+
+function escHtml(str) { if (!str) return ''; return $('<div/>').text(str).html(); }
+
+function formatBytes(bytes) {
+    if (!bytes || bytes === 0) return '0 B';
+    var sizes = ['B', 'KB', 'MB', 'GB'];
+    var i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return (bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0) + ' ' + sizes[i];
+}
+</script>
+{% endblock %}

@@ -28,10 +28,10 @@ if($instanceID == $AUTH->data['instance']["instances_id"]) { // For transfering 
 $DBLIB->orderBy("assetCategoriesGroups.assetCategoriesGroups_order", "ASC");
 $DBLIB->orderBy("assetCategories_rank", "ASC");
 $DBLIB->where("assetCategoriesGroups.assetCategoriesGroups_deleted", 0);
-$DBLIB->where("(assetCategoriesGroups.instances_id IS NULL OR assetCategoriesGroups.instances_id = '" . $instanceID . "')");
+$DBLIB->where("(assetCategoriesGroups.instances_id IS NULL OR assetCategoriesGroups.instances_id = ?)", [$instanceID]);
 $DBLIB->where("assetCategories.assetCategories_deleted", 0);
-$DBLIB->where("(assetCategories.instances_id IS NULL OR assetCategories.instances_id = '" . $instanceID . "')");
-if (isset($_POST['term']) and $_POST['term']) $DBLIB->where("assetCategories.assetCategories_name", "%" . $_POST['term'] . "%", "LIKE");
+$DBLIB->where("(assetCategories.instances_id IS NULL OR assetCategories.instances_id = ?)", [$instanceID]);
+if (isset($_POST['term']) and $_POST['term']) $DBLIB->where("assetCategories.assetCategories_name", "%" . $DBLIB->escape($_POST['term']) . "%", "LIKE");
 $DBLIB->join("assetCategoriesGroups", "assetCategoriesGroups.assetCategoriesGroups_id=assetCategories.assetCategoriesGroups_id", "LEFT");
 $categories = $DBLIB->get('assetCategories');
 finish(true, [], $categories);

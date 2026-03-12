@@ -1,0 +1,251 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+<div class="row">
+    {# ── Lager erstellen ── #}
+    <div class="col-lg-4">
+        <div class="card card-primary card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-plus"></i> Neues Lager</h3>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label>Name *</label>
+                    <input type="text" class="form-control" id="whName" placeholder="z.B. Hauptlager">
+                </div>
+                <div class="form-group">
+                    <label>Adresse</label>
+                    <textarea class="form-control" id="whAddress" rows="2" placeholder="Strasse, PLZ Ort"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Ansprechpartner</label>
+                    <input type="text" class="form-control" id="whContact" placeholder="Vor- und Nachname">
+                </div>
+                <div class="form-group">
+                    <label>Telefon</label>
+                    <input type="text" class="form-control" id="whPhone" placeholder="+49 ...">
+                </div>
+                <div class="form-check mb-3">
+                    <input type="checkbox" class="form-check-input" id="whDefault">
+                    <label class="form-check-label" for="whDefault">Standardlager</label>
+                </div>
+                {% if "ASSETS:CREATE"|instancePermissions %}
+                <button class="btn btn-primary btn-block" id="createWarehouseBtn">
+                    <i class="fas fa-save"></i> Lager anlegen
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        {# ── Umlagerung ── #}
+        <div class="card card-warning card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-exchange-alt"></i> Umlagerung</h3>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label>Equipment-Typ</label>
+                    <select class="form-control select2" id="transferAssetType" style="width:100%;">
+                        <option value="">-- Waehlen --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Von Lager</label>
+                    <select class="form-control" id="transferFrom">
+                        <option value="">-- Waehlen --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Nach Lager</label>
+                    <select class="form-control" id="transferTo">
+                        <option value="">-- Waehlen --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Menge</label>
+                    <input type="number" class="form-control" id="transferQty" min="1" value="1">
+                </div>
+                {% if "ASSETS:CREATE"|instancePermissions %}
+                <button class="btn btn-warning btn-block" id="transferBtn">
+                    <i class="fas fa-exchange-alt"></i> Umlagern
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# ── Lagerliste + Bestand ── #}
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-warehouse"></i> Lagerstandorte</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="overlay" id="warehousesLoading"><i class="fas fa-sync fa-spin fa-2x"></i></div>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Adresse</th>
+                            <th>Ansprechpartner</th>
+                            <th>Telefon</th>
+                            <th>Standard</th>
+                            <th>Bestand</th>
+                        </tr>
+                    </thead>
+                    <tbody id="warehousesBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        {# ── Bestandsuebersicht ── #}
+        <div class="card" id="stockCard" style="display:none;">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-boxes"></i> Bestand: <span id="stockWarehouseName"></span></h3>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>Equipment-Typ</th>
+                            <th>Kategorie</th>
+                            <th>Hersteller</th>
+                            <th>Menge</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stockBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    var warehouses = [];
+
+    function loadWarehouses() {
+        ajaxcall('warehouse/list.php', {}, function(data) {
+            if (!data.response) return;
+            warehouses = data.response.warehouses || [];
+            var html = '';
+            if (warehouses.length > 0) {
+                warehouses.forEach(function(w) {
+                    html += '<tr>';
+                    html += '<td><strong>' + w.name + '</strong></td>';
+                    html += '<td>' + (w.address || '-') + '</td>';
+                    html += '<td>' + (w.contact_person || '-') + '</td>';
+                    html += '<td>' + (w.phone || '-') + '</td>';
+                    html += '<td>' + (w.is_default == 1 ? '<span class="badge badge-success">Ja</span>' : '') + '</td>';
+                    html += '<td><button class="btn btn-sm btn-info showStockBtn" data-id="' + w.id + '" data-name="' + w.name + '"><i class="fas fa-boxes"></i> Anzeigen</button></td>';
+                    html += '</tr>';
+                });
+            } else {
+                html = '<tr><td colspan="6" class="text-center text-muted">Noch keine Lager angelegt</td></tr>';
+            }
+            $('#warehousesBody').html(html);
+            $('#warehousesLoading').hide();
+
+            // Dropdowns fuer Umlagerung befuellen
+            var opts = '<option value="">-- Waehlen --</option>';
+            warehouses.forEach(function(w) {
+                opts += '<option value="' + w.id + '">' + w.name + '</option>';
+            });
+            $('#transferFrom').html(opts);
+            $('#transferTo').html(opts);
+        }, false);
+    }
+    loadWarehouses();
+
+    // Equipment-Typen fuer Select2 laden
+    ajaxcall('assets/list.php', {pageLimit: 500}, function(data) {
+        if (!data.response || !data.response.assets) return;
+        var opts = '<option value="">-- Waehlen --</option>';
+        data.response.assets.forEach(function(a) {
+            opts += '<option value="' + a.assetTypes_id + '">' + a.assetTypes_name + '</option>';
+        });
+        $('#transferAssetType').html(opts).select2({theme: 'bootstrap4', placeholder: '-- Waehlen --'});
+    }, false);
+
+    // Lager erstellen
+    $('#createWarehouseBtn').click(function() {
+        var name = $('#whName').val().trim();
+        if (!name) { bootbox.alert('Bitte Name eingeben'); return; }
+
+        ajaxcall('warehouse/create.php', {
+            name: name,
+            address: $('#whAddress').val(),
+            contact_person: $('#whContact').val(),
+            phone: $('#whPhone').val(),
+            is_default: $('#whDefault').is(':checked') ? 1 : 0
+        }, function(data) {
+            if (data.result) {
+                bootbox.alert('<i class="fas fa-check text-success"></i> Lager erfolgreich angelegt');
+                $('#whName, #whAddress, #whContact, #whPhone').val('');
+                $('#whDefault').prop('checked', false);
+                loadWarehouses();
+            }
+        });
+    });
+
+    // Bestand anzeigen
+    $(document).on('click', '.showStockBtn', function() {
+        var whId = $(this).data('id');
+        var whName = $(this).data('name');
+        $('#stockWarehouseName').text(whName);
+
+        ajaxcall('warehouse/stock.php', {warehouse_id: whId}, function(data) {
+            if (!data.response) return;
+            var stock = data.response.stock || [];
+            var html = '';
+            if (stock.length > 0) {
+                stock.forEach(function(s) {
+                    html += '<tr>';
+                    html += '<td>' + s.assetTypes_name + '</td>';
+                    html += '<td>' + (s.assetCategories_name || '-') + '</td>';
+                    html += '<td>' + (s.manufacturers_name || '-') + '</td>';
+                    html += '<td><strong>' + s.quantity + '</strong></td>';
+                    html += '</tr>';
+                });
+            } else {
+                html = '<tr><td colspan="4" class="text-center text-muted">Kein Bestand in diesem Lager</td></tr>';
+            }
+            $('#stockBody').html(html);
+            $('#stockCard').show();
+        }, false);
+    });
+
+    // Umlagerung
+    $('#transferBtn').click(function() {
+        var assetType = $('#transferAssetType').val();
+        var from = $('#transferFrom').val();
+        var to = $('#transferTo').val();
+        var qty = parseInt($('#transferQty').val());
+
+        if (!assetType || !from || !to || !qty || qty < 1) {
+            bootbox.alert('Bitte alle Felder ausfuellen');
+            return;
+        }
+        if (from === to) {
+            bootbox.alert('Quell- und Ziellager muessen unterschiedlich sein');
+            return;
+        }
+
+        bootbox.confirm('Wirklich ' + qty + ' Stueck umlagern?', function(r) {
+            if (!r) return;
+            ajaxcall('warehouse/transfer.php', {
+                assetTypes_id: assetType,
+                from_warehouse_id: from,
+                to_warehouse_id: to,
+                quantity: qty
+            }, function(data) {
+                if (data.result) {
+                    bootbox.alert('<i class="fas fa-check text-success"></i> Umlagerung erfolgreich');
+                } else {
+                    bootbox.alert('<i class="fas fa-times text-danger"></i> ' + (data.response ? data.response.message : 'Fehler bei der Umlagerung'));
+                }
+            });
+        });
+    });
+});
+</script>
+{% endblock %}
