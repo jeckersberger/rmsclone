@@ -1,0 +1,51 @@
+# Synology-kompatibles Dockerfile (kein BuildKit noetig)
+
+################################################################################
+# Composer Deps Stage
+################################################################################
+FROM composer:lts AS deps
+
+WORKDIR /app
+
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-interaction --ignore-platform-reqs
+
+################################################################################
+# PHP Build Stage
+################################################################################
+FROM php:8.3-apache AS final
+
+LABEL org.opencontainers.image.description="MyRMS - Rental Management System"
+
+# Install PHP extensions
+RUN apt-get update && apt-get install -y \
+    libicu-dev \
+    libzip-dev \
+    libpng-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql mysqli intl zip
+
+# PHP config
+RUN echo "\npost_max_size=64M\n" >> "$PHP_INI_DIR/php.ini" \
+    && echo "memory_limit=256M\n" >> "$PHP_INI_DIR/php.ini" \
+    && echo "max_execution_time=600\n" >> "$PHP_INI_DIR/php.ini" \
+    && echo "sys_temp_dir=/tmp\n" >> "$PHP_INI_DIR/php.ini" \
+    && echo "upload_max_filesize=64M\n" >> "$PHP_INI_DIR/php.ini"
+
+# Set document root
+RUN sed -ri -e 's!/var/www/html!/var/www/html/src!g' /etc/apache2/sites-available/*.conf
+
+# Copy vendor from composer stage
+COPY --from=deps app/vendor/ /var/www/html/vendor
+
+# Copy app files
+COPY ./src /var/www/html/src
+COPY ./db /var/www/html/db
+COPY ./phinx.php /var/www/html
+COPY ./migrate.sh /var/www/html
+RUN chmod +x /var/www/html/migrate.sh
+
+USER www-data
+SHELL ["sh"]
+ENTRYPOINT ["/var/www/html/migrate.sh"]
