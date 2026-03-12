@@ -18,5 +18,4 @@ vendor/
 **/.idea
 .qodo
 install.sh
-deploy-to-nas.sh
 myrms-zugangsdaten.txt
