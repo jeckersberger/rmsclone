@@ -1,4 +1,5 @@
 # Synology-kompatibles Dockerfile (kein BuildKit noetig)
+# Fuer Docker 20.10.x auf Synology DS918+ (kein --mount Support)
 
 ################################################################################
 # Composer Deps Stage
@@ -8,6 +9,9 @@ FROM composer:lts AS deps
 WORKDIR /app
 
 COPY composer.json composer.lock ./
+# Composer autoload classmap benoetigt diese Verzeichnisse
+COPY src/services/ src/services/
+COPY src/common/libs/ src/common/libs/
 RUN composer install --no-dev --no-interaction --ignore-platform-reqs
 
 ################################################################################
@@ -44,8 +48,10 @@ COPY ./src /var/www/html/src
 COPY ./db /var/www/html/db
 COPY ./phinx.php /var/www/html
 COPY ./migrate.sh /var/www/html
-RUN chmod +x /var/www/html/migrate.sh
+
+# Permissions setzen bevor auf www-data gewechselt wird
+RUN chmod 755 /var/www/html/migrate.sh
+RUN chown -R www-data:www-data /var/www/html
 
 USER www-data
-SHELL ["sh"]
 ENTRYPOINT ["/var/www/html/migrate.sh"]

@@ -19,3 +19,4 @@ vendor/
 .qodo
 install.sh
 myrms-zugangsdaten.txt
+.github-token

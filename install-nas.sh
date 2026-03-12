@@ -4,6 +4,9 @@
 # ==============================================================================
 # Direkt auf dem NAS ausfuehren:
 #   sudo sh install-nas.sh
+#
+# Fuer private Repos: GitHub Personal Access Token als Argument uebergeben:
+#   sudo sh install-nas.sh ghp_XXXXXXXXXXXX
 # ==============================================================================
 
 set -e
@@ -11,7 +14,8 @@ set -e
 INSTALL_DIR="/volume3/docker/rmsclone"
 DOMAIN="dash.je-soundulight"
 TUNNEL_TOKEN="eyJhIjoiN2QzNzM4MTdhNTYyMmY4ZmVlNDdlM2VjNTFlOGRjY2YiLCJ0IjoiY2Q1ZGNkYmYtYzQwYy00YzlmLWFiOGEtZWJiNmM0NzllMTVhIiwicyI6Ik5EaGxOREZoT1dRdE1tUTFOUzAwWXpJeUxXSXpZalF0TW1NeE5qTTNaVGs0WkRGaiJ9"
-REPO_ZIP="https://github.com/jeckersberger/rmsclone/archive/refs/heads/main.zip"
+GITHUB_REPO="jeckersberger/rmsclone"
+GITHUB_TOKEN="${1:-}"
 
 echo ""
 echo "============================================="
@@ -34,7 +38,7 @@ JWT_KEY=$(head -c 48 /dev/urandom | od -An -tx1 | tr -d ' \n' | head -c 64)
 echo "  OK - Passwoerter generiert"
 
 # ------------------------------------------------------------------
-# 2. Repo herunterladen
+# 2. Repo herunterladen (tar.gz - kein unzip noetig)
 # ------------------------------------------------------------------
 echo ""
 echo "[2/5] Lade Projekt herunter..."
@@ -42,31 +46,43 @@ echo "[2/5] Lade Projekt herunter..."
 mkdir -p "${INSTALL_DIR}"
 cd /tmp
 
-# Download als ZIP (kein git noetig)
-if command -v wget > /dev/null 2>&1; then
-    wget -q -O rmsclone.zip "${REPO_ZIP}"
-elif command -v curl > /dev/null 2>&1; then
-    curl -sL -o rmsclone.zip "${REPO_ZIP}"
+# Download als tar.gz (tar ist auf Synology immer vorhanden)
+if [ -n "${GITHUB_TOKEN}" ]; then
+    # Private repo - GitHub API mit Token
+    REPO_URL="https://api.github.com/repos/${GITHUB_REPO}/tarball/main"
+    AUTH_HEADER="Authorization: token ${GITHUB_TOKEN}"
+    echo "  Nutze GitHub Token fuer privates Repo..."
+    if command -v curl > /dev/null 2>&1; then
+        curl -sL -H "${AUTH_HEADER}" -o rmsclone.tar.gz "${REPO_URL}"
+    elif command -v wget > /dev/null 2>&1; then
+        wget -q --header="${AUTH_HEADER}" -O rmsclone.tar.gz "${REPO_URL}"
+    else
+        echo "FEHLER: Weder curl noch wget gefunden!"
+        exit 1
+    fi
 else
-    echo "FEHLER: Weder wget noch curl gefunden!"
-    exit 1
+    # Public repo - direkter Download
+    REPO_URL="https://github.com/${GITHUB_REPO}/archive/refs/heads/main.tar.gz"
+    if command -v curl > /dev/null 2>&1; then
+        curl -sL -o rmsclone.tar.gz "${REPO_URL}"
+    elif command -v wget > /dev/null 2>&1; then
+        wget -q -O rmsclone.tar.gz "${REPO_URL}"
+    else
+        echo "FEHLER: Weder curl noch wget gefunden!"
+        exit 1
+    fi
 fi
 
 # Entpacken
-if command -v unzip > /dev/null 2>&1; then
-    unzip -qo rmsclone.zip
-else
-    # Synology hat manchmal 7z statt unzip
-    echo "FEHLER: unzip nicht gefunden. Installiere das SynoCommunity-Paket 'unzip'."
-    exit 1
-fi
+mkdir -p /tmp/rmsclone-extract
+tar xzf rmsclone.tar.gz -C /tmp/rmsclone-extract --strip-components=1
 
 # Dateien kopieren (ueberschreibt bestehende)
-cp -r /tmp/rmsclone-main/* "${INSTALL_DIR}/"
-cp -r /tmp/rmsclone-main/.* "${INSTALL_DIR}/" 2>/dev/null || true
+cp -r /tmp/rmsclone-extract/* "${INSTALL_DIR}/"
+cp -r /tmp/rmsclone-extract/.* "${INSTALL_DIR}/" 2>/dev/null || true
 
 # Aufraeumen
-rm -rf /tmp/rmsclone.zip /tmp/rmsclone-main
+rm -rf /tmp/rmsclone.tar.gz /tmp/rmsclone-extract
 
 echo "  OK - Projekt nach ${INSTALL_DIR} kopiert"
 
@@ -87,6 +103,13 @@ JWT_KEY=${JWT_KEY}
 EOF
 
 chmod 600 "${INSTALL_DIR}/.env"
+
+# GitHub Token speichern fuer Updates
+if [ -n "${GITHUB_TOKEN}" ]; then
+    echo "${GITHUB_TOKEN}" > "${INSTALL_DIR}/.github-token"
+    chmod 600 "${INSTALL_DIR}/.github-token"
+fi
+
 echo "  OK - .env erstellt"
 
 # ------------------------------------------------------------------
@@ -120,6 +143,7 @@ Befehle (als root/sudo):
   Logs:       cd ${INSTALL_DIR} && sudo docker-compose -f docker-compose.synology-cloudflare.yml logs -f
   Neustart:   cd ${INSTALL_DIR} && sudo docker-compose -f docker-compose.synology-cloudflare.yml restart
   Stoppen:    cd ${INSTALL_DIR} && sudo docker-compose -f docker-compose.synology-cloudflare.yml down
+  Update:     cd ${INSTALL_DIR} && sudo sh update-nas.sh
 ==============================================================================
 EOF
 
