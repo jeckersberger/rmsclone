@@ -39,12 +39,18 @@ class bCMS
   }
   function cleanString($var)
   {
-    //HTML Purification
-    //$var = str_replace(array("\r", "\n"), '<br>', $var); //Replace newlines
-
+    //HTML Purification - gehaertet gegen XSS
     $config = HTMLPurifier_Config::createDefault();
     $config->set('Cache.DefinitionImpl', null);
-    //$config->set('AutoFormat.Linkify', true);
+    // Nur sichere HTML-Tags erlauben (Summernote Rich-Text)
+    $config->set('HTML.Allowed', 'p,br,b,i,u,strong,em,strike,s,del,h1,h2,h3,h4,h5,h6,ul,ol,li,a[href|target|rel],img[src|alt|width|height],table[border],thead,tbody,tr,th[colspan|rowspan],td[colspan|rowspan],blockquote,pre,code,div[class],span[class],hr,sub,sup');
+    // Nur sichere URL-Protokolle (kein javascript:, vbscript:, data:)
+    $config->set('URI.AllowedSchemes', ['http' => true, 'https' => true, 'mailto' => true, 'tel' => true]);
+    // Sichere CSS-Properties (kein expression(), behavior, etc.)
+    $config->set('CSS.AllowedProperties', 'color,background-color,font-size,font-weight,font-style,text-decoration,text-align,margin,margin-left,margin-right,margin-top,margin-bottom,padding,padding-left,padding-right,padding-top,padding-bottom,border,width,height,max-width,list-style-type');
+    // target="_blank" mit rel="noopener noreferrer" erzwingen
+    $config->set('HTML.Nofollow', true);
+    $config->set('HTML.TargetBlank', true);
     $purifier = new HTMLPurifier($config);
     return $purifier->purify($var); //NOTE THAT THIS REQUIRES THE USE OF PREPARED STATEMENTS AS IT'S NOT ESCAPED
   }

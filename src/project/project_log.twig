@@ -38,7 +38,7 @@
                                     {% endif %}
                                 </h3>
                                 {% if event.auditLog_actionType == "QUICKCOMMENT" %}
-                                    <div class="timeline-body">{{ event.auditLog_actionData|striptags('<b><i><u><br><p><a><ul><ol><li><strong><em>')|raw }}</div>
+                                    <div class="timeline-body">{{ event.auditLog_actionData|striptags('<b><i><u><br><p><ul><ol><li><strong><em>')|raw }}</div>
                                 {% elseif event.auditLog_actionType in ['INSERT', 'ARCHIVE','UNARCHIVE','CHANGE-MANAGER','UPDATE-NAME','UPDATE-STATUS','CHANGE-CLIENT'] %}
                                     {# Blank #}
                                 {% else %}

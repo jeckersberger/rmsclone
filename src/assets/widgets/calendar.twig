@@ -83,7 +83,7 @@
                 weekNumbers: true,
                 {% if USERDATA['instance']['calendarSettings'].useCustomWeekNumbers and USERDATA.instance['instances_weekStartDates'] %}
                 weekNumberContent : function(week) {
-                    var weekStartDates =  {{USERDATA.instance['instances_weekStartDates']|raw}};
+                    var weekStartDates =  {{USERDATA.instance['instances_weekStartDates']|json_encode|raw}};
                     for (const [date, label] of Object.entries(weekStartDates)) {
                         if (moment(week.date).isSame(date, 'isoWeek')) {
                             //This date is in this week so return the label

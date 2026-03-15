@@ -376,7 +376,7 @@
                                                                     <span class="time"><i class="fas fa-clock"></i> {{ event.auditLog_timestamp|date("h:i:sa") }}</span>
                                                                     <h3 class="timeline-header"><a href="mailto:{{ event.users_email }}">{{ event.users_name1 ~ " " ~ event.users_name2}} </a> hat kommentiert
                                                                     </h3>
-                                                                    <div class="timeline-body">{{ event.auditLog_actionData|striptags('<b><i><u><br><p><a><ul><ol><li><strong><em>')|raw }}</div>
+                                                                    <div class="timeline-body">{{ event.auditLog_actionData|striptags('<b><i><u><br><p><ul><ol><li><strong><em>')|raw }}</div>
                                                                 </div>
                                                             </div>
                                                         {% endif %}
