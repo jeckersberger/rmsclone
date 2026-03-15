@@ -5,6 +5,13 @@ if ($CONFIGCLASS->get("AUTH_SIGNUP_ENABLED") !== 'Enabled') {
     die("404");
 }
 
+// Rate-Limiting fuer Signup
+require_once __DIR__ . '/../../services/RateLimitService.php';
+$rateLimiter = new RateLimitService($DBLIB);
+if (!$rateLimiter->isAllowed('signup', $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0')) {
+    finish(false, ["code" => "RATE_LIMIT", "message" => "Too many signup attempts. Please try again later."]);
+}
+
 if (isset($_POST['name1']) and isset($_POST['password']) and isset($_POST['username']) and isset($_POST['email']) and isset($_POST['name2'])) {
     require_once __DIR__ . '/../../services/PasswordHashService.php';
     if ($AUTH->usernameTaken($GLOBALS['bCMS']->sanitizeString(strtolower($_POST['username'])))) finish(false, ["code" => null, "message" => "Sorry that username is taken, please try another"]);

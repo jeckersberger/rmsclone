@@ -28,7 +28,7 @@ if (isset($_POST['assetGroups_id'])) {
     $group = $DBLIB->getOne("assetGroups",["assetGroups_id"]);
     if (!$group) finish(false,["message"=>"Group not found"]);
 
-    $DBLIB->where("FIND_IN_SET(" . $group['assetGroups_id'] . ", assets.assets_assetGroups)");
+    $DBLIB->where("FIND_IN_SET(?, assets.assets_assetGroups)", [(int)$group['assetGroups_id']]);
 } elseif (isset($_POST['assets_id'])) $DBLIB->where("assets_id", $_POST['assets_id']);
 elseif (isset($_POST['assetTypes_id'])) $DBLIB->where("assets.assetTypes_id", $_POST['assetTypes_id']);
 elseif ($AUTH->instancePermissionCheck("PROJECTS:PROJECT_ASSETS:CREATE:ASSIGN_ALL_BUSINESS_ASSETS")) {

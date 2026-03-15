@@ -33,7 +33,7 @@ if (!empty($_GET['search'])) {
 
 // Filter: Datum
 if (!empty($_GET['from'])) {
-    $DBLIB->where('emailReceived_date', $_GET['from'], '>=');
+    $DBLIB->where('emailReceived_date', preg_replace('/[^0-9\-]/', '', $_GET['from']), '>=');
 }
 if (!empty($_GET['to'])) {
     $DBLIB->where('emailReceived_date', preg_replace('/[^0-9\-]/', '', $_GET['to']) . ' 23:59:59', '<=');
@@ -53,7 +53,7 @@ if (!empty($_GET['search'])) {
     $DBLIB->where("(emailReceived_subject LIKE ? OR emailReceived_fromEmail LIKE ? OR emailReceived_fromName LIKE ?)", [$search, $search, $search]);
 }
 if (!empty($_GET['from'])) {
-    $DBLIB->where('emailReceived_date', $_GET['from'], '>=');
+    $DBLIB->where('emailReceived_date', preg_replace('/[^0-9\-]/', '', $_GET['from']), '>=');
 }
 if (!empty($_GET['to'])) {
     $DBLIB->where('emailReceived_date', preg_replace('/[^0-9\-]/', '', $_GET['to']) . ' 23:59:59', '<=');

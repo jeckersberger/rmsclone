@@ -35,12 +35,12 @@ if (strlen($userProfile->identifier) < 1) {
 
 $DBLIB->where("users_oauth_googleid", $userProfile->identifier);
 $user = $DBLIB->getOne("users", ["users.users_userid"]);
-if (strlen($userProfile->emailVerified) < 1) die('Please verify your email with Google before trying to link it to AdamRMS.' . '<a href="' . $CONFIG['ROOTURL'] . "/user.php" . '">Continue</a>');
+if (strlen($userProfile->emailVerified) < 1) die('Please verify your email with Google before trying to link it to AdamRMS.' . '<a href="' . htmlspecialchars($CONFIG['ROOTURL'], ENT_QUOTES, 'UTF-8') . "/user.php" . '">Continue</a>');
 
+// Sicherheit: Wenn OAuth-ID bereits an ANDEREN Account gelinkt ist, NICHT ueberschreiben (Account-Takeover-Schutz)
 if ($user and $user['users_userid'] != $AUTH->data['users_userid']) {
-    //If its linked to another account remove the link to link it to this one
-    $DBLIB->where("users_userid", $user['users_userid']);
-    $DBLIB->update("users", ["users_oauth_googleid" => null]);
+    header("Location: " . $CONFIG['ROOTURL'] . "/user.php?error=oauth_already_linked");
+    exit;
 }
 
 $DBLIB->where("users_userid", $AUTH->data['users_userid']);

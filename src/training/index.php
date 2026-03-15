@@ -23,7 +23,7 @@ else $DBLIB->where("modules.modules_show", 1);
 if ($AUTH->data['instance']["instancePositions_id"] && !$AUTH->instancePermissionCheck("TRAINING:EDIT") && !$AUTH->instancePermissionCheck("TRAINING:VIEW:USER_PROGRESS_IN_MODULES")) {
     //If the user doesn't have a position - they're server admins
     //If user has permission to edit modules or view users , let them see all of them, otherwise they'll be impossible to edit
-    $DBLIB->where("(modules.modules_visibleToGroups IS NULL OR (FIND_IN_SET(" . $AUTH->data['instance']["instancePositions_id"] . ", modules.modules_visibleToGroups) > 0))"); 
+    $DBLIB->where("(modules.modules_visibleToGroups IS NULL OR (FIND_IN_SET(?, modules.modules_visibleToGroups) > 0))", [(int)$AUTH->data['instance']["instancePositions_id"]]);
 }
 $DBLIB->where("modules.instances_id", $AUTH->data['instance']['instances_id']);
 $DBLIB->orderBy("modules.modules_name","ASC");

@@ -235,7 +235,7 @@ class bCMS
   {
     global $DBLIB;
     if (!is_numeric($groupid)) return false;
-    $DBLIB->where("FIND_IN_SET(" . $groupid . ", users_assetGroupsWatching)");
+    $DBLIB->where("FIND_IN_SET(?, users_assetGroupsWatching)", [(int)$groupid]);
     $users = $DBLIB->get("users", null, ["users_userid"]);
     $return = [];
     foreach ($users as $user) {

@@ -12,7 +12,7 @@ if ($PAGEDATA['USERDATA']['users_changepass'] != '1') die('Error'); //This page 
 $newPass = $_POST['pass'] ?? '';
 $violations = PasswordPolicyService::validate($newPass);
 if (!empty($violations)) {
-    die('POLICY:' . implode(' ', $violations));
+    die('POLICY:Password does not meet requirements');
 }
 
 // Neues Passwort mit Argon2ID hashen

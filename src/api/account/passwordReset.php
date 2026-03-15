@@ -1,7 +1,16 @@
 <?php
 require_once __DIR__ . '/../apiHead.php';
+require_once __DIR__ . '/../../services/RateLimitService.php';
 
 header('Content-Type:text/plain');
+
+// Rate-Limiting fuer Password-Reset
+$rateLimiter = new RateLimitService($DBLIB);
+if (!$rateLimiter->isAllowed('password_reset', $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0')) {
+    die("Too many attempts. Please try again later.");
+}
+$rateLimiter->recordAttempt('password_reset', $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+
 if (!isset($_POST['code'])) {
 	header('Location: ' . $CONFIG['ROOTURL']); //If it fails we may as well just assume they have tried to click it a second time.
 	exit;

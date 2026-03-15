@@ -14,8 +14,12 @@ $data = [
     "maintenanceJobs_id" => $job["maintenanceJobs_id"],
     "users_userid" => $AUTH->data['users_userid']
 ];
-if (isset($_POST['maintenanceJobsMessages_text'])) $data["maintenanceJobsMessages_text"] = $_POST['maintenanceJobsMessages_text'];
-else $data["maintenanceJobsMessages_file"] = $_POST['maintenanceJobsMessages_file'];
+if (isset($_POST['maintenanceJobsMessages_text'])) {
+    require_once __DIR__ . '/../../../services/HtmlSanitizerService.php';
+    $data["maintenanceJobsMessages_text"] = HtmlSanitizerService::sanitize($_POST['maintenanceJobsMessages_text']);
+} else {
+    $data["maintenanceJobsMessages_file"] = $bCMS->sanitizeString($_POST['maintenanceJobsMessages_file']);
+}
 
 $message = $DBLIB->insert("maintenanceJobsMessages", $data);
 if (!$message) finish(false);

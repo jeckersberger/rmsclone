@@ -43,11 +43,17 @@ class BankImportService
      */
     public function importMt940(int $instanceId, string $fileContent): array
     {
-        $batchId = 'MT940-' . date('YmdHis') . '-' . bin2hex(random_bytes(3));
+        $batchId = 'MT940-' . date('YmdHis') . '-' . bin2hex(random_bytes(16));
         $transactions = $this->parseMt940($fileContent);
 
         $imported = 0;
+        $skipped = 0;
         foreach ($transactions as $tx) {
+            // Duplikat-Erkennung
+            if ($this->isDuplicate($instanceId, $tx)) {
+                $skipped++;
+                continue;
+            }
             $this->db->insert('bank_transactions', [
                 'instances_id'     => $instanceId,
                 'transaction_date' => $tx['date'],
@@ -127,19 +133,22 @@ class BankImportService
                     $amount = -$amount;
                 }
 
-                // Datum parsen (YYMMDD)
-                $year = (int)substr($dateStr, 0, 2);
-                $year = $year > 70 ? 1900 + $year : 2000 + $year;
-                $month = substr($dateStr, 2, 2);
-                $day = substr($dateStr, 4, 2);
-                $date = sprintf('%04d-%s-%s', $year, $month, $day);
+                // Datum parsen (YYMMDD) mit Validierung
+                $dateObj = \DateTime::createFromFormat('ymd', $dateStr);
+                if (!$dateObj || $dateObj->format('ymd') !== $dateStr) {
+                    continue; // Ungueltige Datumswerte ueberspringen
+                }
+                $date = $dateObj->format('Y-m-d');
+                $year = (int)$dateObj->format('Y');
 
-                // Valutadatum (MMDD, selbes Jahr)
+                // Valutadatum (MMDD, selbes Jahr) mit Validierung
                 $valueDate = null;
                 if ($valDateStr) {
-                    $vMonth = substr($valDateStr, 0, 2);
-                    $vDay = substr($valDateStr, 2, 2);
-                    $valueDate = sprintf('%04d-%s-%s', $year, $vMonth, $vDay);
+                    $valFull = sprintf('%02d', $year % 100) . $valDateStr;
+                    $valDateObj = \DateTime::createFromFormat('ymd', substr($valFull, 0, 6));
+                    if ($valDateObj) {
+                        $valueDate = $valDateObj->format('Y-m-d');
+                    }
                 }
 
                 $refPart = trim($m[5] ?? '');
@@ -273,11 +282,17 @@ class BankImportService
      */
     public function importCamt053(int $instanceId, string $fileContent): array
     {
-        $batchId = 'CAMT-' . date('YmdHis') . '-' . bin2hex(random_bytes(3));
+        $batchId = 'CAMT-' . date('YmdHis') . '-' . bin2hex(random_bytes(16));
         $transactions = $this->parseCamt053($fileContent);
 
         $imported = 0;
+        $skipped = 0;
         foreach ($transactions as $tx) {
+            // Duplikat-Erkennung
+            if ($this->isDuplicate($instanceId, $tx)) {
+                $skipped++;
+                continue;
+            }
             $this->db->insert('bank_transactions', [
                 'instances_id'     => $instanceId,
                 'transaction_date' => $tx['date'],
@@ -312,8 +327,12 @@ class BankImportService
      */
     private function parseCamt053(string $content): array
     {
+        // XXE-Schutz: Externe Entities deaktivieren
+        if (PHP_VERSION_ID < 80000) {
+            libxml_disable_entity_loader(true);
+        }
         libxml_use_internal_errors(true);
-        $xml = simplexml_load_string($content);
+        $xml = simplexml_load_string($content, 'SimpleXMLElement', LIBXML_NONET | LIBXML_NOENT);
         if ($xml === false) {
             throw new \RuntimeException("Ungueltige CAMT.053 XML-Datei.");
         }
@@ -439,11 +458,17 @@ class BankImportService
      */
     public function importCsv(int $instanceId, string $fileContent): array
     {
-        $batchId = 'CSV-' . date('YmdHis') . '-' . bin2hex(random_bytes(3));
+        $batchId = 'CSV-' . date('YmdHis') . '-' . bin2hex(random_bytes(16));
         $transactions = $this->parseCsv($fileContent);
 
         $imported = 0;
+        $skipped = 0;
         foreach ($transactions as $tx) {
+            // Duplikat-Erkennung
+            if ($this->isDuplicate($instanceId, $tx)) {
+                $skipped++;
+                continue;
+            }
             $this->db->insert('bank_transactions', [
                 'instances_id'     => $instanceId,
                 'transaction_date' => $tx['date'],
@@ -806,6 +831,29 @@ class BankImportService
     }
 
     // ═══════════════════════════════════════════════
+    //  DUPLIKAT-ERKENNUNG
+    // ═══════════════════════════════════════════════
+
+    /**
+     * Pruefen ob eine Transaktion bereits importiert wurde.
+     * Vergleicht Datum, Betrag und Absender-IBAN/Name.
+     */
+    private function isDuplicate(int $instanceId, array $tx): bool
+    {
+        $this->db->where('instances_id', $instanceId);
+        $this->db->where('transaction_date', $tx['date']);
+        $this->db->where('amount', $tx['amount']);
+        if (!empty($tx['sender_iban'])) {
+            $this->db->where('sender_iban', $tx['sender_iban']);
+        }
+        if (!empty($tx['reference'])) {
+            $this->db->where('reference', $tx['reference']);
+        }
+        $existing = $this->db->getOne('bank_transactions', ['id']);
+        return $existing !== null && $existing !== false;
+    }
+
+    // ═══════════════════════════════════════════════
     //  HILFSFUNKTIONEN
     // ═══════════════════════════════════════════════
 
@@ -862,23 +910,35 @@ class BankImportService
             }
         }
 
-        // Fallback: document_exports direkt aktualisieren
-        $this->db->where('document_exports_id', $documentId);
-        $invoice = $this->db->getOne('document_exports');
-        if (!$invoice) return;
+        // Fallback: document_exports direkt aktualisieren (mit Transaction-Lock)
+        $this->db->startTransaction();
+        try {
+            // SELECT ... FOR UPDATE um Race Conditions zu verhindern
+            $this->db->where('document_exports_id', $documentId);
+            $this->db->setQueryOption('FOR UPDATE');
+            $invoice = $this->db->getOne('document_exports');
+            if (!$invoice) {
+                $this->db->rollback();
+                return;
+            }
 
-        $previousPaid = (float)($invoice['paid_amount'] ?? 0);
-        $totalPaid = round($previousPaid + $amount, 2);
-        $gross = (float)($invoice['document_exports_gross'] ?? 0);
-        $remaining = round($gross - $totalPaid, 2);
+            $previousPaid = (float)($invoice['paid_amount'] ?? 0);
+            $totalPaid = round($previousPaid + $amount, 2);
+            $gross = (float)($invoice['document_exports_gross'] ?? 0);
+            $remaining = round($gross - $totalPaid, 2);
 
-        $updateData = ['paid_amount' => $totalPaid];
-        if ($remaining <= 0.01) {
-            $updateData['document_exports_status'] = 'paid';
+            $updateData = ['paid_amount' => $totalPaid];
+            if ($remaining <= 0.01) {
+                $updateData['document_exports_status'] = 'paid';
+            }
+
+            $this->db->where('document_exports_id', $documentId);
+            $this->db->update('document_exports', $updateData);
+            $this->db->commit();
+        } catch (\Exception $e) {
+            $this->db->rollback();
+            throw $e;
         }
-
-        $this->db->where('document_exports_id', $documentId);
-        $this->db->update('document_exports', $updateData);
     }
 
     /**

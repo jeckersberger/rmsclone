@@ -24,7 +24,7 @@ $DBLIB->where("assetGroups_deleted",0);
 $groups = $DBLIB->get('assetGroups');
 $PAGEDATA['groups'] = [];
 foreach($groups as $group) {
-    $DBLIB->where("FIND_IN_SET(" . $group['assetGroups_id'] . ", assets.assets_assetGroups)");
+    $DBLIB->where("FIND_IN_SET(?, assets.assets_assetGroups)", [(int)$group['assetGroups_id']]);
     $DBLIB->where("assets_deleted",0);
     $DBLIB->join("assetTypes", "assets.assetTypes_id=assetTypes.assetTypes_id", "LEFT");
     $DBLIB->join("manufacturers", "manufacturers.manufacturers_id=assetTypes.manufacturers_id", "LEFT");

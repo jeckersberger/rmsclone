@@ -1,6 +1,10 @@
 <?php
 require_once __DIR__ . '/apiHead.php';
 require_once __DIR__ . '/../services/CsrfService.php';
+require_once __DIR__ . '/../services/SecurityHeadersService.php';
+
+// Security-Header fuer API setzen
+SecurityHeadersService::applyApi();
 
 if (!$GLOBALS['AUTH']->login) {
     // Never leak debug info to client, even in dev mode — log it instead

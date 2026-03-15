@@ -25,10 +25,10 @@ if (strlen($userProfile->identifier) < 1) {
 
 $DBLIB->where("users_oauth_microsoftid", $userProfile->identifier);
 $user = $DBLIB->getOne("users", ["users.users_userid"]);
+// Sicherheit: Wenn OAuth-ID bereits an ANDEREN Account gelinkt ist, NICHT ueberschreiben (Account-Takeover-Schutz)
 if ($user and $user['users_userid'] != $AUTH->data['users_userid']) {
-    //If its linked to another account remove the link to link it to this one
-    $DBLIB->where("users_userid", $user['users_userid']);
-    $DBLIB->update("users", ["users_oauth_microsoftid" => null]);
+    header("Location: " . $CONFIG['ROOTURL'] . "/user.php?error=oauth_already_linked");
+    exit;
 }
 
 $DBLIB->where("users_userid", $AUTH->data['users_userid']);

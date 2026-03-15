@@ -6,7 +6,7 @@ if (!$AUTH->instancePermissionCheck("PROJECTS:PROJECT_CREW:VIEW:VIEW_AND_APPLY_F
 $DBLIB->where("projectsVacantRoles.projectsVacantRoles_id",$_GET['id']);
 $DBLIB->where("projectsVacantRoles.projectsVacantRoles_deleted",0);
 $DBLIB->where("projectsVacantRoles.projectsVacantRoles_open",1);
-if ($AUTH->data['instance']["instancePositions_id"]) $DBLIB->where("(projectsVacantRoles.projectsVacantRoles_visibleToGroups IS NULL OR (FIND_IN_SET(" . $AUTH->data['instance']["instancePositions_id"] . ", projectsVacantRoles.projectsVacantRoles_visibleToGroups) > 0))"); //If the user doesn't have a position - they're server admins
+if ($AUTH->data['instance']["instancePositions_id"]) $DBLIB->where("(projectsVacantRoles.projectsVacantRoles_visibleToGroups IS NULL OR (FIND_IN_SET(?, projectsVacantRoles.projectsVacantRoles_visibleToGroups) > 0))", [(int)$AUTH->data['instance']["instancePositions_id"]]); //If the user doesn't have a position - they're server admins
 $DBLIB->where("(projectsVacantRoles.projectsVacantRoles_deadline IS NULL OR projectsVacantRoles.projectsVacantRoles_deadline >= '" . date("Y-m-d H:i:s") . "')");
 $DBLIB->where("(projectsVacantRoles.projectsVacantRoles_slots > projectsVacantRoles.projectsVacantRoles_slotsFilled)");
 $DBLIB->join("projects","projectsVacantRoles.projects_id=projects.projects_id","LEFT");

@@ -9,6 +9,10 @@ foreach ($_POST['formData'] as $item) {
     $array[$item['name']] = $item['value'];
 }
 if (strlen($array['modulesSteps_name']) <1) finish(false, ["code" => "PARAM-ERROR", "message"=> "No data for action"]);
+// HTML-Content sanitizen
+if (isset($array['modulesSteps_content'])) {
+    $array['modulesSteps_content'] = $bCMS->cleanString($array['modulesSteps_content']);
+}
 $array['modulesSteps_show'] = 0;
 
 $DBLIB->where("modules.modules_deleted", 0);

@@ -17,7 +17,7 @@ if ($AUTH->data['instance']["instancePositions_id"] && $AUTH->data['instance']["
     $DBLIB->where("instances_id", $AUTH->data['instance']['instances_id']);
     $DBLIB->where("cmsPages_deleted", 0);
     $DBLIB->where("cmsPages_archived", 0);
-    $DBLIB->where("(cmsPages_visibleToGroups IS NULL OR (FIND_IN_SET(" . $AUTH->data['instance']["instancePositions_id"] . ", cmsPages_visibleToGroups) > 0))");
+    $DBLIB->where("(cmsPages_visibleToGroups IS NULL OR (FIND_IN_SET(?, cmsPages_visibleToGroups) > 0))", [(int)$AUTH->data['instance']["instancePositions_id"]]);
     $DBLIB->where("cmsPages_id", $AUTH->data['instance']["cmsPages_id"]);
     $PAGEDATA['PAGE'] = $DBLIB->getOne("cmsPages");
     if ($PAGEDATA['PAGE']) {

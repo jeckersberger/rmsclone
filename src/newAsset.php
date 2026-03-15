@@ -5,16 +5,16 @@ if (!$AUTH->instancePermissionCheck("ASSETS:CREATE")) die($TWIG->render('404.twi
 $PAGEDATA['pageConfig'] = ["TITLE" => "Add Asset", "BREADCRUMB" => false];
 
 
-$DBLIB->where("(manufacturers.instances_id IS NULL OR manufacturers.instances_id = '" . $AUTH->data['instance']['instances_id'] . "')");
+$DBLIB->where("(manufacturers.instances_id IS NULL OR manufacturers.instances_id = ?)", [(int)$AUTH->data['instance']['instances_id']]);
 $DBLIB->orderBy("manufacturers_name", "ASC");
 $PAGEDATA['manufacturers'] = $DBLIB->get('manufacturers', null, ["manufacturers.manufacturers_id", "manufacturers.manufacturers_name"]);
 
 $DBLIB->orderBy("assetCategoriesGroups.assetCategoriesGroups_order", "ASC");
 $DBLIB->orderBy("assetCategories.assetCategories_rank", "ASC");
 $DBLIB->where("assetCategories.assetCategories_deleted", 0);
-$DBLIB->where("(assetCategories.instances_id IS NULL OR assetCategories.instances_id = '" . $AUTH->data['instance']["instances_id"] . "')");
+$DBLIB->where("(assetCategories.instances_id IS NULL OR assetCategories.instances_id = ?)", [(int)$AUTH->data['instance']["instances_id"]]);
 $DBLIB->where("assetCategoriesGroups.assetCategoriesGroups_deleted", 0);
-$DBLIB->where("(assetCategoriesGroups.instances_id IS NULL OR assetCategoriesGroups.instances_id = '" . $AUTH->data['instance']["instances_id"] . "')");
+$DBLIB->where("(assetCategoriesGroups.instances_id IS NULL OR assetCategoriesGroups.instances_id = ?)", [(int)$AUTH->data['instance']["instances_id"]]);
 $DBLIB->join("assetCategoriesGroups", "assetCategoriesGroups.assetCategoriesGroups_id=assetCategories.assetCategoriesGroups_id", "LEFT");
 $PAGEDATA['categories'] = $DBLIB->get('assetCategories');
 

@@ -1,7 +1,11 @@
 <?php
 require_once __DIR__ . '/head.php';
 require_once __DIR__ . '/../services/CsrfService.php';
+require_once __DIR__ . '/../services/SecurityHeadersService.php';
 require_once __DIR__ . '/../assets/widgets/statsWidgets.php'; //Stats on homepage etc.
+
+// Security-Header setzen
+SecurityHeadersService::apply();
 
 //THIS IS DUPLICATED SOMEWHAT IN API HEAD SECURE AS SECURITY IS HANDLED SLIGHTLY DIFFERENTLY ON THE API END
 
@@ -49,7 +53,11 @@ $DBLIB->insert("analyticsEvents", [
 if ($AUTH->data['users_emailVerified'] == 1) {
     $DBLIB->where("instances_deleted", 0);
     $DBLIB->where("instances_trustedDomains IS NOT NULL");
-    if (count($AUTH->data['instance_ids']) > 0) $DBLIB->where("instances_id NOT IN (" . implode(",", $AUTH->data['instance_ids']) . ")");
+    if (count($AUTH->data['instance_ids']) > 0) {
+        $instanceIdsSafe = array_map('intval', $AUTH->data['instance_ids']);
+        $placeholders = implode(',', array_fill(0, count($instanceIdsSafe), '?'));
+        $DBLIB->where("instances_id NOT IN (" . $placeholders . ")", $instanceIdsSafe);
+    }
     $instancesForTrustedDomains = $DBLIB->get("instances", null, ["instances_id", "instances_name", "instances_trustedDomains"]);
     $PAGEDATA['instancesAvailableToJoinAsTrustedDomains'] = [];
     $userEmailDomain = array_pop(explode('@', $AUTH->data['users_email']));
@@ -109,7 +117,7 @@ if ($CONFIG['LINKS_TERMSOFSERVICEURL'] and ($PAGEDATA['USERDATA']['users_termsAc
     $DBLIB->where("cmsPages_archived", 0);
     $DBLIB->where("cmsPages_showNav", 1);
     $DBLIB->where("cmsPages_subOf", NULL, "IS");
-    if (isset($AUTH->data['instance']["instancePositions_id"])) $DBLIB->where("(cmsPages_visibleToGroups IS NULL OR (FIND_IN_SET(" . $AUTH->data['instance']["instancePositions_id"] . ", cmsPages_visibleToGroups) > 0))"); //If the user doesn't have a position - they're server admins
+    if (isset($AUTH->data['instance']["instancePositions_id"])) $DBLIB->where("(cmsPages_visibleToGroups IS NULL OR (FIND_IN_SET(?, cmsPages_visibleToGroups) > 0))", [(int)$AUTH->data['instance']["instancePositions_id"]]); //If the user doesn't have a position - they're server admins
     $DBLIB->orderBy("cmsPages_navOrder", "ASC");
     $DBLIB->orderBy("cmsPages_id", "ASC");
     $PAGEDATA['NAVIGATIONCMSPages'] = [];
@@ -119,7 +127,7 @@ if ($CONFIG['LINKS_TERMSOFSERVICEURL'] and ($PAGEDATA['USERDATA']['users_termsAc
         $DBLIB->where("cmsPages_archived", 0);
         $DBLIB->where("cmsPages_showNav", 1);
         $DBLIB->where("cmsPages_subOf", $page['cmsPages_id']);
-        if (isset($AUTH->data['instance']["instancePositions_id"])) $DBLIB->where("(cmsPages_visibleToGroups IS NULL OR (FIND_IN_SET(" . $AUTH->data['instance']["instancePositions_id"] . ", cmsPages_visibleToGroups) > 0))"); //If the user doesn't have a position - they're server admins
+        if (isset($AUTH->data['instance']["instancePositions_id"])) $DBLIB->where("(cmsPages_visibleToGroups IS NULL OR (FIND_IN_SET(?, cmsPages_visibleToGroups) > 0))", [(int)$AUTH->data['instance']["instancePositions_id"]]); //If the user doesn't have a position - they're server admins
         $DBLIB->orderBy("cmsPages_name", "ASC");
         $page['SUBPAGES'] = $DBLIB->get("cmsPages");
         $PAGEDATA['NAVIGATIONCMSPages'][] = $page;

@@ -12,8 +12,15 @@ class RateLimitService
     // Standard-Limits
     private const LIMITS = [
         'login' => ['max_attempts' => 5, 'window_minutes' => 15, 'lockout_minutes' => 30],
+        'signup' => ['max_attempts' => 3, 'window_minutes' => 60, 'lockout_minutes' => 60],
         'partner_code' => ['max_attempts' => 5, 'window_minutes' => 60, 'lockout_minutes' => 60],
         'password_reset' => ['max_attempts' => 3, 'window_minutes' => 60, 'lockout_minutes' => 60],
+        'password_change' => ['max_attempts' => 5, 'window_minutes' => 30, 'lockout_minutes' => 30],
+        'totp_setup' => ['max_attempts' => 5, 'window_minutes' => 30, 'lockout_minutes' => 60],
+        'oauth_link' => ['max_attempts' => 5, 'window_minutes' => 30, 'lockout_minutes' => 30],
+        'email_verify' => ['max_attempts' => 5, 'window_minutes' => 60, 'lockout_minutes' => 60],
+        'bank_import' => ['max_attempts' => 10, 'window_minutes' => 60, 'lockout_minutes' => 30],
+        'file_upload' => ['max_attempts' => 50, 'window_minutes' => 60, 'lockout_minutes' => 15],
         'api_general' => ['max_attempts' => 100, 'window_minutes' => 1, 'lockout_minutes' => 5],
     ];
 

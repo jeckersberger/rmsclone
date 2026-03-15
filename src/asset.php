@@ -72,12 +72,12 @@ foreach ($assets as $asset) {
 $PAGEDATA['pageConfig'] = ["TITLE" => $PAGEDATA['asset']['assetTypes_name'], "BREADCRUMB" => false];
 
 // For asset type editing
-$DBLIB->where("(manufacturers.instances_id IS NULL OR manufacturers.instances_id = '" . $PAGEDATA['ASSET_INSTANCE']['instances_id'] . "')");
+$DBLIB->where("(manufacturers.instances_id IS NULL OR manufacturers.instances_id = ?)", [(int)$PAGEDATA['ASSET_INSTANCE']['instances_id']]);
 $DBLIB->orderBy("manufacturers_name", "ASC");
 $PAGEDATA['manufacturers'] = $DBLIB->get('manufacturers', null, ["manufacturers.manufacturers_id", "manufacturers.manufacturers_name"]);
 
 $DBLIB->orderBy("assetCategories_rank", "ASC");
-$DBLIB->where("(assetCategories.instances_id IS NULL OR assetCategories.instances_id = '" . $PAGEDATA['ASSET_INSTANCE']["instances_id"] . "')");
+$DBLIB->where("(assetCategories.instances_id IS NULL OR assetCategories.instances_id = ?)", [(int)$PAGEDATA['ASSET_INSTANCE']["instances_id"]]);
 $DBLIB->where("assetCategories_deleted", 0);
 $DBLIB->join("assetCategoriesGroups", "assetCategoriesGroups.assetCategoriesGroups_id=assetCategories.assetCategoriesGroups_id", "LEFT");
 $PAGEDATA['categories'] = $DBLIB->get('assetCategories');
@@ -86,7 +86,7 @@ $PAGEDATA['categories'] = $DBLIB->get('assetCategories');
 if (count($PAGEDATA['assets']) == 1) {
     //Jobs
     $DBLIB->where("maintenanceJobs.maintenanceJobs_deleted", 0);
-    $DBLIB->where("(FIND_IN_SET(" . $PAGEDATA['assets'][0]['assets_id'] . ", maintenanceJobs.maintenanceJobs_assets) > 0)");
+    $DBLIB->where("(FIND_IN_SET(?, maintenanceJobs.maintenanceJobs_assets) > 0)", [(int)$PAGEDATA['assets'][0]['assets_id']]);
     $DBLIB->join("maintenanceJobsStatuses", "maintenanceJobs.maintenanceJobsStatuses_id=maintenanceJobsStatuses.maintenanceJobsStatuses_id", "LEFT");
     $DBLIB->join("users AS userCreator", "userCreator.users_userid=maintenanceJobs.maintenanceJobs_user_creator", "LEFT");
     $DBLIB->join("users AS userAssigned", "userAssigned.users_userid=maintenanceJobs.maintenanceJobs_user_assignedTo", "LEFT");
@@ -124,10 +124,14 @@ if (count($PAGEDATA['assets']) == 1) {
 
     //Groups
     if ($PAGEDATA['assets'][0]['assets_assetGroups']) {
-        $DBLIB->where("(users_userid IS NULL OR users_userid = '" . $AUTH->data['users_userid'] . "')");
+        $DBLIB->where("(users_userid IS NULL OR users_userid = ?)", [(int)$AUTH->data['users_userid']]);
         $DBLIB->where("instances_id", $PAGEDATA['ASSET_INSTANCE']["instances_id"]);
         $DBLIB->where("assetGroups_deleted", 0);
-        $DBLIB->where("assetGroups_id IN (" . $PAGEDATA['assets'][0]['assets_assetGroups'] . ")");
+        $groupIds = array_filter(array_map('intval', explode(',', $PAGEDATA['assets'][0]['assets_assetGroups'])));
+        if (!empty($groupIds)) {
+            $placeholders = implode(',', array_fill(0, count($groupIds), '?'));
+            $DBLIB->where("assetGroups_id IN (" . $placeholders . ")", $groupIds);
+        }
         $PAGEDATA['assets'][0]['groups'] = $DBLIB->get("assetGroups", null, ["assetGroups_id", "assetGroups_name"]);
     } else $PAGEDATA['assets'][0]['groups'] = [];
 

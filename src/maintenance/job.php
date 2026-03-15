@@ -17,7 +17,7 @@ if (!$PAGEDATA['job']) die($TWIG->render('404.twig', $PAGEDATA));
 
 // Statuses
 $DBLIB->where("maintenanceJobsStatuses_deleted", 0);
-$DBLIB->where("(instances_id IS NULL OR instances_id = '" . $AUTH->data['instance']["instances_id"] . "')");
+$DBLIB->where("(instances_id IS NULL OR instances_id = ?)", [(int)$AUTH->data['instance']["instances_id"]]);
 $DBLIB->orderBy("maintenanceJobsStatuses_order", "ASC");
 $DBLIB->orderBy("maintenanceJobsStatuses_name", "ASC");
 $PAGEDATA['jobStatuses'] = $DBLIB->get("maintenanceJobsStatuses", null, ["maintenanceJobsStatuses.maintenanceJobsStatuses_id", "maintenanceJobsStatuses.maintenanceJobsStatuses_name"]);
@@ -40,24 +40,28 @@ if ($AUTH->instancePermissionCheck("MAINTENANCE_JOBS:EDIT:USER_ASSIGNED_TO_JOB")
     $DBLIB->join("instancePositions", "userInstances.instancePositions_id=instancePositions.instancePositions_id","LEFT");
     $DBLIB->where("instances_id",  $AUTH->data['instance']['instances_id']);
     $DBLIB->where("userInstances.userInstances_deleted",  0);
-    $DBLIB->where("(userInstances.userInstances_archived IS NULL OR userInstances.userInstances_archived >= '" . date('Y-m-d H:i:s') . "')");
+    $DBLIB->where("(userInstances.userInstances_archived IS NULL OR userInstances.userInstances_archived >= ?)", [date('Y-m-d H:i:s')]);
     $PAGEDATA['potentialManagers'] = $DBLIB->get('users', null, ["users.users_name1", "users.users_name2", "users.users_userid"]);
 }
 
 // Users tagged
 $PAGEDATA['job']['tagged'] = [];
 if ($PAGEDATA['job']['maintenanceJobs_user_tagged'] != "") {
-    $DBLIB->where("(users.users_userid IN (" . $PAGEDATA['job']['maintenanceJobs_user_tagged'] . "))");
-    $DBLIB->orderBy("users.users_name1", "ASC");
-    $DBLIB->orderBy("users.users_name2", "ASC");
-    $DBLIB->orderBy("users.users_created", "ASC");
-    $DBLIB->where("users_deleted", 0);
-    $DBLIB->join("userInstances", "users.users_userid=userInstances.users_userid","LEFT");
-    $DBLIB->join("instancePositions", "userInstances.instancePositions_id=instancePositions.instancePositions_id","LEFT");
-    $DBLIB->where("instances_id",  $AUTH->data['instance']['instances_id']);
-    $DBLIB->where("userInstances.userInstances_deleted",  0);
-    $DBLIB->where("(userInstances.userInstances_archived IS NULL OR userInstances.userInstances_archived >= '" . date('Y-m-d H:i:s') . "')");
-    $PAGEDATA['job']['tagged'] = $DBLIB->get('users', null, ["users.users_name1", "users.users_name2", "users.users_userid"]);
+    $taggedIds = array_filter(array_map('intval', explode(',', $PAGEDATA['job']['maintenanceJobs_user_tagged'])));
+    if (!empty($taggedIds)) {
+        $placeholders = implode(',', array_fill(0, count($taggedIds), '?'));
+        $DBLIB->where("(users.users_userid IN (" . $placeholders . "))", $taggedIds);
+        $DBLIB->orderBy("users.users_name1", "ASC");
+        $DBLIB->orderBy("users.users_name2", "ASC");
+        $DBLIB->orderBy("users.users_created", "ASC");
+        $DBLIB->where("users_deleted", 0);
+        $DBLIB->join("userInstances", "users.users_userid=userInstances.users_userid","LEFT");
+        $DBLIB->join("instancePositions", "userInstances.instancePositions_id=instancePositions.instancePositions_id","LEFT");
+        $DBLIB->where("instances_id",  $AUTH->data['instance']['instances_id']);
+        $DBLIB->where("userInstances.userInstances_deleted",  0);
+        $DBLIB->where("(userInstances.userInstances_archived IS NULL OR userInstances.userInstances_archived >= ?)", [date('Y-m-d H:i:s')]);
+        $PAGEDATA['job']['tagged'] = $DBLIB->get('users', null, ["users.users_name1", "users.users_name2", "users.users_userid"]);
+    }
 }
 
 
@@ -75,7 +79,11 @@ if ($PAGEDATA['job']['maintenanceJobs_assets'] != null) $PAGEDATA['job']['mainte
 else $PAGEDATA['job']['maintenanceJobs_assets'] = [];
 $PAGEDATA['job']['assets'] = [];
 if (count($PAGEDATA['job']['maintenanceJobs_assets']) > 0) {
-    $DBLIB->where("(assets_id IN (" . implode(",", $PAGEDATA['job']['maintenanceJobs_assets']) . "))");
+    $assetIds = array_filter(array_map('intval', $PAGEDATA['job']['maintenanceJobs_assets']));
+    if (!empty($assetIds)) {
+        $placeholders = implode(',', array_fill(0, count($assetIds), '?'));
+        $DBLIB->where("(assets_id IN (" . $placeholders . "))", $assetIds);
+    }
     $DBLIB->join("assetTypes", "assets.assetTypes_id=assetTypes.assetTypes_id", "LEFT");
     $DBLIB->join("manufacturers", "manufacturers.manufacturers_id=assetTypes.manufacturers_id", "LEFT");
     $DBLIB->join("assetCategories", "assetTypes.assetCategories_id=assetCategories.assetCategories_id", "LEFT");

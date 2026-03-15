@@ -6,7 +6,7 @@ if (!isset($_POST['p']) or strlen($_POST['p']) < 1) finish(false, ["code" => "AR
 $DBLIB->where("instances_id", $AUTH->data['instance']['instances_id']);
 $DBLIB->where("cmsPages_deleted", 0);
 $DBLIB->where("cmsPages_archived", 0);
-if ($AUTH->data['instance']["instancePositions_id"]) $DBLIB->where("(cmsPages_visibleToGroups IS NULL OR (FIND_IN_SET(" . $AUTH->data['instance']["instancePositions_id"] . ", cmsPages_visibleToGroups) > 0))");
+if ($AUTH->data['instance']["instancePositions_id"]) $DBLIB->where("(cmsPages_visibleToGroups IS NULL OR (FIND_IN_SET(?, cmsPages_visibleToGroups) > 0))", [(int)$AUTH->data['instance']["instancePositions_id"]]);
 $DBLIB->where("cmsPages_id", $_POST['p']);
 $PAGE = $DBLIB->getOne("cmsPages");
 if (!$PAGE) finish(false, ["code" => "NO_PAGE", "message" => "Page not found"]);
