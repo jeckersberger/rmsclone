@@ -8,7 +8,7 @@
  */
 use Phinx\Migration\AbstractMigration;
 
-class BankImport20260308 extends AbstractMigration
+class BankImportMatching extends AbstractMigration
 {
     public function up()
     {
