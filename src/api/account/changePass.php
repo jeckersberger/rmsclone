@@ -3,7 +3,16 @@
 require_once __DIR__ . '/../apiHeadSecure.php';
 require_once __DIR__ . '/../../services/PasswordPolicyService.php';
 
-if (hash($AUTH->data['users_hash'], $AUTH->data['users_salty1'] . $_POST['oldpass']. $AUTH->data['users_salty2']) != $AUTH->data['users_password']) finish(false,["message"=>"Current Password Incorrect"]);
+require_once __DIR__ . '/../../services/PasswordHashService.php';
+
+// Altes Passwort pruefen (unterstuetzt Legacy- und modernes Schema)
+if (!PasswordHashService::verify(
+    $_POST['oldpass'],
+    $AUTH->data['users_password'],
+    $AUTH->data['users_hash'],
+    $AUTH->data['users_salty1'] ?? '',
+    $AUTH->data['users_salty2'] ?? ''
+)) finish(false, ["message" => "Current Password Incorrect"]);
 
 // Enforce password policy on new password
 $newPass = $_POST['newpass'] ?? '';
@@ -12,9 +21,17 @@ if (!empty($violations)) {
     finish(false, ["code" => "WEAK_PASSWORD", "message" => implode(' ', $violations)]);
 }
 
+// Neues Passwort mit Argon2ID hashen
+$upgradeData = PasswordHashService::upgradeData($newPass);
+
 $DBLIB->where ('users_userid', $AUTH->data['users_userid']);
-if ($DBLIB->update('users', ["users_password" => hash($CONFIG['AUTH_NEXTHASH'], $AUTH->data['users_salty1'] . $newPass . $AUTH->data['users_salty2'])])) {
-    $bCMS->auditLog("UPDATE", "users", "PASSWORD CHANGE", $AUTH->data['users_userid'],$AUTH->data['users_userid']);
+if ($DBLIB->update('users', $upgradeData)) {
+    // Alle anderen Sessions invalidieren (Sicherheit bei Passwortwechsel)
+    $DBLIB->where('users_userid', $AUTH->data['users_userid']);
+    $DBLIB->where('authTokens_token', $_SESSION['token'] ?? '', '!=');
+    $DBLIB->update('authTokens', ['authTokens_valid' => 0]);
+
+    $bCMS->auditLog("UPDATE", "users", "PASSWORD CHANGE + HASH UPGRADE", $AUTH->data['users_userid'], $AUTH->data['users_userid']);
     finish(true);
 }
 else finish(false);

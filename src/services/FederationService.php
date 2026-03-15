@@ -402,6 +402,14 @@ class FederationService
      */
     private function sendRequest(string $url, array $data): ?array
     {
+        // SSRF-Schutz: Keine Anfragen an private/interne Netzwerke
+        require_once __DIR__ . '/UrlSecurityService.php';
+        $check = UrlSecurityService::validateUrl($url);
+        if (!$check['safe']) {
+            $this->logFederation(null, 'outgoing', 'request', 'error', 'SSRF blocked: ' . $check['reason']);
+            return null;
+        }
+
         $ch = curl_init();
         curl_setopt_array($ch, [
             CURLOPT_URL => $url,
@@ -437,6 +445,13 @@ class FederationService
      */
     private function sendAuthenticatedRequest(string $url, string $apiKey, array $data): ?array
     {
+        // SSRF-Schutz: Keine Anfragen an private/interne Netzwerke
+        require_once __DIR__ . '/UrlSecurityService.php';
+        $check = UrlSecurityService::validateUrl($url);
+        if (!$check['safe']) {
+            return null;
+        }
+
         $ch = curl_init();
         curl_setopt_array($ch, [
             CURLOPT_URL => $url,

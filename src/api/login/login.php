@@ -18,10 +18,11 @@ if (isset($_POST['formInput']) and isset($_POST['password'])) {
         }
         if (filter_var($input, FILTER_VALIDATE_EMAIL)) $DBLIB->where ("users_email", $input);
         else $DBLIB->where ("users_username", $input);
+        require_once __DIR__ . '/../../services/PasswordHashService.php';
         $DBLIB->where("users_password", NULL, "IS NOT"); //To cover oauth users
         $user = $DBLIB->getOne("users",["users.users_salty1", "users.users_suspended", "users.users_salty2", "users.users_password", "users.users_userid", "users.users_hash", "users.users_totpSecret", "users.users_totpEnabled"]);
         if (!$user) $successful = false;
-        elseif (!hash_equals($user['users_password'], hash($user['users_hash'], $user['users_salty1'] . $password . $user['users_salty2']))) $successful = false;
+        elseif (!PasswordHashService::verify($password, $user['users_password'], $user['users_hash'], $user['users_salty1'] ?? '', $user['users_salty2'] ?? '')) $successful = false;
         else $successful = true;
 
         // Account-basierter Brute-Force-Schutz (5 Minuten Fenster)
@@ -91,6 +92,14 @@ if (isset($_POST['formInput']) and isset($_POST['password'])) {
                     $loginLog->logAttempt($user['users_userid'], $clientIp, $userAgent, false, 'invalid_totp');
                     finish(false, ["code" => "TOTP_INVALID", "message" => "Ungueltiger Zwei-Faktor-Code"]);
                 }
+            }
+
+            // Transparentes Upgrade auf Argon2ID bei erfolgreichem Login
+            if (PasswordHashService::needsRehash($user['users_hash'])) {
+                $upgradeData = PasswordHashService::upgradeData($password);
+                $DBLIB->where('users_userid', $user['users_userid']);
+                $DBLIB->update('users', $upgradeData);
+                $bCMS->auditLog("UPDATE", "users", "PASSWORD HASH UPGRADED TO ARGON2ID", $user['users_userid'], $user['users_userid']);
             }
 
             $rateLimiter->recordAttempt('login', $clientIp, true);

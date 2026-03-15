@@ -11,6 +11,7 @@
 require_once __DIR__ . '/../apiHeadSecure.php';
 require_once __DIR__ . '/../../services/TotpService.php';
 require_once __DIR__ . '/../../services/ErrorHandlerService.php';
+require_once __DIR__ . '/../../services/PasswordHashService.php';
 
 ErrorHandlerService::wrap(function () use ($DBLIB, $AUTH, $bCMS) {
     $totpService = new TotpService($DBLIB);
@@ -63,8 +64,13 @@ ErrorHandlerService::wrap(function () use ($DBLIB, $AUTH, $bCMS) {
             if (empty($password)) {
                 finish(false, ['message' => 'Aktuelles Passwort erforderlich']);
             }
-            $hash = hash($AUTH->data['users_hash'], $AUTH->data['users_salty1'] . $password . $AUTH->data['users_salty2']);
-            if ($hash !== $AUTH->data['users_password']) {
+            if (!PasswordHashService::verify(
+                $password,
+                $AUTH->data['users_password'],
+                $AUTH->data['users_hash'],
+                $AUTH->data['users_salty1'] ?? '',
+                $AUTH->data['users_salty2'] ?? ''
+            )) {
                 finish(false, ['message' => 'Falsches Passwort']);
             }
             $totpService->disableTotp($userId);

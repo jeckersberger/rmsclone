@@ -3,16 +3,35 @@ require_once __DIR__ . '/../apiHeadSecure.php';
 if ($CONFIG['FILES_ENABLED'] !== "Enabled") {
     finish(false, ["code" => null, "message" => "File uploads are disabled"]);
 }
+// Path-Traversal-Schutz: Dateinamen bereinigen
+$sanitizedName = $bCMS->sanitizeString($_POST['name']);
+$sanitizedOriginal = $bCMS->sanitizeString($_POST['originalName']);
+
+// Directory-Traversal-Zeichen entfernen (../ und ..\)
+$sanitizedName = str_replace(['../', '..\\', '..'], '', $sanitizedName);
+$sanitizedOriginal = str_replace(['../', '..\\', '..'], '', $sanitizedOriginal);
+
+// Nur den Dateinamen verwenden (basename), nicht den vollen Pfad
+$safeFilename = basename($sanitizedName);
+$safeOriginalFilename = basename($sanitizedOriginal);
+
+// Extension auf erlaubte Typen beschraenken
+$extension = strtolower(pathinfo($safeFilename, PATHINFO_EXTENSION));
+$allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'zip', 'mp4', 'mov', 'mp3', 'wav'];
+if (!in_array($extension, $allowedExtensions)) {
+    finish(false, ["code" => "INVALID_FILETYPE", "message" => "File type not allowed: " . $extension]);
+}
+
 $fileData = [
-    "s3files_extension" => pathinfo($bCMS->sanitizeString($_POST['name']), PATHINFO_EXTENSION),
-    "s3files_path" => pathinfo($bCMS->sanitizeString($_POST['name']), PATHINFO_DIRNAME),
-    "s3files_meta_size" => $bCMS->sanitizeString($_POST['size']),
+    "s3files_extension" => $extension,
+    "s3files_path" => pathinfo($sanitizedName, PATHINFO_DIRNAME) === '.' ? '' : pathinfo($sanitizedName, PATHINFO_DIRNAME),
+    "s3files_meta_size" => (int)$_POST['size'],
     "s3files_meta_type" => $bCMS->sanitizeString($_POST['typeid']),
     "s3files_meta_subType" => is_numeric($_POST['subtype']) ? $bCMS->sanitizeString($_POST['subtype']) : null,
     "users_userid" => $AUTH->data['users_userid'],
-    "s3files_original_name" => $bCMS->sanitizeString($_POST['originalName']),
-    "s3files_filename" => pathinfo($bCMS->sanitizeString($_POST['name']), PATHINFO_FILENAME),
-    "s3files_name" => pathinfo($bCMS->sanitizeString($_POST['originalName']), PATHINFO_FILENAME),
+    "s3files_original_name" => $safeOriginalFilename,
+    "s3files_filename" => pathinfo($safeFilename, PATHINFO_FILENAME),
+    "s3files_name" => pathinfo($safeOriginalFilename, PATHINFO_FILENAME),
     "s3files_meta_public" => $bCMS->sanitizeString($_POST['public']),
     "instances_id" => $AUTH->data['instance']['instances_id']
 ];

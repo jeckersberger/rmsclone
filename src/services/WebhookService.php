@@ -41,6 +41,13 @@ class WebhookService
             return ['success' => false, 'error' => 'Nur HTTPS-URLs erlaubt'];
         }
 
+        // SSRF-Schutz: Keine Webhooks an private/interne Netzwerke
+        require_once __DIR__ . '/UrlSecurityService.php';
+        $check = UrlSecurityService::validateUrl($url);
+        if (!$check['safe']) {
+            return ['success' => false, 'error' => 'URL verweist auf ein internes Netzwerk und ist nicht erlaubt'];
+        }
+
         $validEvents = array_intersect($events, self::VALID_EVENTS);
         if (empty($validEvents)) {
             return ['success' => false, 'error' => 'Keine gueltigen Events angegeben'];
@@ -103,6 +110,14 @@ class WebhookService
      */
     private function send(array $webhook, string $event, array $payload): array
     {
+        // SSRF-Schutz auch beim Senden (URL koennte sich seit Registrierung geaendert haben)
+        require_once __DIR__ . '/UrlSecurityService.php';
+        $check = UrlSecurityService::validateUrl($webhook['url']);
+        if (!$check['safe']) {
+            $this->logDelivery($webhook['id'], $event, 0, false, 'SSRF blocked: ' . $check['reason']);
+            return ['success' => false, 'error' => 'URL blocked by security policy'];
+        }
+
         $body = json_encode([
             'event' => $event,
             'timestamp' => date('c'),

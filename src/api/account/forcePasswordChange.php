@@ -2,6 +2,7 @@
 //Force password change with policy enforcement
 require_once __DIR__ . '/../apiHeadSecure.php';
 require_once __DIR__ . '/../../services/PasswordPolicyService.php';
+require_once __DIR__ . '/../../services/PasswordHashService.php';
 
 header("Content-Type: text/plain");
 
@@ -14,9 +15,13 @@ if (!empty($violations)) {
     die('POLICY:' . implode(' ', $violations));
 }
 
+// Neues Passwort mit Argon2ID hashen
+$upgradeData = PasswordHashService::upgradeData($newPass);
+$upgradeData['users_changepass'] = 0;
+
 $DBLIB->where ('users_userid', $PAGEDATA['USERDATA']['users_userid']);
-if ($DBLIB->update('users', ["users_password" => hash($CONFIG['AUTH_NEXTHASH'], $PAGEDATA['USERDATA']['users_salty1'] . $newPass . $PAGEDATA['USERDATA']['users_salty2']), "users_changepass" => 0])) {
-    $bCMS->auditLog("UPDATE", "users", "PASSWORD CHANGE BECAUSE FORCED TO", $AUTH->data['users_userid'],$AUTH->data['users_userid']);
+if ($DBLIB->update('users', $upgradeData)) {
+    $bCMS->auditLog("UPDATE", "users", "PASSWORD CHANGE BECAUSE FORCED TO + HASH UPGRADE", $AUTH->data['users_userid'],$AUTH->data['users_userid']);
     die('1');
 }
 else die('2');

@@ -78,11 +78,22 @@ for ($x = 1; $x <= 10; $x++) {
 }
 
 
+// CSV Injection Schutz: Zellen die mit gefaehrlichen Zeichen beginnen, prefixen
+function sanitizeCsvCell($value) {
+    if (is_string($value) && strlen($value) > 0) {
+        $firstChar = $value[0];
+        if (in_array($firstChar, ['=', '+', '-', '@', "\t", "\r"])) {
+            return "'" . $value; // Apostroph-Prefix verhindert Formelauswertung in Excel
+        }
+    }
+    return $value;
+}
+
 if (isset($_POST['csv'])) {
     $fp = fopen('php://output', 'w');
     fputcsv($fp, $headerRow, ",", "\"", "\\", "\r\n");
     foreach ($spreadsheetRows as $row) {
-        fputcsv($fp, $row, ",", "\"", "\\", "\r\n");
+        fputcsv($fp, array_map('sanitizeCsvCell', $row), ",", "\"", "\\", "\r\n");
     }
     fclose($fp);
 } elseif (isset($_POST['xlsx'])) {

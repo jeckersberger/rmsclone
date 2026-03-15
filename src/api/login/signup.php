@@ -6,18 +6,21 @@ if ($CONFIGCLASS->get("AUTH_SIGNUP_ENABLED") !== 'Enabled') {
 }
 
 if (isset($_POST['name1']) and isset($_POST['password']) and isset($_POST['username']) and isset($_POST['email']) and isset($_POST['name2'])) {
+    require_once __DIR__ . '/../../services/PasswordHashService.php';
     if ($AUTH->usernameTaken($GLOBALS['bCMS']->sanitizeString(strtolower($_POST['username'])))) finish(false, ["code" => null, "message" => "Sorry that username is taken, please try another"]);
     if ($AUTH->emailTaken($GLOBALS['bCMS']->sanitizeString(strtolower($_POST['email'])))) finish(false, ["code" => null, "message" => "Sorry, you already have an account with that email address"]);
+    // Sicheres Hashing mit Argon2ID (oder bcrypt als Fallback)
+    $hashResult = PasswordHashService::hashNew($_POST['password']);
     $data = Array (
         'users_email' => strtolower($bCMS->sanitizeString($_POST['email'])),
         'users_username' => strtolower($bCMS->sanitizeString($_POST['username'])),
         'users_name1' => $bCMS->sanitizeString($_POST['name1']),
         'users_name2' => $bCMS->sanitizeString($_POST['name2']),
-        "users_salty1" => $bCMS->randomString(8),
-        "users_salty2" => $bCMS->randomString(8),
-        "users_hash" => $CONFIG['AUTH_NEXTHASH'],
+        "users_salty1" => '',
+        "users_salty2" => '',
+        "users_hash" => $hashResult['marker'],
+        "users_password" => $hashResult['hash'],
     );
-    $data["users_password"] = hash($data['users_hash'], $data['users_salty1'] . $_POST['password'] . $data['users_salty2']);
     $newUser = $DBLIB->insert("users", $data);
     if (!$newUser) finish(false, ["code" => null, "message" => "Can't create user due to database error"]);
     else {
