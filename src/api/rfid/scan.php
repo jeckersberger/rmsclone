@@ -57,6 +57,10 @@ switch ($action) {
         handleCompleteInventory($rfidService);
         break;
 
+    case 'list_assets':
+        handleListAssets($instanceId);
+        break;
+
     default:
         finish(false, ["code" => "INVALID", "message" => "Unknown action"]);
 }
@@ -249,4 +253,22 @@ function handleCompleteInventory($rfidService)
     } else {
         finish(false, ["code" => "INVENTORY_FAILED", "message" => $result['message']]);
     }
+}
+
+/**
+ * List all assets for dropdown selectors
+ */
+function handleListAssets(int $instanceId)
+{
+    global $DBLIB;
+    $DBLIB->where('a.instances_id', $instanceId);
+    $DBLIB->where('a.assets_deleted', 0);
+    $DBLIB->join('assetTypes at', 'a.assetTypes_id=at.assetTypes_id', 'LEFT');
+    $DBLIB->orderBy('at.assetTypes_name', 'ASC');
+    $DBLIB->orderBy('a.assets_tag', 'ASC');
+    $assets = $DBLIB->get('assets a', 500, [
+        'a.assets_id', 'a.assets_tag', 'a.asset_definableFields_1 AS rfid_tag',
+        'at.assetTypes_name'
+    ]);
+    finish(true, null, ["assets" => $assets ?: []]);
 }

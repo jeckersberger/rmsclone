@@ -239,9 +239,11 @@
     <h1>RFID Scanner</h1>
 
     <div class="rfid-mode-selector">
-        <button class="mode-btn active" onclick="setMode('checkout')">Ausleihe (Checkout)</button>
-        <button class="mode-btn" onclick="setMode('checkin')">Rückgabe (Checkin)</button>
-        <button class="mode-btn" onclick="setMode('inventory')">Inventur (Inventory)</button>
+        <button class="mode-btn active" onclick="setMode('checkout')"><i class="fas fa-sign-out-alt"></i> Ausleihe</button>
+        <button class="mode-btn" onclick="setMode('checkin')"><i class="fas fa-sign-in-alt"></i> Rueckgabe</button>
+        <button class="mode-btn" onclick="setMode('inventory')"><i class="fas fa-clipboard-list"></i> Inventur</button>
+        <button class="mode-btn" onclick="setMode('write_tag')"><i class="fas fa-pen"></i> Tag schreiben</button>
+        <button class="mode-btn" onclick="setMode('print_label')"><i class="fas fa-print"></i> Label drucken</button>
     </div>
 
     <div class="rfid-input-section">
@@ -273,6 +275,57 @@
         >
             Complete Inventory
         </button>
+    </div>
+
+    {# ── Tag Write Section ── #}
+    <div id="writeTagSection" style="display:none; margin-bottom: 20px;">
+        <div class="card card-warning card-outline">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-pen"></i> RFID-Tag beschreiben</h3></div>
+            <div class="card-body">
+                <p style="font-size:16px;">1. Asset auswaehlen &rarr; 2. Neuen EPC eingeben oder generieren &rarr; 3. Tag scannen &rarr; Tag wird beschrieben</p>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+                    <select id="writeAssetSelector" class="project-selector" style="display:block; flex:2;">
+                        <option value="">-- Asset auswaehlen --</option>
+                    </select>
+                    <input type="text" id="writeEpcInput" class="rfid-input" style="flex:1; max-width:none;" placeholder="EPC (z.B. RMS-0001)" />
+                    <button onclick="generateEpc()" style="padding:12px 20px; font-size:16px; background:#ffc107; border:none; border-radius:5px; cursor:pointer; min-height:48px; white-space:nowrap;">
+                        <i class="fas fa-magic"></i> Auto-EPC
+                    </button>
+                </div>
+                <p style="font-size:14px; color:#666;">Aktueller Tag (scannen zum Lesen): <strong id="currentTagDisplay">-</strong></p>
+                <button onclick="writeTag()" style="padding:15px 30px; font-size:18px; font-weight:bold; background:#28a745; color:white; border:none; border-radius:5px; cursor:pointer; min-height:56px; width:100%;">
+                    <i class="fas fa-save"></i> Tag beschreiben &amp; Asset zuweisen
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {# ── Label Print Section ── #}
+    <div id="printLabelSection" style="display:none; margin-bottom: 20px;">
+        <div class="card card-info card-outline">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-print"></i> Label drucken (Zebra LP2824)</h3></div>
+            <div class="card-body">
+                <p style="font-size:16px;">Asset auswaehlen und Label drucken. Der Drucker muss als Netzwerkdrucker oder via USB angeschlossen sein.</p>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+                    <select id="printAssetSelector" class="project-selector" style="display:block; flex:2;">
+                        <option value="">-- Asset auswaehlen --</option>
+                    </select>
+                    <button onclick="printLabel()" style="padding:15px 30px; font-size:18px; font-weight:bold; background:#17a2b8; color:white; border:none; border-radius:5px; cursor:pointer; min-height:56px; white-space:nowrap;">
+                        <i class="fas fa-print"></i> Label drucken
+                    </button>
+                </div>
+                <div id="labelPreview" style="display:none; margin-top:15px; padding:20px; background:white; border:2px dashed #ccc; border-radius:5px; text-align:center;">
+                    <div style="font-family:monospace; font-size:14px; background:#f5f5f5; padding:15px; border-radius:3px; text-align:left; white-space:pre;" id="labelPreviewContent"></div>
+                </div>
+                <div style="margin-top:10px;">
+                    <label style="font-size:14px; margin-right:10px;">Drucker-IP (fuer Netzwerkdruck):</label>
+                    <input type="text" id="printerIp" value="" placeholder="z.B. 192.168.1.100" style="padding:8px; border:1px solid #ccc; border-radius:3px; width:200px;" />
+                    <button onclick="printLabelDirect()" style="padding:8px 16px; font-size:14px; background:#6c757d; color:white; border:none; border-radius:3px; cursor:pointer; margin-left:5px;">
+                        <i class="fas fa-network-wired"></i> Direkt senden
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div id="resultDisplay" class="result-display"></div>
@@ -612,6 +665,194 @@
             // Audio not available in this context
         }
     }
+
+    // ── Tag Write Functions ──
+    function loadAssets(targetSelector) {
+        ajaxcall('rfid/scan.php', { action: 'list_assets' }, function(response) {
+            if (response.result && response.response && response.response.assets) {
+                var sel = document.getElementById(targetSelector);
+                sel.innerHTML = '<option value="">-- Asset auswaehlen --</option>';
+                response.response.assets.forEach(function(a) {
+                    var opt = document.createElement('option');
+                    opt.value = a.assets_id;
+                    opt.textContent = (a.assetTypes_name || '') + ' ' + (a.assets_tag ? '#' + a.assets_tag : '') + ' (ID:' + a.assets_id + ')';
+                    opt.dataset.tag = a.assets_tag || '';
+                    opt.dataset.rfid = a.rfid_tag || '';
+                    opt.dataset.type = a.assetTypes_name || '';
+                    sel.appendChild(opt);
+                });
+            }
+        }, false);
+    }
+
+    function generateEpc() {
+        var sel = document.getElementById('writeAssetSelector');
+        var opt = sel.options[sel.selectedIndex];
+        if (!sel.value) {
+            showResult('Bitte zuerst ein Asset auswaehlen', 'warning');
+            return;
+        }
+        var epc = 'RMS-' + String(sel.value).padStart(6, '0');
+        document.getElementById('writeEpcInput').value = epc;
+    }
+
+    function writeTag() {
+        var assetId = document.getElementById('writeAssetSelector').value;
+        var newEpc = document.getElementById('writeEpcInput').value.trim();
+        var currentTag = document.getElementById('rfidInput').value.trim();
+
+        if (!assetId) { showResult('Bitte Asset auswaehlen', 'warning'); return; }
+        if (!newEpc) { showResult('Bitte EPC eingeben oder generieren', 'warning'); return; }
+
+        // If the Chafon scanner is used in keyboard mode, the "current tag" field
+        // contains the last scanned tag. We use it to identify which physical tag to write.
+        // The actual write happens on the device side (Android SDK).
+        // Here we register the EPC assignment in the system.
+        ajaxcall('rfid/scan.php', {
+            action: 'assign_tag',
+            asset_id: assetId,
+            rfid_tag: newEpc
+        }, function(response) {
+            if (response.result) {
+                playSound('success');
+                showResult('<i class="fas fa-check-circle"></i> Tag "' + newEpc + '" erfolgreich zugewiesen!<br><small>Jetzt mit dem Chafon-Scanner den EPC auf den physischen Tag schreiben (Write EPC in Chafon-App).</small>', 'success');
+                addToHistory(newEpc, 'Tag zugewiesen (Asset #' + assetId + ')', 'success');
+                document.getElementById('currentTagDisplay').textContent = newEpc;
+            } else {
+                playSound('error');
+                showResult('Fehler: ' + (response.response ? response.response.message : 'Unbekannt'), 'error');
+            }
+        }, true);
+    }
+
+    // ── Label Print Functions ──
+    function printLabel() {
+        var assetId = document.getElementById('printAssetSelector').value;
+        if (!assetId) { showResult('Bitte Asset auswaehlen', 'warning'); return; }
+
+        ajaxcall('rfid/label.php', {
+            action: 'preview',
+            asset_id: assetId
+        }, function(response) {
+            if (response.result && response.response) {
+                var r = response.response;
+                var preview = document.getElementById('labelPreview');
+                var content = document.getElementById('labelPreviewContent');
+                preview.style.display = 'block';
+
+                // Show human-readable preview
+                var lines = [];
+                lines.push('┌──────────────────────────────┐');
+                lines.push('│  ' + (r.type_name || '').substring(0, 26).padEnd(26) + '  │');
+                lines.push('│  ' + (r.asset_tag || '').substring(0, 26).padEnd(26) + '  │');
+                lines.push('│  ████████████████████████████  │');
+                lines.push('│  ' + (r.barcode_data || '').substring(0, 26).padEnd(26) + '  │');
+                if (r.rfid_tag) {
+                    lines.push('│  RFID: ' + r.rfid_tag.substring(0, 20).padEnd(20) + '  │');
+                }
+                lines.push('└──────────────────────────────┘');
+                content.textContent = lines.join('\n');
+
+                showResult('Label-Vorschau erstellt. Klicke "Direkt senden" fuer Netzwerkdruck oder nutze den Browser-Druck.', 'success');
+            } else {
+                showResult('Fehler beim Erstellen der Label-Vorschau', 'error');
+            }
+        }, true);
+    }
+
+    function printLabelDirect() {
+        var assetId = document.getElementById('printAssetSelector').value;
+        var printerIp = document.getElementById('printerIp').value.trim();
+
+        if (!assetId) { showResult('Bitte Asset auswaehlen', 'warning'); return; }
+
+        ajaxcall('rfid/label.php', {
+            action: 'print',
+            asset_id: assetId,
+            printer_ip: printerIp || ''
+        }, function(response) {
+            if (response.result) {
+                playSound('success');
+                showResult('<i class="fas fa-check-circle"></i> Label-Druckauftrag gesendet!', 'success');
+                addToHistory('PRINT', 'Label gedruckt (Asset #' + assetId + ')', 'success');
+            } else {
+                playSound('error');
+                showResult('Druckfehler: ' + (response.response ? response.response.message : 'Drucker nicht erreichbar'), 'error');
+            }
+        }, true);
+    }
+
+    // ── Mode: write_tag and print_label ──
+    var origSetMode = setMode;
+    setMode = function(mode) {
+        // Hide new sections by default
+        document.getElementById('writeTagSection').style.display = 'none';
+        document.getElementById('printLabelSection').style.display = 'none';
+
+        // Update active button
+        document.querySelectorAll('.mode-btn').forEach(function(btn) { btn.classList.remove('active'); });
+        if (event && event.target) event.target.classList.add('active');
+
+        var projectSelector = document.getElementById('projectSelector');
+        var startBtn = document.getElementById('startInventoryBtn');
+        var completeBtn = document.getElementById('completeInventoryBtn');
+        var resultDisplay = document.getElementById('resultDisplay');
+        var inventoryResults = document.getElementById('inventoryResults');
+        var rfidInput = document.getElementById('rfidInput');
+
+        projectSelector.classList.remove('visible');
+        startBtn.style.display = 'none';
+        completeBtn.style.display = 'none';
+        inventoryResults.classList.remove('visible');
+        resultDisplay.classList.remove('visible');
+
+        currentMode = mode;
+
+        if (mode === 'checkout') {
+            projectSelector.classList.add('visible');
+            rfidInput.style.display = '';
+            rfidInput.placeholder = 'RFID-Tag scannen...';
+            loadProjects();
+        } else if (mode === 'checkin') {
+            rfidInput.style.display = '';
+            rfidInput.placeholder = 'RFID-Tag scannen...';
+        } else if (mode === 'inventory') {
+            rfidInput.style.display = '';
+            rfidInput.placeholder = 'RFID-Tag scannen...';
+            startBtn.style.display = 'inline-block';
+            completeBtn.style.display = 'inline-block';
+            inventorySessionId = null;
+        } else if (mode === 'write_tag') {
+            rfidInput.style.display = '';
+            rfidInput.placeholder = 'Tag scannen zum Lesen der aktuellen ID...';
+            document.getElementById('writeTagSection').style.display = 'block';
+            loadAssets('writeAssetSelector');
+        } else if (mode === 'print_label') {
+            rfidInput.style.display = 'none';
+            document.getElementById('printLabelSection').style.display = 'block';
+            loadAssets('printAssetSelector');
+            document.getElementById('labelPreview').style.display = 'none';
+        }
+
+        if (rfidInput.style.display !== 'none') {
+            rfidInput.value = '';
+            rfidInput.focus();
+        }
+    };
+
+    // When scanning in write_tag mode, show the scanned tag ID
+    var origHandleScan = handleScan;
+    handleScan = function(rfidTag) {
+        if (currentMode === 'write_tag') {
+            document.getElementById('currentTagDisplay').textContent = rfidTag;
+            showResult('Tag gelesen: ' + rfidTag, 'success');
+            playSound('success');
+            document.getElementById('rfidInput').value = '';
+            document.getElementById('rfidInput').focus();
+            return;
+        }
+        origHandleScan(rfidTag);
+    };
 
     // Handle RFID input - the scanner sends tags as keyboard input
     document.getElementById('rfidInput').addEventListener('keypress', function(e) {
