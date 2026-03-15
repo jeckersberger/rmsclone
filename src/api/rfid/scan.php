@@ -6,6 +6,7 @@
  * manage tag assignments, and handle inventory operations.
  */
 require_once __DIR__ . '/../apiHeadSecure.php';
+require_once __DIR__ . '/../../services/StockItemService.php';
 
 // Check permissions
 if (!$AUTH->instancePermissionCheck("ASSETS:ASSET_BARCODES:SCAN")) {
@@ -16,6 +17,8 @@ $instanceId = $AUTH->data['instance']['instances_id'];
 $userId = $AUTH->data['users_userid'];
 
 $rfidService = new RfidService($DBLIB);
+$stockService = new StockItemService($DBLIB);
+$rfidService->setStockService($stockService);
 
 // Get the action parameter
 $action = $_POST['action'] ?? null;
@@ -59,6 +62,24 @@ switch ($action) {
 
     case 'list_assets':
         handleListAssets($instanceId);
+        break;
+
+    // ── New: Universal scan (handles both assets and stock instances) ──
+    case 'universal_scan':
+        handleUniversalScan($rfidService, $instanceId, $userId);
+        break;
+
+    case 'universal_lookup':
+        handleUniversalLookup($rfidService, $instanceId);
+        break;
+
+    // ── New: Box scan (Kisten-Scan) ──
+    case 'box_scan':
+        handleBoxScan($stockService, $instanceId, $userId);
+        break;
+
+    case 'box_scan_action':
+        handleBoxScanAction($stockService, $rfidService, $instanceId, $userId);
         break;
 
     default:
@@ -271,4 +292,137 @@ function handleListAssets(int $instanceId)
         'at.assetTypes_name'
     ]);
     finish(true, null, ["assets" => $assets ?: []]);
+}
+
+/**
+ * Universal scan: automatically detects asset vs stock instance
+ */
+function handleUniversalScan($rfidService, $instanceId, $userId)
+{
+    $rfidTag = $_POST['rfid_tag'] ?? null;
+    $scanAction = $_POST['scan_action'] ?? null;
+    $projectId = isset($_POST['project_id']) ? (int)$_POST['project_id'] : null;
+
+    if (!$rfidTag || !$scanAction) {
+        finish(false, ["code" => "INVALID", "message" => "rfid_tag and scan_action required"]);
+    }
+
+    $result = $rfidService->processUniversalScan($instanceId, $rfidTag, $scanAction, $userId, $projectId);
+
+    if ($result['success']) {
+        finish(true, null, [
+            'entity_type'  => $result['entity_type'],
+            'entity'       => $result['entity'] ?? $result['asset'] ?? null,
+            'message'      => $result['message'],
+            'action_taken' => $result['action_taken'],
+        ]);
+    } else {
+        finish(false, [
+            "code"        => "SCAN_FAILED",
+            "message"     => $result['message'],
+            "entity_type" => $result['entity_type'],
+            "entity"      => $result['entity'] ?? $result['asset'] ?? null,
+        ]);
+    }
+}
+
+/**
+ * Universal lookup: finds asset or stock instance by RFID tag
+ */
+function handleUniversalLookup($rfidService, $instanceId)
+{
+    $rfidTag = $_POST['rfid_tag'] ?? null;
+
+    if (!$rfidTag) {
+        finish(false, ["code" => "INVALID", "message" => "rfid_tag required"]);
+    }
+
+    $entity = $rfidService->findEntityByTag($instanceId, $rfidTag);
+
+    if ($entity) {
+        finish(true, null, [
+            'entity_type' => $entity['entity_type'],
+            'entity'      => $entity,
+        ]);
+    } else {
+        finish(false, ["code" => "NOT_FOUND", "message" => "Weder Gerät noch Artikel gefunden"]);
+    }
+}
+
+/**
+ * Box scan: process multiple tags and group results
+ */
+function handleBoxScan($stockService, $instanceId, $userId)
+{
+    $rfidTagsJson = $_POST['rfid_tags'] ?? null;
+
+    if (!$rfidTagsJson) {
+        finish(false, ["code" => "INVALID", "message" => "rfid_tags required"]);
+    }
+
+    $rfidTags = json_decode($rfidTagsJson, true);
+    if (!is_array($rfidTags) || empty($rfidTags)) {
+        finish(false, ["code" => "INVALID", "message" => "rfid_tags must be a non-empty JSON array"]);
+    }
+
+    $result = $stockService->processBoxScan($instanceId, $rfidTags);
+
+    // Optionally save session
+    $sessionName = $_POST['session_name'] ?? '';
+    if (!empty($sessionName)) {
+        $projectId = isset($_POST['project_id']) ? (int)$_POST['project_id'] : null;
+        $sessionId = $stockService->saveBoxScanSession(
+            $instanceId, $userId, $sessionName, $result, $projectId, 'count'
+        );
+        $result['session_id'] = $sessionId;
+    }
+
+    finish(true, null, ['result' => $result]);
+}
+
+/**
+ * Box scan with action: checkout/checkin all scanned items
+ */
+function handleBoxScanAction($stockService, $rfidService, $instanceId, $userId)
+{
+    $rfidTagsJson = $_POST['rfid_tags'] ?? null;
+    $scanAction = $_POST['scan_action'] ?? 'count';
+    $projectId = isset($_POST['project_id']) ? (int)$_POST['project_id'] : null;
+
+    if (!$rfidTagsJson) {
+        finish(false, ["code" => "INVALID", "message" => "rfid_tags required"]);
+    }
+
+    $rfidTags = json_decode($rfidTagsJson, true);
+    if (!is_array($rfidTags) || empty($rfidTags)) {
+        finish(false, ["code" => "INVALID", "message" => "rfid_tags must be a non-empty JSON array"]);
+    }
+
+    // For assets, use the RfidService for checkout/checkin
+    $result = $stockService->processBoxScanWithAction(
+        $instanceId, $rfidTags, $scanAction, $userId, $projectId
+    );
+
+    // Also process assets through RfidService
+    if ($scanAction === 'checkout' && $projectId) {
+        foreach ($result['assets'] as $asset) {
+            if ($asset['status'] === 'available') {
+                $rfidService->processScan(
+                    $instanceId, $asset['rfid_tag'], 'checkout', $userId, $projectId
+                );
+                $result['action_results']['successes']++;
+            }
+        }
+    } elseif ($scanAction === 'checkin') {
+        foreach ($result['assets'] as $asset) {
+            if ($asset['status'] === 'checked_out') {
+                $rfidService->processScan(
+                    $instanceId, $asset['rfid_tag'], 'checkin', $userId
+                );
+                $result['action_results']['successes']++;
+            }
+        }
+    }
+
+    finish(true, null, ['result' => $result]);
 }

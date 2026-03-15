@@ -8,10 +8,153 @@
 class RfidService
 {
     private $db;
+    private ?StockItemService $stockService = null;
 
     public function __construct($db)
     {
         $this->db = $db;
+    }
+
+    /**
+     * Set StockItemService for dual-entity RFID lookups
+     */
+    public function setStockService(StockItemService $stockService): void
+    {
+        $this->stockService = $stockService;
+    }
+
+    /**
+     * Universal RFID lookup: finds either an Asset or a Stock Instance
+     * Returns a normalized result with entity_type = 'asset' | 'stock_instance'
+     *
+     * @param int $instanceId Tenant instance ID
+     * @param string $rfidTag RFID EPC tag
+     * @return array|null Normalized entity with entity_type field
+     */
+    public function findEntityByTag(int $instanceId, string $rfidTag): ?array
+    {
+        // 1. Try asset first
+        $asset = $this->findByTag($instanceId, $rfidTag);
+        if ($asset) {
+            $asset['entity_type'] = 'asset';
+            $asset['entity_id'] = $asset['assets_id'];
+            $asset['display_name'] = $asset['type_name'] . ' - ' . ($asset['assets_name'] ?? '#' . $asset['assets_id']);
+            return $asset;
+        }
+
+        // 2. Try stock instance
+        if ($this->stockService) {
+            $stockInst = $this->stockService->findByRfidTag($instanceId, $rfidTag);
+            if ($stockInst) {
+                $stockInst['entity_type'] = 'stock_instance';
+                $stockInst['entity_id'] = $stockInst['id'];
+                $stockInst['display_name'] = $stockInst['item_name'] . ' #' . $stockInst['instance_number'];
+                return $stockInst;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Universal scan processing: handles both assets and stock instances
+     *
+     * @param int $instanceId Tenant instance ID
+     * @param string $rfidTag RFID EPC tag
+     * @param string $action checkout, checkin, locate, inventory
+     * @param int $userId User ID
+     * @param int|null $projectId Project ID (for checkout)
+     * @return array Scan result with entity info
+     */
+    public function processUniversalScan(int $instanceId, string $rfidTag, string $action, int $userId, ?int $projectId = null): array
+    {
+        $entity = $this->findEntityByTag($instanceId, $rfidTag);
+
+        if (!$entity) {
+            return [
+                'success'      => false,
+                'entity_type'  => null,
+                'entity'       => null,
+                'message'      => 'Unbekannter Tag - weder Gerät noch Artikel',
+                'action_taken' => null,
+            ];
+        }
+
+        if ($entity['entity_type'] === 'asset') {
+            // Delegate to existing asset scan logic
+            $result = $this->processScan($instanceId, $rfidTag, $action, $userId, $projectId);
+            $result['entity_type'] = 'asset';
+            return $result;
+        }
+
+        // Stock instance handling
+        if ($entity['entity_type'] === 'stock_instance' && $this->stockService) {
+            switch ($action) {
+                case 'checkout':
+                    if (!$projectId) {
+                        return [
+                            'success'      => false,
+                            'entity_type'  => 'stock_instance',
+                            'entity'       => $entity,
+                            'message'      => 'Projekt-ID benötigt für Ausleihe',
+                            'action_taken' => null,
+                        ];
+                    }
+                    $result = $this->stockService->checkOut($entity['id'], $instanceId, $projectId, $userId);
+                    return [
+                        'success'      => $result['success'],
+                        'entity_type'  => 'stock_instance',
+                        'entity'       => $entity,
+                        'asset'        => $entity, // backwards compat
+                        'message'      => $result['message'],
+                        'action_taken' => $result['success'] ? 'checkout' : null,
+                    ];
+
+                case 'checkin':
+                    $result = $this->stockService->checkIn($entity['id'], $instanceId, $userId);
+                    return [
+                        'success'      => $result['success'],
+                        'entity_type'  => 'stock_instance',
+                        'entity'       => $entity,
+                        'asset'        => $entity, // backwards compat
+                        'message'      => $result['message'],
+                        'action_taken' => $result['success'] ? 'checkin' : null,
+                    ];
+
+                case 'locate':
+                    // Update last_scan_at
+                    $this->db->where('id', $entity['id']);
+                    $this->db->update('stock_instances', [
+                        'last_scan_at' => date('Y-m-d H:i:s'),
+                    ]);
+                    return [
+                        'success'      => true,
+                        'entity_type'  => 'stock_instance',
+                        'entity'       => $entity,
+                        'asset'        => $entity,
+                        'message'      => 'Artikel lokalisiert: ' . $entity['display_name'],
+                        'action_taken' => 'locate',
+                    ];
+
+                case 'inventory':
+                    return [
+                        'success'      => true,
+                        'entity_type'  => 'stock_instance',
+                        'entity'       => $entity,
+                        'asset'        => $entity,
+                        'message'      => 'Artikel erfasst: ' . $entity['display_name'],
+                        'action_taken' => 'inventory',
+                    ];
+            }
+        }
+
+        return [
+            'success'      => false,
+            'entity_type'  => $entity['entity_type'],
+            'entity'       => $entity,
+            'message'      => 'Ungültige Aktion',
+            'action_taken' => null,
+        ];
     }
 
     /**
