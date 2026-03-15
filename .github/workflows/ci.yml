@@ -42,10 +42,10 @@ jobs:
           echo "All PHP files passed syntax check"
 
   # --------------------------------------------------------------------------
-  # Migration Dry-Run - Verify Phinx migrations can be applied
+  # Migration Check - Verify Phinx migrations can be applied
   # --------------------------------------------------------------------------
   migration-check:
-    name: Migration Dry-Run
+    name: Migration Check
     runs-on: ubuntu-latest
 
     services:
@@ -77,7 +77,7 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist
 
-      - name: Run Phinx migrations (dry-run)
+      - name: Run Phinx migrations
         env:
           DB_HOSTNAME: 127.0.0.1
           DB_DATABASE: adamrms_test
@@ -85,8 +85,8 @@ jobs:
           DB_PASSWORD: test_password
           DB_PORT: 3306
         run: |
-          php vendor/bin/phinx migrate -e production --dry-run
-          echo "Migration dry-run passed"
+          php vendor/bin/phinx migrate -e production
+          echo "Migration check passed"
 
   # --------------------------------------------------------------------------
   # Smoke Test - Build container and verify health endpoint
