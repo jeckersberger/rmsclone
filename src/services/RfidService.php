@@ -1,21 +1,13 @@
 <?php
 /**
- * RfidService - RFID-Integration fuer Equipment-Tracking
+ * RFID Scanner Integration Service
  *
- * Unterstuetzt:
- * - UHF RFID-Tags (EPC Gen2)
- * - RFID-Gateway Anbindung (TCP/HTTP)
- * - Automatische Inventur beim Gate-Durchgang
- * - Tag-Zuordnung zu Assets
- * - Label-Druck mit RFID-Tag-ID
+ * Manages RFID tag assignments, scan processing, checkout/checkin workflows,
+ * and inventory operations for the Chafon CF-H906 UHF RFID handheld reader.
  */
 class RfidService
 {
     private $db;
-
-    const TAG_STATUS_ACTIVE = 'active';
-    const TAG_STATUS_LOST = 'lost';
-    const TAG_STATUS_DECOMMISSIONED = 'decommissioned';
 
     public function __construct($db)
     {
@@ -23,205 +15,497 @@ class RfidService
     }
 
     /**
-     * RFID-Tag einem Asset zuordnen
+     * Assign an RFID EPC tag to an asset
+     *
+     * @param int $assetId Asset ID
+     * @param string $rfidTag RFID EPC tag
+     * @param int $userId User ID for audit trail
+     * @return bool Success status
      */
-    public function assignTag(int $assetId, string $tagEpc, int $userId): array
+    public function assignTag(int $assetId, string $rfidTag, int $userId): bool
     {
-        $tagEpc = strtoupper(trim($tagEpc));
-        if (!preg_match('/^[0-9A-F]{24,48}$/', $tagEpc)) {
-            return ['success' => false, 'error' => 'Ungueltiges EPC-Format (24-48 Hex-Zeichen)'];
+        $rfidTag = trim($rfidTag);
+
+        if (empty($rfidTag)) {
+            return false;
         }
 
-        // Duplikatpruefung
-        $this->db->where('tag_epc', $tagEpc);
-        $this->db->where('status', self::TAG_STATUS_ACTIVE);
-        $existing = $this->db->getOne('rfid_tags', ['id', 'asset_id']);
+        // Validate uniqueness - check if tag exists elsewhere
+        $this->db->where('asset_definableFields_1', $rfidTag);
+        $this->db->where('assets_id', $assetId, '!=');
+        $existing = $this->db->getOne('assets');
+
         if ($existing) {
-            return ['success' => false, 'error' => 'Tag bereits Asset #' . $existing['asset_id'] . ' zugeordnet'];
+            return false; // Tag already assigned to another asset
         }
 
-        // Altes Tag deaktivieren
-        $this->db->where('asset_id', $assetId);
-        $this->db->where('status', self::TAG_STATUS_ACTIVE);
-        $this->db->update('rfid_tags', ['status' => self::TAG_STATUS_DECOMMISSIONED]);
-
-        $id = $this->db->insert('rfid_tags', [
-            'asset_id' => $assetId,
-            'tag_epc' => $tagEpc,
-            'status' => self::TAG_STATUS_ACTIVE,
-            'assigned_by' => $userId,
-            'assigned_at' => date('Y-m-d H:i:s'),
+        // Update asset with RFID tag in asset_definableFields_1
+        $this->db->where('assets_id', $assetId);
+        return (bool) $this->db->update('assets', [
+            'asset_definableFields_1' => $rfidTag,
         ]);
-
-        return $id
-            ? ['success' => true, 'id' => $id]
-            : ['success' => false, 'error' => 'Fehler beim Speichern'];
     }
 
     /**
-     * Asset per RFID-Tag finden
+     * Remove RFID tag from an asset
+     *
+     * @param int $assetId Asset ID
+     * @param int $userId User ID for audit trail
+     * @return bool Success status
      */
-    public function findAssetByTag(string $tagEpc): ?array
+    public function unassignTag(int $assetId, int $userId): bool
     {
-        $tagEpc = strtoupper(trim($tagEpc));
-        $sql = "SELECT rt.*, a.assets_id, a.assets_tag, at.assetTypes_name
-                FROM rfid_tags rt
-                JOIN assets a ON rt.asset_id = a.assets_id
-                JOIN assetTypes at ON a.assetTypes_id = at.assetTypes_id
-                WHERE rt.tag_epc = ? AND rt.status = ?
-                AND a.assets_deleted = 0";
-        $result = $this->db->rawQuery($sql, [$tagEpc, self::TAG_STATUS_ACTIVE]);
-        return $result ? $result[0] : null;
-    }
-
-    /**
-     * Bulk-Scan verarbeiten (Gateway-Meldung)
-     */
-    public function processBulkScan(array $tagEpcs, string $gatewayId, int $instanceId): array
-    {
-        $found = [];
-        $unknown = [];
-
-        foreach ($tagEpcs as $epc) {
-            $asset = $this->findAssetByTag($epc);
-            if ($asset) {
-                $found[] = [
-                    'tag_epc' => $epc,
-                    'asset_id' => $asset['assets_id'],
-                    'asset_tag' => $asset['assets_tag'],
-                    'asset_name' => $asset['assetTypes_name'],
-                ];
-            } else {
-                $unknown[] = $epc;
-            }
-        }
-
-        // Scan-Event loggen
-        $this->db->insert('rfid_scan_log', [
-            'gateway_id' => $gatewayId,
-            'instances_id' => $instanceId,
-            'tags_scanned' => count($tagEpcs),
-            'tags_found' => count($found),
-            'tags_unknown' => count($unknown),
-            'scan_data' => json_encode(['found' => $found, 'unknown' => $unknown]),
-            'scanned_at' => date('Y-m-d H:i:s'),
+        $this->db->where('assets_id', $assetId);
+        return (bool) $this->db->update('assets', [
+            'asset_definableFields_1' => null,
         ]);
-
-        return [
-            'total_scanned' => count($tagEpcs),
-            'found' => $found,
-            'unknown' => $unknown,
-        ];
     }
 
     /**
-     * RFID-basierte Inventur: Soll-Ist-Vergleich
+     * Find asset by RFID tag with full details
+     *
+     * @param int $instanceId Instance ID
+     * @param string $rfidTag RFID EPC tag
+     * @return array|null Asset with type name, status, current assignment
      */
-    public function inventoryCheck(array $scannedEpcs, int $instanceId): array
+    public function findByTag(int $instanceId, string $rfidTag): ?array
     {
-        // Alle aktiven Tags der Instanz
-        $sql = "SELECT rt.tag_epc, a.assets_id, a.assets_tag, at.assetTypes_name
-                FROM rfid_tags rt
-                JOIN assets a ON rt.asset_id = a.assets_id
-                JOIN assetTypes at ON a.assetTypes_id = at.assetTypes_id
-                WHERE rt.status = ? AND a.assets_deleted = 0
-                AND at.instances_id = ?";
-        $allTags = $this->db->rawQuery($sql, [self::TAG_STATUS_ACTIVE, $instanceId]) ?: [];
+        $rfidTag = trim($rfidTag);
 
-        $expectedEpcs = array_column($allTags, 'tag_epc');
-        $scannedUpper = array_map('strtoupper', $scannedEpcs);
-
-        $present = [];
-        $missing = [];
-        $unexpected = [];
-
-        foreach ($allTags as $tag) {
-            if (in_array($tag['tag_epc'], $scannedUpper)) {
-                $present[] = $tag;
-            } else {
-                $missing[] = $tag;
-            }
-        }
-
-        foreach ($scannedUpper as $epc) {
-            if (!in_array($epc, $expectedEpcs)) {
-                $unexpected[] = $epc;
-            }
-        }
-
-        return [
-            'total_expected' => count($allTags),
-            'total_scanned' => count($scannedEpcs),
-            'present' => count($present),
-            'missing' => $missing,
-            'unexpected' => $unexpected,
-            'match_rate' => count($allTags) > 0
-                ? round(count($present) / count($allTags) * 100, 1)
-                : 100,
-        ];
-    }
-
-    /**
-     * Gateway registrieren/aktualisieren
-     */
-    public function registerGateway(int $instanceId, string $gatewayId, string $name, string $location = ''): array
-    {
-        $this->db->where('gateway_id', $gatewayId);
+        // Find asset by RFID tag
+        $this->db->where('asset_definableFields_1', $rfidTag);
         $this->db->where('instances_id', $instanceId);
-        $existing = $this->db->getOne('rfid_gateways', ['id']);
+        $asset = $this->db->getOne('assets', null, ['assets_id', 'assets_name', 'assetTypes_id', 'asset_definableFields_1', 'asset_definableFields_2', 'asset_definableFields_3', 'asset_definableFields_4', 'asset_definableFields_5']);
 
-        $data = [
-            'instances_id' => $instanceId,
-            'gateway_id' => $gatewayId,
-            'name' => $name,
-            'location' => $location,
-            'last_seen_at' => date('Y-m-d H:i:s'),
-            'active' => 1,
-        ];
-
-        if ($existing) {
-            $this->db->where('id', $existing['id']);
-            $this->db->update('rfid_gateways', $data);
-            return ['success' => true, 'id' => $existing['id']];
+        if (!$asset) {
+            return null;
         }
 
-        $data['created_at'] = date('Y-m-d H:i:s');
-        $id = $this->db->insert('rfid_gateways', $data);
-        return $id ? ['success' => true, 'id' => $id] : ['success' => false, 'error' => 'Fehler'];
+        // Get asset type
+        $this->db->where('assetTypes_id', $asset['assetTypes_id']);
+        $assetType = $this->db->getOne('assetTypes', null, ['assetTypes_name']);
+
+        $asset['type_name'] = $assetType ? $assetType['assetTypes_name'] : 'Unknown';
+
+        // Get current assignment if active
+        $this->db->where('assets_id', $asset['assets_id']);
+        $this->db->where('assetsAssignments_end', null);
+        $this->db->orderBy('assetsAssignments_id', 'DESC');
+        $assignment = $this->db->getOne('assetsAssignments', null, ['assetsAssignments_id', 'projects_id', 'assetsAssignments_start']);
+
+        $asset['current_assignment'] = $assignment ?: null;
+        $asset['status'] = $assignment ? 'checked_out' : 'available';
+
+        return $asset;
     }
 
     /**
-     * ZPL-Label mit RFID-Tag fuer Zebra-Drucker
+     * Bulk lookup multiple RFID tags
+     *
+     * @param int $instanceId Instance ID
+     * @param array $rfidTags Array of RFID tags
+     * @return array Lookup results
      */
-    public function generateRfidLabel(int $assetId): ?string
+    public function bulkLookup(int $instanceId, array $rfidTags): array
     {
-        $sql = "SELECT a.assets_tag, at.assetTypes_name, rt.tag_epc
-                FROM assets a
-                JOIN assetTypes at ON a.assetTypes_id = at.assetTypes_id
-                LEFT JOIN rfid_tags rt ON rt.asset_id = a.assets_id AND rt.status = ?
-                WHERE a.assets_id = ? AND a.assets_deleted = 0";
-        $asset = $this->db->rawQuery($sql, [self::TAG_STATUS_ACTIVE, $assetId]);
-        if (!$asset) return null;
-        $asset = $asset[0];
+        $results = [];
 
-        $tag = $asset['assets_tag'] ?? '';
-        $name = $asset['assetTypes_name'] ?? '';
-        $epc = $asset['tag_epc'] ?? '';
-
-        // ZPL mit RFID-Encoding
-        $zpl = "^XA\n";
-        $zpl .= "^CF0,30\n";
-        $zpl .= "^FO50,30^FD{$name}^FS\n";
-        $zpl .= "^CF0,25\n";
-        $zpl .= "^FO50,70^FDID: {$tag}^FS\n";
-        if ($epc) {
-            $zpl .= "^FO50,100^FDRFID: {$epc}^FS\n";
-            // RFID-Tag schreiben
-            $zpl .= "^RFW,H^FD{$epc}^FS\n";
+        foreach ($rfidTags as $tag) {
+            $asset = $this->findByTag($instanceId, $tag);
+            $results[$tag] = $asset;
         }
-        $zpl .= "^FO50,140^BQN,2,4^FDMA,{$tag}^FS\n"; // QR-Code
-        $zpl .= "^XZ\n";
 
-        return $zpl;
+        return $results;
+    }
+
+    /**
+     * Process a single RFID scan
+     *
+     * @param int $instanceId Instance ID
+     * @param string $rfidTag RFID EPC tag
+     * @param string $action Action: checkout, checkin, inventory, locate
+     * @param int $userId User ID
+     * @param int|null $projectId Project ID (required for checkout)
+     * @return array Result with keys: success, asset, message, action_taken
+     */
+    public function processScan(int $instanceId, string $rfidTag, string $action, int $userId, ?int $projectId = null): array
+    {
+        $asset = $this->findByTag($instanceId, $rfidTag);
+
+        if (!$asset) {
+            return [
+                'success' => false,
+                'asset' => null,
+                'message' => 'Asset not found',
+                'action_taken' => null,
+            ];
+        }
+
+        switch ($action) {
+            case 'checkout':
+                if (!$projectId) {
+                    return [
+                        'success' => false,
+                        'asset' => $asset,
+                        'message' => 'Project ID required for checkout',
+                        'action_taken' => null,
+                    ];
+                }
+
+                if ($asset['status'] === 'checked_out') {
+                    return [
+                        'success' => false,
+                        'asset' => $asset,
+                        'message' => 'Asset already checked out',
+                        'action_taken' => null,
+                    ];
+                }
+
+                $result = $this->checkOut($instanceId, $asset['assets_id'], $projectId, $userId);
+                return $result;
+
+            case 'checkin':
+                if ($asset['status'] !== 'checked_out') {
+                    return [
+                        'success' => false,
+                        'asset' => $asset,
+                        'message' => 'Asset not currently checked out',
+                        'action_taken' => null,
+                    ];
+                }
+
+                $result = $this->checkIn($instanceId, $asset['assets_id'], $userId);
+                return $result;
+
+            case 'locate':
+                return [
+                    'success' => true,
+                    'asset' => $asset,
+                    'message' => 'Asset located',
+                    'action_taken' => 'locate',
+                ];
+
+            case 'inventory':
+                return [
+                    'success' => true,
+                    'asset' => $asset,
+                    'message' => 'Asset recorded for inventory',
+                    'action_taken' => 'inventory',
+                ];
+
+            default:
+                return [
+                    'success' => false,
+                    'asset' => null,
+                    'message' => 'Invalid action',
+                    'action_taken' => null,
+                ];
+        }
+    }
+
+    /**
+     * Check asset out to a project
+     *
+     * @param int $instanceId Instance ID
+     * @param int $assetId Asset ID
+     * @param int $projectId Project ID
+     * @param int $userId User ID
+     * @return array Result
+     */
+    public function checkOut(int $instanceId, int $assetId, int $projectId, int $userId): array
+    {
+        // Get asset details
+        $this->db->where('assets_id', $assetId);
+        $asset = $this->db->getOne('assets', null, ['assets_id', 'assets_name', 'asset_definableFields_1']);
+
+        if (!$asset) {
+            return [
+                'success' => false,
+                'asset' => null,
+                'message' => 'Asset not found',
+                'action_taken' => null,
+            ];
+        }
+
+        // Create assignment
+        $assignmentId = $this->db->insert('assetsAssignments', [
+            'assets_id' => $assetId,
+            'projects_id' => $projectId,
+            'instances_id' => $instanceId,
+            'assetsAssignments_start' => date('Y-m-d H:i:s'),
+            'assetsAssignments_end' => null,
+        ]);
+
+        if (!$assignmentId) {
+            return [
+                'success' => false,
+                'asset' => $asset,
+                'message' => 'Failed to create assignment',
+                'action_taken' => null,
+            ];
+        }
+
+        // Log scan
+        $this->logScan($instanceId, $assetId, $asset['asset_definableFields_1'], 'checkout', $userId, $projectId);
+
+        return [
+            'success' => true,
+            'asset' => $asset,
+            'message' => 'Asset checked out successfully',
+            'action_taken' => 'checkout',
+        ];
+    }
+
+    /**
+     * Check asset back in from a project
+     *
+     * @param int $instanceId Instance ID
+     * @param int $assetId Asset ID
+     * @param int $userId User ID
+     * @return array Result
+     */
+    public function checkIn(int $instanceId, int $assetId, int $userId): array
+    {
+        // Get asset details
+        $this->db->where('assets_id', $assetId);
+        $asset = $this->db->getOne('assets', null, ['assets_id', 'assets_name', 'asset_definableFields_1']);
+
+        if (!$asset) {
+            return [
+                'success' => false,
+                'asset' => null,
+                'message' => 'Asset not found',
+                'action_taken' => null,
+            ];
+        }
+
+        // Find active assignment
+        $this->db->where('assets_id', $assetId);
+        $this->db->where('assetsAssignments_end', null);
+        $this->db->orderBy('assetsAssignments_id', 'DESC');
+        $assignment = $this->db->getOne('assetsAssignments');
+
+        if (!$assignment) {
+            return [
+                'success' => false,
+                'asset' => $asset,
+                'message' => 'No active assignment found',
+                'action_taken' => null,
+            ];
+        }
+
+        // End assignment
+        $this->db->where('assetsAssignments_id', $assignment['assetsAssignments_id']);
+        $updated = $this->db->update('assetsAssignments', [
+            'assetsAssignments_end' => date('Y-m-d H:i:s'),
+        ]);
+
+        if (!$updated) {
+            return [
+                'success' => false,
+                'asset' => $asset,
+                'message' => 'Failed to end assignment',
+                'action_taken' => null,
+            ];
+        }
+
+        // Log scan
+        $this->logScan($instanceId, $assetId, $asset['asset_definableFields_1'], 'checkin', $userId, $assignment['projects_id']);
+
+        return [
+            'success' => true,
+            'asset' => $asset,
+            'message' => 'Asset checked in successfully',
+            'action_taken' => 'checkin',
+        ];
+    }
+
+    /**
+     * Log a scan event to history
+     *
+     * @param int $instanceId Instance ID
+     * @param int $assetId Asset ID
+     * @param string|null $rfidTag RFID tag
+     * @param string $action Action performed
+     * @param int $userId User ID
+     * @param int|null $projectId Project ID
+     * @return void
+     */
+    public function logScan(int $instanceId, int $assetId, ?string $rfidTag, string $action, int $userId, ?int $projectId = null): void
+    {
+        // Find or create barcode record for this RFID tag
+        $barcode = null;
+        if ($rfidTag) {
+            $this->db->where('assetsBarcodes_code', $rfidTag);
+            $this->db->where('assetTypes_id', null);
+            $barcode = $this->db->getOne('assetsBarcodes');
+
+            if (!$barcode) {
+                $barcodeId = $this->db->insert('assetsBarcodes', [
+                    'assetsBarcodes_code' => $rfidTag,
+                    'assetsBarcodes_type' => 'rfid',
+                    'assetTypes_id' => null,
+                ]);
+                $barcode = ['assetsBarcodes_id' => $barcodeId];
+            }
+        }
+
+        // Log scan
+        $this->db->insert('assetsBarcodesScans', [
+            'assets_id' => $assetId,
+            'assetsBarcodes_id' => $barcode['assetsBarcodes_id'] ?? null,
+            'assetsBarcodesScans_timestamp' => date('Y-m-d H:i:s'),
+            'assetsBarcodesScans_action' => $action,
+            'users_userid' => $userId,
+            'projects_id' => $projectId,
+            'instances_id' => $instanceId,
+        ]);
+    }
+
+    /**
+     * Start a new inventory session
+     *
+     * @param int $instanceId Instance ID
+     * @param int $userId User ID
+     * @return int Inventory session ID
+     */
+    public function startInventory(int $instanceId, int $userId): int
+    {
+        $sessionId = $this->db->insert('rfidInventorySessions', [
+            'instances_id' => $instanceId,
+            'users_userid' => $userId,
+            'session_started' => date('Y-m-d H:i:s'),
+            'session_ended' => null,
+        ]);
+
+        return $sessionId;
+    }
+
+    /**
+     * Process a tag scan during inventory
+     *
+     * @param int $sessionId Inventory session ID
+     * @param string $rfidTag RFID tag
+     * @return array Asset info and found status
+     */
+    public function processInventoryScan(int $sessionId, string $rfidTag): array
+    {
+        // Get session details
+        $this->db->where('rfidInventorySessions_id', $sessionId);
+        $session = $this->db->getOne('rfidInventorySessions');
+
+        if (!$session) {
+            return [
+                'success' => false,
+                'message' => 'Session not found',
+                'asset' => null,
+            ];
+        }
+
+        $asset = $this->findByTag($session['instances_id'], $rfidTag);
+
+        if (!$asset) {
+            // Unknown tag - log as unknown
+            $this->db->insert('rfidInventoryScans', [
+                'rfidInventorySessions_id' => $sessionId,
+                'assets_id' => null,
+                'rfid_tag' => trim($rfidTag),
+                'found' => 0,
+                'scan_timestamp' => date('Y-m-d H:i:s'),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Unknown tag',
+                'asset' => null,
+            ];
+        }
+
+        // Known asset - log as found
+        $this->db->insert('rfidInventoryScans', [
+            'rfidInventorySessions_id' => $sessionId,
+            'assets_id' => $asset['assets_id'],
+            'rfid_tag' => trim($rfidTag),
+            'found' => 1,
+            'scan_timestamp' => date('Y-m-d H:i:s'),
+        ]);
+
+        return [
+            'success' => true,
+            'message' => 'Asset recorded',
+            'asset' => $asset,
+        ];
+    }
+
+    /**
+     * Complete inventory session and get results
+     *
+     * @param int $sessionId Inventory session ID
+     * @return array Found assets, missing assets, unknown tags
+     */
+    public function completeInventory(int $sessionId): array
+    {
+        // Get session details
+        $this->db->where('rfidInventorySessions_id', $sessionId);
+        $session = $this->db->getOne('rfidInventorySessions');
+
+        if (!$session) {
+            return [
+                'success' => false,
+                'message' => 'Session not found',
+                'found_assets' => [],
+                'missing_assets' => [],
+                'unknown_tags' => [],
+            ];
+        }
+
+        // End session
+        $this->db->where('rfidInventorySessions_id', $sessionId);
+        $this->db->update('rfidInventorySessions', [
+            'session_ended' => date('Y-m-d H:i:s'),
+        ]);
+
+        // Get all scanned assets
+        $this->db->where('rfidInventorySessions_id', $sessionId);
+        $this->db->where('found', 1);
+        $scannedAssets = $this->db->get('rfidInventoryScans') ?: [];
+
+        $scannedAssetIds = array_column($scannedAssets, 'assets_id');
+        $scannedAssetIds = array_filter($scannedAssetIds);
+
+        // Get unknown tags
+        $this->db->where('rfidInventorySessions_id', $sessionId);
+        $this->db->where('assets_id', null);
+        $unknownScans = $this->db->get('rfidInventoryScans') ?: [];
+
+        $unknownTags = array_column($unknownScans, 'rfid_tag');
+
+        // Get all assets in instance (to find missing ones)
+        $this->db->where('instances_id', $session['instances_id']);
+        $this->db->where('asset_definableFields_1', null, '!=');
+        $allAssetsWithRfid = $this->db->get('assets') ?: [];
+
+        $allAssetIds = array_column($allAssetsWithRfid, 'assets_id');
+        $missingAssetIds = array_diff($allAssetIds, $scannedAssetIds);
+
+        // Get missing asset details
+        $missingAssets = [];
+        if (!empty($missingAssetIds)) {
+            foreach ($missingAssetIds as $id) {
+                $this->db->where('assets_id', $id);
+                $asset = $this->db->getOne('assets');
+                if ($asset) {
+                    $missingAssets[] = $asset;
+                }
+            }
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Inventory completed',
+            'found_assets' => array_values(array_filter($scannedAssets, fn($s) => !empty($s['assets_id']))),
+            'missing_assets' => $missingAssets,
+            'unknown_tags' => $unknownTags,
+        ];
     }
 }
