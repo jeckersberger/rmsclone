@@ -1,0 +1,347 @@
+<?php
+/**
+ * ReportingService — Zentrale Berichterstellung
+ *
+ * Liefert:
+ * - P&L (Profit & Loss) nach Monat
+ * - Asset-Auslastung (Utilization) nach Typ/Kategorie
+ * - A/R Aging (Forderungsalter-Analyse)
+ * - Revenue per Client Ranking
+ * - Monthly Trend (beliebiger Zeitraum)
+ *
+ * Nutzung:
+ *   $report = new ReportingService($DBLIB, $instanceId);
+ *   $pnl = $report->profitAndLoss('2025-01-01', '2025-12-31');
+ */
+class ReportingService
+{
+    private $db;
+    private int $instanceId;
+
+    public function __construct($db, int $instanceId)
+    {
+        $this->db = $db;
+        $this->instanceId = $instanceId;
+    }
+
+    /**
+     * Profit & Loss — monatliche Aufschluesselung
+     *
+     * @param string $from  Startdatum (Y-m-d)
+     * @param string $to    Enddatum (Y-m-d)
+     * @return array ['months' => [...], 'totals' => [...]]
+     */
+    public function profitAndLoss(string $from, string $to): array
+    {
+        // Revenue (Invoices)
+        $this->db->where('de.instances_id', $this->instanceId);
+        $this->db->where('de.document_exports_deleted', 0);
+        $this->db->where('de.document_exports_type', 'invoice');
+        $this->db->where('de.document_exports_date', $from, '>=');
+        $this->db->where('de.document_exports_date', $to, '<=');
+        $this->db->groupBy("DATE_FORMAT(de.document_exports_date, '%Y-%m')");
+        $this->db->orderBy("month_key", "ASC");
+        $revenueRows = $this->db->get('document_exports de', null, [
+            "DATE_FORMAT(de.document_exports_date, '%Y-%m') AS month_key",
+            "SUM(de.document_exports_net) AS net_revenue",
+            "SUM(de.document_exports_gross) AS gross_revenue",
+            "SUM(de.document_exports_tax) AS tax_amount",
+            "COUNT(*) AS invoice_count"
+        ]);
+
+        // Credit notes
+        $this->db->where('de.instances_id', $this->instanceId);
+        $this->db->where('de.document_exports_deleted', 0);
+        $this->db->where('de.document_exports_type', 'credit');
+        $this->db->where('de.document_exports_date', $from, '>=');
+        $this->db->where('de.document_exports_date', $to, '<=');
+        $this->db->groupBy("DATE_FORMAT(de.document_exports_date, '%Y-%m')");
+        $creditRows = $this->db->get('document_exports de', null, [
+            "DATE_FORMAT(de.document_exports_date, '%Y-%m') AS month_key",
+            "SUM(de.document_exports_gross) AS credit_total",
+            "COUNT(*) AS credit_count"
+        ]);
+
+        // Index credit notes by month
+        $credits = [];
+        foreach (($creditRows ?: []) as $cr) {
+            $credits[$cr['month_key']] = $cr;
+        }
+
+        $months = [];
+        $totals = ['net_revenue' => 0, 'gross_revenue' => 0, 'tax' => 0, 'credits' => 0, 'net_after_credits' => 0, 'invoices' => 0];
+
+        foreach (($revenueRows ?: []) as $row) {
+            $key = $row['month_key'];
+            $creditAmount = isset($credits[$key]) ? (float)$credits[$key]['credit_total'] : 0;
+            $netAfterCredits = (float)$row['gross_revenue'] - $creditAmount;
+
+            $months[] = [
+                'month' => $key,
+                'label' => $this->monthLabel($key),
+                'net_revenue' => (float)$row['net_revenue'] / 100,
+                'gross_revenue' => (float)$row['gross_revenue'] / 100,
+                'tax' => (float)$row['tax_amount'] / 100,
+                'credits' => $creditAmount / 100,
+                'net_after_credits' => $netAfterCredits / 100,
+                'invoice_count' => (int)$row['invoice_count']
+            ];
+
+            $totals['net_revenue'] += (float)$row['net_revenue'] / 100;
+            $totals['gross_revenue'] += (float)$row['gross_revenue'] / 100;
+            $totals['tax'] += (float)$row['tax_amount'] / 100;
+            $totals['credits'] += $creditAmount / 100;
+            $totals['net_after_credits'] += $netAfterCredits / 100;
+            $totals['invoices'] += (int)$row['invoice_count'];
+        }
+
+        return ['months' => $months, 'totals' => $totals, 'period' => ['from' => $from, 'to' => $to]];
+    }
+
+    /**
+     * Asset-Auslastung — gruppiert nach AssetType
+     *
+     * @param string $from  Startdatum
+     * @param string $to    Enddatum
+     * @return array
+     */
+    public function assetUtilization(string $from, string $to): array
+    {
+        // Total assets per type
+        $this->db->where('a.instances_id', $this->instanceId);
+        $this->db->where('a.assets_deleted', 0);
+        $this->db->join('assetTypes at', 'a.assetTypes_id=at.assetTypes_id', 'LEFT');
+        $this->db->groupBy('at.assetTypes_id');
+        $this->db->orderBy('total_assets', 'DESC');
+        $assetCounts = $this->db->get('assets a', null, [
+            'at.assetTypes_id',
+            'at.assetTypes_name',
+            'COUNT(*) AS total_assets'
+        ]);
+
+        // Assignments in period
+        $this->db->where('aa.instances_id', $this->instanceId);
+        $this->db->join('assets a', 'aa.assets_id=a.assets_id', 'INNER');
+        $this->db->join('assetTypes at', 'a.assetTypes_id=at.assetTypes_id', 'LEFT');
+        $this->db->join('projects p', 'aa.projects_id=p.projects_id', 'LEFT');
+        $this->db->where('(p.projects_dates_use_start <= ? AND p.projects_dates_use_end >= ?)', [$to, $from]);
+        $this->db->groupBy('at.assetTypes_id');
+        $assignmentCounts = $this->db->get('assetsAssignments aa', null, [
+            'at.assetTypes_id',
+            'COUNT(DISTINCT a.assets_id) AS used_assets',
+            'COUNT(*) AS assignment_count'
+        ]);
+
+        // Index assignments
+        $assignments = [];
+        foreach (($assignmentCounts ?: []) as $ac) {
+            $assignments[$ac['assetTypes_id']] = $ac;
+        }
+
+        $result = [];
+        $totalAssets = 0;
+        $totalUsed = 0;
+        foreach (($assetCounts ?: []) as $ac) {
+            $typeId = $ac['assetTypes_id'];
+            $total = (int)$ac['total_assets'];
+            $used = isset($assignments[$typeId]) ? (int)$assignments[$typeId]['used_assets'] : 0;
+            $assigns = isset($assignments[$typeId]) ? (int)$assignments[$typeId]['assignment_count'] : 0;
+            $utilization = $total > 0 ? round(($used / $total) * 100, 1) : 0;
+
+            $result[] = [
+                'assetType_id' => $typeId,
+                'name' => $ac['assetTypes_name'] ?: 'Unbekannt',
+                'total_assets' => $total,
+                'used_assets' => $used,
+                'idle_assets' => $total - $used,
+                'assignments' => $assigns,
+                'utilization_pct' => $utilization
+            ];
+
+            $totalAssets += $total;
+            $totalUsed += $used;
+        }
+
+        return [
+            'types' => $result,
+            'summary' => [
+                'total_assets' => $totalAssets,
+                'total_used' => $totalUsed,
+                'total_idle' => $totalAssets - $totalUsed,
+                'avg_utilization' => $totalAssets > 0 ? round(($totalUsed / $totalAssets) * 100, 1) : 0
+            ],
+            'period' => ['from' => $from, 'to' => $to]
+        ];
+    }
+
+    /**
+     * Accounts Receivable Aging — detailliert
+     *
+     * @return array Buckets mit einzelnen Rechnungen
+     */
+    public function arAging(): array
+    {
+        $today = date('Y-m-d');
+
+        $this->db->where('de.instances_id', $this->instanceId);
+        $this->db->where('de.document_exports_deleted', 0);
+        $this->db->where('de.document_exports_type', 'invoice');
+        $this->db->where('de.document_exports_status', 'unpaid');
+        $this->db->join('projects p', 'de.projects_id=p.projects_id', 'LEFT');
+        $this->db->join('clients c', 'p.clients_id=c.clients_id', 'LEFT');
+        $this->db->orderBy('de.document_exports_date', 'ASC');
+        $invoices = $this->db->get('document_exports de', null, [
+            'de.document_exports_id', 'de.document_exports_number', 'de.document_exports_date',
+            'de.document_exports_gross', 'de.document_exports_dueDate',
+            'p.projects_id', 'p.projects_name', 'c.clients_name', 'c.clients_id'
+        ]);
+
+        $buckets = [
+            '0-30' => ['label' => '0-30 Tage', 'invoices' => [], 'total' => 0, 'count' => 0],
+            '31-60' => ['label' => '31-60 Tage', 'invoices' => [], 'total' => 0, 'count' => 0],
+            '61-90' => ['label' => '61-90 Tage', 'invoices' => [], 'total' => 0, 'count' => 0],
+            '90+' => ['label' => 'Ueber 90 Tage', 'invoices' => [], 'total' => 0, 'count' => 0],
+        ];
+
+        $grandTotal = 0;
+        foreach (($invoices ?: []) as $inv) {
+            $dueDate = $inv['document_exports_dueDate'] ?: $inv['document_exports_date'];
+            $daysOld = max(0, (int)((strtotime($today) - strtotime($dueDate)) / 86400));
+            $amount = (float)$inv['document_exports_gross'] / 100;
+
+            if ($daysOld <= 30) $bucket = '0-30';
+            elseif ($daysOld <= 60) $bucket = '31-60';
+            elseif ($daysOld <= 90) $bucket = '61-90';
+            else $bucket = '90+';
+
+            $buckets[$bucket]['invoices'][] = [
+                'id' => $inv['document_exports_id'],
+                'number' => $inv['document_exports_number'],
+                'date' => $inv['document_exports_date'],
+                'due_date' => $dueDate,
+                'days_overdue' => $daysOld,
+                'amount' => $amount,
+                'client' => $inv['clients_name'],
+                'client_id' => $inv['clients_id'],
+                'project' => $inv['projects_name'],
+                'project_id' => $inv['projects_id'],
+            ];
+            $buckets[$bucket]['total'] += $amount;
+            $buckets[$bucket]['count']++;
+            $grandTotal += $amount;
+        }
+
+        return [
+            'buckets' => $buckets,
+            'grand_total' => $grandTotal,
+            'total_invoices' => count($invoices ?: [])
+        ];
+    }
+
+    /**
+     * Revenue per Client — Top N Kunden nach Umsatz
+     *
+     * @param string $from
+     * @param string $to
+     * @param int $limit
+     * @return array
+     */
+    public function revenuePerClient(string $from, string $to, int $limit = 20): array
+    {
+        $this->db->where('de.instances_id', $this->instanceId);
+        $this->db->where('de.document_exports_deleted', 0);
+        $this->db->where('de.document_exports_type', 'invoice');
+        $this->db->where('de.document_exports_date', $from, '>=');
+        $this->db->where('de.document_exports_date', $to, '<=');
+        $this->db->join('projects p', 'de.projects_id=p.projects_id', 'LEFT');
+        $this->db->join('clients c', 'p.clients_id=c.clients_id', 'LEFT');
+        $this->db->groupBy('c.clients_id');
+        $this->db->orderBy('total_revenue', 'DESC');
+        $rows = $this->db->get('document_exports de', $limit, [
+            'c.clients_id', 'c.clients_name',
+            'SUM(de.document_exports_gross) AS total_revenue',
+            'SUM(de.document_exports_net) AS net_revenue',
+            'COUNT(*) AS invoice_count'
+        ]);
+
+        $result = [];
+        foreach (($rows ?: []) as $row) {
+            $result[] = [
+                'client_id' => $row['clients_id'],
+                'name' => $row['clients_name'] ?: 'Unbekannt',
+                'gross_revenue' => (float)$row['total_revenue'] / 100,
+                'net_revenue' => (float)$row['net_revenue'] / 100,
+                'invoice_count' => (int)$row['invoice_count']
+            ];
+        }
+
+        return ['clients' => $result, 'period' => ['from' => $from, 'to' => $to]];
+    }
+
+    /**
+     * Monatlicher Revenue-Trend (fuer Charts)
+     *
+     * @param int $months  Anzahl Monate zurueck
+     * @return array
+     */
+    public function monthlyRevenueTrend(int $months = 12): array
+    {
+        $from = date('Y-m-01', strtotime("-{$months} months"));
+        $to = date('Y-m-d');
+
+        $this->db->where('de.instances_id', $this->instanceId);
+        $this->db->where('de.document_exports_deleted', 0);
+        $this->db->where('de.document_exports_type', 'invoice');
+        $this->db->where('de.document_exports_date', $from, '>=');
+        $this->db->where('de.document_exports_date', $to, '<=');
+        $this->db->groupBy("DATE_FORMAT(de.document_exports_date, '%Y-%m')");
+        $this->db->orderBy('month_key', 'ASC');
+        $rows = $this->db->get('document_exports de', null, [
+            "DATE_FORMAT(de.document_exports_date, '%Y-%m') AS month_key",
+            "SUM(de.document_exports_gross) AS revenue",
+            "COUNT(*) AS invoice_count"
+        ]);
+
+        $trend = [];
+        foreach (($rows ?: []) as $row) {
+            $trend[] = [
+                'month' => $row['month_key'],
+                'label' => $this->monthLabel($row['month_key']),
+                'revenue' => (float)$row['revenue'] / 100,
+                'invoices' => (int)$row['invoice_count']
+            ];
+        }
+
+        return $trend;
+    }
+
+    /**
+     * Export-Helper: Array zu CSV-String
+     *
+     * @param array $data     Flaches Array von Rows
+     * @param array $headers  Spaltenkoepfe
+     * @return string         CSV content
+     */
+    public static function toCsv(array $data, array $headers): string
+    {
+        $output = fopen('php://temp', 'r+');
+        // BOM for Excel UTF-8 compatibility
+        fwrite($output, "\xEF\xBB\xBF");
+        fputcsv($output, $headers, ';');
+        foreach ($data as $row) {
+            fputcsv($output, $row, ';');
+        }
+        rewind($output);
+        $csv = stream_get_contents($output);
+        fclose($output);
+        return $csv;
+    }
+
+    private function monthLabel(string $yearMonth): string
+    {
+        $months = ['01' => 'Jan', '02' => 'Feb', '03' => 'Maer', '04' => 'Apr', '05' => 'Mai', '06' => 'Jun',
+                    '07' => 'Jul', '08' => 'Aug', '09' => 'Sep', '10' => 'Okt', '11' => 'Nov', '12' => 'Dez'];
+        $parts = explode('-', $yearMonth);
+        return ($months[$parts[1]] ?? $parts[1]) . ' ' . $parts[0];
+    }
+}

@@ -68,4 +68,84 @@ foreach (($assets ?: []) as $a) {
     ];
 }
 
-finish(true, null, ["results" => $results]);
+// ── Invoices / Documents ──
+if ($AUTH->instancePermissionCheck("PROJECTS:VIEW")) {
+    $escapedTerm = $bCMS->escapeLikeWildcards($term);
+    $DBLIB->where("de.instances_id", $instanceId);
+    $DBLIB->where("de.document_exports_deleted", 0);
+    $DBLIB->join("projects p", "de.projects_id=p.projects_id", "LEFT");
+    $DBLIB->join("clients c", "p.clients_id=c.clients_id", "LEFT");
+    $DBLIB->where("(de.document_exports_number LIKE ? OR p.projects_name LIKE ? OR c.clients_name LIKE ?)", [
+        '%' . $escapedTerm . '%', '%' . $escapedTerm . '%', '%' . $escapedTerm . '%'
+    ]);
+    $DBLIB->orderBy("de.document_exports_date", "DESC");
+    $docs = $DBLIB->get("document_exports de", 5, [
+        "de.document_exports_id", "de.document_exports_number", "de.document_exports_type",
+        "de.document_exports_gross", "p.projects_name", "c.clients_name"
+    ]);
+    $typeIcons = ['invoice' => 'fa-file-invoice-dollar', 'quote' => 'fa-file-alt', 'credit' => 'fa-file-medical-alt'];
+    $typeLabels = ['invoice' => 'Rechnung', 'quote' => 'Angebot', 'credit' => 'Gutschrift'];
+    foreach (($docs ?: []) as $d) {
+        $docType = $d['document_exports_type'] ?? 'invoice';
+        $results[] = [
+            'type' => 'document',
+            'icon' => 'fas ' . ($typeIcons[$docType] ?? 'fa-file'),
+            'badge' => 'warning',
+            'title' => ($typeLabels[$docType] ?? $docType) . ' ' . ($d['document_exports_number'] ?: '#' . $d['document_exports_id']),
+            'subtitle' => ($d['clients_name'] ?: ($d['projects_name'] ?: '')) . ($d['document_exports_gross'] ? ' | ' . number_format($d['document_exports_gross'] / 100, 2, ',', '.') . ' EUR' : ''),
+            'url' => '/project/?id=' . $d['document_exports_id'] . '&tab=documents'
+        ];
+    }
+}
+
+// ── Maintenance Jobs ──
+if ($AUTH->instancePermissionCheck("MAINTENANCE:VIEW")) {
+    $escapedTerm = $bCMS->escapeLikeWildcards($term);
+    $DBLIB->where("maintenanceJobs.instances_id", $instanceId);
+    $DBLIB->where("maintenanceJobs.maintenanceJobs_deleted", 0);
+    $DBLIB->where("(maintenanceJobs.maintenanceJobs_title LIKE ? OR maintenanceJobs.maintenanceJobs_faultDescription LIKE ?)", [
+        '%' . $escapedTerm . '%', '%' . $escapedTerm . '%'
+    ]);
+    $DBLIB->orderBy("maintenanceJobs.maintenanceJobs_created", "DESC");
+    $jobs = $DBLIB->get("maintenanceJobs", 5, [
+        "maintenanceJobs.maintenanceJobs_id", "maintenanceJobs.maintenanceJobs_title",
+        "maintenanceJobs.maintenanceJobs_priority", "maintenanceJobs.maintenanceJobs_status"
+    ]);
+    $prioColors = [1 => 'secondary', 2 => 'info', 3 => 'warning', 4 => 'danger', 5 => 'danger'];
+    foreach (($jobs ?: []) as $j) {
+        $results[] = [
+            'type' => 'maintenance',
+            'icon' => 'fas fa-tools',
+            'badge' => $prioColors[$j['maintenanceJobs_priority']] ?? 'secondary',
+            'title' => $j['maintenanceJobs_title'],
+            'subtitle' => 'Status: ' . ($j['maintenanceJobs_status'] ?: 'Offen'),
+            'url' => '/maintenance/job.php?id=' . $j['maintenanceJobs_id']
+        ];
+    }
+}
+
+// ── Users ──
+if ($AUTH->instancePermissionCheck("USERS:VIEW")) {
+    $escapedTerm = $bCMS->escapeLikeWildcards($term);
+    $DBLIB->where("users.users_deleted", 0);
+    $DBLIB->where("(users.users_name1 LIKE ? OR users.users_name2 LIKE ? OR users.users_email LIKE ? OR users.users_username LIKE ?)", [
+        '%' . $escapedTerm . '%', '%' . $escapedTerm . '%', '%' . $escapedTerm . '%', '%' . $escapedTerm . '%'
+    ]);
+    $DBLIB->join("userInstances", "users.users_userid=userInstances.users_userid AND userInstances.instances_id = " . (int)$instanceId, "INNER");
+    $DBLIB->orderBy("users.users_name1", "ASC");
+    $users = $DBLIB->get("users", 5, [
+        "users.users_userid", "users.users_name1", "users.users_name2", "users.users_email"
+    ]);
+    foreach (($users ?: []) as $u) {
+        $results[] = [
+            'type' => 'user',
+            'icon' => 'fas fa-user',
+            'badge' => 'info',
+            'title' => trim(($u['users_name1'] ?: '') . ' ' . ($u['users_name2'] ?: '')),
+            'subtitle' => $u['users_email'] ?: '',
+            'url' => '/user.php?id=' . $u['users_userid']
+        ];
+    }
+}
+
+finish(true, null, ["results" => $results, "total" => count($results)]);

@@ -2,7 +2,118 @@
 
 {% block content %}
 
-{# ── Quick Stats Row ── #}
+{# ── Executive KPI Row ── #}
+<div class="row" id="analyticsKPIs">
+    <div class="col-lg-3 col-md-6 col-12">
+        <div class="info-box bg-gradient-primary">
+            <span class="info-box-icon"><i class="fas fa-chart-line"></i></span>
+            <div class="info-box-content">
+                <span class="info-box-text">Umsatz (MTD)</span>
+                <span class="info-box-number" id="kpiRevenueMTD">-</span>
+                <div class="progress"><div class="progress-bar" id="kpiMTDBar" style="width: 0%"></div></div>
+                <span class="progress-description" id="kpiMTDChange">Lade...</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 col-12">
+        <div class="info-box bg-gradient-success">
+            <span class="info-box-icon"><i class="fas fa-euro-sign"></i></span>
+            <div class="info-box-content">
+                <span class="info-box-text">Umsatz (YTD)</span>
+                <span class="info-box-number" id="kpiRevenueYTD">-</span>
+                <div class="progress"><div class="progress-bar" id="kpiYTDBar" style="width: 0%"></div></div>
+                <span class="progress-description" id="kpiYTDChange">Lade...</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 col-12">
+        <div class="info-box bg-gradient-warning">
+            <span class="info-box-icon"><i class="fas fa-file-invoice"></i></span>
+            <div class="info-box-content">
+                <span class="info-box-text">Offene Rechnungen</span>
+                <span class="info-box-number" id="kpiOpenInvoices">-</span>
+                <div class="progress"><div class="progress-bar" style="width: 100%"></div></div>
+                <span class="progress-description" id="kpiOpenCount">-</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 col-12">
+        <div class="info-box bg-gradient-danger">
+            <span class="info-box-icon"><i class="fas fa-exclamation-circle"></i></span>
+            <div class="info-box-content">
+                <span class="info-box-text">Ueberfaellig</span>
+                <span class="info-box-number" id="kpiOverdue">-</span>
+                <div class="progress"><div class="progress-bar" style="width: 100%"></div></div>
+                <span class="progress-description">Sofortige Aufmerksamkeit</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Charts Row: Revenue Trend + A/R Aging ── #}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card card-primary card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-chart-area"></i> Umsatzentwicklung (30 Tage)</h3>
+                <div class="card-tools">
+                    <button type="button" class="btn btn-tool" id="toggleMonthlyChart" title="12-Monats-Ansicht">
+                        <i class="fas fa-calendar-alt"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <canvas id="revenueTrendChart" height="280"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card card-warning card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-layer-group"></i> Forderungen (Aging)</h3>
+            </div>
+            <div class="card-body">
+                <canvas id="arAgingChart" height="280"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Charts Row: Cash Flow + Top Kunden + Asset Utilization ── #}
+<div class="row">
+    <div class="col-lg-4">
+        <div class="card card-success card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-money-bill-wave"></i> Cash Flow Prognose</h3>
+            </div>
+            <div class="card-body">
+                <canvas id="cashFlowChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card card-info card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-users"></i> Top 5 Kunden (YTD)</h3>
+            </div>
+            <div class="card-body">
+                <canvas id="topClientsChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card card-secondary card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-boxes"></i> Asset Nutzung (Top 10)</h3>
+            </div>
+            <div class="card-body">
+                <canvas id="assetUtilChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Quick Stats Row (Projekte) ── #}
 <div class="row" id="dashboardStats">
     <div class="col-lg-3 col-6">
         <div class="small-box bg-info">
@@ -401,6 +512,312 @@ $(document).ready(function() {
         }
 
     }, false);
+
+    // ── Executive Dashboard: Analytics Charts ──
+    var chartScript = document.createElement('script');
+    chartScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+    chartScript.onload = function() {
+        loadAnalyticsDashboard();
+    };
+    document.head.appendChild(chartScript);
+
+    function formatEuro(val) {
+        return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(val);
+    }
+    function formatEuroShort(val) {
+        if (val >= 1000000) return (val / 1000000).toFixed(1) + ' Mio \u20AC';
+        if (val >= 1000) return (val / 1000).toFixed(1) + 'k \u20AC';
+        return val.toFixed(0) + ' \u20AC';
+    }
+
+    var analyticsCharts = {};
+    var analyticsData = null;
+    var showMonthly = false;
+
+    function loadAnalyticsDashboard() {
+        ajaxcall('dashboard/analytics.php', {}, function(resp) {
+            if (!resp.response) {
+                $('#analyticsKPIs .info-box-number').text('n/a');
+                return;
+            }
+            analyticsData = resp.response;
+            renderKPIs(analyticsData.kpis);
+            renderRevenueTrend(analyticsData.revenue_trend);
+            renderArAging(analyticsData.ar_aging);
+            renderCashFlow(analyticsData.cashflow_forecast);
+            renderTopClients(analyticsData.top_clients);
+            renderAssetUtil(analyticsData.asset_utilization);
+        }, false);
+    }
+
+    function renderKPIs(kpis) {
+        if (!kpis) return;
+        $('#kpiRevenueMTD').text(formatEuro(kpis.revenue_mtd || 0));
+        $('#kpiRevenueYTD').text(formatEuro(kpis.revenue_ytd || 0));
+        $('#kpiOpenInvoices').text(formatEuro(kpis.open_invoices_total || 0));
+        $('#kpiOverdue').text(formatEuro(kpis.overdue_total || 0));
+
+        var mtdChange = kpis.revenue_mtd_change || 0;
+        var ytdChange = kpis.revenue_ytd_change || 0;
+        var mtdIcon = mtdChange >= 0 ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>';
+        var ytdIcon = ytdChange >= 0 ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>';
+        $('#kpiMTDChange').html(mtdIcon + ' ' + mtdChange.toFixed(1) + '% gg. Vormonat');
+        $('#kpiYTDChange').html(ytdIcon + ' ' + ytdChange.toFixed(1) + '% gg. Vorjahr');
+        $('#kpiOpenCount').text((kpis.open_invoices_count || 0) + ' Rechnungen offen');
+
+        // Progress bars (visual only)
+        var mtdPct = kpis.revenue_last_month > 0 ? Math.min(100, (kpis.revenue_mtd / kpis.revenue_last_month) * 100) : 50;
+        $('#kpiMTDBar').css('width', mtdPct + '%');
+        $('#kpiYTDBar').css('width', '60%');
+    }
+
+    function renderRevenueTrend(data) {
+        if (!data || data.length === 0) return;
+        var ctx = document.getElementById('revenueTrendChart').getContext('2d');
+        analyticsCharts.revenueTrend = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.map(function(d) { return d.label; }),
+                datasets: [{
+                    label: 'Umsatz',
+                    data: data.map(function(d) { return d.revenue; }),
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0,123,255,0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 2,
+                    pointHoverRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) { return formatEuro(ctx.parsed.y); }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: function(v) { return formatEuroShort(v); } }
+                    },
+                    x: {
+                        ticks: { maxTicksLimit: 10 }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderMonthlyRevenue(data) {
+        if (!data || data.length === 0) return;
+        var ctx = document.getElementById('revenueTrendChart').getContext('2d');
+        analyticsCharts.revenueTrend = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map(function(d) { return d.label; }),
+                datasets: [{
+                    label: 'Monatsumsatz',
+                    data: data.map(function(d) { return d.revenue; }),
+                    backgroundColor: 'rgba(0,123,255,0.7)',
+                    borderColor: '#007bff',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) { return formatEuro(ctx.parsed.y); }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: function(v) { return formatEuroShort(v); } }
+                    }
+                }
+            }
+        });
+    }
+
+    // Toggle between 30-day trend and 12-month view
+    $('#toggleMonthlyChart').on('click', function() {
+        if (!analyticsData) return;
+        showMonthly = !showMonthly;
+        if (analyticsCharts.revenueTrend) {
+            analyticsCharts.revenueTrend.destroy();
+        }
+        var header = $(this).closest('.card-header').find('.card-title');
+        if (showMonthly) {
+            header.html('<i class="fas fa-chart-bar"></i> Monatsumsatz (12 Monate)');
+            renderMonthlyRevenue(analyticsData.monthly_revenue);
+        } else {
+            header.html('<i class="fas fa-chart-area"></i> Umsatzentwicklung (30 Tage)');
+            renderRevenueTrend(analyticsData.revenue_trend);
+        }
+    });
+
+    function renderArAging(data) {
+        if (!data || data.length === 0) return;
+        var colors = ['#28a745', '#ffc107', '#fd7e14', '#dc3545'];
+        var ctx = document.getElementById('arAgingChart').getContext('2d');
+        analyticsCharts.arAging = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: data.map(function(d) { return d.label; }),
+                datasets: [{
+                    data: data.map(function(d) { return d.total; }),
+                    backgroundColor: colors,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { font: { size: 11 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                return ctx.label + ': ' + formatEuro(ctx.parsed) + ' (' + (data[ctx.dataIndex] ? data[ctx.dataIndex].count : 0) + ' Rg.)';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderCashFlow(data) {
+        if (!data || data.length === 0) return;
+        var ctx = document.getElementById('cashFlowChart').getContext('2d');
+        analyticsCharts.cashFlow = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map(function(d) { return d.label; }),
+                datasets: [
+                    {
+                        label: 'Erwartet',
+                        data: data.map(function(d) { return d.expected_income; }),
+                        backgroundColor: 'rgba(40,167,69,0.7)'
+                    },
+                    {
+                        label: 'Ueberfaellig',
+                        data: data.map(function(d) { return d.overdue; }),
+                        backgroundColor: 'rgba(220,53,69,0.7)'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { font: { size: 11 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) { return ctx.dataset.label + ': ' + formatEuro(ctx.parsed.y); }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: function(v) { return formatEuroShort(v); } }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderTopClients(data) {
+        if (!data || data.length === 0) return;
+        var ctx = document.getElementById('topClientsChart').getContext('2d');
+        analyticsCharts.topClients = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map(function(d) { return d.name.length > 20 ? d.name.substring(0, 18) + '...' : d.name; }),
+                datasets: [{
+                    label: 'Umsatz YTD',
+                    data: data.map(function(d) { return d.revenue; }),
+                    backgroundColor: ['#17a2b8', '#138496', '#0f6674', '#0b4852', '#072a30']
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) { return formatEuro(ctx.parsed.x) + ' (' + (data[ctx.dataIndex] ? data[ctx.dataIndex].invoices : 0) + ' Rg.)'; }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: { callback: function(v) { return formatEuroShort(v); } }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderAssetUtil(data) {
+        if (!data || data.length === 0) return;
+        var ctx = document.getElementById('assetUtilChart').getContext('2d');
+        analyticsCharts.assetUtil = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map(function(d) { return d.name.length > 18 ? d.name.substring(0, 16) + '...' : d.name; }),
+                datasets: [{
+                    label: 'Nutzungsrate %',
+                    data: data.map(function(d) { return d.avg_utilization; }),
+                    backgroundColor: data.map(function(d) {
+                        if (d.avg_utilization >= 80) return '#28a745';
+                        if (d.avg_utilization >= 50) return '#ffc107';
+                        return '#dc3545';
+                    }),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                var d = data[ctx.dataIndex];
+                                return d ? d.avg_utilization.toFixed(1) + '% (' + d.usage_count + '/' + d.asset_count + ' Assets)' : '';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: { callback: function(v) { return v + '%'; } }
+                    },
+                    x: {
+                        ticks: { font: { size: 10 } }
+                    }
+                }
+            }
+        });
+    }
 });
 </script>
 {% endblock %}

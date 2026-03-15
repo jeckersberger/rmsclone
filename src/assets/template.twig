@@ -1155,13 +1155,14 @@ console.log("Welcome to    {{ CONFIG.PROJECT_NAME|escape("js") }}version    {{ V
                         $results.html('<span class="dropdown-item text-muted"><i>{{ t("no_results") }}</i></span>').show();
                         return;
                     }
+                    var typeLabels = {project:'Projekt',client:'Kunde',asset:'Asset',document:'Dokument',maintenance:'Wartung',user:'Benutzer'};
                     var html = '';
                     data.response.results.forEach(function(r) {
                         html += '<a href="{{ CONFIG.ROOTURL }}' + r.url + '" class="dropdown-item">';
                         html += '<i class="' + r.icon + ' mr-2"></i> ';
                         html += '<span>' + r.title + '</span>';
                         if (r.subtitle) html += ' <small class="text-muted">- ' + r.subtitle + '</small>';
-                        html += '<span class="float-right badge bg-' + r.badge + '">' + r.type + '</span>';
+                        html += '<span class="float-right badge bg-' + r.badge + '">' + (typeLabels[r.type] || r.type) + '</span>';
                         html += '</a>';
                     });
                     html += '<div class="dropdown-divider"></div>';
