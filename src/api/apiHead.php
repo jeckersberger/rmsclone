@@ -29,8 +29,11 @@ $dataPayload = json_decode(file_get_contents('php://input'));
 $dataPayload = (array) $dataPayload;
 foreach ($dataPayload as $key=>$item) {
     if (is_array($item) or is_object($item)) continue; //Do this for simple values only for now
-    $_GET[$key] = $item;
-    $_POST[$key] = $item;
+    // Sicherheit: Nur Strings und Zahlen akzeptieren, booleans zu String konvertieren
+    if (is_bool($item)) $item = $item ? '1' : '0';
+    if (!is_string($item) && !is_numeric($item)) continue;
+    $_GET[$key] = (string) $item;
+    $_POST[$key] = (string) $item;
 }
 //Copy GET over to POST for older clients
 foreach ($_GET as $key=>$item) {

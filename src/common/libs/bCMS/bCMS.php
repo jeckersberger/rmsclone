@@ -18,6 +18,14 @@ class bCMS
     global $DBLIB;
     return $DBLIB->escape($this->sanitizeString($var));
   }
+  /**
+   * Escapt LIKE-Wildcard-Zeichen (%, _) in einem Suchbegriff.
+   * Verwenden bei parametrisierten LIKE-Queries statt $DBLIB->escape().
+   */
+  function escapeLikeWildcards(string $term): string
+  {
+    return str_replace(['%', '_'], ['\\%', '\\_'], $term);
+  }
   function randomString($length = 10, $stringonly = false)
   { //Generate a random string
     $characters = 'abcdefghkmnopqrstuvwxyzABCDEFGHKMNOPQRSTUVWXYZ';
@@ -129,7 +137,15 @@ class bCMS
     $file = $DBLIB->getone("s3files", ["s3files_path", "s3files_filename", "s3files_extension"]);
     if (!$file) return false;
     $storageRoot = getenv('LOCAL_STORAGE_PATH') ?: '/var/www/html/storage';
-    return $storageRoot . "/" . $file['s3files_path'] . "/" . $file['s3files_filename'] . '.' . $file['s3files_extension'];
+    // Sicherheitspruefung: realpath() verhindert Symlink- und Path-Traversal-Angriffe
+    $constructedPath = $storageRoot . "/" . $file['s3files_path'] . "/" . $file['s3files_filename'] . '.' . $file['s3files_extension'];
+    $realPath = realpath($constructedPath);
+    $realStorageRoot = realpath($storageRoot);
+    if ($realPath === false || $realStorageRoot === false || strpos($realPath, $realStorageRoot) !== 0) {
+        error_log('[SECURITY] Path traversal attempt blocked: ' . $constructedPath);
+        return false;
+    }
+    return $realPath;
   }
   function s3Passthrough($fileid)
   {

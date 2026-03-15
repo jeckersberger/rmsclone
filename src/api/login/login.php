@@ -21,7 +21,7 @@ if (isset($_POST['formInput']) and isset($_POST['password'])) {
         $DBLIB->where("users_password", NULL, "IS NOT"); //To cover oauth users
         $user = $DBLIB->getOne("users",["users.users_salty1", "users.users_suspended", "users.users_salty2", "users.users_password", "users.users_userid", "users.users_hash", "users.users_totpSecret", "users.users_totpEnabled"]);
         if (!$user) $successful = false;
-        elseif ($user['users_password'] != hash($user['users_hash'], $user['users_salty1'] . $password . $user['users_salty2'])) $successful = false;
+        elseif (!hash_equals($user['users_password'], hash($user['users_hash'], $user['users_salty1'] . $password . $user['users_salty2']))) $successful = false;
         else $successful = true;
 
         // Account-basierter Brute-Force-Schutz (5 Minuten Fenster)
