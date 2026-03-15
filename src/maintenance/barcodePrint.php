@@ -47,7 +47,7 @@ foreach ($ids as $id) {
                 "assetsBarcodes_added" => date("Y-m-d H:i:s")
             ];
             while (checkDuplicate($assetBarcodeData["assetsBarcodes_value"], $assetBarcodeData["assetsBarcodes_type"])) {
-                $assetBarcodeData["assetsBarcodes_value"] = mt_rand(1000, 999999);
+                $assetBarcodeData["assetsBarcodes_value"] = random_int(1000, 999999);
             }
             $insert = $DBLIB->insert("assetsBarcodes", $assetBarcodeData);
             if ($insert) {
@@ -73,7 +73,7 @@ if ($_GET['blanks'] > 0) {
             "assetsBarcodes_type" => isset($_GET['barcodeType']) ? $_GET['barcodeType'] : "CODE_128"
         ];
         while (checkDuplicate($assetBarcodeData["assetsBarcodes_value"], $assetBarcodeData["assetsBarcodes_type"])) {
-            $assetBarcodeData["assetsBarcodes_value"] = mt_rand(1000, 99999);
+            $assetBarcodeData["assetsBarcodes_value"] = random_int(1000, 99999);
         }
         $asset = [];
         $assetBarcodeData['assetsBarcodes_id'] = null;

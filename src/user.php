@@ -24,15 +24,10 @@ $PAGEDATA['user'] = $DBLIB->getone("users", ["users.*"]);
 if (!$PAGEDATA['user']) die($TWIG->render('404.twig', $PAGEDATA));
 
 if ($PAGEDATA['user']['users_calendarHash'] == null) {
-   $characters = 'abcdefghijklmnopqrstuvwxyz';
-   $charactersLength = strlen($characters);
-   $randomString = '';
-   for ($i = 0; $i < 50; $i++) {
-    $randomString .= $characters[rand(0, $charactersLength - 1)];
-   }
+   // Kryptographisch sicheren Calendar-Hash generieren
+   $randomString = bin2hex(random_bytes(25)); // 50 Zeichen hex
    $DBLIB->where("users.users_userid", $PAGEDATA['user']['users_userid']);
    $DBLIB->update("users", ['users_calendarHash' => $randomString]);
-   //Generate a calendar hash
    $PAGEDATA['user']['users_calendarHash'] = $randomString;
 }
 $PAGEDATA['user']['users_email_md5'] = md5($PAGEDATA['user']['users_email']);

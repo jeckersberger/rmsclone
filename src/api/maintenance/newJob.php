@@ -25,7 +25,7 @@ if (!$array['maintenanceJobs_user_creator']) $array['maintenanceJobs_user_creato
 
 //TODO verify these users are in the instance
 $result = $DBLIB->insert("maintenanceJobs", array_intersect_key( $array, array_flip( ['maintenanceJobs_assets','maintenanceJobs_title','maintenanceJobs_timestamp_added','maintenanceJobs_user_creator','maintenanceJobs_user_assignedTo','maintenanceJobs_faultDescription','maintenanceJobs_priority',"instances_id","maintenanceJobs_user_tagged"] ) ));
-if (!$result) finish(false, ["code" => "INSERT-FAIL", "message"=> "Could not insert job" . $DBLIB->getlasterror()]);
+if (!$result) finish(false, ["code" => "INSERT-FAIL", "message"=> "Could not insert job"]);
 else {
     $bCMS->auditLog("INSERT", "maintenanceJobs", null, $AUTH->data['users_userid'],null, null,$result);
     $bCMS->auditLog("CHANGE-TITLE", "maintenanceJobs", "Set the title to ". $array['maintenanceJobs_title'], $AUTH->data['users_userid'],null, null,$result);
@@ -33,7 +33,11 @@ else {
     $array['maintenanceJobs_id'] = $result;
     $array['tagged'] = [];
     if ($array['maintenanceJobs_user_tagged'] != "") {
-        $DBLIB->where("(users.users_userid IN (" . $array['maintenanceJobs_user_tagged'] . "))");
+        // Sichere IN-Klausel: Nur Integer-IDs erlauben
+        $taggedIds = array_filter(array_map('intval', explode(',', $array['maintenanceJobs_user_tagged'])));
+        if (empty($taggedIds)) { $array['tagged'] = []; } else {
+        $placeholders = implode(',', array_fill(0, count($taggedIds), '?'));
+        $DBLIB->where("(users.users_userid IN (" . $placeholders . "))", $taggedIds);
         $DBLIB->orderBy("users.users_name1", "ASC");
         $DBLIB->orderBy("users.users_name2", "ASC");
         $DBLIB->orderBy("users.users_created", "ASC");
@@ -44,7 +48,7 @@ else {
         $DBLIB->where("userInstances.userInstances_deleted",  0);
         $DBLIB->where("(userInstances.userInstances_archived IS NULL OR userInstances.userInstances_archived >= '" . date('Y-m-d H:i:s') . "')");
         $array['tagged'] = $DBLIB->get('users', null, ["users.users_name1", "users.users_name2", "users.users_userid"]);
-    }
+    }}
     if (count($array['tagged']) > 0) {
         foreach ($array['tagged'] as $user) {
             if ($user['users_userid'] == $AUTH->data['users_userid']) continue;

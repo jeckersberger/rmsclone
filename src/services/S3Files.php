@@ -13,7 +13,7 @@ class S3Files {
             mkdir($fullDir, 0775, true);
         }
 
-        $filename = ($opts['name'] ?? 'doc') . '_' . time() . '_' . mt_rand(10000, 99999);
+        $filename = ($opts['name'] ?? 'doc') . '_' . time() . '_' . random_int(10000, 99999);
         $safeFilename = preg_replace('/[^a-zA-Z0-9_\-]/', '_', $filename);
         $fullPath = $fullDir . '/' . $safeFilename . '.pdf';
 

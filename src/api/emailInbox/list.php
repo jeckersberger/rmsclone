@@ -36,7 +36,7 @@ if (!empty($_GET['from'])) {
     $DBLIB->where('emailReceived_date', $_GET['from'], '>=');
 }
 if (!empty($_GET['to'])) {
-    $DBLIB->where('emailReceived_date', $_GET['to'] . ' 23:59:59', '<=');
+    $DBLIB->where('emailReceived_date', preg_replace('/[^0-9\-]/', '', $_GET['to']) . ' 23:59:59', '<=');
 }
 
 // Gesamtanzahl fuer Paginierung
@@ -56,7 +56,7 @@ if (!empty($_GET['from'])) {
     $DBLIB->where('emailReceived_date', $_GET['from'], '>=');
 }
 if (!empty($_GET['to'])) {
-    $DBLIB->where('emailReceived_date', $_GET['to'] . ' 23:59:59', '<=');
+    $DBLIB->where('emailReceived_date', preg_replace('/[^0-9\-]/', '', $_GET['to']) . ' 23:59:59', '<=');
 }
 
 $DBLIB->orderBy('emailReceived_date', 'DESC');

@@ -43,7 +43,7 @@ class BankImportService
      */
     public function importMt940(int $instanceId, string $fileContent): array
     {
-        $batchId = 'MT940-' . date('YmdHis') . '-' . substr(md5(uniqid()), 0, 6);
+        $batchId = 'MT940-' . date('YmdHis') . '-' . bin2hex(random_bytes(3));
         $transactions = $this->parseMt940($fileContent);
 
         $imported = 0;
@@ -273,7 +273,7 @@ class BankImportService
      */
     public function importCamt053(int $instanceId, string $fileContent): array
     {
-        $batchId = 'CAMT-' . date('YmdHis') . '-' . substr(md5(uniqid()), 0, 6);
+        $batchId = 'CAMT-' . date('YmdHis') . '-' . bin2hex(random_bytes(3));
         $transactions = $this->parseCamt053($fileContent);
 
         $imported = 0;
@@ -439,7 +439,7 @@ class BankImportService
      */
     public function importCsv(int $instanceId, string $fileContent): array
     {
-        $batchId = 'CSV-' . date('YmdHis') . '-' . substr(md5(uniqid()), 0, 6);
+        $batchId = 'CSV-' . date('YmdHis') . '-' . bin2hex(random_bytes(3));
         $transactions = $this->parseCsv($fileContent);
 
         $imported = 0;

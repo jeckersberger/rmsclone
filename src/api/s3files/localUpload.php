@@ -65,7 +65,7 @@ if (!$scanResult['clean']) {
 }
 
 $storagePath = "uploads/" . $type;
-$filename = time() . "-" . mt_rand(1000000000, 9999999999) . "." . $extension;
+$filename = time() . "-" . random_int(1000000000, 9999999999) . "." . $extension;
 
 // Store uploads outside webroot for security
 $storageRoot = getenv('LOCAL_STORAGE_PATH') ?: '/data/uploads';

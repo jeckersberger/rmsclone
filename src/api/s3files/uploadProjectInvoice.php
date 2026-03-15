@@ -26,7 +26,7 @@ if (isset($_FILES['file'])) {
             break;
     }
 
-    $filename = sprintf("%s-", $filenamePrefix) . time() . "-" . mt_rand(1000000000, 9999999999) . ".pdf";
+    $filename = sprintf("%s-", $filenamePrefix) . time() . "-" . random_int(1000000000, 9999999999) . ".pdf";
 
     $storageRoot = getenv('LOCAL_STORAGE_PATH') ?: '/var/www/html/storage';
     $fullDir = $storageRoot . "/" . $storagePath;
@@ -54,7 +54,6 @@ if (isset($_FILES['file'])) {
         "instances_id" => $AUTH->data['instance']['instances_id']
     ];
     $id = $DBLIB->insert("s3files", $fileData);
-    echo $DBLIB->getLastError();
     if (!$id) finish(false, ["code" => null, "message" => "Error"]);
     else finish(true, null, ["id" => $id, "resize" => false, "url" => $CONFIG['ROOTURL'] . '/api/file/?r=true&f=' . $id]);
 }

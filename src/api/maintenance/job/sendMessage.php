@@ -23,17 +23,21 @@ if (!$message) finish(false);
 
 $job['tagged'] = [];
 if ($job['maintenanceJobs_user_tagged'] != "") {
-    $DBLIB->where("(users.users_userid IN (" . $job['maintenanceJobs_user_tagged'] . "))");
-    $DBLIB->orderBy("users.users_name1", "ASC");
-    $DBLIB->orderBy("users.users_name2", "ASC");
-    $DBLIB->orderBy("users.users_created", "ASC");
-    $DBLIB->where("users_deleted", 0);
-    $DBLIB->join("userInstances", "users.users_userid=userInstances.users_userid","LEFT");
-    $DBLIB->join("instancePositions", "userInstances.instancePositions_id=instancePositions.instancePositions_id","LEFT");
-    $DBLIB->where("instances_id",  $AUTH->data['instance']['instances_id']);
-    $DBLIB->where("userInstances.userInstances_deleted",  0);
-    $DBLIB->where("(userInstances.userInstances_archived IS NULL OR userInstances.userInstances_archived >= '" . date('Y-m-d H:i:s') . "')");
-    $job['tagged'] = $DBLIB->get('users', null, ["users.users_name1", "users.users_name2", "users.users_userid"]);
+    $taggedIds = array_filter(array_map('intval', explode(',', $job['maintenanceJobs_user_tagged'])));
+    if (!empty($taggedIds)) {
+        $placeholders = implode(',', array_fill(0, count($taggedIds), '?'));
+        $DBLIB->where("(users.users_userid IN (" . $placeholders . "))", $taggedIds);
+        $DBLIB->orderBy("users.users_name1", "ASC");
+        $DBLIB->orderBy("users.users_name2", "ASC");
+        $DBLIB->orderBy("users.users_created", "ASC");
+        $DBLIB->where("users_deleted", 0);
+        $DBLIB->join("userInstances", "users.users_userid=userInstances.users_userid","LEFT");
+        $DBLIB->join("instancePositions", "userInstances.instancePositions_id=instancePositions.instancePositions_id","LEFT");
+        $DBLIB->where("instances_id",  $AUTH->data['instance']['instances_id']);
+        $DBLIB->where("userInstances.userInstances_deleted",  0);
+        $DBLIB->where("(userInstances.userInstances_archived IS NULL OR userInstances.userInstances_archived >= ?)", [date('Y-m-d H:i:s')]);
+        $job['tagged'] = $DBLIB->get('users', null, ["users.users_name1", "users.users_name2", "users.users_userid"]);
+    }
 }
 if (count($job['tagged']) > 0 and isset($data["maintenanceJobsMessages_text"])) {
     foreach ($job['tagged'] as $user) {

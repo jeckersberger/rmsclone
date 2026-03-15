@@ -27,13 +27,13 @@ class bCMS
     return str_replace(['%', '_'], ['\\%', '\\_'], $term);
   }
   function randomString($length = 10, $stringonly = false)
-  { //Generate a random string
+  { //Generate a cryptographically secure random string
     $characters = 'abcdefghkmnopqrstuvwxyzABCDEFGHKMNOPQRSTUVWXYZ';
     if (!$stringonly) $characters .= '0123456789';
     $charactersLength = strlen($characters);
     $randomString = '';
     for ($i = 0; $i < $length; $i++) {
-      $randomString .= $characters[rand(0, $charactersLength - 1)];
+      $randomString .= $characters[random_int(0, $charactersLength - 1)];
     }
     return $randomString;
   }

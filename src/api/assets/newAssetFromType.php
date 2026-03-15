@@ -48,7 +48,7 @@ $assetBarcodeData = [
     "assetsBarcodes_added" => date("Y-m-d H:i:s")
 ];
 while (checkDuplicate($assetBarcodeData["assetsBarcodes_value"], $assetBarcodeData["assetsBarcodes_type"])) {
-    $assetBarcodeData["assetsBarcodes_value"] = mt_rand(1000, 999999); //Duplicate, so generate a hopefully random number as a replacement
+    $assetBarcodeData["assetsBarcodes_value"] = random_int(1000, 999999); //Duplicate, so generate a cryptographically random number as a replacement
 }
 $insert = $DBLIB->insert("assetsBarcodes", $assetBarcodeData);
 //We don't really mind if the insert fails, we can always generate another one later...

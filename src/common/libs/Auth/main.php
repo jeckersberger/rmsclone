@@ -353,7 +353,7 @@ class bID
 
         $DBLIB->where('users_userid', $userid);
         $DBLIB->update('emailVerificationCodes', ["emailVerificationCodes_valid" => "0"]); //Set all the previous codes to invalid
-        $code = md5($GLOBALS['bCMS']->randomString(100) . $userid . time()) . time();
+        $code = bin2hex(random_bytes(32)); // 64 Zeichen kryptographisch sicherer Token
         $data = Array("users_userid" => $userid,
             "emailVerificationCodes_timestamp" => date('Y-m-d G:i:s'),
             "emailVerificationCodes_code" => $code
@@ -373,7 +373,7 @@ class bID
 
         $DBLIB->where('users_userid', $userid);
         $DBLIB->update('passwordResetCodes', ["passwordResetCodes_valid" => "0"]); //Set all the previous codes to invalid
-        $code = md5($GLOBALS['bCMS']->randomString(100) . $userid . time()) . time();
+        $code = bin2hex(random_bytes(32)); // 64 Zeichen kryptographisch sicherer Token
         $data = Array(
             "users_userid" => $userid,
             "passwordResetCodes_timestamp" => date('Y-m-d G:i:s'),

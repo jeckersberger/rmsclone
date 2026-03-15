@@ -22,7 +22,7 @@ if(isset($_FILES['file'])) {
     // Sanitize typename to prevent path traversal
     $typename = preg_replace('/[^a-zA-Z0-9_-]/', '', $_POST['typename'] ?? 'GENERAL');
     $storagePath = "uploads/" . $typename;
-    $filename = time() . "-" . mt_rand(1000000000, 9999999999) . "." . $extension;
+    $filename = time() . "-" . random_int(1000000000, 9999999999) . "." . $extension;
 
     $storageRoot = getenv('LOCAL_STORAGE_PATH') ?: '/var/www/html/storage';
     $fullDir = $storageRoot . "/" . $storagePath;
