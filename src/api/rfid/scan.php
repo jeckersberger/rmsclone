@@ -8,6 +8,7 @@
 require_once __DIR__ . '/../apiHeadSecure.php';
 require_once __DIR__ . '/../../services/StockItemService.php';
 require_once __DIR__ . '/../../services/CrossInstanceLookupService.php';
+require_once __DIR__ . '/../../services/TagFormatService.php';
 
 // Check permissions
 if (!$AUTH->instancePermissionCheck("ASSETS:ASSET_BARCODES:SCAN")) {
@@ -20,6 +21,7 @@ $userId = $AUTH->data['users_userid'];
 $rfidService = new RfidService($DBLIB);
 $stockService = new StockItemService($DBLIB);
 $crossLookup = new CrossInstanceLookupService($DBLIB, $instanceId);
+$tagFormat = new TagFormatService($DBLIB, $instanceId);
 $rfidService->setStockService($stockService);
 $rfidService->setCrossLookupService($crossLookup);
 
@@ -85,15 +87,128 @@ switch ($action) {
         handleBoxScanAction($stockService, $rfidService, $instanceId, $userId);
         break;
 
+    // ── Binary EPC encode/decode for RFID tag memory ──
+    case 'encode_epc':
+        handleEncodeEpc($tagFormat);
+        break;
+
+    case 'decode_epc':
+        handleDecodeEpc($tagFormat);
+        break;
+
+    case 'get_write_epc':
+        // Convenience: generate the binary EPC hex to write to a tag
+        handleGetWriteEpc($tagFormat);
+        break;
+
     default:
         finish(false, ["code" => "INVALID", "message" => "Unknown action"]);
 }
 
 /**
- * Process a single scan
+ * Encode entity data to binary EPC hex string for writing to RFID tag.
+ * POST: entity_type (asset|stock_instance|external), entity_id, use_128bit (optional)
+ * Returns: 24-char hex (96-bit) or 32-char hex (128-bit) EPC
+ */
+function handleEncodeEpc($tagFormat) {
+    $entityType = $_POST['entity_type'] ?? '';
+    $entityId = (int)($_POST['entity_id'] ?? 0);
+    $use128bit = filter_var($_POST['use_128bit'] ?? false, FILTER_VALIDATE_BOOLEAN);
+    $subId = (int)($_POST['sub_id'] ?? 0);
+
+    if (empty($entityType) || $entityId <= 0) {
+        finish(false, ["message" => "entity_type and entity_id required"]);
+    }
+
+    try {
+        if ($use128bit) {
+            $epcHex = $tagFormat->encodeBinaryEpc128($entityType, $entityId, $subId);
+        } else {
+            $epcHex = $tagFormat->encodeBinaryEpc($entityType, $entityId);
+        }
+
+        // Also provide the human-readable version
+        $typeLetter = match ($entityType) {
+            'asset' => 'A', 'stock_instance' => 'I', 'external' => 'E',
+            default => '?'
+        };
+        $humanReadable = 'RMS-' . $tagFormat->getCompanyCode() . '-' . $typeLetter . '-' . str_pad($entityId, 6, '0', STR_PAD_LEFT);
+
+        finish(true, null, [
+            'epc_hex'        => $epcHex,
+            'epc_bits'       => strlen($epcHex) * 4,
+            'human_readable' => $humanReadable,
+            'company_code'   => $tagFormat->getCompanyCode(),
+            'entity_type'    => $entityType,
+            'entity_id'      => $entityId,
+        ]);
+    } catch (\Exception $e) {
+        finish(false, ["message" => $e->getMessage()]);
+    }
+}
+
+/**
+ * Decode a binary EPC hex string read from an RFID tag.
+ * POST: epc_hex (24 or 32 char hex string)
+ * Returns: decoded entity info + human-readable tag
+ */
+function handleDecodeEpc($tagFormat) {
+    $epcHex = $_POST['epc_hex'] ?? '';
+
+    if (empty($epcHex)) {
+        finish(false, ["message" => "epc_hex required"]);
+    }
+
+    $decoded = $tagFormat->decodeBinaryEpc($epcHex);
+
+    if (!$decoded) {
+        finish(false, ["message" => "Invalid EPC — not an RMS tag or CRC error"]);
+    }
+
+    finish(true, null, $decoded);
+}
+
+/**
+ * Convenience endpoint: Get the binary EPC hex to write to a tag for a specific entity.
+ * POST: entity_type, entity_id
+ * Returns both 96-bit and 128-bit versions plus human-readable format.
+ */
+function handleGetWriteEpc($tagFormat) {
+    $entityType = $_POST['entity_type'] ?? '';
+    $entityId = (int)($_POST['entity_id'] ?? 0);
+
+    if (empty($entityType) || $entityId <= 0) {
+        finish(false, ["message" => "entity_type and entity_id required"]);
+    }
+
+    try {
+        $epc96 = $tagFormat->encodeBinaryEpc($entityType, $entityId);
+        $epc128 = $tagFormat->encodeBinaryEpc128($entityType, $entityId);
+        $typeLetter = match ($entityType) {
+            'asset' => 'A', 'stock_instance' => 'I', 'external' => 'E',
+            default => '?'
+        };
+        $humanReadable = 'RMS-' . $tagFormat->getCompanyCode() . '-' . $typeLetter . '-' . str_pad($entityId, 6, '0', STR_PAD_LEFT);
+
+        finish(true, null, [
+            'epc_96bit'      => $epc96,
+            'epc_128bit'     => $epc128,
+            'human_readable' => $humanReadable,
+            'company_code'   => $tagFormat->getCompanyCode(),
+        ]);
+    } catch (\Exception $e) {
+        finish(false, ["message" => $e->getMessage()]);
+    }
+}
+
+/**
+ * Process a single scan.
+ * Auto-detects binary EPC hex from RFID reader and converts to human-readable format.
  */
 function handleScan($rfidService, $instanceId, $userId)
 {
+    global $tagFormat;
+
     $rfidTag = $_POST['rfid_tag'] ?? null;
     $scanAction = $_POST['scan_action'] ?? null;
     $projectId = isset($_POST['project_id']) ? (int)$_POST['project_id'] : null;
@@ -101,6 +216,10 @@ function handleScan($rfidService, $instanceId, $userId)
     if (!$rfidTag || !$scanAction) {
         finish(false, ["code" => "INVALID", "message" => "rfid_tag and scan_action required"]);
     }
+
+    // Auto-detect binary EPC: if it's 24 or 32 hex chars starting with '52' (RMS header),
+    // decode it to human-readable format first
+    $rfidTag = resolveTagFormat($rfidTag, $tagFormat);
 
     $result = $rfidService->processScan($instanceId, $rfidTag, $scanAction, $userId, $projectId);
 
@@ -120,10 +239,35 @@ function handleScan($rfidService, $instanceId, $userId)
 }
 
 /**
+ * Resolve a tag value: if it's a binary EPC hex (24/32 chars starting with 0x52),
+ * decode it to the human-readable format (RMS-a3f7b2c1-A-000042).
+ * Otherwise return as-is (already human-readable or barcode).
+ */
+function resolveTagFormat(string $tag, TagFormatService $tagFormat): string
+{
+    $clean = strtoupper(trim($tag));
+
+    // Binary EPC: exactly 24 or 32 hex chars, starting with '52' (RMS header byte)
+    if (preg_match('/^[0-9A-F]{24}$/', $clean) || preg_match('/^[0-9A-F]{32}$/', $clean)) {
+        if (substr($clean, 0, 2) === '52') {
+            $decoded = $tagFormat->decodeBinaryEpc($clean);
+            if ($decoded && $decoded['crc_valid']) {
+                return $decoded['human_readable'];
+            }
+        }
+    }
+
+    // Already human-readable or unknown format
+    return $tag;
+}
+
+/**
  * Process multiple tag scans
  */
 function handleBulkScan($rfidService, $instanceId, $userId)
 {
+    global $tagFormat;
+
     $rfidTagsJson = $_POST['rfid_tags'] ?? null;
     $scanAction = $_POST['scan_action'] ?? null;
     $projectId = isset($_POST['project_id']) ? (int)$_POST['project_id'] : null;
@@ -133,6 +277,11 @@ function handleBulkScan($rfidService, $instanceId, $userId)
     }
 
     $rfidTags = json_decode($rfidTagsJson, true);
+
+    // Resolve binary EPCs to human-readable format
+    if (is_array($rfidTags)) {
+        $rfidTags = array_map(fn($t) => resolveTagFormat($t, $tagFormat), $rfidTags);
+    }
 
     if (!is_array($rfidTags)) {
         finish(false, ["code" => "INVALID", "message" => "rfid_tags must be a JSON array"]);

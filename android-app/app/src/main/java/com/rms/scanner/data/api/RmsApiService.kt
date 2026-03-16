@@ -220,4 +220,20 @@ interface RmsApiService {
     suspend fun getCompanyCode(
         @Field("action") action: String = "get_code"
     ): ApiResponse
+
+    // Binary EPC encode/decode for RFID tag memory
+    @FormUrlEncoded
+    @POST("api/rfid/scan.php")
+    suspend fun getWriteEpc(
+        @Field("action") action: String = "get_write_epc",
+        @Field("entity_type") entityType: String,
+        @Field("entity_id") entityId: Int
+    ): ApiResponse
+
+    @FormUrlEncoded
+    @POST("api/rfid/scan.php")
+    suspend fun decodeEpc(
+        @Field("action") action: String = "decode_epc",
+        @Field("epc_hex") epcHex: String
+    ): ApiResponse
 }

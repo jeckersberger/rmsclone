@@ -17,7 +17,8 @@ data class TagWriteUiState(
     val selectedAssetId: Int? = null,
     val stockInstances: List<StockInstance> = emptyList(),
     val selectedInstanceId: Int? = null,
-    val newEpc: String = "",
+    val newEpc: String = "",            // Human-readable: RMS-a3f7b2c1-A-000042
+    val binaryEpc: String = "",         // Binary hex for RFID write: 52A3F7B2C1410000002A...
     val isLoadingAssets: Boolean = false,
     val isLoadingInstances: Boolean = false,
     val isWriting: Boolean = false,
@@ -92,19 +93,66 @@ class TagWriteViewModel : ViewModel() {
         _uiState.value = _uiState.value.copy(newEpc = epc)
     }
 
+    /**
+     * Generate the EPC for writing to an RFID tag.
+     * Calls the server API to get both human-readable and binary EPC formats.
+     * The binary EPC (96-bit hex) is what actually gets written to the tag memory.
+     * The human-readable format is displayed in the UI.
+     */
     fun generateAutoEpc() {
-        val companyCode = _uiState.value.companyCode.ifEmpty { "XX" }
-        val typeChar = when (_uiState.value.entityType) {
-            "asset" -> "A"
-            "stock" -> "I"
-            else -> "X"
+        val entityType = when (_uiState.value.entityType) {
+            "asset" -> "asset"
+            "stock" -> "stock_instance"
+            else -> return
         }
-        val uuid = UUID.randomUUID().toString().substring(0, 8).uppercase()
-        val autoEpc = "RMS-$companyCode-$typeChar-$uuid"
-        _uiState.value = _uiState.value.copy(
-            newEpc = autoEpc,
-            generatedEpc = autoEpc
-        )
+        val entityId = when (_uiState.value.entityType) {
+            "asset" -> _uiState.value.selectedAssetId
+            "stock" -> _uiState.value.selectedInstanceId
+            else -> null
+        }
+
+        if (entityId == null) {
+            _uiState.value = _uiState.value.copy(
+                errorMessage = "Bitte zuerst ein Gerät/Artikel auswählen"
+            )
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                val result = repository.getWriteEpc(entityType, entityId)
+                if (result.isSuccess) {
+                    @Suppress("UNCHECKED_CAST")
+                    val data = result.getOrNull() as? Map<String, Any> ?: return@launch
+                    val humanReadable = data["human_readable"] as? String ?: ""
+                    val binaryEpc96 = data["epc_96bit"] as? String ?: ""
+
+                    _uiState.value = _uiState.value.copy(
+                        newEpc = humanReadable,
+                        binaryEpc = binaryEpc96,
+                        generatedEpc = humanReadable
+                    )
+                    Log.d(tag, "EPC generated: $humanReadable (binary: $binaryEpc96)")
+                } else {
+                    // Fallback: generate locally with company code
+                    val companyCode = _uiState.value.companyCode.ifEmpty { "00000000" }
+                    val typeChar = if (entityType == "asset") "A" else "I"
+                    val padId = entityId.toString().padStart(6, '0')
+                    val autoEpc = "RMS-$companyCode-$typeChar-$padId"
+                    _uiState.value = _uiState.value.copy(
+                        newEpc = autoEpc,
+                        binaryEpc = "", // No binary without server
+                        generatedEpc = autoEpc,
+                        errorMessage = "Binär-EPC nicht verfügbar (Offline-Modus)"
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(tag, "Error generating EPC", e)
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = e.message ?: "Fehler bei EPC-Generierung"
+                )
+            }
+        }
     }
 
     private fun loadCompanyCode() {
