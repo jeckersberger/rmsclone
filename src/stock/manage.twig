@@ -1,0 +1,401 @@
+{% extends "assets/template.twig" %}
+
+{% block content %}
+<style>
+    .stock-container { max-width: 1000px; margin: 20px auto; padding: 0 10px; }
+    .stock-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+    .stock-header h1 { margin: 0; }
+    .btn-create { padding: 12px 24px; font-size: 16px; font-weight: bold; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    .btn-create:hover { background: #218838; }
+
+    .stock-stats { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
+    .stat-card { flex: 1; min-width: 120px; padding: 15px; background: white; border-radius: 8px; border: 1px solid #dee2e6; text-align: center; }
+    .stat-card .stat-value { font-size: 28px; font-weight: bold; color: #007bff; }
+    .stat-card .stat-label { font-size: 13px; color: #666; margin-top: 5px; }
+    .stat-card.warning .stat-value { color: #dc3545; }
+
+    .stock-table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; border: 1px solid #dee2e6; }
+    .stock-table th { background: #f8f9fa; padding: 12px 15px; text-align: left; font-size: 14px; border-bottom: 2px solid #dee2e6; }
+    .stock-table td { padding: 10px 15px; border-bottom: 1px solid #eee; font-size: 14px; }
+    .stock-table tr:hover { background: #f5f7fa; }
+    .stock-table .count-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; }
+    .stock-table .count-available { background: #d4edda; color: #155724; }
+    .stock-table .count-out { background: #fff3cd; color: #856404; }
+    .stock-table .count-damaged { background: #f8d7da; color: #721c24; }
+
+    .stock-actions button { padding: 5px 10px; font-size: 13px; border: none; border-radius: 3px; cursor: pointer; margin-right: 5px; }
+    .btn-edit { background: #007bff; color: white; }
+    .btn-instances { background: #6f42c1; color: white; }
+    .btn-add-inst { background: #20c997; color: white; }
+    .btn-delete { background: #dc3545; color: white; }
+
+    /* Modal */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+    .modal-overlay.visible { display: flex; }
+    .modal-box { background: white; border-radius: 8px; padding: 30px; max-width: 550px; width: 90%; max-height: 90vh; overflow-y: auto; }
+    .modal-box h2 { margin-top: 0; font-size: 22px; margin-bottom: 20px; }
+    .modal-box label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
+    .modal-box input, .modal-box textarea, .modal-box select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 15px; margin-bottom: 15px; box-sizing: border-box; }
+    .modal-box textarea { height: 80px; resize: vertical; }
+    .modal-row { display: flex; gap: 15px; }
+    .modal-row > div { flex: 1; }
+    .modal-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px; }
+    .modal-btns button { padding: 10px 24px; font-size: 16px; border: none; border-radius: 5px; cursor: pointer; }
+    .modal-btns .btn-save { background: #28a745; color: white; }
+    .modal-btns .btn-cancel { background: #6c757d; color: white; }
+
+    /* Instances panel */
+    .instances-panel { display: none; margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 5px; border: 1px solid #dee2e6; }
+    .instances-panel.visible { display: block; }
+    .instances-panel h3 { margin-top: 0; font-size: 18px; }
+    .inst-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .inst-table th { background: #e9ecef; padding: 8px 10px; text-align: left; font-size: 13px; }
+    .inst-table td { padding: 6px 10px; border-bottom: 1px solid #eee; font-size: 13px; }
+    .inst-status { padding: 2px 6px; border-radius: 3px; font-size: 11px; font-weight: bold; }
+    .inst-status.available { background: #d4edda; color: #155724; }
+    .inst-status.checked_out { background: #fff3cd; color: #856404; }
+    .inst-status.damaged { background: #f8d7da; color: #721c24; }
+    .inst-status.lost { background: #d6d8db; color: #383d41; }
+
+    @media (max-width: 600px) {
+        .stock-stats { flex-direction: column; }
+        .modal-row { flex-direction: column; gap: 0; }
+    }
+</style>
+
+<div class="stock-container">
+    <div class="stock-header">
+        <h1><i class="fas fa-boxes"></i> Artikelverwaltung</h1>
+        <button class="btn-create" onclick="showCreateModal()"><i class="fas fa-plus"></i> Neuer Artikeltyp</button>
+    </div>
+
+    <div class="stock-stats" id="stockStats">
+        <div class="stat-card"><div class="stat-value" id="statTypes">-</div><div class="stat-label">Artikeltypen</div></div>
+        <div class="stat-card"><div class="stat-value" id="statTotal">-</div><div class="stat-label">Gesamt</div></div>
+        <div class="stat-card"><div class="stat-value" id="statAvailable">-</div><div class="stat-label">Verfuegbar</div></div>
+        <div class="stat-card"><div class="stat-value" id="statOut">-</div><div class="stat-label">Ausgeliehen</div></div>
+        <div class="stat-card"><div class="stat-value" id="statRfid">-</div><div class="stat-label">Mit RFID</div></div>
+        <div class="stat-card warning"><div class="stat-value" id="statDamaged">-</div><div class="stat-label">Beschaedigt</div></div>
+    </div>
+
+    <table class="stock-table" id="stockTable">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Kategorie</th>
+                <th>SKU</th>
+                <th>Bestand</th>
+                <th>Verfuegbar</th>
+                <th>Ausgeliehen</th>
+                <th>Aktionen</th>
+            </tr>
+        </thead>
+        <tbody id="stockTableBody">
+            <tr><td colspan="7" style="text-align:center; padding:30px; color:#999;">Lade Artikeltypen...</td></tr>
+        </tbody>
+    </table>
+
+    <div class="instances-panel" id="instancesPanel">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h3 id="instancesPanelTitle">Instanzen</h3>
+            <div>
+                <button class="btn-add-inst" onclick="showAddInstancesModal()"><i class="fas fa-plus"></i> Instanzen erstellen</button>
+                <button style="padding:5px 10px; background:#dc3545; color:white; border:none; border-radius:3px; cursor:pointer; margin-left:5px;" onclick="closeInstancesPanel()"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+        <table class="inst-table">
+            <thead>
+                <tr><th>#</th><th>RFID-Tag</th><th>Status</th><th>Zustand</th><th>Letzter Scan</th></tr>
+            </thead>
+            <tbody id="instancesTableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+{# ── Create/Edit Modal ── #}
+<div class="modal-overlay" id="itemModal">
+    <div class="modal-box">
+        <h2 id="itemModalTitle">Neuer Artikeltyp</h2>
+        <input type="hidden" id="editItemId" value="" />
+
+        <label>Name *</label>
+        <input type="text" id="itemName" placeholder="z.B. HDMI-Kabel 3m" />
+
+        <div class="modal-row">
+            <div>
+                <label>Kategorie</label>
+                <input type="text" id="itemCategory" placeholder="z.B. Kabel" />
+            </div>
+            <div>
+                <label>SKU / Artikelnummer</label>
+                <input type="text" id="itemSku" placeholder="z.B. HDMI-3M" />
+            </div>
+        </div>
+
+        <label>Beschreibung</label>
+        <textarea id="itemDescription" placeholder="Optionale Beschreibung..."></textarea>
+
+        <div class="modal-row">
+            <div>
+                <label>Einkaufswert (EUR)</label>
+                <input type="number" id="itemValue" step="0.01" value="0" />
+            </div>
+            <div>
+                <label>Mindestbestand</label>
+                <input type="number" id="itemMinStock" value="0" />
+            </div>
+        </div>
+
+        <div class="modal-row">
+            <div>
+                <label>Tagesrate (EUR)</label>
+                <input type="number" id="itemDayRate" step="0.01" value="0" />
+            </div>
+            <div>
+                <label>Wochenrate (EUR)</label>
+                <input type="number" id="itemWeekRate" step="0.01" value="0" />
+            </div>
+        </div>
+
+        <div class="modal-btns">
+            <button class="btn-cancel" onclick="closeModal('itemModal')">Abbrechen</button>
+            <button class="btn-save" onclick="saveItem()"><i class="fas fa-save"></i> Speichern</button>
+        </div>
+    </div>
+</div>
+
+{# ── Add Instances Modal ── #}
+<div class="modal-overlay" id="addInstancesModal">
+    <div class="modal-box">
+        <h2>Instanzen erstellen</h2>
+        <p style="color:#666; font-size:14px;">Erstelle physische Exemplare dieses Artikeltyps. Jede Instanz bekommt automatisch einen eindeutigen RFID-Tag (RMS-I-xxxxxx).</p>
+        <input type="hidden" id="addInstItemId" value="" />
+
+        <label>Anzahl</label>
+        <input type="number" id="addInstQuantity" value="10" min="1" max="500" />
+
+        <label>
+            <input type="checkbox" id="addInstAutoRfid" checked style="width:auto; margin-right:8px;" />
+            Automatisch RFID-EPCs generieren
+        </label>
+
+        <div class="modal-btns" style="margin-top:20px;">
+            <button class="btn-cancel" onclick="closeModal('addInstancesModal')">Abbrechen</button>
+            <button class="btn-save" onclick="createInstances()"><i class="fas fa-plus"></i> Erstellen</button>
+        </div>
+    </div>
+</div>
+
+<script>
+var currentItemId = null;
+
+function loadStockItems() {
+    ajaxcall('stock/items.php', { action: 'list_items' }, function(r) {
+        if (r.success && r.items) {
+            renderTable(r.items);
+        }
+    }, false);
+
+    ajaxcall('stock/items.php', { action: 'overview' }, function(r) {
+        if (r.success && r.overview) {
+            var o = r.overview;
+            document.getElementById('statTypes').textContent = o.total_types;
+            document.getElementById('statTotal').textContent = o.total_instances;
+            document.getElementById('statAvailable').textContent = o.available;
+            document.getElementById('statOut').textContent = o.checked_out;
+            document.getElementById('statRfid').textContent = o.with_rfid;
+            document.getElementById('statDamaged').textContent = o.damaged;
+        }
+    }, false);
+}
+
+function renderTable(items) {
+    var body = document.getElementById('stockTableBody');
+    if (!items.length) {
+        body.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px; color:#999;">Noch keine Artikeltypen. Klicke "Neuer Artikeltyp" um zu starten.</td></tr>';
+        return;
+    }
+    var html = '';
+    items.forEach(function(item) {
+        var c = item.counts;
+        html += '<tr data-id="' + item.id + '">';
+        html += '<td><strong>' + item.name + '</strong></td>';
+        html += '<td>' + (item.category || '-') + '</td>';
+        html += '<td style="font-family:monospace;">' + (item.sku || '-') + '</td>';
+        html += '<td>' + c.total + '</td>';
+        html += '<td><span class="count-badge count-available">' + c.available + '</span></td>';
+        html += '<td><span class="count-badge count-out">' + c.checked_out + '</span></td>';
+        html += '<td class="stock-actions">';
+        html += '<button class="btn-instances" onclick="showInstances(' + item.id + ', \'' + item.name.replace(/'/g, "\\'") + '\')"><i class="fas fa-list"></i></button>';
+        html += '<button class="btn-add-inst" onclick="showAddInstancesModalFor(' + item.id + ')"><i class="fas fa-plus"></i></button>';
+        html += '<button class="btn-edit" onclick="editItem(' + item.id + ')"><i class="fas fa-edit"></i></button>';
+        html += '<button class="btn-delete" onclick="deleteItem(' + item.id + ', \'' + item.name.replace(/'/g, "\\'") + '\')"><i class="fas fa-trash"></i></button>';
+        html += '</td></tr>';
+    });
+    body.innerHTML = html;
+}
+
+// ── Create / Edit ──
+function showCreateModal() {
+    document.getElementById('itemModalTitle').textContent = 'Neuer Artikeltyp';
+    document.getElementById('editItemId').value = '';
+    document.getElementById('itemName').value = '';
+    document.getElementById('itemCategory').value = '';
+    document.getElementById('itemSku').value = '';
+    document.getElementById('itemDescription').value = '';
+    document.getElementById('itemValue').value = '0';
+    document.getElementById('itemMinStock').value = '0';
+    document.getElementById('itemDayRate').value = '0';
+    document.getElementById('itemWeekRate').value = '0';
+    document.getElementById('itemModal').classList.add('visible');
+}
+
+function editItem(itemId) {
+    ajaxcall('stock/items.php', { action: 'get_item', item_id: itemId }, function(r) {
+        if (r.success && r.item) {
+            var i = r.item;
+            document.getElementById('itemModalTitle').textContent = 'Artikeltyp bearbeiten';
+            document.getElementById('editItemId').value = i.id;
+            document.getElementById('itemName').value = i.name;
+            document.getElementById('itemCategory').value = i.category || '';
+            document.getElementById('itemSku').value = i.sku || '';
+            document.getElementById('itemDescription').value = i.description || '';
+            document.getElementById('itemValue').value = i.unit_value || '0';
+            document.getElementById('itemMinStock').value = i.min_stock || '0';
+            document.getElementById('itemDayRate').value = i.day_rate || '0';
+            document.getElementById('itemWeekRate').value = i.week_rate || '0';
+            document.getElementById('itemModal').classList.add('visible');
+        }
+    }, false);
+}
+
+function saveItem() {
+    var editId = document.getElementById('editItemId').value;
+    var params = {
+        action: editId ? 'update_item' : 'create_item',
+        name: document.getElementById('itemName').value,
+        category: document.getElementById('itemCategory').value,
+        sku: document.getElementById('itemSku').value,
+        description: document.getElementById('itemDescription').value,
+        unit_value: document.getElementById('itemValue').value,
+        min_stock: document.getElementById('itemMinStock').value,
+        day_rate: document.getElementById('itemDayRate').value,
+        week_rate: document.getElementById('itemWeekRate').value,
+    };
+    if (editId) params.item_id = editId;
+
+    ajaxcall('stock/items.php', params, function(r) {
+        if (r.success) {
+            closeModal('itemModal');
+            loadStockItems();
+        } else {
+            alert('Fehler: ' + (r.message || 'Unbekannt'));
+        }
+    }, true);
+}
+
+function deleteItem(itemId, name) {
+    if (!confirm('Artikeltyp "' + name + '" wirklich loeschen?')) return;
+    ajaxcall('stock/items.php', { action: 'delete_item', item_id: itemId }, function(r) {
+        loadStockItems();
+        closeInstancesPanel();
+    }, true);
+}
+
+// ── Instances ──
+function showInstances(itemId, itemName) {
+    currentItemId = itemId;
+    document.getElementById('instancesPanelTitle').textContent = 'Instanzen: ' + itemName;
+    document.getElementById('instancesPanel').classList.add('visible');
+
+    ajaxcall('stock/items.php', { action: 'list_instances', item_id: itemId }, function(r) {
+        if (r.success) {
+            renderInstances(r.instances);
+        }
+    }, false);
+}
+
+function renderInstances(instances) {
+    var body = document.getElementById('instancesTableBody');
+    if (!instances.length) {
+        body.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999; padding:15px;">Keine Instanzen. Klicke + um welche zu erstellen.</td></tr>';
+        return;
+    }
+    var html = '';
+    instances.forEach(function(inst) {
+        html += '<tr>';
+        html += '<td><strong>#' + String(inst.instance_number).padStart(4, '0') + '</strong></td>';
+        html += '<td style="font-family:monospace; font-size:12px;">' + (inst.rfid_tag || '<em style="color:#999;">kein Tag</em>') + '</td>';
+        html += '<td><span class="inst-status ' + inst.status + '">' + statusLabel(inst.status) + '</span></td>';
+        html += '<td>' + conditionLabel(inst.condition) + '</td>';
+        html += '<td>' + (inst.last_scan_at ? inst.last_scan_at.substring(0, 16) : '-') + '</td>';
+        html += '</tr>';
+    });
+    body.innerHTML = html;
+}
+
+function statusLabel(s) {
+    var map = { available: 'Verfuegbar', checked_out: 'Ausgeliehen', damaged: 'Beschaedigt', lost: 'Verloren', retired: 'Ausgemustert' };
+    return map[s] || s;
+}
+
+function conditionLabel(c) {
+    var map = { good: 'Gut', fair: 'Mittel', poor: 'Schlecht' };
+    return map[c] || c;
+}
+
+function closeInstancesPanel() {
+    document.getElementById('instancesPanel').classList.remove('visible');
+    currentItemId = null;
+}
+
+function showAddInstancesModal() {
+    if (!currentItemId) return;
+    document.getElementById('addInstItemId').value = currentItemId;
+    document.getElementById('addInstQuantity').value = '10';
+    document.getElementById('addInstAutoRfid').checked = true;
+    document.getElementById('addInstancesModal').classList.add('visible');
+}
+
+function showAddInstancesModalFor(itemId) {
+    currentItemId = itemId;
+    showAddInstancesModal();
+}
+
+function createInstances() {
+    var itemId = document.getElementById('addInstItemId').value;
+    var quantity = document.getElementById('addInstQuantity').value;
+    var autoRfid = document.getElementById('addInstAutoRfid').checked ? '1' : '0';
+
+    ajaxcall('stock/items.php', {
+        action: 'create_instances',
+        item_id: itemId,
+        quantity: quantity,
+        auto_rfid: autoRfid
+    }, function(r) {
+        if (r.success) {
+            closeModal('addInstancesModal');
+            showInstances(currentItemId, document.getElementById('instancesPanelTitle').textContent.replace('Instanzen: ', ''));
+            loadStockItems(); // refresh counts
+            alert(r.created + ' Instanzen erstellt!');
+        } else {
+            alert('Fehler: ' + (r.message || 'Unbekannt'));
+        }
+    }, true);
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('visible');
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) overlay.classList.remove('visible');
+    });
+});
+
+// Init
+loadStockItems();
+</script>
+{% endblock %}

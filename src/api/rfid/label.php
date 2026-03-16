@@ -1,16 +1,18 @@
 <?php
 /**
- * Asset Label Print API — ZPL-Labels fuer Zebra LP2824
+ * Asset & Stock Label Print API — ZPL-Labels fuer Zebra LP2824
  *
  * Generiert ZPL-Code fuer den Zebra LP2824 (2-Zoll Direct Thermal, 203dpi).
- * Unterstuetzt Vorschau (JSON) und Direktdruck (TCP/IP an Drucker).
+ * Unterstuetzt sowohl Assets (Geraete) als auch Stock-Instanzen (Artikel).
  *
  * POST Parameters:
- *   action    = preview | print | zpl
- *   asset_id  = int
- *   printer_ip = string (optional, fuer Direktdruck)
+ *   action        = preview | zpl | print | list_assets | preview_stock | print_stock
+ *   asset_id      = int (fuer Asset-Labels)
+ *   stock_item_id = int (fuer Artikel-Labels)
+ *   printer_ip    = string (optional, fuer Direktdruck)
  */
 require_once __DIR__ . '/../apiHeadSecure.php';
+require_once __DIR__ . '/../../services/StockItemService.php';
 
 if (!$AUTH->instancePermissionCheck("ASSETS:ASSET_BARCODES:SCAN")) {
     finish(false, ["message" => "Permission denied"]);
@@ -18,125 +20,232 @@ if (!$AUTH->instancePermissionCheck("ASSETS:ASSET_BARCODES:SCAN")) {
 
 $instanceId = (int)$AUTH->data['instance']['instances_id'];
 $action = $_POST['action'] ?? '';
-$assetId = (int)($_POST['asset_id'] ?? 0);
-
-if (!$assetId) {
-    finish(false, ["message" => "asset_id required"]);
-}
-
-// Fetch asset data
-$DBLIB->where('a.assets_id', $assetId);
-$DBLIB->where('a.instances_id', $instanceId);
-$DBLIB->where('a.assets_deleted', 0);
-$DBLIB->join('assetTypes at', 'a.assetTypes_id=at.assetTypes_id', 'LEFT');
-$asset = $DBLIB->getOne('assets a', [
-    'a.assets_id', 'a.assets_tag', 'a.asset_definableFields_1 AS rfid_tag',
-    'at.assetTypes_name', 'a.assets_storageLocation', 'a.assets_value',
-    'a.assets_dayRate', 'a.assets_weekRate'
-]);
-
-if (!$asset) {
-    finish(false, ["message" => "Asset not found"]);
-}
-
-// Label data
-$typeName = $asset['assetTypes_name'] ?: 'Asset';
-$assetTag = $asset['assets_tag'] ?: 'ID-' . $asset['assets_id'];
-$rfidTag = $asset['rfid_tag'] ?: '';
-$location = $asset['assets_storageLocation'] ?: '';
-$barcodeData = 'RMS-' . str_pad($asset['assets_id'], 6, '0', STR_PAD_LEFT);
 
 switch ($action) {
+    // ═══════════════════════════════════
+    // Asset Labels (Geraete)
+    // ═══════════════════════════════════
     case 'preview':
-        finish(true, null, [
-            'asset_id' => $asset['assets_id'],
-            'type_name' => $typeName,
-            'asset_tag' => $assetTag,
-            'rfid_tag' => $rfidTag,
-            'location' => $location,
-            'barcode_data' => $barcodeData,
-            'day_rate' => $asset['assets_dayRate'],
-            'week_rate' => $asset['assets_weekRate'],
-        ]);
-        break;
-
     case 'zpl':
-        $zpl = generateZpl($typeName, $assetTag, $barcodeData, $rfidTag, $location);
-        finish(true, null, ['zpl' => $zpl, 'barcode' => $barcodeData]);
-        break;
-
     case 'print':
-        $printerIp = $_POST['printer_ip'] ?? '';
-        $zpl = generateZpl($typeName, $assetTag, $barcodeData, $rfidTag, $location);
-
-        if (!empty($printerIp)) {
-            // Validate IP format
-            if (!filter_var($printerIp, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
-                finish(false, ["message" => "Invalid printer IP"]);
-            }
-            // Block private/loopback ranges that aren't local network
-            // (Allow 192.168.x.x and 10.x.x.x and 172.16-31.x.x for local printers)
-            $result = sendToPrinter($printerIp, 9100, $zpl);
-            if ($result === true) {
-                finish(true, null, ["message" => "Label sent to printer", "zpl" => $zpl]);
-            } else {
-                finish(false, ["message" => "Print failed: " . $result, "zpl" => $zpl]);
-            }
-        } else {
-            // No IP: return ZPL for browser-based printing (via print dialog or copy/paste)
-            finish(true, null, [
-                "message" => "ZPL generated. Connect printer via USB and use ZPL print utility.",
-                "zpl" => $zpl
-            ]);
-        }
+        handleAssetLabel($action, $instanceId);
         break;
 
     case 'list_assets':
-        // Helper: list assets for dropdown
-        $DBLIB->where('a.instances_id', $instanceId);
-        $DBLIB->where('a.assets_deleted', 0);
-        $DBLIB->join('assetTypes at', 'a.assetTypes_id=at.assetTypes_id', 'LEFT');
-        $DBLIB->orderBy('at.assetTypes_name', 'ASC');
-        $DBLIB->orderBy('a.assets_tag', 'ASC');
-        $assets = $DBLIB->get('assets a', 500, [
-            'a.assets_id', 'a.assets_tag', 'a.asset_definableFields_1 AS rfid_tag',
-            'at.assetTypes_name'
-        ]);
-        finish(true, null, ["assets" => $assets ?: []]);
+        handleListAssets($instanceId);
+        break;
+
+    // ═══════════════════════════════════
+    // Stock Instance Labels (Artikel)
+    // ═══════════════════════════════════
+    case 'preview_stock':
+        handleStockPreview($instanceId);
+        break;
+
+    case 'print_stock':
+        handleStockPrint($instanceId);
         break;
 
     default:
-        finish(false, ["message" => "Unknown action. Available: preview, zpl, print, list_assets"]);
+        finish(false, ["message" => "Unknown action. Available: preview, zpl, print, list_assets, preview_stock, print_stock"]);
 }
 
+// ══════════════════════════════════════
+// Asset Label Handlers
+// ══════════════════════════════════════
+function handleAssetLabel(string $action, int $instanceId): void
+{
+    global $DBLIB;
+
+    $assetId = (int)($_POST['asset_id'] ?? 0);
+    if (!$assetId) {
+        finish(false, ["message" => "asset_id required"]);
+    }
+
+    $DBLIB->where('a.assets_id', $assetId);
+    $DBLIB->where('a.instances_id', $instanceId);
+    $DBLIB->where('a.assets_deleted', 0);
+    $DBLIB->join('assetTypes at', 'a.assetTypes_id=at.assetTypes_id', 'LEFT');
+    $asset = $DBLIB->getOne('assets a', [
+        'a.assets_id', 'a.assets_tag', 'a.asset_definableFields_1 AS rfid_tag',
+        'at.assetTypes_name', 'a.assets_storageLocation', 'a.assets_value',
+        'a.assets_dayRate', 'a.assets_weekRate'
+    ]);
+
+    if (!$asset) {
+        finish(false, ["message" => "Asset not found"]);
+    }
+
+    $typeName = $asset['assetTypes_name'] ?: 'Asset';
+    $assetTag = $asset['assets_tag'] ?: 'ID-' . $asset['assets_id'];
+    $rfidTag = $asset['rfid_tag'] ?: '';
+    $location = $asset['assets_storageLocation'] ?: '';
+    $barcodeData = 'RMS-A-' . str_pad($asset['assets_id'], 6, '0', STR_PAD_LEFT);
+
+    switch ($action) {
+        case 'preview':
+            finish(true, null, [
+                'asset_id'     => $asset['assets_id'],
+                'type_name'    => $typeName,
+                'asset_tag'    => $assetTag,
+                'rfid_tag'     => $rfidTag,
+                'location'     => $location,
+                'barcode_data' => $barcodeData,
+                'day_rate'     => $asset['assets_dayRate'],
+                'week_rate'    => $asset['assets_weekRate'],
+                'entity_type'  => 'asset',
+            ]);
+            break;
+
+        case 'zpl':
+            $zpl = generateAssetZpl($typeName, $assetTag, $barcodeData, $rfidTag, $location);
+            finish(true, null, ['zpl' => $zpl, 'barcode' => $barcodeData]);
+            break;
+
+        case 'print':
+            $printerIp = $_POST['printer_ip'] ?? '';
+            $zpl = generateAssetZpl($typeName, $assetTag, $barcodeData, $rfidTag, $location);
+            printZpl($zpl, $printerIp);
+            break;
+    }
+}
+
+// ══════════════════════════════════════
+// Stock Label Handlers
+// ══════════════════════════════════════
+function handleStockPreview(int $instanceId): void
+{
+    global $DBLIB;
+    $stockService = new StockItemService($DBLIB);
+
+    $stockItemId = (int)($_POST['stock_item_id'] ?? 0);
+    if (!$stockItemId) {
+        finish(false, ["message" => "stock_item_id required"]);
+    }
+
+    $item = $stockService->getItem($stockItemId);
+    if (!$item) {
+        finish(false, ["message" => "Stock item not found"]);
+    }
+
+    finish(true, null, [
+        'stock_item_id'  => $item['id'],
+        'item_name'      => $item['name'],
+        'category'       => $item['category'],
+        'sku'            => $item['sku'],
+        'instance_count' => $item['counts']['total'] . ' total, ' . $item['counts']['available'] . ' verfuegbar',
+        'entity_type'    => 'stock_item',
+    ]);
+}
+
+function handleStockPrint(int $instanceId): void
+{
+    global $DBLIB;
+    $stockService = new StockItemService($DBLIB);
+
+    $stockItemId = (int)($_POST['stock_item_id'] ?? 0);
+    $printerIp = $_POST['printer_ip'] ?? '';
+
+    if (!$stockItemId) {
+        finish(false, ["message" => "stock_item_id required"]);
+    }
+
+    $item = $stockService->getItem($stockItemId);
+    if (!$item) {
+        finish(false, ["message" => "Stock item not found"]);
+    }
+
+    // Get all instances that have RFID tags
+    $instances = $stockService->listInstances($stockItemId);
+    $instancesWithRfid = array_filter($instances, function ($i) {
+        return !empty($i['rfid_tag']);
+    });
+
+    if (empty($instancesWithRfid)) {
+        finish(false, ["message" => "Keine Instanzen mit RFID-Tags vorhanden"]);
+    }
+
+    // Generate ZPL for each instance
+    $allZpl = '';
+    $printed = 0;
+    foreach ($instancesWithRfid as $inst) {
+        $zpl = generateStockZpl(
+            $item['name'],
+            $item['category'],
+            $inst['instance_number'],
+            $inst['rfid_tag'],
+            $item['sku']
+        );
+        $allZpl .= $zpl;
+        $printed++;
+    }
+
+    if (!empty($printerIp)) {
+        if (!filter_var($printerIp, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            finish(false, ["message" => "Invalid printer IP"]);
+        }
+        $result = sendToPrinter($printerIp, 9100, $allZpl);
+        if ($result === true) {
+            finish(true, null, [
+                "message" => $printed . " Labels an Drucker gesendet",
+                "printed" => $printed,
+                "zpl"     => $allZpl,
+            ]);
+        } else {
+            finish(false, ["message" => "Print failed: " . $result, "zpl" => $allZpl]);
+        }
+    } else {
+        finish(true, null, [
+            "message" => $printed . " Labels generiert (ZPL)",
+            "printed" => $printed,
+            "zpl"     => $allZpl,
+        ]);
+    }
+}
+
+function handleListAssets(int $instanceId): void
+{
+    global $DBLIB;
+    $DBLIB->where('a.instances_id', $instanceId);
+    $DBLIB->where('a.assets_deleted', 0);
+    $DBLIB->join('assetTypes at', 'a.assetTypes_id=at.assetTypes_id', 'LEFT');
+    $DBLIB->orderBy('at.assetTypes_name', 'ASC');
+    $DBLIB->orderBy('a.assets_tag', 'ASC');
+    $assets = $DBLIB->get('assets a', 500, [
+        'a.assets_id', 'a.assets_tag', 'a.asset_definableFields_1 AS rfid_tag',
+        'at.assetTypes_name'
+    ]);
+    finish(true, null, ["assets" => $assets ?: []]);
+}
+
+// ══════════════════════════════════════
+// ZPL Generation
+// ══════════════════════════════════════
+
 /**
- * Generate ZPL code for Zebra LP2824 (2-inch, 203dpi)
+ * Generate ZPL for Asset label (Geraet)
  *
- * Label size: ~56mm x 25mm (2.2" x 1")
- * Resolution: 203 dpi (8 dots/mm)
- *
- * Layout:
+ * Layout (2.2" x 1", 203dpi):
  *   ┌──────────────────────────────┐
- *   │ AssetType Name        [RFID] │
+ *   │ GERAET  AssetType Name [RF] │
  *   │ #Asset-Tag                    │
  *   │ ║║║║║║║║║║║║║║║║║║║║         │
- *   │ RMS-000001                    │
+ *   │ RMS-A-000001                  │
  *   │ Lager: XY                     │
  *   └──────────────────────────────┘
  */
-function generateZpl(string $typeName, string $assetTag, string $barcodeData, string $rfidTag, string $location): string
+function generateAssetZpl(string $typeName, string $assetTag, string $barcodeData, string $rfidTag, string $location): string
 {
-    // Sanitize for ZPL (remove special chars that could break ZPL)
     $typeName = preg_replace('/[^a-zA-Z0-9\s\-\.\/_äöüÄÖÜß]/', '', $typeName);
     $assetTag = preg_replace('/[^a-zA-Z0-9\s\-\.\/_#äöüÄÖÜß]/', '', $assetTag);
     $location = preg_replace('/[^a-zA-Z0-9\s\-\.\/_äöüÄÖÜß]/', '', $location);
 
-    $zpl = "^XA\n";                          // Start format
-    $zpl .= "^CI28\n";                       // UTF-8 character set
-    $zpl .= "^PW464\n";                      // Print width: 58mm = 464 dots @ 203dpi
-    $zpl .= "^LL200\n";                      // Label length: 25mm = 200 dots
+    $zpl = "^XA\n";
+    $zpl .= "^CI28\n";
+    $zpl .= "^PW464\n";
+    $zpl .= "^LL200\n";
 
-    // Row 1: Asset Type Name (bold, large)
+    // Row 1: Asset Type Name (bold)
     $zpl .= "^FO10,10^A0N,28,28^FD" . $typeName . "^FS\n";
 
     // RFID indicator (top right)
@@ -150,20 +259,80 @@ function generateZpl(string $typeName, string $assetTag, string $barcodeData, st
     // Row 3: Barcode (Code 128)
     $zpl .= "^FO10,72^BCN,50,N,N,N^FD" . $barcodeData . "^FS\n";
 
-    // Row 4: Barcode text below
+    // Row 4: Barcode text
     $zpl .= "^FO10,128^A0N,18,18^FD" . $barcodeData . "^FS\n";
 
-    // Row 5: Location (if set)
+    // Row 5: Location
     if (!empty($location)) {
         $zpl .= "^FO10,150^A0N,18,18^FDLager: " . $location . "^FS\n";
     }
 
-    // RFID tag text (bottom right, small)
+    // RFID tag text (bottom right)
     if (!empty($rfidTag)) {
         $zpl .= "^FO200,150^A0N,16,16^FDRFID:" . substr($rfidTag, 0, 20) . "^FS\n";
     }
 
-    $zpl .= "^XZ\n";                        // End format
+    $zpl .= "^XZ\n";
+
+    return $zpl;
+}
+
+/**
+ * Generate ZPL for Stock Instance label (Artikel)
+ *
+ * Layout (2.2" x 1", 203dpi) — kompakter, ohne Seriennummer:
+ *   ┌──────────────────────────────┐
+ *   │ ARTIKEL  Kabelname      [RF] │
+ *   │ Kategorie        #0023       │
+ *   │ ║║║║║║║║║║║║║║║║║║║║         │
+ *   │ RMS-I-000023                  │
+ *   │ SKU: HDMI-3M                  │
+ *   └──────────────────────────────┘
+ */
+function generateStockZpl(string $itemName, string $category, int $instanceNumber, string $rfidTag, string $sku): string
+{
+    $itemName = preg_replace('/[^a-zA-Z0-9\s\-\.\/_äöüÄÖÜß]/', '', $itemName);
+    $category = preg_replace('/[^a-zA-Z0-9\s\-\.\/_äöüÄÖÜß]/', '', $category);
+    $sku = preg_replace('/[^a-zA-Z0-9\s\-\.\/_äöüÄÖÜß]/', '', $sku);
+
+    $zpl = "^XA\n";
+    $zpl .= "^CI28\n";
+    $zpl .= "^PW464\n";
+    $zpl .= "^LL200\n";
+
+    // Row 1: Item Name
+    $zpl .= "^FO10,10^A0N,28,28^FD" . $itemName . "^FS\n";
+
+    // RFID indicator (top right)
+    if (!empty($rfidTag)) {
+        $zpl .= "^FO370,10^A0N,20,20^FDRF^FS\n";
+    }
+
+    // Row 2: Category + Instance Number
+    $instanceLabel = '#' . str_pad($instanceNumber, 4, '0', STR_PAD_LEFT);
+    if (!empty($category)) {
+        $zpl .= "^FO10,42^A0N,22,22^FD" . $category . "^FS\n";
+    }
+    $zpl .= "^FO350,42^A0N,22,22^FD" . $instanceLabel . "^FS\n";
+
+    // Row 3: Barcode (Code 128) using RFID tag as data
+    $barcodeData = !empty($rfidTag) ? $rfidTag : 'RMS-I-' . str_pad($instanceNumber, 6, '0', STR_PAD_LEFT);
+    $zpl .= "^FO10,72^BCN,50,N,N,N^FD" . $barcodeData . "^FS\n";
+
+    // Row 4: Barcode text
+    $zpl .= "^FO10,128^A0N,18,18^FD" . $barcodeData . "^FS\n";
+
+    // Row 5: SKU (if set)
+    if (!empty($sku)) {
+        $zpl .= "^FO10,150^A0N,18,18^FDSKU: " . $sku . "^FS\n";
+    }
+
+    // RFID tag text (bottom right)
+    if (!empty($rfidTag)) {
+        $zpl .= "^FO200,150^A0N,16,16^FDRFID:" . substr($rfidTag, 0, 20) . "^FS\n";
+    }
+
+    $zpl .= "^XZ\n";
 
     return $zpl;
 }
