@@ -212,16 +212,14 @@ function handleGetHistory() {
 
     $query = "
         SELECT
-            codeHistory_id,
-            codeHistory_instances_id,
-            codeHistory_oldCode,
-            codeHistory_newCode,
-            codeHistory_action,
-            codeHistory_reason,
-            codeHistory_timestamp
-        FROM code_history
-        WHERE codeHistory_instances_id = ?
-        ORDER BY codeHistory_timestamp DESC
+            id,
+            instances_id,
+            old_code,
+            new_code,
+            changed_at
+        FROM company_code_history
+        WHERE instances_id = ?
+        ORDER BY changed_at DESC
         LIMIT 50
     ";
 
@@ -290,22 +288,18 @@ function logCodeChange($action, $oldCode, $newCode, $reason) {
     global $DBLIB, $instanceId;
 
     $query = "
-        INSERT INTO code_history (
-            codeHistory_instances_id,
-            codeHistory_oldCode,
-            codeHistory_newCode,
-            codeHistory_action,
-            codeHistory_reason,
-            codeHistory_timestamp
-        ) VALUES (?, ?, ?, ?, ?, NOW())
+        INSERT INTO company_code_history (
+            instances_id,
+            old_code,
+            new_code,
+            changed_at
+        ) VALUES (?, ?, ?, NOW())
     ";
 
     $DBLIB->query($query, [
         $instanceId,
         $oldCode,
         $newCode,
-        $action,
-        $reason
     ]);
 }
 ?>

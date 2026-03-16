@@ -175,7 +175,7 @@ class TagFormatService
             return false;
         }
 
-        $code = strtoupper($code);
+        $code = strtolower($code);
         $this->db->where('instances_companyCode', $code);
         $this->db->where('instances_id', $partnerInstanceIds, 'IN');
         $result = $this->db->getOne('instances', ['instances_id']);
