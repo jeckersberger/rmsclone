@@ -199,12 +199,7 @@ class CaseContentsService
         $this->db->where('assets_id', $assetId);
         $this->db->where('instances_id', $this->instanceId);
 
-        $data = [
-            'is_case' => 1,
-            'updated_at' => date('Y-m-d H:i:s')
-        ];
-
-        $result = $this->db->update('assets', $data);
+        $result = $this->db->update('assets', ['is_case' => 1]);
 
         return $result > 0;
     }
@@ -227,12 +222,7 @@ class CaseContentsService
         $this->db->where('assets_id', $assetId);
         $this->db->where('instances_id', $this->instanceId);
 
-        $data = [
-            'is_case' => 0,
-            'updated_at' => date('Y-m-d H:i:s')
-        ];
-
-        $result = $this->db->update('assets', $data);
+        $result = $this->db->update('assets', ['is_case' => 0]);
 
         return $result > 0;
     }
@@ -244,21 +234,23 @@ class CaseContentsService
     {
         $this->db->where('a.is_case', 1);
         $this->db->where('a.instances_id', $this->instanceId);
+        $this->db->where('a.assets_deleted', 0);
+
+        // Join assetTypes for display name
+        $this->db->join('assetTypes at', 'at.assetTypes_id = a.assetTypes_id', 'LEFT');
 
         // Count contents for each case
-        $this->db->leftJoin(
-            'case_contents cc',
-            'a.assets_id = cc.case_asset_id AND cc.instances_id = a.instances_id',
-            'cc'
-        );
+        $this->db->join('case_contents cc', 'a.assets_id = cc.case_asset_id', 'LEFT');
 
-        $this->db->orderBy('a.asset_name', 'ASC');
+        $this->db->orderBy('at.assetTypes_name', 'ASC');
+        $this->db->orderBy('a.assets_tag', 'ASC');
         $this->db->groupBy('a.assets_id');
 
         $results = $this->db->get('assets a', null, [
             'a.assets_id',
-            'a.asset_name',
-            'a.asset_code',
+            'a.assets_tag',
+            'at.assetTypes_name AS type_name',
+            'a.assets_serialInternal',
             'COUNT(cc.id) as content_count'
         ]);
 

@@ -156,19 +156,21 @@ function handleCheckFederation() {
         finish(false, ["message" => "No company code set"]);
     }
 
-    // Get partner instances from partner_links
+    // Get partner instances from partner_links (both directions)
     $partnerQuery = "
-        SELECT pl.partner_links_id, pl.partner_instances_id
-        FROM partner_links
-        WHERE partner_links_instances_id = ?
+        SELECT instance_b_id AS partner_id FROM partner_links
+        WHERE instance_a_id = ? AND status = 'active' AND deleted = 0
+        UNION
+        SELECT instance_a_id AS partner_id FROM partner_links
+        WHERE instance_b_id = ? AND status = 'active' AND deleted = 0
     ";
-    $partnerResult = $DBLIB->query($partnerQuery, [$instanceId]);
+    $partnerResult = $DBLIB->query($partnerQuery, [$instanceId, $instanceId]);
 
     $collisions = [];
 
     if ($partnerResult && $partnerResult->num_rows > 0) {
         while ($partner = $partnerResult->fetch_assoc()) {
-            $partnerId = (int)$partner['partner_instances_id'];
+            $partnerId = (int)$partner['partner_id'];
 
             // Get partner's company code
             $partnerCodeQuery = "SELECT instances_companyCode FROM instances WHERE instances_id = ?";
@@ -184,6 +186,28 @@ function handleCheckFederation() {
                         "partner_code" => $partnerCode
                     ];
                 }
+            }
+        }
+    }
+
+    // Also check remote federation servers
+    $fedQuery = "
+        SELECT partner_servers_id, partner_servers_name, partner_servers_remoteCompanyCode
+        FROM partner_servers
+        WHERE instances_id = ? AND partner_servers_deleted = 0 AND partner_servers_status = 'active'
+          AND partner_servers_remoteCompanyCode IS NOT NULL
+    ";
+    $fedResult = $DBLIB->query($fedQuery, [$instanceId]);
+
+    if ($fedResult && $fedResult->num_rows > 0) {
+        while ($fed = $fedResult->fetch_assoc()) {
+            if (strtolower($fed['partner_servers_remoteCompanyCode']) === strtolower($currentCode)) {
+                $collisions[] = [
+                    "partner_id" => (int)$fed['partner_servers_id'],
+                    "partner_name" => $fed['partner_servers_name'],
+                    "partner_code" => $fed['partner_servers_remoteCompanyCode'],
+                    "source" => "federation"
+                ];
             }
         }
     }
