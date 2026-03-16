@@ -12,10 +12,6 @@
 require_once(__DIR__ . '/../../vendor/autoload.php'); //Composer
 require_once __DIR__ . '/libs/Config/Config.php';
 
-use Aws\S3\S3Client;
-use Aws\S3\Exception\S3Exception;
-use Aws\CloudFront\CloudFrontClient;
-use Aws\Exception\AwsException;
 use Twig\Extra\String\StringExtension;
 
 //TWIG
@@ -233,7 +229,6 @@ $CSP = [
     ],
     "connect-src" => [
         ["value" => "'self'", "comment" => ""],
-        ["value" => "https://*.amazonaws.com", "comment" => "S3 uploads"],
     ],
     "frame-src" => [
         ["value" => "https://www.youtube.com", "comment" => "Training modules"],

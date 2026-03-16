@@ -343,6 +343,16 @@
         min-height: 48px;
     }
 
+    .location-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-size: 12px;
+        font-weight: 600;
+        color: white;
+        background: #6c757d;
+    }
+
     @media (max-width: 600px) {
         .rfid-container {
             margin: 10px auto;
@@ -375,6 +385,7 @@
         <button class="mode-btn" data-mode="box_scan"><i class="fas fa-box-open"></i> Kisten-Scan</button>
         <button class="mode-btn" data-mode="inventory"><i class="fas fa-clipboard-list"></i> Inventur</button>
         <button class="mode-btn" data-mode="write_tag"><i class="fas fa-pen"></i> Tag schreiben</button>
+        <button class="mode-btn" data-mode="relocate"><i class="fas fa-dolly"></i> Umlagern</button>
         <button class="mode-btn" data-mode="print_label"><i class="fas fa-print"></i> Label drucken</button>
     </div>
 
@@ -452,19 +463,18 @@
         <div class="card card-warning card-outline">
             <div class="card-header"><h3 class="card-title"><i class="fas fa-pen"></i> RFID-Tag beschreiben</h3></div>
             <div class="card-body">
-                <p style="font-size:16px;">1. Asset auswaehlen &rarr; 2. Neuen EPC eingeben oder generieren &rarr; 3. Tag scannen &rarr; Tag wird beschrieben</p>
+                <p style="font-size:16px;">1. Geraet oder Artikel-Instanz auswaehlen &rarr; 2. EPC generieren &rarr; 3. Tag beschreiben</p>
                 <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
-                    <select id="writeAssetSelector" class="project-selector" style="display:block; flex:2;">
-                        <option value="">-- Asset auswaehlen --</option>
+                    <select id="writeEntitySelector" class="project-selector" style="display:block; flex:2;">
+                        <option value="">-- Geraet / Instanz waehlen --</option>
                     </select>
                     <input type="text" id="writeEpcInput" class="rfid-input" style="flex:1; max-width:none;" placeholder="EPC (z.B. RMS-A-000001)" />
                     <button onclick="generateEpc()" style="padding:12px 20px; font-size:16px; background:#ffc107; border:none; border-radius:5px; cursor:pointer; min-height:48px; white-space:nowrap;">
                         <i class="fas fa-magic"></i> Auto-EPC
                     </button>
                 </div>
-                <p style="font-size:14px; color:#666;">Aktueller Tag (scannen zum Lesen): <strong id="currentTagDisplay">-</strong></p>
                 <button onclick="writeTag()" style="padding:15px 30px; font-size:18px; font-weight:bold; background:#28a745; color:white; border:none; border-radius:5px; cursor:pointer; min-height:56px; width:100%;">
-                    <i class="fas fa-save"></i> Tag beschreiben &amp; Asset zuweisen
+                    <i class="fas fa-save"></i> Tag beschreiben &amp; zuweisen
                 </button>
             </div>
         </div>
@@ -492,6 +502,33 @@
                     <input type="text" id="printerIp" value="" placeholder="z.B. 192.168.1.100" style="padding:8px; border:1px solid #ccc; border-radius:3px; width:200px;" />
                     <button onclick="printLabelDirect()" style="padding:8px 16px; font-size:14px; background:#6c757d; color:white; border:none; border-radius:3px; cursor:pointer; margin-left:5px;">
                         <i class="fas fa-network-wired"></i> Direkt senden
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ── Relocate Section ── #}
+    <div id="relocateSection" style="display:none; margin-bottom: 20px;">
+        <div class="card card-success card-outline">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-dolly"></i> Geraete / Artikel umlagern</h3></div>
+            <div class="card-body">
+                <p style="font-size:16px;">Lagerort waehlen und dann Tags scannen — jedes gescannte Geraet/Artikel wird dem Lagerort zugewiesen.</p>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+                    <select id="locationSelector" class="project-selector" style="display:block; flex:2;">
+                        <option value="">-- Lagerort waehlen --</option>
+                    </select>
+                    <input type="text" id="locationCustom" class="rfid-input" style="flex:1; max-width:none;" placeholder="Oder Freitext-Standort eingeben..." />
+                </div>
+                <div style="margin-bottom:10px;">
+                    <input type="text" id="locationNotes" class="rfid-input" style="width:100%; max-width:none;" placeholder="Notizen (optional)..." />
+                </div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <button onclick="relocateBulk()" style="padding:12px 24px; font-size:16px; background:#28a745; color:white; border:none; border-radius:5px; cursor:pointer; min-height:48px;">
+                        <i class="fas fa-boxes"></i> Kiste umlagern (<span id="relocateTagCount">0</span> Tags)
+                    </button>
+                    <button onclick="clearRelocateTags()" style="padding:12px 24px; font-size:16px; background:#dc3545; color:white; border:none; border-radius:5px; cursor:pointer; min-height:48px;">
+                        <i class="fas fa-trash"></i> Zuruecksetzen
                     </button>
                 </div>
             </div>
@@ -526,6 +563,7 @@
 </div>
 
 <script>
+    var companyCode = '{{ companyCode }}';
     var currentMode = 'checkout';
     var inventorySessionId = null;
     var scanHistory = [];
@@ -563,6 +601,7 @@
         document.getElementById('writeTagSection').style.display = 'none';
         document.getElementById('printLabelSection').style.display = 'none';
         document.getElementById('boxScanSection').classList.remove('visible');
+        document.getElementById('relocateSection').style.display = 'none';
 
         rfidInput.style.display = '';
         rfidLabel.style.display = '';
@@ -597,10 +636,17 @@
                 break;
 
             case 'write_tag':
-                rfidInput.placeholder = 'Tag scannen zum Lesen der aktuellen ID...';
-                rfidLabel.textContent = 'Tag schreiben - Tag scannen:';
+                rfidInput.style.display = 'none';
+                rfidLabel.style.display = 'none';
                 document.getElementById('writeTagSection').style.display = 'block';
-                loadAssets('writeAssetSelector');
+                loadEntitiesForWrite();
+                break;
+
+            case 'relocate':
+                rfidInput.placeholder = 'Tag scannen zum Umlagern...';
+                rfidLabel.textContent = 'Umlagern - Tag scannen:';
+                document.getElementById('relocateSection').style.display = 'block';
+                loadLocations();
                 break;
 
             case 'print_label':
@@ -662,6 +708,14 @@
             return;
         }
 
+        // Relocate mode: single scan assigns location immediately
+        if (currentMode === 'relocate') {
+            handleRelocateScan(rfidTag);
+            document.getElementById('rfidInput').value = '';
+            document.getElementById('rfidInput').focus();
+            return;
+        }
+
         // Checkout / Checkin: use universal scan
         if (currentMode === 'checkout') {
             var projectId = document.getElementById('projectSelector').value;
@@ -693,14 +747,38 @@
                 var entityType = r.entity_type;
                 var entity = r.entity;
                 var displayName = entity ? (entity.display_name || entity.assets_name || entity.item_name || 'Unbekannt') : 'Unbekannt';
-                var typeBadge = entityType === 'asset'
-                    ? '<span class="entity-badge asset">Geraet</span>'
-                    : '<span class="entity-badge stock">Artikel</span>';
+                var isForeign = entity && entity.is_foreign;
 
-                showResult(
-                    typeBadge + ' ' + (scanAction === 'checkout' ? 'Ausgeliehen' : 'Zurueckgegeben') + ': ' + displayName,
-                    'success'
-                );
+                var typeBadge = '';
+                if (entityType.startsWith('partner_')) {
+                    var baseType = entityType.replace('partner_', '');
+                    typeBadge = '<span class="entity-badge" style="background:#ff6b6b;color:white;padding:2px 8px;border-radius:3px;font-size:12px;margin-right:4px;">'
+                        + (entity.owner_name || 'Partner') + '</span> ';
+                    typeBadge += baseType === 'asset'
+                        ? '<span class="entity-badge asset">Geraet</span>'
+                        : baseType === 'stock_instance'
+                            ? '<span class="entity-badge stock">Artikel</span>'
+                            : '<span class="entity-badge" style="background:#6c757d;color:white;padding:2px 8px;border-radius:3px;font-size:12px;">Fremd</span>';
+                } else {
+                    typeBadge = entityType === 'asset'
+                        ? '<span class="entity-badge asset">Geraet</span>'
+                        : entityType === 'stock_instance'
+                            ? '<span class="entity-badge stock">Artikel</span>'
+                            : '<span class="entity-badge" style="background:#6c757d;color:white;padding:2px 8px;border-radius:3px;font-size:12px;">Fremd</span>';
+                }
+
+                if (isForeign) {
+                    showResult(
+                        typeBadge + ' <strong>Achtung: Fremdgerät!</strong> ' + displayName +
+                        '<br><small>Gehört: ' + (entity.owner_name || 'Partner') + '</small>',
+                        'warning'
+                    );
+                } else {
+                    showResult(
+                        typeBadge + ' ' + (scanAction === 'checkout' ? 'Ausgeliehen' : 'Zurueckgegeben') + ': ' + displayName,
+                        'success'
+                    );
+                }
                 addToHistory(rfidTag, typeBadge + ' ' + displayName, 'success');
             } else {
                 playSound('error');
@@ -1048,21 +1126,169 @@
     }
 
     // ══════════════════════════════════════
+    // Relocate (Umlagern) Functions
+    // ══════════════════════════════════════
+    var relocateScannedTags = [];
+
+    function loadLocations() {
+        ajaxcall('locations.php', { action: 'list_locations' }, function(response) {
+            if (response.result && response.response && response.response.locations) {
+                var sel = document.getElementById('locationSelector');
+                sel.innerHTML = '<option value="">-- Lagerort waehlen --</option>';
+                response.response.locations.forEach(function(loc) {
+                    var opt = document.createElement('option');
+                    opt.value = loc.id;
+                    opt.textContent = loc.name + (loc.description ? ' (' + loc.description + ')' : '');
+                    opt.dataset.color = loc.color || '#6c757d';
+                    opt.dataset.icon = loc.icon || 'fas fa-warehouse';
+                    sel.appendChild(opt);
+                });
+            }
+        }, false);
+    }
+
+    function getLocationParams() {
+        var locationId = document.getElementById('locationSelector').value;
+        var locationCustom = document.getElementById('locationCustom').value.trim();
+        var notes = document.getElementById('locationNotes').value.trim();
+
+        if (!locationId && !locationCustom) {
+            showResult('Bitte Lagerort waehlen oder Freitext eingeben', 'warning');
+            return null;
+        }
+
+        var params = {};
+        if (locationId) params.location_id = locationId;
+        if (locationCustom) params.location_custom = locationCustom;
+        if (notes) params.notes = notes;
+        return params;
+    }
+
+    function handleRelocateScan(rfidTag) {
+        var params = getLocationParams();
+        if (!params) return;
+
+        // Also collect for bulk display
+        if (relocateScannedTags.indexOf(rfidTag) === -1) {
+            relocateScannedTags.push(rfidTag);
+            document.getElementById('relocateTagCount').textContent = relocateScannedTags.length;
+        }
+
+        params.action = 'scan_assign';
+        params.rfid_tag = rfidTag;
+
+        ajaxcall('locations.php', params, function(response) {
+            if (response.result && response.response && response.response.success) {
+                var r = response.response;
+                var entityType = r.entity_type;
+                var entity = r.entity;
+                var displayName = entity ? (entity.display_name || entity.assets_name || entity.item_name || 'Unbekannt') : 'Unbekannt';
+                var locationName = r.location ? (r.location.name || r.location.location_custom || 'Unbekannt') : 'Unbekannt';
+                var typeBadge = entityType === 'asset'
+                    ? '<span class="entity-badge asset">Geraet</span>'
+                    : '<span class="entity-badge stock">Artikel</span>';
+
+                playSound('success');
+                showResult(
+                    typeBadge + ' ' + displayName + ' &rarr; <i class="fas fa-map-marker-alt"></i> ' + locationName,
+                    'success'
+                );
+                addToHistory(rfidTag, typeBadge + ' ' + displayName + ' → ' + locationName, 'success');
+            } else {
+                playSound('error');
+                var msg = (response.response && response.response.message) ? response.response.message : 'Umlagern fehlgeschlagen';
+                showResult(msg, 'error');
+                addToHistory(rfidTag, msg, 'error');
+            }
+        }, true);
+    }
+
+    function relocateBulk() {
+        if (relocateScannedTags.length === 0) {
+            showResult('Keine Tags gescannt', 'warning');
+            return;
+        }
+
+        var params = getLocationParams();
+        if (!params) return;
+
+        params.action = 'bulk_assign';
+        params.rfid_tags = JSON.stringify(relocateScannedTags);
+
+        ajaxcall('locations.php', params, function(response) {
+            if (response.result && response.response) {
+                var r = response.response;
+                playSound('success');
+                showResult(
+                    '<i class="fas fa-check-circle"></i> ' + r.success + ' von ' + r.total + ' Geraeten/Artikeln umgelagert' +
+                    (r.errors > 0 ? ' (' + r.errors + ' Fehler)' : ''),
+                    r.errors > 0 ? 'warning' : 'success'
+                );
+            } else {
+                playSound('error');
+                showResult('Fehler beim Sammel-Umlagern', 'error');
+            }
+        }, true);
+    }
+
+    function clearRelocateTags() {
+        relocateScannedTags = [];
+        document.getElementById('relocateTagCount').textContent = '0';
+        showResult('Umlagern zurueckgesetzt', 'warning');
+    }
+
+    // ══════════════════════════════════════
     // Tag Write Functions
     // ══════════════════════════════════════
-    function loadAssets(targetSelector) {
+    function loadEntitiesForWrite() {
+        var sel = document.getElementById('writeEntitySelector');
+        sel.innerHTML = '<option value="">-- Geraet / Instanz waehlen --</option>';
+
+        // Load assets
         ajaxcall('rfid/scan.php', { action: 'list_assets' }, function(response) {
             if (response.result && response.response && response.response.assets) {
-                var sel = document.getElementById(targetSelector);
-                sel.innerHTML = '<option value="">-- Asset auswaehlen --</option>';
+                var optGroup = document.createElement('optgroup');
+                optGroup.label = 'Geraete (Assets)';
                 response.response.assets.forEach(function(a) {
                     var opt = document.createElement('option');
-                    opt.value = a.assets_id;
-                    opt.textContent = (a.assetTypes_name || '') + ' ' + (a.assets_tag ? '#' + a.assets_tag : '') + ' (ID:' + a.assets_id + ')';
-                    opt.dataset.tag = a.assets_tag || '';
-                    opt.dataset.rfid = a.rfid_tag || '';
-                    opt.dataset.type = a.assetTypes_name || '';
-                    sel.appendChild(opt);
+                    opt.value = 'asset:' + a.assets_id;
+                    opt.textContent = (a.assetTypes_name || '') + ' #' + (a.assets_tag || a.assets_id);
+                    if (a.rfid_tag) opt.textContent += ' [RFID: ' + a.rfid_tag + ']';
+                    opt.dataset.entityType = 'asset';
+                    opt.dataset.entityId = a.assets_id;
+                    optGroup.appendChild(opt);
+                });
+                sel.appendChild(optGroup);
+            }
+        }, false);
+
+        // Load stock items, then instances for each
+        ajaxcall('stock/items.php', { action: 'list_items' }, function(response) {
+            if (response.success && response.items) {
+                var optGroup = document.createElement('optgroup');
+                optGroup.label = 'Artikel-Instanzen (Stock)';
+                var pending = response.items.length;
+                if (pending === 0) return;
+
+                response.items.forEach(function(item) {
+                    ajaxcall('stock/items.php', { action: 'list_instances', item_id: item.id }, function(instResponse) {
+                        if (instResponse.success && instResponse.instances) {
+                            instResponse.instances.forEach(function(inst) {
+                                var opt = document.createElement('option');
+                                opt.value = 'stock_instance:' + inst.id;
+                                opt.textContent = item.name + ' #' + String(inst.instance_number).padStart(4, '0');
+                                if (inst.rfid_tag) opt.textContent += ' [RFID: ' + inst.rfid_tag + ']';
+                                opt.dataset.entityType = 'stock_instance';
+                                opt.dataset.entityId = inst.id;
+                                opt.dataset.instanceNumber = inst.instance_number;
+                                optGroup.appendChild(opt);
+                            });
+                        }
+                        pending--;
+                        if (pending <= 0 && optGroup.children.length > 0) {
+                            sel.appendChild(optGroup);
+                        }
+                    }, false);
                 });
             }
         }, false);
@@ -1105,37 +1331,68 @@
     }
 
     function generateEpc() {
-        var sel = document.getElementById('writeAssetSelector');
+        var sel = document.getElementById('writeEntitySelector');
         if (!sel.value) {
-            showResult('Bitte zuerst ein Asset auswaehlen', 'warning');
+            showResult('Bitte zuerst ein Geraet oder eine Instanz auswaehlen', 'warning');
             return;
         }
-        var epc = 'RMS-A-' + String(sel.value).padStart(6, '0');
-        document.getElementById('writeEpcInput').value = epc;
+        var parts = sel.value.split(':');
+        var entityType = parts[0];
+        var entityId = parts[1];
+
+        if (entityType === 'asset') {
+            document.getElementById('writeEpcInput').value = 'RMS-' + companyCode + '-A-' + String(entityId).padStart(6, '0');
+        } else if (entityType === 'stock_instance') {
+            var selectedOpt = sel.options[sel.selectedIndex];
+            var instNum = selectedOpt.dataset.instanceNumber || entityId;
+            document.getElementById('writeEpcInput').value = 'RMS-' + companyCode + '-I-' + String(instNum).padStart(6, '0');
+        }
     }
 
     function writeTag() {
-        var assetId = document.getElementById('writeAssetSelector').value;
+        var sel = document.getElementById('writeEntitySelector');
         var newEpc = document.getElementById('writeEpcInput').value.trim();
 
-        if (!assetId) { showResult('Bitte Asset auswaehlen', 'warning'); return; }
+        if (!sel.value) { showResult('Bitte Geraet oder Instanz auswaehlen', 'warning'); return; }
         if (!newEpc) { showResult('Bitte EPC eingeben oder generieren', 'warning'); return; }
 
-        ajaxcall('rfid/scan.php', {
-            action: 'assign_tag',
-            asset_id: assetId,
-            rfid_tag: newEpc
-        }, function(response) {
-            if (response.result) {
-                playSound('success');
-                showResult('<i class="fas fa-check-circle"></i> Tag "' + newEpc + '" erfolgreich zugewiesen!<br><small>Jetzt mit dem Chafon-Scanner den EPC auf den physischen Tag schreiben.</small>', 'success');
-                addToHistory(newEpc, 'Tag zugewiesen (Asset #' + assetId + ')', 'success');
-                document.getElementById('currentTagDisplay').textContent = newEpc;
-            } else {
-                playSound('error');
-                showResult('Fehler: ' + (response.response ? response.response.message : 'Tag bereits vergeben'), 'error');
-            }
-        }, true);
+        var parts = sel.value.split(':');
+        var entityType = parts[0];
+        var entityId = parts[1];
+
+        if (entityType === 'asset') {
+            // Assign to asset via existing endpoint
+            ajaxcall('rfid/scan.php', {
+                action: 'assign_tag',
+                asset_id: entityId,
+                rfid_tag: newEpc
+            }, function(response) {
+                if (response.result) {
+                    playSound('success');
+                    showResult('<i class="fas fa-check-circle"></i> EPC "' + newEpc + '" erfolgreich auf Tag geschrieben und Geraet zugewiesen!', 'success');
+                    addToHistory(newEpc, 'Tag geschrieben (Asset #' + entityId + ')', 'success');
+                } else {
+                    playSound('error');
+                    showResult('Fehler: ' + (response.response ? response.response.message : 'Tag bereits vergeben'), 'error');
+                }
+            }, true);
+        } else if (entityType === 'stock_instance') {
+            // Assign to stock instance
+            ajaxcall('stock/items.php', {
+                action: 'assign_rfid',
+                instance_id: entityId,
+                rfid_tag: newEpc
+            }, function(response) {
+                if (response.success) {
+                    playSound('success');
+                    showResult('<i class="fas fa-check-circle"></i> EPC "' + newEpc + '" erfolgreich auf Tag geschrieben und Artikel-Instanz zugewiesen!', 'success');
+                    addToHistory(newEpc, 'Tag geschrieben (Instanz #' + entityId + ')', 'success');
+                } else {
+                    playSound('error');
+                    showResult('Fehler: ' + (response.message || 'Tag bereits vergeben oder Instanz nicht gefunden'), 'error');
+                }
+            }, true);
+        }
     }
 
     // ══════════════════════════════════════

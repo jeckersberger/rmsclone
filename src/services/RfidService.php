@@ -9,6 +9,7 @@ class RfidService
 {
     private $db;
     private ?StockItemService $stockService = null;
+    private ?CrossInstanceLookupService $crossLookup = null;
 
     public function __construct($db)
     {
@@ -21,6 +22,14 @@ class RfidService
     public function setStockService(StockItemService $stockService): void
     {
         $this->stockService = $stockService;
+    }
+
+    /**
+     * Set CrossInstanceLookupService for partner/federation tag lookups
+     */
+    public function setCrossLookupService(CrossInstanceLookupService $service): void
+    {
+        $this->crossLookup = $service;
     }
 
     /**
@@ -50,6 +59,23 @@ class RfidService
                 $stockInst['entity_id'] = $stockInst['id'];
                 $stockInst['display_name'] = $stockInst['item_name'] . ' #' . $stockInst['instance_number'];
                 return $stockInst;
+            }
+        }
+
+        // 3. Try cross-instance lookup (partner instances and federated servers)
+        if ($this->crossLookup) {
+            $crossResult = $this->crossLookup->lookupTag($rfidTag);
+            if ($crossResult) {
+                return [
+                    'entity_type' => 'partner_' . $crossResult['entity_type'],
+                    'entity_id' => null,
+                    'display_name' => $crossResult['entity']['display_name'] ?? 'Unbekannt',
+                    'owner_name' => $crossResult['owner_instance_name'],
+                    'owner_server_url' => $crossResult['owner_server_url'],
+                    'source' => $crossResult['source'],
+                    'is_foreign' => true,
+                    'rfid_tag' => $rfidTag,
+                ];
             }
         }
 
@@ -529,7 +555,7 @@ class RfidService
      *
      * @param int $sessionId Inventory session ID
      * @param string $rfidTag RFID tag
-     * @return array Asset info and found status
+     * @return array Asset or stock instance info and found status
      */
     public function processInventoryScan(int $sessionId, string $rfidTag): array
     {
@@ -545,38 +571,65 @@ class RfidService
             ];
         }
 
+        // 1. Try to find asset by RFID tag (existing behavior)
         $asset = $this->findByTag($session['instances_id'], $rfidTag);
 
-        if (!$asset) {
-            // Unknown tag - log as unknown
+        if ($asset) {
+            // Known asset - log as found
             $this->db->insert('rfidInventoryScans', [
                 'rfidInventorySessions_id' => $sessionId,
-                'assets_id' => null,
+                'assets_id' => $asset['assets_id'],
                 'rfid_tag' => trim($rfidTag),
-                'found' => 0,
+                'entity_type' => 'asset',
+                'found' => 1,
                 'scan_timestamp' => date('Y-m-d H:i:s'),
             ]);
 
             return [
-                'success' => false,
-                'message' => 'Unknown tag',
-                'asset' => null,
+                'success' => true,
+                'message' => 'Asset recorded',
+                'asset' => $asset,
             ];
         }
 
-        // Known asset - log as found
+        // 2. If not found as asset AND stockService is set, try stock instance
+        if ($this->stockService) {
+            $stockInstance = $this->stockService->findByRfidTag($session['instances_id'], $rfidTag);
+
+            if ($stockInstance) {
+                // Known stock instance - log as found
+                $this->db->insert('rfidInventoryScans', [
+                    'rfidInventorySessions_id' => $sessionId,
+                    'stock_instance_id' => $stockInstance['id'],
+                    'rfid_tag' => trim($rfidTag),
+                    'entity_type' => 'stock_instance',
+                    'found' => 1,
+                    'scan_timestamp' => date('Y-m-d H:i:s'),
+                ]);
+
+                return [
+                    'success' => true,
+                    'message' => 'Stock instance recorded',
+                    'asset' => $stockInstance,
+                ];
+            }
+        }
+
+        // 3. Unknown tag - log as unknown
         $this->db->insert('rfidInventoryScans', [
             'rfidInventorySessions_id' => $sessionId,
-            'assets_id' => $asset['assets_id'],
+            'assets_id' => null,
+            'stock_instance_id' => null,
             'rfid_tag' => trim($rfidTag),
-            'found' => 1,
+            'entity_type' => null,
+            'found' => 0,
             'scan_timestamp' => date('Y-m-d H:i:s'),
         ]);
 
         return [
-            'success' => true,
-            'message' => 'Asset recorded',
-            'asset' => $asset,
+            'success' => false,
+            'message' => 'Unknown tag',
+            'asset' => null,
         ];
     }
 
@@ -584,7 +637,7 @@ class RfidService
      * Complete inventory session and get results
      *
      * @param int $sessionId Inventory session ID
-     * @return array Found assets, missing assets, unknown tags
+     * @return array Found assets/stock instances, missing assets/instances, unknown tags
      */
     public function completeInventory(int $sessionId): array
     {
@@ -597,7 +650,9 @@ class RfidService
                 'success' => false,
                 'message' => 'Session not found',
                 'found_assets' => [],
+                'found_stock_instances' => [],
                 'missing_assets' => [],
+                'missing_stock_instances' => [],
                 'unknown_tags' => [],
             ];
         }
@@ -608,22 +663,30 @@ class RfidService
             'session_ended' => date('Y-m-d H:i:s'),
         ]);
 
-        // Get all scanned assets
+        // Get all scanned items (assets and stock instances)
         $this->db->where('rfidInventorySessions_id', $sessionId);
         $this->db->where('found', 1);
-        $scannedAssets = $this->db->get('rfidInventoryScans') ?: [];
+        $scannedItems = $this->db->get('rfidInventoryScans') ?: [];
 
-        $scannedAssetIds = array_column($scannedAssets, 'assets_id');
+        // Separate found assets from found stock instances
+        $foundAssets = array_values(array_filter($scannedItems, fn($s) => !empty($s['assets_id']) || $s['entity_type'] === 'asset'));
+        $foundStockInstances = array_values(array_filter($scannedItems, fn($s) => !empty($s['stock_instance_id']) || $s['entity_type'] === 'stock_instance'));
+
+        // Collect scanned asset IDs and stock instance IDs
+        $scannedAssetIds = array_column($foundAssets, 'assets_id');
         $scannedAssetIds = array_filter($scannedAssetIds);
 
-        // Get unknown tags
+        $scannedStockInstanceIds = array_column($foundStockInstances, 'stock_instance_id');
+        $scannedStockInstanceIds = array_filter($scannedStockInstanceIds);
+
+        // Get unknown tags (not found as asset or stock instance)
         $this->db->where('rfidInventorySessions_id', $sessionId);
-        $this->db->where('assets_id', null);
+        $this->db->where('found', 0);
         $unknownScans = $this->db->get('rfidInventoryScans') ?: [];
 
         $unknownTags = array_column($unknownScans, 'rfid_tag');
 
-        // Get all assets in instance (to find missing ones)
+        // Get all assets in instance with RFID tags (to find missing ones)
         $this->db->where('instances_id', $session['instances_id']);
         $this->db->where('asset_definableFields_1', null, '!=');
         $allAssetsWithRfid = $this->db->get('assets') ?: [];
@@ -643,11 +706,30 @@ class RfidService
             }
         }
 
+        // Get all stock instances in session with RFID tags (to find missing ones)
+        $missingStockInstances = [];
+        if ($this->stockService) {
+            $allStockInstancesWithRfid = $this->stockService->getAllByInstanceWithRfid($session['instances_id']) ?: [];
+            $allStockInstanceIds = array_column($allStockInstancesWithRfid, 'id');
+            $missingStockInstanceIds = array_diff($allStockInstanceIds, $scannedStockInstanceIds);
+
+            if (!empty($missingStockInstanceIds)) {
+                foreach ($missingStockInstanceIds as $id) {
+                    $stockInst = $this->stockService->getById($id);
+                    if ($stockInst) {
+                        $missingStockInstances[] = $stockInst;
+                    }
+                }
+            }
+        }
+
         return [
             'success' => true,
             'message' => 'Inventory completed',
-            'found_assets' => array_values(array_filter($scannedAssets, fn($s) => !empty($s['assets_id']))),
+            'found_assets' => $foundAssets,
+            'found_stock_instances' => $foundStockInstances,
             'missing_assets' => $missingAssets,
+            'missing_stock_instances' => $missingStockInstances,
             'unknown_tags' => $unknownTags,
         ];
     }

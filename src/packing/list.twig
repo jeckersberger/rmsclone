@@ -1,0 +1,764 @@
+{% extends "assets/template.twig" %}
+
+{% block content %}
+<style>
+    .packing-container {
+        max-width: 900px;
+        margin: 20px auto;
+        padding: 0 15px;
+    }
+
+    .packing-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+
+    .packing-header h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: bold;
+    }
+
+    .header-controls {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .project-selector-container {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .project-selector-container select {
+        padding: 8px 12px;
+        font-size: 14px;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        background: white;
+        cursor: pointer;
+    }
+
+    .btn-refresh {
+        padding: 8px 15px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 3px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-refresh:hover {
+        background: #0056b3;
+    }
+
+    .progress-section {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+
+    .progress-label {
+        font-size: 12px;
+        font-weight: bold;
+        color: #666;
+        margin-bottom: 8px;
+    }
+
+    .progress-bar-container {
+        position: relative;
+        width: 100%;
+        height: 28px;
+        background: #f0f0f0;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #28a745, #20c997);
+        width: 0%;
+        transition: width 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 12px;
+        position: relative;
+    }
+
+    .progress-bar-text {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #333;
+        font-weight: bold;
+        font-size: 12px;
+        z-index: 2;
+    }
+
+    .scanner-input-section {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    .scanner-label {
+        font-size: 12px;
+        font-weight: bold;
+        color: #666;
+        display: block;
+        margin-bottom: 8px;
+    }
+
+    .scanner-input {
+        font-size: 16px;
+        padding: 12px;
+        width: 100%;
+        max-width: 400px;
+        border: 2px solid #ddd;
+        border-radius: 3px;
+        text-align: center;
+        transition: border-color 0.2s;
+    }
+
+    .scanner-input:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+    }
+
+    .section-category {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        margin-bottom: 15px;
+        overflow: hidden;
+    }
+
+    .section-header {
+        background: #f5f5f5;
+        padding: 12px 15px;
+        border-bottom: 1px solid #ddd;
+        font-weight: bold;
+        font-size: 14px;
+        color: #333;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .section-header-label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .section-header-count {
+        background: #ddd;
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-size: 12px;
+        color: #666;
+    }
+
+    .pack-item {
+        position: relative;
+        overflow: hidden;
+        padding: 12px 15px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+        user-select: none;
+        -webkit-user-select: none;
+        transition: background 0.3s ease;
+        min-height: 50px;
+    }
+
+    .pack-item:last-child {
+        border-bottom: none;
+    }
+
+    .pack-item.checked {
+        background: #d4edda;
+    }
+
+    .pack-item.pressing {
+        background: #fff3cd;
+    }
+
+    .pack-item .longpress-progress {
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        height: 3px;
+        width: 0;
+        background: #28a745;
+        border-radius: 0 2px 0 0;
+    }
+
+    .pack-item-content {
+        flex: 1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .pack-item-details {
+        flex: 1;
+    }
+
+    .pack-item-name {
+        font-weight: bold;
+        font-size: 14px;
+        color: #333;
+        margin-bottom: 3px;
+    }
+
+    .pack-item-tag {
+        font-size: 12px;
+        color: #999;
+        font-family: 'Courier New', monospace;
+    }
+
+    .pack-item-tag::before {
+        content: '# ';
+    }
+
+    .pack-item-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .check-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: 2px solid #ccc;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        flex-shrink: 0;
+        background: white;
+        transition: all 0.2s ease;
+    }
+
+    .pack-item.checked .check-icon {
+        background: #28a745;
+        border-color: #28a745;
+        color: white;
+        font-size: 20px;
+    }
+
+    .pack-item.pressing .check-icon {
+        background: #ffc107;
+        border-color: #ff9800;
+        color: white;
+    }
+
+    .empty-section {
+        padding: 30px 15px;
+        text-align: center;
+        color: #999;
+        font-size: 14px;
+    }
+
+    .no-project-selected {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 40px;
+        text-align: center;
+        color: #666;
+        font-size: 16px;
+    }
+
+    .export-section {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 15px;
+        margin-top: 20px;
+        text-align: center;
+    }
+
+    .btn-export {
+        padding: 12px 24px;
+        background: #17a2b8;
+        color: white;
+        border: none;
+        border-radius: 3px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-export:hover {
+        background: #138496;
+    }
+
+    .btn-export:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+
+    .loading-spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #007bff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .status-message {
+        padding: 12px;
+        border-radius: 3px;
+        margin-bottom: 15px;
+        display: none;
+    }
+
+    .status-message.visible {
+        display: block;
+    }
+
+    .status-message.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .status-message.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    @media (max-width: 768px) {
+        .packing-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .header-controls {
+            width: 100%;
+        }
+
+        .project-selector-container {
+            width: 100%;
+        }
+
+        .project-selector-container select {
+            flex: 1;
+        }
+
+        .pack-item {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .pack-item-content {
+            width: 100%;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .pack-item-actions {
+            width: 100%;
+            justify-content: flex-end;
+        }
+    }
+</style>
+
+<div class="packing-container">
+    <div class="packing-header">
+        <h1><i class="fas fa-list"></i> Packliste</h1>
+        <div class="header-controls">
+            <div class="project-selector-container">
+                <label for="projectSelect" style="font-weight: bold; margin: 0;">Projekt:</label>
+                <select id="projectSelect" onchange="loadPackingList()">
+                    <option value="">-- Projekt auswählen --</option>
+                </select>
+            </div>
+            <button class="btn-refresh" onclick="loadPackingList()"><i class="fas fa-sync-alt"></i> Aktualisieren</button>
+        </div>
+    </div>
+
+    <div id="statusMessage" class="status-message"></div>
+
+    <div id="contentContainer" style="display: none;">
+        <div class="progress-section">
+            <div class="progress-label">Fortschritt</div>
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="progressBarFill" style="width: 0%;"></div>
+                <div class="progress-bar-text" id="progressText">0 / 0 (0%)</div>
+            </div>
+        </div>
+
+        <div class="scanner-input-section">
+            <label class="scanner-label" for="scannerInput">RFID/Barcode scannen:</label>
+            <input type="text" id="scannerInput" class="scanner-input" placeholder="Scan oder tippen..." autocomplete="off">
+        </div>
+
+        <div id="itemsContainer"></div>
+
+        <div class="export-section">
+            <button class="btn-export" id="exportBtn" onclick="exportPDF()"><i class="fas fa-file-pdf"></i> Packliste als PDF exportieren</button>
+        </div>
+    </div>
+
+    <div id="noProjectMessage" class="no-project-selected">
+        <i class="fas fa-inbox" style="font-size: 48px; color: #ccc; display: block; margin-bottom: 15px;"></i>
+        <p>Bitte wählen Sie ein Projekt aus, um die Packliste zu sehen.</p>
+    </div>
+</div>
+
+<script>
+var currentProject = null;
+var packingData = null;
+var longPressTimer = null;
+var longPressDuration = 3000; // 3 seconds
+var longPressItem = null;
+
+// Load projects on page load
+function loadProjects() {
+    ajaxcall('assets/projects.php', { action: 'list' }, function(response) {
+        if (response.success && response.projects) {
+            var select = document.getElementById('projectSelect');
+            select.innerHTML = '<option value="">-- Projekt auswählen --</option>';
+            response.projects.forEach(function(project) {
+                var option = document.createElement('option');
+                option.value = project.id;
+                option.textContent = project.name;
+                select.appendChild(option);
+            });
+        }
+    });
+}
+
+function loadPackingList() {
+    var projectId = document.getElementById('projectSelect').value;
+    if (!projectId) {
+        document.getElementById('contentContainer').style.display = 'none';
+        document.getElementById('noProjectMessage').style.display = 'block';
+        return;
+    }
+
+    currentProject = projectId;
+    showStatus('Packliste wird geladen...', 'success');
+
+    ajaxcall('packing/list.php', { action: 'get_list', project_id: projectId }, function(response) {
+        if (response.success) {
+            packingData = response;
+            renderPackingList();
+            document.getElementById('contentContainer').style.display = 'block';
+            document.getElementById('noProjectMessage').style.display = 'none';
+            showStatus('Packliste geladen', 'success');
+        } else {
+            showStatus('Fehler beim Laden der Packliste: ' + (response.message || ''), 'error');
+        }
+    });
+}
+
+function renderPackingList() {
+    if (!packingData) return;
+
+    var container = document.getElementById('itemsContainer');
+    container.innerHTML = '';
+
+    var totalItems = 0;
+    var checkedItems = 0;
+
+    var categories = [
+        { title: 'Geräte', key: 'assets', icon: 'fa-cube' },
+        { title: 'Artikel', key: 'stock_instances', icon: 'fa-box' },
+        { title: 'Fremdmaterial', key: 'external_items', icon: 'fa-dolly' }
+    ];
+
+    categories.forEach(function(category) {
+        var items = packingData[category.key] || [];
+        if (items.length === 0) return;
+
+        totalItems += items.length;
+
+        var checkedCount = items.filter(item => item.checked).length;
+        checkedItems += checkedCount;
+
+        var categoryDiv = document.createElement('div');
+        categoryDiv.className = 'section-category';
+
+        var headerDiv = document.createElement('div');
+        headerDiv.className = 'section-header';
+
+        var labelDiv = document.createElement('div');
+        labelDiv.className = 'section-header-label';
+        labelDiv.innerHTML = '<i class="fas ' + category.icon + '"></i> ' +
+            '<span>═══ ' + category.title + ' (' + checkedCount + '/' + items.length + ') ═════════════════════════</span>';
+
+        headerDiv.appendChild(labelDiv);
+        categoryDiv.appendChild(headerDiv);
+
+        items.forEach(function(item) {
+            var itemDiv = createItemElement(item);
+            categoryDiv.appendChild(itemDiv);
+        });
+
+        container.appendChild(categoryDiv);
+    });
+
+    updateProgress(checkedItems, totalItems);
+}
+
+function createItemElement(item) {
+    var itemDiv = document.createElement('div');
+    itemDiv.className = 'pack-item' + (item.checked ? ' checked' : '');
+    itemDiv.id = 'item_' + item.id;
+
+    var progressBar = document.createElement('div');
+    progressBar.className = 'longpress-progress';
+    itemDiv.appendChild(progressBar);
+
+    var contentDiv = document.createElement('div');
+    contentDiv.className = 'pack-item-content';
+
+    var detailsDiv = document.createElement('div');
+    detailsDiv.className = 'pack-item-details';
+
+    var nameDiv = document.createElement('div');
+    nameDiv.className = 'pack-item-name';
+    nameDiv.textContent = (item.name || 'Unbekannt') + (item.instance_number ? ' #' + item.instance_number : '');
+
+    var tagDiv = document.createElement('div');
+    tagDiv.className = 'pack-item-tag';
+    tagDiv.textContent = item.tag || item.barcode || item.id;
+
+    detailsDiv.appendChild(nameDiv);
+    detailsDiv.appendChild(tagDiv);
+
+    var actionsDiv = document.createElement('div');
+    actionsDiv.className = 'pack-item-actions';
+
+    var checkIcon = document.createElement('div');
+    checkIcon.className = 'check-icon';
+    checkIcon.innerHTML = item.checked ? '<i class="fas fa-check"></i>' : '';
+
+    actionsDiv.appendChild(checkIcon);
+    contentDiv.appendChild(detailsDiv);
+    contentDiv.appendChild(actionsDiv);
+    itemDiv.appendChild(contentDiv);
+
+    // Touch and mouse events for long-press
+    itemDiv.addEventListener('touchstart', function(e) {
+        startLongPress(item.id, itemDiv);
+    }, { passive: true });
+
+    itemDiv.addEventListener('touchend', function() {
+        cancelLongPress(itemDiv);
+    }, { passive: true });
+
+    itemDiv.addEventListener('touchcancel', function() {
+        cancelLongPress(itemDiv);
+    }, { passive: true });
+
+    itemDiv.addEventListener('mousedown', function() {
+        startLongPress(item.id, itemDiv);
+    });
+
+    itemDiv.addEventListener('mouseup', function() {
+        cancelLongPress(itemDiv);
+    });
+
+    itemDiv.addEventListener('mouseleave', function() {
+        cancelLongPress(itemDiv);
+    });
+
+    return itemDiv;
+}
+
+function startLongPress(itemId, element) {
+    longPressItem = itemId;
+    element.classList.add('pressing');
+
+    var progressBar = element.querySelector('.longpress-progress');
+    progressBar.style.transition = 'width ' + longPressDuration + 'ms linear';
+    progressBar.style.width = '100%';
+
+    longPressTimer = setTimeout(function() {
+        checkOffItem(itemId);
+        element.classList.remove('pressing');
+        progressBar.style.transition = 'none';
+        progressBar.style.width = '0';
+    }, longPressDuration);
+}
+
+function cancelLongPress(element) {
+    if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+    }
+    if (element) {
+        element.classList.remove('pressing');
+        var progressBar = element.querySelector('.longpress-progress');
+        if (progressBar) {
+            progressBar.style.transition = 'none';
+            progressBar.style.width = '0';
+        }
+    }
+    longPressItem = null;
+}
+
+function checkOffItem(itemId) {
+    if (!currentProject) return;
+
+    ajaxcall('packing/list.php', {
+        action: 'check_item',
+        project_id: currentProject,
+        item_id: itemId
+    }, function(response) {
+        if (response.success) {
+            var itemElement = document.getElementById('item_' + itemId);
+            if (itemElement) {
+                itemElement.classList.add('checked');
+                var checkIcon = itemElement.querySelector('.check-icon');
+                if (checkIcon) {
+                    checkIcon.innerHTML = '<i class="fas fa-check"></i>';
+                }
+            }
+
+            // Update the item in packingData
+            for (var key in packingData) {
+                if (Array.isArray(packingData[key])) {
+                    var item = packingData[key].find(i => i.id == itemId);
+                    if (item) {
+                        item.checked = true;
+                        break;
+                    }
+                }
+            }
+
+            updateProgressFromData();
+        }
+    });
+}
+
+function handleScannerInput(event) {
+    if (event.key !== 'Enter') return;
+
+    var scannedValue = event.target.value.trim();
+    event.target.value = '';
+
+    if (!scannedValue) return;
+
+    // Search for item with matching barcode or tag
+    var foundItem = null;
+    for (var key in packingData) {
+        if (Array.isArray(packingData[key])) {
+            foundItem = packingData[key].find(item =>
+                item.tag === scannedValue || item.barcode === scannedValue
+            );
+            if (foundItem) break;
+        }
+    }
+
+    if (foundItem && !foundItem.checked) {
+        checkOffItem(foundItem.id);
+    }
+}
+
+function updateProgress(checkedItems, totalItems) {
+    var percentage = totalItems > 0 ? Math.round((checkedItems / totalItems) * 100) : 0;
+    var progressText = checkedItems + ' / ' + totalItems + ' (' + percentage + '%)';
+
+    document.getElementById('progressBarFill').style.width = percentage + '%';
+    document.getElementById('progressText').textContent = progressText;
+}
+
+function updateProgressFromData() {
+    if (!packingData) return;
+
+    var totalItems = 0;
+    var checkedItems = 0;
+
+    for (var key in packingData) {
+        if (Array.isArray(packingData[key])) {
+            packingData[key].forEach(function(item) {
+                totalItems++;
+                if (item.checked) checkedItems++;
+            });
+        }
+    }
+
+    updateProgress(checkedItems, totalItems);
+}
+
+function exportPDF() {
+    if (!currentProject) return;
+
+    document.getElementById('exportBtn').disabled = true;
+    showStatus('PDF wird generiert...', 'success');
+
+    ajaxcall('packing/list.php', {
+        action: 'export_pdf',
+        project_id: currentProject
+    }, function(response) {
+        document.getElementById('exportBtn').disabled = false;
+        if (response.success) {
+            // Trigger download
+            if (response.pdf_url) {
+                window.location.href = response.pdf_url;
+            }
+            showStatus('PDF exportiert', 'success');
+        } else {
+            showStatus('Fehler beim Exportieren: ' + (response.message || ''), 'error');
+        }
+    });
+}
+
+function showStatus(message, type) {
+    var box = document.getElementById('statusMessage');
+    box.className = 'status-message visible status-' + type;
+    box.textContent = message;
+    setTimeout(function() {
+        box.classList.remove('visible');
+    }, 3000);
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', function() {
+    loadProjects();
+
+    document.getElementById('scannerInput').addEventListener('keypress', function(e) {
+        handleScannerInput(e);
+    });
+});
+</script>
+
+{% endblock %}

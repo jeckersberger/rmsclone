@@ -13,10 +13,16 @@
 class StockItemService
 {
     private $db;
+    private ?TagFormatService $tagFormatService = null;
 
     public function __construct($db)
     {
         $this->db = $db;
+    }
+
+    public function setTagFormatService(TagFormatService $svc): void
+    {
+        $this->tagFormatService = $svc;
     }
 
     // ═══════════════════════════════════════════
@@ -203,7 +209,11 @@ class StockItemService
         for ($i = 0; $i < $quantity; $i++) {
             $rfidTag = null;
             if ($autoRfid) {
-                $rfidTag = sprintf('RMS-I-%06d', $nextEpc);
+                if ($this->tagFormatService) {
+                    $rfidTag = $this->tagFormatService->generateStockInstanceEpc($nextEpc);
+                } else {
+                    $rfidTag = sprintf('RMS-I-%06d', $nextEpc); // fallback
+                }
                 $nextEpc++;
             }
 

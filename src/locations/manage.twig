@@ -1,0 +1,229 @@
+{% extends "layout.twig" %}
+
+{% block title %}Lagerorte verwalten{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6"><h1><i class="fas fa-map-marker-alt"></i> Lagerorte verwalten</h1></div>
+        </div>
+    </div>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        {# Statistics Cards #}
+        <div class="row" id="locationStats">
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-info">
+                    <div class="inner"><h3 id="statTotal">0</h3><p>Lagerorte gesamt</p></div>
+                    <div class="icon"><i class="fas fa-map-marker-alt"></i></div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-success">
+                    <div class="inner"><h3 id="statActive">0</h3><p>Aktiv</p></div>
+                    <div class="icon"><i class="fas fa-check"></i></div>
+                </div>
+            </div>
+        </div>
+
+        {# Locations Table #}
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Lagerorte</h3>
+                <div class="card-tools">
+                    <button onclick="showCreateModal()" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus"></i> Neuer Lagerort
+                    </button>
+                </div>
+            </div>
+            <div class="card-body table-responsive p-0">
+                <table class="table table-hover table-striped">
+                    <thead>
+                        <tr>
+                            <th>Farbe</th>
+                            <th>Icon</th>
+                            <th>Name</th>
+                            <th>Beschreibung</th>
+                            <th>Geraete</th>
+                            <th>Artikel</th>
+                            <th>Status</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="locationsTableBody">
+                        <tr><td colspan="8" class="text-center">Lade...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+{# Create/Edit Modal #}
+<div class="modal fade" id="locationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="locationModalTitle">Neuer Lagerort</h5>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editLocationId" value="">
+                <div class="form-group">
+                    <label>Name *</label>
+                    <input type="text" id="locName" class="form-control" placeholder="z.B. Hauptlager" required>
+                </div>
+                <div class="form-group">
+                    <label>Beschreibung</label>
+                    <input type="text" id="locDescription" class="form-control" placeholder="z.B. Zentrales Lager Halle A">
+                </div>
+                <div class="form-group">
+                    <label>Farbe</label>
+                    <input type="color" id="locColor" class="form-control" value="#6c757d" style="height:40px;">
+                </div>
+                <div class="form-group">
+                    <label>Icon (FontAwesome Klasse)</label>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <input type="text" id="locIcon" class="form-control" value="fas fa-warehouse" placeholder="fas fa-warehouse">
+                        <i id="locIconPreview" class="fas fa-warehouse" style="font-size:24px;"></i>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Sortierung</label>
+                    <input type="number" id="locSortOrder" class="form-control" value="0" min="0">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-primary" onclick="saveLocation()">Speichern</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Load locations on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadLocations();
+});
+
+// Icon preview
+document.getElementById('locIcon').addEventListener('input', function() {
+    document.getElementById('locIconPreview').className = this.value;
+});
+
+function loadLocations() {
+    ajaxcall('locations.php', { action: 'all_locations' }, function(response) {
+        if (response.result && response.response && response.response.locations) {
+            var locations = response.response.locations;
+            renderTable(locations);
+            updateStats(locations);
+        }
+    }, true);
+}
+
+function renderTable(locations) {
+    var tbody = document.getElementById('locationsTableBody');
+    tbody.innerHTML = '';
+
+    if (locations.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Keine Lagerorte vorhanden</td></tr>';
+        return;
+    }
+
+    locations.forEach(function(loc) {
+        var tr = document.createElement('tr');
+        if (!parseInt(loc.is_active)) tr.style.opacity = '0.5';
+        tr.innerHTML =
+            '<td><span style="display:inline-block;width:24px;height:24px;border-radius:4px;background:' + (loc.color || '#6c757d') + ';"></span></td>' +
+            '<td><i class="' + (loc.icon || 'fas fa-warehouse') + '"></i></td>' +
+            '<td><strong>' + loc.name + '</strong></td>' +
+            '<td>' + (loc.description || '-') + '</td>' +
+            '<td><span class="badge badge-primary">' + (loc.asset_count || 0) + '</span></td>' +
+            '<td><span class="badge badge-success">' + (loc.instance_count || 0) + '</span></td>' +
+            '<td>' + (parseInt(loc.is_active) ? '<span class="badge badge-success">Aktiv</span>' : '<span class="badge badge-secondary">Inaktiv</span>') + '</td>' +
+            '<td>' +
+                '<button onclick="editLocation(' + loc.id + ')" class="btn btn-xs btn-info" title="Bearbeiten"><i class="fas fa-edit"></i></button> ' +
+                (parseInt(loc.is_active)
+                    ? '<button onclick="deleteLocation(' + loc.id + ')" class="btn btn-xs btn-danger" title="Deaktivieren"><i class="fas fa-trash"></i></button>'
+                    : '<button onclick="reactivateLocation(' + loc.id + ')" class="btn btn-xs btn-success" title="Reaktivieren"><i class="fas fa-undo"></i></button>') +
+            '</td>';
+        tbody.appendChild(tr);
+    });
+}
+
+function updateStats(locations) {
+    document.getElementById('statTotal').textContent = locations.length;
+    document.getElementById('statActive').textContent = locations.filter(function(l) { return parseInt(l.is_active); }).length;
+}
+
+function showCreateModal() {
+    document.getElementById('editLocationId').value = '';
+    document.getElementById('locationModalTitle').textContent = 'Neuer Lagerort';
+    document.getElementById('locName').value = '';
+    document.getElementById('locDescription').value = '';
+    document.getElementById('locColor').value = '#6c757d';
+    document.getElementById('locIcon').value = 'fas fa-warehouse';
+    document.getElementById('locIconPreview').className = 'fas fa-warehouse';
+    document.getElementById('locSortOrder').value = '0';
+    $('#locationModal').modal('show');
+}
+
+function editLocation(id) {
+    ajaxcall('locations.php', { action: 'get_location', id: id }, function(response) {
+        if (response.result && response.response && response.response.location) {
+            var loc = response.response.location;
+            document.getElementById('editLocationId').value = loc.id;
+            document.getElementById('locationModalTitle').textContent = 'Lagerort bearbeiten';
+            document.getElementById('locName').value = loc.name;
+            document.getElementById('locDescription').value = loc.description || '';
+            document.getElementById('locColor').value = loc.color || '#6c757d';
+            document.getElementById('locIcon').value = loc.icon || 'fas fa-warehouse';
+            document.getElementById('locIconPreview').className = loc.icon || 'fas fa-warehouse';
+            document.getElementById('locSortOrder').value = loc.sort_order || 0;
+            $('#locationModal').modal('show');
+        }
+    }, true);
+}
+
+function saveLocation() {
+    var id = document.getElementById('editLocationId').value;
+    var params = {
+        action: id ? 'update_location' : 'create_location',
+        name: document.getElementById('locName').value,
+        description: document.getElementById('locDescription').value,
+        color: document.getElementById('locColor').value,
+        icon: document.getElementById('locIcon').value,
+        sort_order: document.getElementById('locSortOrder').value
+    };
+    if (id) params.id = id;
+
+    ajaxcall('locations.php', params, function(response) {
+        if (response.result) {
+            $('#locationModal').modal('hide');
+            loadLocations();
+        } else {
+            alert('Fehler: ' + (response.response ? response.response.message : 'Unbekannter Fehler'));
+        }
+    }, true);
+}
+
+function deleteLocation(id) {
+    if (!confirm('Lagerort wirklich deaktivieren?')) return;
+    ajaxcall('locations.php', { action: 'delete_location', id: id }, function(response) {
+        if (response.result) loadLocations();
+    }, true);
+}
+
+function reactivateLocation(id) {
+    ajaxcall('locations.php', { action: 'update_location', id: id, is_active: 1 }, function(response) {
+        if (response.result) loadLocations();
+    }, true);
+}
+</script>
+{% endblock %}

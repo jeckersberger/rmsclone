@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">RMS Scanner</string>
+    <string name="btn_checkout">Ausleihe</string>
+    <string name="btn_checkin">Rückgabe</string>
+    <string name="btn_box_scan">Kisten-Scan</string>
+    <string name="btn_inventory">Inventur</string>
+    <string name="btn_write_tag">Tag schreiben</string>
+    <string name="btn_settings">Einstellungen</string>
+    <string name="btn_connect">Verbinden</string>
+    <string name="btn_start">Starten</string>
+    <string name="btn_stop">Stoppen</string>
+    <string name="btn_reset">Zurücksetzen</string>
+    <string name="btn_back">Zurück</string>
+    <string name="btn_save">Speichern</string>
+
+    <string name="label_server_url">Server URL</string>
+    <string name="label_username">Benutzername</string>
+    <string name="label_password">Passwort</string>
+    <string name="label_project">Projekt</string>
+    <string name="label_scanner_power">Scanner Leistung</string>
+    <string name="label_entity_type">Entitätstyp</string>
+    <string name="label_epc">EPC-Code</string>
+
+    <string name="msg_connecting">Verbindung wird getestet...</string>
+    <string name="msg_connected">Verbunden</string>
+    <string name="msg_disconnected">Verbindung getrennt</string>
+    <string name="msg_connection_failed">Verbindung fehlgeschlagen</string>
+    <string name="msg_scanning">Scanning...</string>
+    <string name="msg_no_tags">Keine Tags gescannt</string>
+    <string name="msg_inventory_started">Inventur gestartet</string>
+    <string name="msg_inventory_completed">Inventur abgeschlossen</string>
+    <string name="msg_tag_written">Tag erfolgreich geschrieben</string>
+
+    <string name="title_scan_result">Letztes Scan-Ergebnis</string>
+    <string name="title_scan_history">Scan-Verlauf</string>
+    <string name="title_results">Ergebnisse</string>
+
+    <string name="status_active">AKTIV</string>
+    <string name="status_inactive">INAKTIV</string>
+    <string name="status_scanner">Scanner</string>
+    <string name="status_found">Gefunden</string>
+    <string name="status_missing">Vermisst</string>
+    <string name="status_unknown">Unbekannt</string>
+
+    <string name="btn_relocate">Umlagern</string>
+    <string name="relocate_title">Geräte / Artikel umlagern</string>
+    <string name="select_location">Lagerort wählen</string>
+    <string name="custom_location_hint">Oder Freitext-Standort eingeben...</string>
+    <string name="notes_hint">Notizen (optional)</string>
+    <string name="tags_scanned">Tags gescannt</string>
+    <string name="relocated">umgelagert</string>
+    <string name="errors">Fehler</string>
+    <string name="reset">Zurücksetzen</string>
+    <string name="no_location_selected">Bitte zuerst Lagerort wählen oder Freitext eingeben</string>
+    <string name="relocate_success">erfolgreich umgelagert</string>
+
+    <string name="btn_packing_list">Packliste</string>
+    <string name="btn_external_items">Fremdmaterial</string>
+    <string name="packing_list_title">Packliste</string>
+    <string name="external_items_title">Fremdmaterial erfassen</string>
+    <string name="select_project">Projekt wählen</string>
+    <string name="progress_format">%1$d / %2$d (%3$d%%)</string>
+    <string name="scan_to_check">Scannen zum Abhaken</string>
+    <string name="long_press_hint">3 Sek. gedrückt halten zum Abhaken</string>
+    <string name="checked_off">Abgehakt</string>
+    <string name="section_assets">Geräte</string>
+    <string name="section_stock">Artikel</string>
+    <string name="section_external">Fremdmaterial</string>
+    <string name="description">Beschreibung</string>
+    <string name="owner">Eigentümer</string>
+    <string name="contact">Kontakt</string>
+    <string name="quantity">Menge</string>
+    <string name="return_date">Rückgabedatum</string>
+    <string name="notes">Notizen</string>
+    <string name="btn_save">Erfassen</string>
+    <string name="btn_return">Zurückgeben</string>
+    <string name="recently_added">Zuletzt erfasst</string>
+</resources>

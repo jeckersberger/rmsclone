@@ -44,7 +44,6 @@
   "forwardPorts": [
     8080,
     "db:3306",
-    "s3filestore:8081",
     "phpmyadmin:8082",
     "mailpit:8083"
   ],
@@ -59,9 +58,6 @@
       "label": "PHP Web Server",
       "onAutoForward": "ignore",
       "protocol": "http"
-    },
-    "8081": {
-      "label": "S3 Emulator (s3mock)"
     },
     "8082": {
       "label": "phpMyAdmin",

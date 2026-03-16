@@ -53,8 +53,54 @@ if (isset($_FILES['file'])) {
         "s3files_meta_public" => 0,
         "instances_id" => $AUTH->data['instance']['instances_id']
     ];
+
+    // File encryption support (GoBD compliance)
+    $encryptionEnabled = getenv('FILE_ENCRYPTION_ENABLED') === 'true';
+    if ($encryptionEnabled) {
+        require_once __DIR__ . '/../../services/FileEncryptionService.php';
+        try {
+            $encryptionKey = getenv('FILE_ENCRYPTION_KEY');
+            if (!$encryptionKey) {
+                @unlink($fullPath);
+                finish(false, ["code" => null, "message" => "File encryption not properly configured"]);
+            }
+
+            $encryptionService = new FileEncryptionService($encryptionKey);
+
+            // Calculate integrity hash before encryption
+            $integrityHash = $encryptionService->calculateHash($fullPath);
+
+            // Encrypt the file in place
+            $encryptedPath = $fullPath . '.encrypted';
+            if (!$encryptionService->encryptFile($fullPath, $encryptedPath)) {
+                @unlink($fullPath);
+                @unlink($encryptedPath);
+                finish(false, ["code" => null, "message" => "File encryption failed"]);
+            }
+
+            // Replace original with encrypted version
+            if (!unlink($fullPath) || !rename($encryptedPath, $fullPath)) {
+                @unlink($encryptedPath);
+                @unlink($fullPath);
+                finish(false, ["code" => null, "message" => "Failed to finalize encrypted file"]);
+            }
+
+            // Store encryption metadata
+            $fileData['s3files_encrypted'] = 1;
+            $fileData['s3files_integrity_hash'] = $integrityHash;
+
+        } catch (Exception $e) {
+            error_log("Project invoice encryption error: " . $e->getMessage());
+            @unlink($fullPath);
+            finish(false, ["code" => null, "message" => "File encryption error: " . $e->getMessage()]);
+        }
+    }
+
     $id = $DBLIB->insert("s3files", $fileData);
-    if (!$id) finish(false, ["code" => null, "message" => "Error"]);
+    if (!$id) {
+        @unlink($fullPath);
+        finish(false, ["code" => null, "message" => "Error"]);
+    }
     else finish(true, null, ["id" => $id, "resize" => false, "url" => $CONFIG['ROOTURL'] . '/api/file/?r=true&f=' . $id]);
 }
 finish(false, ["code" => null, "message" => "HTTP Upload Error"]);

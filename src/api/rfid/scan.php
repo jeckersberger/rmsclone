@@ -7,6 +7,7 @@
  */
 require_once __DIR__ . '/../apiHeadSecure.php';
 require_once __DIR__ . '/../../services/StockItemService.php';
+require_once __DIR__ . '/../../services/CrossInstanceLookupService.php';
 
 // Check permissions
 if (!$AUTH->instancePermissionCheck("ASSETS:ASSET_BARCODES:SCAN")) {
@@ -18,7 +19,9 @@ $userId = $AUTH->data['users_userid'];
 
 $rfidService = new RfidService($DBLIB);
 $stockService = new StockItemService($DBLIB);
+$crossLookup = new CrossInstanceLookupService($DBLIB, $instanceId);
 $rfidService->setStockService($stockService);
+$rfidService->setCrossLookupService($crossLookup);
 
 // Get the action parameter
 $action = $_POST['action'] ?? null;

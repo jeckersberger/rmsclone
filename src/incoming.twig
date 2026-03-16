@@ -1,0 +1,1187 @@
+{% extends "assets/template.twig" %}
+
+{% block content %}
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0">Eingehende Rechnungen</h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="#">Buchhaltung</a></li>
+                    <li class="breadcrumb-item active">Eingehende Rechnungen</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="content">
+    <div class="container-fluid">
+        <!-- Dashboard Cards -->
+        <div class="row" id="dashboardCards">
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-info">
+                    <div class="inner">
+                        <h3 id="totalOpen">0</h3>
+                        <p>Offene Rechnungen</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-file-invoice"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-warning">
+                    <div class="inner">
+                        <h3 id="dueThisWeek">€ 0,00</h3>
+                        <p>Fällig diese Woche</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-danger">
+                    <div class="inner">
+                        <h3 id="overdue">€ 0,00</h3>
+                        <p>Überfällig</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-6" id="complianceCard">
+                <div class="small-box bg-success">
+                    <div class="inner">
+                        <h3 id="complianceStatus">✓</h3>
+                        <p>GoBD-Konformität</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Card -->
+        <div class="card">
+            <!-- Header with filters and actions -->
+            <div class="card-header">
+                <h3 class="card-title">Rechnungsliste</h3>
+
+                <div class="card-tools">
+                    <div class="input-group input-group-sm" style="width: 100%; max-width: 600px;">
+                        <input type="text" class="form-control" id="vendorSearch" placeholder="Lieferant...">
+                        <select class="form-control" id="statusFilter" style="max-width: 150px;">
+                            <option value="">Alle Status</option>
+                            <option value="draft">Entwurf</option>
+                            <option value="recorded">Erfasst</option>
+                            <option value="verified">Verifiziert</option>
+                            <option value="paid">Bezahlt</option>
+                            <option value="disputed">Umstritten</option>
+                            <option value="cancelled">Storniert</option>
+                        </select>
+
+                        <select class="form-control" id="categoryFilter" style="max-width: 150px;">
+                            <option value="">Alle Kategorien</option>
+                        </select>
+
+                        <div class="input-group-append">
+                            <button type="button" class="btn btn-default" id="addInvoiceBtn">
+                                <i class="fa fa-plus"></i> Neue Rechnung
+                            </button>
+                            <button type="button" class="btn btn-default" id="scanReceiptBtn">
+                                <i class="fa fa-camera"></i> Beleg scannen
+                            </button>
+                            <button type="button" class="btn btn-default" id="exportBtn">
+                                <i class="fa fa-download"></i> Exportieren
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Invoice Table -->
+            <div class="card-body table-responsive p-0">
+                <table class="table table-hover table-striped" id="invoicesTable">
+                    <thead>
+                    <tr>
+                        <th style="width: 100px;">Datum</th>
+                        <th>Rechnung</th>
+                        <th style="width: 200px;">Lieferant</th>
+                        <th style="width: 100px;">Kategorie</th>
+                        <th style="width: 120px;">Betrag</th>
+                        <th style="width: 100px;">Status</th>
+                        <th style="width: 150px;">Aktionen</th>
+                    </tr>
+                    </thead>
+                    <tbody id="invoicesTableBody">
+                    <tr>
+                        <td colspan="7" class="text-center py-4">
+                            <i class="fas fa-sync fa-spin"></i> Laden...
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Compliance Warnings Panel -->
+        <div class="card" id="compliancePanel" style="display: none;">
+            <div class="card-header bg-warning">
+                <h3 class="card-title">GoBD-Compliance Warnungen</h3>
+            </div>
+            <div class="card-body" id="complianceWarnings">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Invoice Modal -->
+<div class="modal fade" id="invoiceModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="invoiceModalTitle">Neue Rechnung</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <form id="invoiceForm">
+                <div class="modal-body">
+                    <input type="hidden" id="invoiceId" name="id">
+
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label for="documentType">Dokumenttyp *</label>
+                            <select class="form-control" id="documentType" name="document_type" required>
+                                <option value="invoice">Rechnung</option>
+                                <option value="receipt">Beleg/Quittung</option>
+                                <option value="credit_note">Gutschrift</option>
+                                <option value="expense_report">Spesenabrechnung</option>
+                                <option value="delivery_note">Lieferschein</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label for="documentNumber">Rechnungsnummer</label>
+                            <input type="text" class="form-control" id="documentNumber" name="document_number">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-md-8">
+                            <label for="vendorName">Lieferant/Anbieter *</label>
+                            <input type="text" class="form-control" id="vendorName" name="vendor_name" required autocomplete="off">
+                            <div id="vendorSuggestions" class="list-group mt-2" style="display: none;"></div>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label for="vendorVatId">USt-ID</label>
+                            <input type="text" class="form-control" id="vendorVatId" name="vendor_vat_id">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label for="documentDate">Rechnungsdatum *</label>
+                            <input type="date" class="form-control" id="documentDate" name="document_date" required>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label for="receivedDate">Empfangsdatum *</label>
+                            <input type="date" class="form-control" id="receivedDate" name="received_date" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-md-3">
+                            <label for="grossAmount">Bruttobetrag *</label>
+                            <input type="number" step="0.01" class="form-control" id="grossAmount" name="gross_amount" required>
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label for="netAmount">Nettobetrag</label>
+                            <input type="number" step="0.01" class="form-control" id="netAmount" name="net_amount">
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label for="vatAmount">USt.-Betrag</label>
+                            <input type="number" step="0.01" class="form-control" id="vatAmount" name="vat_amount">
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label for="vatRate">USt.-Satz %</label>
+                            <input type="number" step="0.01" class="form-control" id="vatRate" name="vat_rate">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label for="categoryId">Ausgabenkategorie</label>
+                            <select class="form-control" id="categoryId" name="category_id">
+                                <option value="">-- Keine --</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label for="projectId">Projekt</label>
+                            <select class="form-control" id="projectId" name="project_id">
+                                <option value="">-- Keiner --</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label for="dueDate">Fälligkeitsdatum</label>
+                            <input type="date" class="form-control" id="dueDate" name="due_date">
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label for="costCenter">Kostenstelle</label>
+                            <input type="text" class="form-control" id="costCenter" name="cost_center">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">Beschreibung</label>
+                        <textarea class="form-control" id="description" name="description" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="taxDeductible" name="tax_deductible" checked>
+                        <label class="form-check-label" for="taxDeductible">
+                            Betriebsausgabe (steuerlich absetzbar)
+                        </label>
+                    </div>
+
+                    <!-- Hospitality Receipt Checkbox -->
+                    <div class="form-check mt-3">
+                        <input type="checkbox" class="form-check-input" id="isHospitality" name="is_hospitality">
+                        <label class="form-check-label" for="isHospitality">
+                            Bewirtungsbeleg (Mahlzeit/Getränk)
+                        </label>
+                    </div>
+
+                    <!-- Hospitality Fields (hidden by default) -->
+                    <div id="hospitalityFields" style="display: none;" class="mt-3 p-3 border border-info rounded bg-light">
+                        <div class="alert alert-info small mb-3">
+                            <strong>Für die steuerliche Absetzbarkeit:</strong> Anlass und Teilnehmer müssen dokumentiert werden.
+                            Bewirtungskosten sind zu 70% als Betriebsausgabe absetzbar (§4 Abs. 5 Nr. 2 EStG).
+                        </div>
+
+                        <div class="form-group">
+                            <label for="hospitalityOccasion">Anlass der Bewirtung *</label>
+                            <input type="text" class="form-control" id="hospitalityOccasion" name="hospitality_occasion" placeholder="z.B. Kundenmeeting, Geschäftsessen">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="hospitalityAttendees">Teilnehmer mit Firma *</label>
+                            <textarea class="form-control" id="hospitalityAttendees" name="hospitality_attendees" rows="2" placeholder="Name und Firma der Teilnehmer (eine Person pro Zeile)"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="hospitalityBusinessRelation">Geschäftliche Beziehung</label>
+                            <input type="text" class="form-control" id="hospitalityBusinessRelation" name="hospitality_business_relation" placeholder="z.B. Kunde, Lieferant, Partner">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="hospitalityTipAmount">Trinkgeld €</label>
+                            <input type="number" step="0.01" class="form-control" id="hospitalityTipAmount" name="hospitality_tip_amount" placeholder="Trinkgeld-Betrag (falls separate Angabe nötig)">
+                        </div>
+                    </div>
+
+                    <!-- File Upload Area -->
+                    <div class="mt-4">
+                        <label>Dateien anhängen</label>
+                        <div class="border border-2 border-dashed p-4 text-center" id="fileDropZone" style="cursor: pointer;">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-2"></i>
+                            <p>Ziehen Sie Dateien hier hin oder klicken Sie zum Auswählen</p>
+                            <small class="text-muted">PDF, JPG, PNG, TIFF bis 10 MB</small>
+                            <input type="file" id="fileInput" multiple style="display: none;" accept=".pdf,.jpg,.jpeg,.png,.tiff">
+                        </div>
+                        <div id="attachedFiles" class="mt-3"></div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Detail View Modal -->
+<div class="modal fade" id="detailModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Rechnungsdetails</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Basic Info -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Dokumentdetails</h6>
+                        <p><strong>Typ:</strong> <span id="detailType"></span></p>
+                        <p><strong>Nummer:</strong> <span id="detailNumber"></span></p>
+                        <p><strong>Datum:</strong> <span id="detailDate"></span></p>
+                        <p><strong>Empfangen:</strong> <span id="detailReceivedDate"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Lieferant</h6>
+                        <p><strong>Name:</strong> <span id="detailVendor"></span></p>
+                        <p><strong>USt-ID:</strong> <span id="detailVatId"></span></p>
+                    </div>
+                </div>
+
+                <!-- Amounts -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Beträge</h6>
+                        <p><strong>Brutto:</strong> <span id="detailGross"></span></p>
+                        <p><strong>Netto:</strong> <span id="detailNet"></span></p>
+                        <p><strong>USt:</strong> <span id="detailVat"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Status</h6>
+                        <p><strong>Status:</strong> <span id="detailStatus" class="badge"></span></p>
+                        <p><strong>Verifiziert:</strong> <span id="detailVerified"></span></p>
+                        <p><strong>Bezahlt:</strong> <span id="detailPaid"></span></p>
+                    </div>
+                </div>
+
+                <!-- Files -->
+                <div class="mb-4">
+                    <h6 class="text-muted">Anhänge</h6>
+                    <div id="detailFiles" class="row"></div>
+                </div>
+
+                <!-- Audit Log -->
+                <div class="mb-4">
+                    <h6 class="text-muted">Änderungsprotokoll (GoBD-Audit-Trail)</h6>
+                    <div id="detailAuditLog" class="timeline-container">
+                        <p class="text-muted">Laden...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Schließen</button>
+                <button type="button" class="btn btn-warning" id="editDetailBtn">Bearbeiten</button>
+                <button type="button" class="btn btn-success" id="verifyDetailBtn">Verifizieren</button>
+                <button type="button" class="btn btn-primary" id="markPaidDetailBtn">Bezahlt markieren</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Receipt Camera Capture Modal -->
+<div class="modal fade" id="cameraModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Beleg fotografieren</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Camera Preview Container -->
+                <div id="cameraContainer" style="display: none; margin-bottom: 20px;">
+                    <video id="videoPreview" width="100%" height="auto" style="background-color: #000; border-radius: 5px;"></video>
+                    <div class="text-center mt-3">
+                        <button type="button" class="btn btn-primary" id="capturePhotoBtn">
+                            <i class="fa fa-camera"></i> Foto aufnehmen
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="stopCameraBtn">
+                            <i class="fa fa-times"></i> Abbrechen
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Fallback File Input -->
+                <div id="fallbackContainer" style="text-align: center; margin-bottom: 20px;">
+                    <label class="form-control" style="cursor: pointer; padding: 40px;">
+                        <i class="fas fa-camera fa-3x text-muted mb-2"></i>
+                        <p>Beleg fotografieren oder Datei wählen</p>
+                        <input type="file" id="cameraFileInput" accept="image/*" capture="environment" style="display: none;">
+                        <small class="text-muted">Klicken zum Datei auswählen oder Foto mit Kamera machen</small>
+                    </label>
+                </div>
+
+                <!-- Photo Preview -->
+                <div id="photoPreviewContainer" style="display: none;">
+                    <img id="photoPreview" src="" style="width: 100%; border-radius: 5px; margin-bottom: 20px;">
+                    <div id="ocrResultsContainer" class="alert alert-info" style="display: none;">
+                        <h6>KI-Scan Ergebnisse:</h6>
+                        <div id="ocrResults"></div>
+                    </div>
+                </div>
+
+                <!-- Canvas (hidden) for capturing from video -->
+                <canvas id="photoCanvas" style="display: none;"></canvas>
+            </div>
+
+            <div class="modal-footer" id="cameraModalFooter">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-primary" id="usePhotoBtn" style="display: none;">
+                    <i class="fa fa-check"></i> Foto verwenden
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mark Paid Modal -->
+<div class="modal fade" id="markPaidModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Rechnung als bezahlt markieren</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <form id="markPaidForm">
+                <div class="modal-body">
+                    <input type="hidden" id="markPaidId" name="id">
+
+                    <div class="form-group">
+                        <label for="markPaidDate">Bezahltdatum *</label>
+                        <input type="date" class="form-control" id="markPaidDate" name="paid_date" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="paymentMethod">Zahlungsart</label>
+                        <select class="form-control" id="paymentMethod" name="payment_method">
+                            <option value="">-- Keine Angabe --</option>
+                            <option value="bank_transfer">Banküberweisung</option>
+                            <option value="cash">Bargeld</option>
+                            <option value="card">Kartenzahlung</option>
+                            <option value="paypal">PayPal</option>
+                            <option value="other">Sonstige</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="paymentReference">Zahlungsreferenz (z.B. Überweisungsnummer)</label>
+                        <input type="text" class="form-control" id="paymentReference" name="payment_reference">
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const apiBase = '{{ CONFIG.ROOTURL }}/api/incoming/invoices.php';
+    let currentInvoiceId = null;
+
+    // Set today's dates
+    document.getElementById('documentDate').valueAsDate = new Date();
+    document.getElementById('receivedDate').valueAsDate = new Date();
+    document.getElementById('markPaidDate').valueAsDate = new Date();
+
+    // Load initial data
+    loadCategories();
+    loadInvoices();
+    loadComplianceStatus();
+
+    // Event listeners
+    document.getElementById('addInvoiceBtn').addEventListener('click', openAddModal);
+    document.getElementById('scanReceiptBtn').addEventListener('click', openScanModal);
+    document.getElementById('exportBtn').addEventListener('click', exportToCSV);
+    document.getElementById('vendorSearch').addEventListener('input', debounce(filterInvoices, 300));
+    document.getElementById('statusFilter').addEventListener('change', filterInvoices);
+    document.getElementById('categoryFilter').addEventListener('change', filterInvoices);
+
+    document.getElementById('invoiceForm').addEventListener('submit', saveInvoice);
+    document.getElementById('markPaidForm').addEventListener('submit', markPaid);
+
+    // File drag & drop
+    const fileDropZone = document.getElementById('fileDropZone');
+    const fileInput = document.getElementById('fileInput');
+
+    fileDropZone.addEventListener('click', () => fileInput.click());
+    fileDropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        fileDropZone.classList.add('bg-light');
+    });
+    fileDropZone.addEventListener('dragleave', () => {
+        fileDropZone.classList.remove('bg-light');
+    });
+    fileDropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        fileDropZone.classList.remove('bg-light');
+        handleFiles(e.dataTransfer.files);
+    });
+
+    fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+    // Hospitality checkbox toggle
+    document.getElementById('isHospitality').addEventListener('change', function() {
+        const hospitalityFields = document.getElementById('hospitalityFields');
+        if (this.checked) {
+            hospitalityFields.style.display = 'block';
+        } else {
+            hospitalityFields.style.display = 'none';
+        }
+    });
+
+    // Vendor autocomplete
+    document.getElementById('vendorName').addEventListener('input', debounce(function (e) {
+        const query = e.target.value;
+        if (query.length < 2) {
+            document.getElementById('vendorSuggestions').style.display = 'none';
+            return;
+        }
+
+        fetch(apiBase + '?action=search_vendor&q=' + encodeURIComponent(query))
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.results.length > 0) {
+                    const html = data.results.map(r => `<button type="button" class="list-group-item list-group-item-action">${r.name}</button>`).join('');
+                    document.getElementById('vendorSuggestions').innerHTML = html;
+                    document.getElementById('vendorSuggestions').style.display = 'block';
+
+                    document.querySelectorAll('#vendorSuggestions button').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            document.getElementById('vendorName').value = btn.textContent;
+                            document.getElementById('vendorSuggestions').style.display = 'none';
+                        });
+                    });
+                } else {
+                    document.getElementById('vendorSuggestions').style.display = 'none';
+                }
+            });
+    }, 300));
+
+    function loadCategories() {
+        fetch(apiBase + '?action=expense_categories')
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const select = document.getElementById('categoryId');
+                    const filterSelect = document.getElementById('categoryFilter');
+                    const html = data.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+                    select.innerHTML = '<option value="">-- Keine --</option>' + html;
+                    filterSelect.innerHTML = '<option value="">Alle Kategorien</option>' + html;
+                }
+            });
+    }
+
+    function loadInvoices() {
+        const filters = getFilterParams();
+        const query = new URLSearchParams(filters).toString();
+
+        fetch(apiBase + '?action=list&' + query)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    displayInvoices(data.invoices);
+                    updateDashboard(data.invoices);
+                }
+            });
+    }
+
+    function displayInvoices(invoices) {
+        const tbody = document.getElementById('invoicesTableBody');
+
+        if (invoices.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4">Keine Rechnungen gefunden</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = invoices.map(inv => {
+            const statusBadges = {
+                'draft': '<span class="badge badge-secondary">Entwurf</span>',
+                'recorded': '<span class="badge badge-info">Erfasst</span>',
+                'verified': '<span class="badge badge-primary">Verifiziert</span>',
+                'paid': '<span class="badge badge-success">Bezahlt</span>',
+                'disputed': '<span class="badge badge-warning">Umstritten</span>',
+                'cancelled': '<span class="badge badge-danger">Storniert</span>',
+            };
+
+            return `
+                <tr>
+                    <td>${formatDate(inv.document_date)}</td>
+                    <td>
+                        <strong>${inv.document_number || '(keine Nummer)'}</strong><br>
+                        <small class="text-muted">${inv.document_type}</small>
+                    </td>
+                    <td>${inv.vendor_name}</td>
+                    <td><small class="text-muted">${inv.category_id || '—'}</small></td>
+                    <td class="text-right"><strong>${formatCurrency(inv.gross_amount)}</strong></td>
+                    <td>${statusBadges[inv.status] || inv.status}</td>
+                    <td>
+                        <button class="btn btn-sm btn-info" onclick="openDetail(${inv.id})">
+                            <i class="fa fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-warning" onclick="openEditModal(${inv.id})">
+                            <i class="fa fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteInvoice(${inv.id})">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function updateDashboard(invoices) {
+        const unpaid = invoices.filter(i => ['draft', 'recorded', 'verified'].includes(i.status));
+        const overdue = unpaid.filter(i => i.due_date && new Date(i.due_date) < new Date());
+        const dueThisWeek = unpaid.filter(i => {
+            if (!i.due_date) return false;
+            const due = new Date(i.due_date);
+            const today = new Date();
+            const week = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+            return due >= today && due <= week;
+        });
+
+        document.getElementById('totalOpen').textContent = unpaid.length;
+        document.getElementById('dueThisWeek').textContent = formatCurrency(dueThisWeek.reduce((s, i) => s + parseFloat(i.gross_amount || 0), 0));
+        document.getElementById('overdue').textContent = formatCurrency(overdue.reduce((s, i) => s + parseFloat(i.gross_amount || 0), 0));
+    }
+
+    function loadComplianceStatus() {
+        fetch(apiBase + '?action=compliance_check')
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const card = document.getElementById('complianceCard');
+                    const statusEl = document.getElementById('complianceStatus');
+                    const panel = document.getElementById('compliancePanel');
+
+                    if (data.compliant) {
+                        statusEl.textContent = '✓ OK';
+                        card.classList.remove('bg-warning', 'bg-danger');
+                        card.classList.add('bg-success');
+                        panel.style.display = 'none';
+                    } else {
+                        statusEl.textContent = '⚠ ' + data.issues.length;
+                        card.classList.remove('bg-success');
+                        card.classList.add('bg-warning');
+                        panel.style.display = 'block';
+
+                        panel.querySelector('#complianceWarnings').innerHTML = data.issues.map(issue => `
+                            <div class="alert alert-${issue.severity === 'error' ? 'danger' : 'warning'} mb-2">
+                                <strong>${issue.type}:</strong> ${issue.message}
+                            </div>
+                        `).join('');
+                    }
+                }
+            });
+    }
+
+    function getFilterParams() {
+        return {
+            action: 'list',
+            vendor: document.getElementById('vendorSearch').value,
+            status: document.getElementById('statusFilter').value,
+            category_id: document.getElementById('categoryFilter').value,
+        };
+    }
+
+    function filterInvoices() {
+        loadInvoices();
+    }
+
+    function openAddModal() {
+        currentInvoiceId = null;
+        document.getElementById('invoiceForm').reset();
+        document.getElementById('invoiceModalTitle').textContent = 'Neue Rechnung';
+        document.getElementById('invoiceId').value = '';
+        document.getElementById('attachedFiles').innerHTML = '';
+        document.getElementById('documentDate').valueAsDate = new Date();
+        document.getElementById('receivedDate').valueAsDate = new Date();
+        $('#invoiceModal').modal('show');
+    }
+
+    function openEditModal(id) {
+        currentInvoiceId = id;
+        fetch(apiBase + '?action=get&id=' + id)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const inv = data.invoice;
+                    document.getElementById('invoiceModalTitle').textContent = 'Rechnung bearbeiten';
+                    document.getElementById('invoiceId').value = inv.id;
+                    document.getElementById('documentType').value = inv.document_type;
+                    document.getElementById('documentNumber').value = inv.document_number || '';
+                    document.getElementById('vendorName').value = inv.vendor_name;
+                    document.getElementById('vendorVatId').value = inv.vendor_vat_id || '';
+                    document.getElementById('description').value = inv.description || '';
+                    document.getElementById('documentDate').value = inv.document_date;
+                    document.getElementById('receivedDate').value = inv.received_date;
+                    document.getElementById('grossAmount').value = inv.gross_amount;
+                    document.getElementById('netAmount').value = inv.net_amount || '';
+                    document.getElementById('vatAmount').value = inv.vat_amount || '';
+                    document.getElementById('vatRate').value = inv.vat_rate || '';
+                    document.getElementById('categoryId').value = inv.category_id || '';
+                    document.getElementById('projectId').value = inv.project_id || '';
+                    document.getElementById('dueDate').value = inv.due_date || '';
+                    document.getElementById('costCenter').value = inv.cost_center || '';
+                    document.getElementById('taxDeductible').checked = inv.tax_deductible == 1;
+
+                    $('#invoiceModal').modal('show');
+                }
+            });
+    }
+
+    function openDetail(id) {
+        fetch(apiBase + '?action=get&id=' + id)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const inv = data.invoice;
+                    document.getElementById('detailType').textContent = inv.document_type;
+                    document.getElementById('detailNumber').textContent = inv.document_number || '—';
+                    document.getElementById('detailDate').textContent = formatDate(inv.document_date);
+                    document.getElementById('detailReceivedDate').textContent = formatDate(inv.received_date);
+                    document.getElementById('detailVendor').textContent = inv.vendor_name;
+                    document.getElementById('detailVatId').textContent = inv.vendor_vat_id || '—';
+                    document.getElementById('detailGross').textContent = formatCurrency(inv.gross_amount);
+                    document.getElementById('detailNet').textContent = inv.net_amount ? formatCurrency(inv.net_amount) : '—';
+                    document.getElementById('detailVat').textContent = inv.vat_amount ? formatCurrency(inv.vat_amount) : '—';
+
+                    const statusBadges = {
+                        'draft': 'secondary',
+                        'recorded': 'info',
+                        'verified': 'primary',
+                        'paid': 'success',
+                        'disputed': 'warning',
+                        'cancelled': 'danger',
+                    };
+                    const statusEl = document.getElementById('detailStatus');
+                    statusEl.className = 'badge badge-' + (statusBadges[inv.status] || 'secondary');
+                    statusEl.textContent = inv.status;
+
+                    document.getElementById('detailVerified').textContent = inv.verified_at ? formatDate(inv.verified_at) : '—';
+                    document.getElementById('detailPaid').textContent = inv.paid_date ? formatDate(inv.paid_date) : '—';
+
+                    // Files
+                    const filesHtml = inv.files.map(f => `
+                        <div class="col-md-4 mb-3">
+                            <div class="border rounded p-2 text-center">
+                                <i class="far fa-file fa-2x text-muted mb-2"></i>
+                                <p class="small mb-0">Datei</p>
+                                <small class="text-muted">${f.file_type}</small>
+                            </div>
+                        </div>
+                    `).join('');
+                    document.getElementById('detailFiles').innerHTML = filesHtml || '<p class="text-muted">Keine Dateien</p>';
+
+                    // Audit log
+                    fetch(apiBase + '?action=audit_log&id=' + id)
+                        .then(r => r.json())
+                        .then(auditData => {
+                            if (auditData.success) {
+                                const logHtml = auditData.audit_log.map(entry => `
+                                    <div class="timeline-item">
+                                        <div class="timeline-marker"></div>
+                                        <div class="timeline-content">
+                                            <strong>${entry.action}</strong>
+                                            ${entry.field_name ? ` - ${entry.field_name}` : ''}
+                                            <br>
+                                            <small class="text-muted">${formatDate(entry.created_at)}</small>
+                                        </div>
+                                    </div>
+                                `).join('');
+                                document.getElementById('detailAuditLog').innerHTML = logHtml;
+                            }
+                        });
+
+                    currentInvoiceId = id;
+                    document.getElementById('editDetailBtn').onclick = () => openEditModal(id);
+                    document.getElementById('verifyDetailBtn').onclick = () => verifyInvoice(id);
+                    document.getElementById('markPaidDetailBtn').onclick = () => {
+                        document.getElementById('markPaidId').value = id;
+                        $('#detailModal').modal('hide');
+                        $('#markPaidModal').modal('show');
+                    };
+
+                    $('#detailModal').modal('show');
+                }
+            });
+    }
+
+    function openScanModal() {
+        // This would typically open a camera app or file picker
+        // For now, open the add modal
+        openAddModal();
+    }
+
+    function handleFiles(files) {
+        const container = document.getElementById('attachedFiles');
+        Array.from(files).forEach(file => {
+            const div = document.createElement('div');
+            div.className = 'alert alert-info';
+            div.innerHTML = `
+                <i class="fa fa-file"></i> ${file.name}
+                <button type="button" class="close" onclick="this.parentElement.remove()">×</button>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function saveInvoice(e) {
+        e.preventDefault();
+        const formData = new FormData(document.getElementById('invoiceForm'));
+        const isEdit = formData.get('id');
+        const action = isEdit ? 'update' : 'create';
+
+        fetch(apiBase, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Action': action }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert('Rechnung gespeichert!');
+                $('#invoiceModal').modal('hide');
+                loadInvoices();
+            } else {
+                alert('Fehler beim Speichern: ' + JSON.stringify(data.error));
+            }
+        });
+    }
+
+    function markPaid(e) {
+        e.preventDefault();
+        const formData = new FormData(document.getElementById('markPaidForm'));
+        formData.set('action', 'mark_paid');
+
+        fetch(apiBase, {
+            method: 'POST',
+            body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert('Rechnung als bezahlt markiert!');
+                $('#markPaidModal').modal('hide');
+                loadInvoices();
+            } else {
+                alert('Fehler: ' + JSON.stringify(data.error));
+            }
+        });
+    }
+
+    function verifyInvoice(id) {
+        if (confirm('Rechnung verifizieren?')) {
+            const formData = new FormData();
+            formData.set('action', 'verify');
+            formData.set('id', id);
+
+            fetch(apiBase, {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Rechnung verifiziert!');
+                    $('#detailModal').modal('hide');
+                    loadInvoices();
+                }
+            });
+        }
+    }
+
+    function deleteInvoice(id) {
+        if (confirm('Rechnung wirklich löschen (wird als storniert markiert)?')) {
+            const formData = new FormData();
+            formData.set('action', 'delete');
+            formData.set('id', id);
+            formData.set('reason', 'Benutzer löschen');
+
+            fetch(apiBase, {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Rechnung gelöscht!');
+                    loadInvoices();
+                }
+            });
+        }
+    }
+
+    function exportToCSV() {
+        const invoices = document.querySelectorAll('#invoicesTable tbody tr');
+        let csv = 'Datum,Rechnung,Lieferant,Betrag,Status\n';
+
+        invoices.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length >= 5) {
+                const datum = cells[0].textContent.trim();
+                const rechnung = cells[1].textContent.trim().replace(/\n.*/s, '');
+                const lieferant = cells[2].textContent.trim();
+                const betrag = cells[4].textContent.trim();
+                const status = cells[5].textContent.trim();
+
+                csv += `"${datum}","${rechnung}","${lieferant}","${betrag}","${status}"\n`;
+            }
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'rechnungen_' + new Date().toISOString().split('T')[0] + '.csv');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // Utility functions
+    function formatDate(dateStr) {
+        const date = new Date(dateStr + 'T00:00:00Z');
+        return date.toLocaleDateString('de-DE');
+    }
+
+    function formatCurrency(amount) {
+        return new Intl.NumberFormat('de-DE', {
+            style: 'currency',
+            currency: 'EUR'
+        }).format(amount);
+    }
+
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // ═══════════════════════════════════
+    // Camera / Receipt Photo Capture
+    // ═══════════════════════════════════
+    let cameraStream = null;
+    let lastCapturedPhoto = null;
+
+    document.getElementById('cameraFileInput').addEventListener('change', function(e) {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                lastCapturedPhoto = event.target.result;
+                showPhotoPreview(lastCapturedPhoto);
+                performOcrScan(file);
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    document.getElementById('capturePhotoBtn').addEventListener('click', function() {
+        const canvas = document.getElementById('photoCanvas');
+        const video = document.getElementById('videoPreview');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+
+        lastCapturedPhoto = canvas.toDataURL('image/jpeg', 0.9);
+        showPhotoPreview(lastCapturedPhoto);
+
+        // Also send for OCR
+        canvas.toBlob(function(blob) {
+            performOcrScan(blob);
+        }, 'image/jpeg', 0.9);
+    });
+
+    document.getElementById('stopCameraBtn').addEventListener('click', stopCamera);
+
+    document.getElementById('usePhotoBtn').addEventListener('click', function() {
+        if (lastCapturedPhoto) {
+            // Create a file from the photo data
+            fetch(lastCapturedPhoto)
+                .then(res => res.blob())
+                .then(blob => {
+                    const file = new File([blob], 'receipt_' + Date.now() + '.jpg', { type: 'image/jpeg' });
+                    const container = document.getElementById('attachedFiles');
+                    const div = document.createElement('div');
+                    div.className = 'alert alert-success';
+                    div.innerHTML = `
+                        <i class="fa fa-image"></i> ${file.name}
+                        <button type="button" class="close" onclick="this.parentElement.remove()">×</button>
+                    `;
+                    container.appendChild(div);
+
+                    // Store file reference for form submission
+                    if (!window.capturedPhotos) window.capturedPhotos = [];
+                    window.capturedPhotos.push(file);
+                });
+        }
+        $('#cameraModal').modal('hide');
+    });
+
+    function startCamera() {
+        document.getElementById('fallbackContainer').style.display = 'none';
+        document.getElementById('cameraContainer').style.display = 'block';
+
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: 'environment',
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 }
+                }
+            })
+            .then(function(stream) {
+                cameraStream = stream;
+                const video = document.getElementById('videoPreview');
+                video.srcObject = stream;
+                video.play();
+            })
+            .catch(function(err) {
+                console.log('Camera error:', err);
+                alert('Kamera konnte nicht gestartet werden: ' + err.message);
+                document.getElementById('fallbackContainer').style.display = 'block';
+                document.getElementById('cameraContainer').style.display = 'none';
+            });
+        } else {
+            console.log('getUserMedia not supported');
+            document.getElementById('fallbackContainer').style.display = 'block';
+            document.getElementById('cameraContainer').style.display = 'none';
+        }
+    }
+
+    function stopCamera() {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
+        document.getElementById('cameraContainer').style.display = 'none';
+        document.getElementById('fallbackContainer').style.display = 'block';
+    }
+
+    function showPhotoPreview(photoData) {
+        document.getElementById('cameraContainer').style.display = 'none';
+        document.getElementById('fallbackContainer').style.display = 'none';
+        document.getElementById('photoPreviewContainer').style.display = 'block';
+        document.getElementById('photoPreview').src = photoData;
+        document.getElementById('usePhotoBtn').style.display = 'inline-block';
+    }
+
+    function performOcrScan(file) {
+        const formData = new FormData();
+        formData.append('action', 'scan_invoice');
+        formData.append('file', file);
+
+        document.getElementById('ocrResultsContainer').innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> KI-Scan läuft...</div>';
+        document.getElementById('ocrResultsContainer').style.display = 'block';
+
+        fetch('{{ CONFIG.ROOTURL }}/api/ai/scanInvoice.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.extracted) {
+                const extracted = data.extracted;
+                let results = '<ul>';
+
+                if (extracted.vendor_name) {
+                    results += '<li><strong>Lieferant:</strong> ' + extracted.vendor_name + '</li>';
+                }
+                if (extracted.amount) {
+                    results += '<li><strong>Betrag:</strong> €' + parseFloat(extracted.amount).toFixed(2) + '</li>';
+                }
+                if (extracted.date) {
+                    results += '<li><strong>Datum:</strong> ' + extracted.date + '</li>';
+                }
+                if (extracted.document_number) {
+                    results += '<li><strong>Rechnungsnummer:</strong> ' + extracted.document_number + '</li>';
+                }
+                if (extracted.vat_rate) {
+                    results += '<li><strong>USt-Satz:</strong> ' + extracted.vat_rate + '%</li>';
+                }
+                if (extracted.category) {
+                    results += '<li><strong>Kategorie:</strong> ' + extracted.category + '</li>';
+                }
+
+                results += '</ul>';
+                document.getElementById('ocrResults').innerHTML = results;
+
+                // Auto-fill form
+                if (extracted.vendor_name) document.getElementById('vendorName').value = extracted.vendor_name;
+                if (extracted.amount) document.getElementById('grossAmount').value = extracted.amount;
+                if (extracted.date) document.getElementById('documentDate').value = extracted.date;
+                if (extracted.document_number) document.getElementById('documentNumber').value = extracted.document_number;
+                if (extracted.vat_rate) document.getElementById('vatRate').value = extracted.vat_rate;
+            } else {
+                document.getElementById('ocrResults').innerHTML = '<p class="text-warning">KI konnte keine Daten extrahieren. Bitte manuell ausfüllen.</p>';
+            }
+        })
+        .catch(err => {
+            console.error('OCR error:', err);
+            document.getElementById('ocrResults').innerHTML = '<p class="text-danger">Fehler beim KI-Scan: ' + err.message + '</p>';
+        });
+    }
+
+    // Update openScanModal to use camera
+    window.openScanModal = function() {
+        $('#cameraModal').modal('show');
+        // Try to start camera on next tick to ensure modal is visible
+        setTimeout(startCamera, 300);
+    };
+});
+</script>
+
+<style>
+.timeline-item {
+    display: flex;
+    margin-bottom: 15px;
+}
+
+.timeline-marker {
+    width: 15px;
+    height: 15px;
+    background-color: #0066cc;
+    border-radius: 50%;
+    margin-right: 15px;
+    margin-top: 3px;
+    flex-shrink: 0;
+}
+
+.timeline-content {
+    padding: 8px 0;
+}
+
+.border-dashed {
+    border-style: dashed !important;
+}
+</style>
+
+{% endblock %}

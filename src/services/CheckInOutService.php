@@ -10,10 +10,16 @@
 class CheckInOutService
 {
     private $db;
+    private ?CaseContentsService $caseContentsService = null;
 
     public function __construct($db)
     {
         $this->db = $db;
+    }
+
+    public function setCaseContentsService(CaseContentsService $svc): void
+    {
+        $this->caseContentsService = $svc;
     }
 
     /**
@@ -72,6 +78,84 @@ class CheckInOutService
         }
 
         return $checkInId;
+    }
+
+    /**
+     * Check in an asset with case contents verification (if asset is a case)
+     *
+     * @param int $instanceId
+     * @param int $assetId
+     * @param int $projectId
+     * @param int $userId
+     * @param array $scannedContents Array of scanned items: ['entity_type' => 'asset'|'stock_instance', 'entity_id' => int]
+     * @param array $data Additional checkin data (condition, notes, etc.)
+     * @param bool $acknowledgeDiscrepancies If true, allows checkin even with missing items
+     * @return array Result with checkinId and caseVerificationResult (if applicable)
+     */
+    public function checkInWithCaseVerification(
+        int $instanceId,
+        int $assetId,
+        int $projectId,
+        int $userId,
+        array $scannedContents = [],
+        array $data = [],
+        bool $acknowledgeDiscrepancies = false
+    ): array
+    {
+        // Check if asset is a case
+        $this->db->where('assets_id', $assetId);
+        $this->db->where('instances_id', $instanceId);
+        $asset = $this->db->getOne('assets', ['is_case']);
+
+        $result = [
+            'checkinId' => null,
+            'caseVerificationResult' => null,
+            'warnings' => []
+        ];
+
+        // If it's a case and we have CaseContentsService, verify contents
+        if ($asset && $asset['is_case'] && $this->caseContentsService) {
+            $verificationResult = $this->caseContentsService->verifyCaseContents($assetId, $scannedContents);
+            $result['caseVerificationResult'] = $verificationResult;
+
+            // Log the verification check
+            try {
+                $this->caseContentsService->logCheck(
+                    $assetId,
+                    $projectId,
+                    'checkin',
+                    $userId,
+                    $verificationResult
+                );
+            } catch (Exception $e) {
+                // Logging failed, but continue with checkin
+            }
+
+            // Check if there are missing items that are not acknowledged
+            $hasMissingItems = !empty($verificationResult['missing']);
+            $hasRequiredMissing = $verificationResult['summary']['has_missing_required'] ?? false;
+
+            if ($hasMissingItems && !$acknowledgeDiscrepancies) {
+                $result['warnings'][] = [
+                    'type' => 'case_contents_incomplete',
+                    'message' => 'Case contents verification found discrepancies',
+                    'details' => [
+                        'missing' => $verificationResult['missing'],
+                        'extra' => $verificationResult['extra'],
+                        'swapped' => $verificationResult['swapped'],
+                        'has_required_missing' => $hasRequiredMissing
+                    ]
+                ];
+
+                // Still allow checkin, but return the warning
+            }
+        }
+
+        // Perform normal checkin
+        $checkinId = $this->checkIn($instanceId, $assetId, $projectId, $userId, $data);
+        $result['checkinId'] = $checkinId;
+
+        return $result;
     }
 
     /**
@@ -163,6 +247,44 @@ class CheckInOutService
             $count++;
         }
         return $count;
+    }
+
+    /**
+     * Get checkin warnings for an asset (e.g., case verification needed)
+     *
+     * @param int $assetId
+     * @return array Warnings array with case_verification_needed flag and expected_contents_count
+     */
+    public function getCheckinWarnings(int $assetId): array
+    {
+        $warnings = [];
+
+        // Check if asset is a case
+        $this->db->where('assets_id', $assetId);
+        $asset = $this->db->getOne('assets', ['is_case']);
+
+        if ($asset && $asset['is_case']) {
+            $warnings['case_verification_needed'] = true;
+
+            // Get expected contents count if we have CaseContentsService
+            if ($this->caseContentsService) {
+                $contents = $this->caseContentsService->getCaseContents($assetId);
+                $warnings['expected_contents_count'] = count($contents);
+
+                // Count required items
+                $requiredCount = 0;
+                foreach ($contents as $item) {
+                    if ($item['is_required']) {
+                        $requiredCount++;
+                    }
+                }
+                $warnings['required_items_count'] = $requiredCount;
+            }
+        } else {
+            $warnings['case_verification_needed'] = false;
+        }
+
+        return $warnings;
     }
 
     private function getLastCheckout(int $assetId, int $projectId): ?array

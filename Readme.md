@@ -19,7 +19,7 @@ Based on [AdamRMS](https://github.com/adam-rms/adam-rms), customized for own use
 - Recurring/repeating projects with automation
 - Crew/staff assignment and scheduling
 - Calendar integration with ICS export
-- File attachments (S3 or local storage)
+- File attachments (local storage)
 
 ### Financial Management
 - Invoice, quote, and delivery note generation (PDF)
@@ -70,7 +70,7 @@ Based on [AdamRMS](https://github.com/adam-rms/adam-rms), customized for own use
 | Frontend | AdminLTE (Bootstrap 4), jQuery |
 | PDF | Dompdf (server-side), pdfmake (client-side) |
 | Email | SendGrid, Mailgun, Postmark, or SMTP |
-| File Storage | AWS S3 or local filesystem |
+| File Storage | Local filesystem |
 | Auth | JWT + HybridAuth (social login) |
 | Migrations | Phinx |
 | Deployment | Docker + Docker Compose |

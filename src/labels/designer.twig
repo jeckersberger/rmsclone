@@ -1,0 +1,993 @@
+{% extends "assets/template.twig" %}
+
+{% block content %}
+<style>
+    .designer-container {
+        margin: 20px;
+    }
+
+    .designer-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .designer-header h1 {
+        margin: 0;
+        font-size: 28px;
+        font-weight: bold;
+    }
+
+    .designer-body {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 20px;
+    }
+
+    .designer-sidebar {
+        background: #f9f9f9;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 15px;
+        max-height: calc(100vh - 200px);
+        overflow-y: auto;
+    }
+
+    .sidebar-section {
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .sidebar-section:last-child {
+        border-bottom: none;
+    }
+
+    .sidebar-section h3 {
+        font-size: 13px;
+        font-weight: bold;
+        color: #666;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+        letter-spacing: 0.5px;
+    }
+
+    .form-group {
+        margin-bottom: 12px;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 5px;
+        color: #333;
+    }
+
+    .form-group select,
+    .form-group input[type="text"] {
+        width: 100%;
+        padding: 8px;
+        font-size: 13px;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+    }
+
+    .button-group {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+
+    .btn-sm {
+        flex: 1;
+        padding: 8px 10px;
+        font-size: 12px;
+        font-weight: bold;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-primary-sm {
+        background: #007bff;
+        color: white;
+    }
+
+    .btn-primary-sm:hover {
+        background: #0056b3;
+    }
+
+    .btn-secondary-sm {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary-sm:hover {
+        background: #545b62;
+    }
+
+    .element-list {
+        max-height: 300px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+    }
+
+    .element-item {
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .element-item:hover {
+        background: #f0f0f0;
+    }
+
+    .element-item.selected {
+        background: #e3f2fd;
+        border-left: 3px solid #007bff;
+    }
+
+    .element-item-name {
+        flex: 1;
+    }
+
+    .element-item-actions {
+        display: flex;
+        gap: 5px;
+    }
+
+    .btn-icon {
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        border: none;
+        background: #ddd;
+        color: #333;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 11px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+
+    .btn-icon:hover {
+        background: #bbb;
+    }
+
+    .btn-icon.delete:hover {
+        background: #dc3545;
+        color: white;
+    }
+
+    .designer-main {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .label-preview-card {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 20px;
+    }
+
+    .label-preview-header {
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 15px;
+        color: #333;
+    }
+
+    .label-preview-container {
+        position: relative;
+        background: #fff;
+        border: 2px dashed #999;
+        border-radius: 3px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 15px;
+    }
+
+    .label-preview {
+        position: relative;
+        background: white;
+        border: 1px solid #ccc;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .label-preview-element {
+        position: absolute;
+        box-sizing: border-box;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        font-family: Arial, sans-serif;
+        cursor: move;
+        transition: outline 0.1s;
+    }
+
+    .label-preview-element:hover {
+        outline: 2px solid #ffb300;
+    }
+
+    .label-preview-element.selected {
+        outline: 2px solid #007bff;
+        background: rgba(0, 123, 255, 0.05);
+    }
+
+    .label-preview-element.text {
+        color: #000;
+        padding: 2px 4px;
+    }
+
+    .label-preview-element.barcode {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f9f9f9;
+        border: 1px dashed #999;
+        font-family: 'Courier New', monospace;
+        font-size: 8px;
+        color: #666;
+    }
+
+    .label-preview-element.qrcode {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f9f9f9;
+        border: 1px dashed #999;
+        font-size: 8px;
+        color: #666;
+    }
+
+    .label-preview-element.line {
+        background: #000;
+    }
+
+    .label-preview-element.box {
+        background: transparent;
+        border: 1px solid #000;
+    }
+
+    .config-panel {
+        background: #f9f9f9;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        padding: 12px;
+        display: none;
+        font-size: 12px;
+    }
+
+    .config-panel.visible {
+        display: block;
+    }
+
+    .config-panel h4 {
+        margin: 0 0 10px 0;
+        font-size: 13px;
+        color: #333;
+    }
+
+    .config-row {
+        margin-bottom: 10px;
+    }
+
+    .config-row label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 3px;
+        color: #333;
+    }
+
+    .config-row input,
+    .config-row select {
+        width: 100%;
+        padding: 6px;
+        font-size: 12px;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        box-sizing: border-box;
+    }
+
+    .zpl-code-card {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 20px;
+    }
+
+    .zpl-code-header {
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        color: #333;
+    }
+
+    .zpl-code-display {
+        background: #f5f5f5;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        padding: 12px;
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+        color: #333;
+        line-height: 1.4;
+        max-height: 200px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+
+    .printer-config {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+
+    .printer-config-header {
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 15px;
+        color: #333;
+    }
+
+    .printer-config-row {
+        display: flex;
+        gap: 10px;
+        align-items: flex-end;
+    }
+
+    .printer-config-row > div {
+        flex: 1;
+    }
+
+    .printer-config-row label {
+        display: block;
+        font-size: 12px;
+        margin-bottom: 5px;
+        color: #333;
+    }
+
+    .printer-config-row input {
+        width: 100%;
+        padding: 8px;
+        font-size: 12px;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+    }
+
+    .btn-print {
+        padding: 10px 20px;
+        background: #28a745;
+        color: white;
+        border: none;
+        border-radius: 3px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-print:hover {
+        background: #1e7e34;
+    }
+
+    .btn-save-template {
+        padding: 12px 20px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 3px;
+        font-weight: bold;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s;
+    }
+
+    .btn-save-template:hover {
+        background: #0056b3;
+    }
+
+    .alert {
+        padding: 12px;
+        border-radius: 3px;
+        margin-bottom: 15px;
+        display: none;
+    }
+
+    .alert.visible {
+        display: block;
+    }
+
+    .alert-success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .alert-error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    @media (max-width: 1200px) {
+        .designer-body {
+            grid-template-columns: 1fr;
+        }
+
+        .designer-sidebar {
+            order: 2;
+        }
+
+        .designer-main {
+            order: 1;
+        }
+    }
+</style>
+
+<div class="designer-container">
+    <div class="designer-header">
+        <h1><i class="fas fa-tag"></i> Label-Designer (Zebra LP2824)</h1>
+        <button class="btn-save-template" onclick="saveTemplate()"><i class="fas fa-save"></i> Speichern</button>
+    </div>
+
+    <div id="alertBox" class="alert"></div>
+
+    <div class="designer-body">
+        <div class="designer-sidebar">
+            <div class="sidebar-section">
+                <h3>Template-Auswahl</h3>
+                <div class="form-group">
+                    <select id="templateSelect" onchange="loadTemplate()">
+                        <option value="">-- Neues Template --</option>
+                        <option value="default">Standard Template</option>
+                    </select>
+                </div>
+                <button class="btn-primary-sm" onclick="resetTemplate()"><i class="fas fa-plus"></i> Neu</button>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Label-Größe</h3>
+                <div class="form-group">
+                    <select id="labelSizeSelect" onchange="changeLabelSize()">
+                        <option value="57:25">57x25mm</option>
+                        <option value="57:32">57x32mm</option>
+                        <option value="80:25">80x25mm</option>
+                        <option value="100:50">100x50mm</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Entity-Typ</h3>
+                <div class="form-group">
+                    <select id="entityTypeSelect" onchange="updateDataFields()">
+                        <option value="asset">Asset</option>
+                        <option value="stock">Artikel</option>
+                        <option value="external">Fremdmaterial</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Elemente</h3>
+                <div class="button-group">
+                    <button class="btn-secondary-sm" onclick="addElement('text')" title="Text oder Datenfeld hinzufügen"><i class="fas fa-font"></i></button>
+                    <button class="btn-secondary-sm" onclick="addElement('barcode')" title="Barcode hinzufügen"><i class="fas fa-barcode"></i></button>
+                </div>
+                <div class="button-group">
+                    <button class="btn-secondary-sm" onclick="addElement('qrcode')" title="QR-Code hinzufügen"><i class="fas fa-qrcode"></i></button>
+                    <button class="btn-secondary-sm" onclick="addElement('line')" title="Linie hinzufügen"><i class="fas fa-minus"></i></button>
+                </div>
+                <div class="button-group">
+                    <button class="btn-secondary-sm" onclick="addElement('box')" title="Rahmen hinzufügen"><i class="fas fa-square"></i></button>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Element-Liste</h3>
+                <div class="element-list" id="elementList"></div>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="config-panel" id="configPanel">
+                    <h4>Eigenschaften</h4>
+                    <div id="configContent"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="designer-main">
+            <div class="label-preview-card">
+                <div class="label-preview-header">LABEL-VORSCHAU</div>
+                <div class="label-preview-container">
+                    <div class="label-preview" id="labelPreview" onclick="selectElement(null)"></div>
+                </div>
+            </div>
+
+            <div class="zpl-code-card">
+                <div class="zpl-code-header">ZPL-Code:</div>
+                <div class="zpl-code-display" id="zplCodeDisplay">^XA
+^CI28
+^FS
+^XZ</div>
+            </div>
+
+            <div class="printer-config">
+                <div class="printer-config-header">Drucker-Konfiguration</div>
+                <div class="printer-config-row">
+                    <div>
+                        <label>Drucker-IP:</label>
+                        <input type="text" id="printerIp" placeholder="z.B. 192.168.1.100" value="">
+                    </div>
+                    <button class="btn-print" onclick="testPrint()"><i class="fas fa-print"></i> Test drucken</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Data fields mapping
+var dataFields = {
+    asset: {
+        type_name: 'Gerätetyp', asset_tag: 'Asset-Nr.', rfid_tag: 'RFID-Tag',
+        rfid_indicator: 'RF-Kennzeichen', barcode_data: 'Barcode', location: 'Lagerort',
+        serial_number: 'Seriennummer', value: 'Wert'
+    },
+    stock: {
+        item_name: 'Artikelname', category: 'Kategorie', instance_number: 'Instanz-Nr.',
+        rfid_tag: 'RFID-Tag', rfid_indicator: 'RF-Kennzeichen', barcode_data: 'Barcode', sku: 'SKU'
+    },
+    external: {
+        description: 'Beschreibung', owner_name: 'Eigentümer', barcode_data: 'Barcode',
+        rfid_tag: 'RFID-Tag', rfid_indicator: 'RF-Kennzeichen', return_date: 'Rückgabedatum',
+        project_name: 'Projektname', quantity: 'Menge'
+    }
+};
+
+// Sample data for preview
+var sampleData = {
+    asset: { type_name: 'Beamer', asset_tag: '1042', rfid_tag: 'RMS-A-000042', rfid_indicator: 'RF', barcode_data: 'RMS-A-000042', location: 'Hauptlager', serial_number: 'SN-2025-1234', value: '899.00' },
+    stock: { item_name: 'HDMI-Kabel 3m', category: 'Kabel', instance_number: '0023', rfid_tag: 'RMS-I-000023', rfid_indicator: 'RF', barcode_data: 'RMS-I-000023', sku: 'HDMI-3M' },
+    external: { description: 'Scheinwerfer 2kW', owner_name: 'Firma Mueller', barcode_data: 'EXT-000001', rfid_tag: '', rfid_indicator: '', return_date: '2026-03-20', project_name: 'Stadtfest', quantity: '2' }
+};
+
+var labelTemplate = {
+    name: 'Neue Vorlage',
+    size: { width: 57, height: 25 },
+    elements: [],
+    entityType: 'asset'
+};
+
+var selectedElement = null;
+var elementIdCounter = 0;
+
+// Label size presets in mm
+var sizePresets = {
+    '57:25': { width: 57, height: 25 },
+    '57:32': { width: 57, height: 32 },
+    '80:25': { width: 80, height: 25 },
+    '100:50': { width: 100, height: 50 }
+};
+
+function addElement(type) {
+    var element = {
+        id: 'elem_' + (elementIdCounter++),
+        type: type,
+        x: 5,
+        y: 5,
+        width: type === 'text' ? 40 : type === 'barcode' ? 50 : type === 'qrcode' ? 20 : 40,
+        height: type === 'text' ? 5 : type === 'barcode' ? 10 : type === 'qrcode' ? 20 : 1,
+        label: type === 'text' ? 'Text' : type === 'barcode' ? 'Barcode' : type === 'qrcode' ? 'QR-Code' : type === 'line' ? 'Linie' : 'Rahmen'
+    };
+
+    if (type === 'text') {
+        element.dataField = 'asset_tag';
+        element.staticText = '';
+        element.fontSize = 12;
+        element.prefix = '';
+        element.suffix = '';
+    } else if (type === 'barcode') {
+        element.dataField = 'barcode_data';
+        element.barcodeType = 'code128';
+        element.barcodeHeight = 10;
+    } else if (type === 'qrcode') {
+        element.dataField = 'barcode_data';
+    }
+
+    labelTemplate.elements.push(element);
+    renderLabelPreview();
+    updateElementList();
+    selectElement(element.id);
+}
+
+function selectElement(elemId) {
+    selectedElement = elemId;
+    renderElementList();
+    showConfigPanel(elemId);
+    renderLabelPreview();
+}
+
+function deleteElement(elemId) {
+    labelTemplate.elements = labelTemplate.elements.filter(e => e.id !== elemId);
+    if (selectedElement === elemId) selectedElement = null;
+    renderLabelPreview();
+    updateElementList();
+}
+
+function updateElementList() {
+    var html = '';
+    labelTemplate.elements.forEach(function(elem, idx) {
+        var label = (idx + 1) + '. ' + (elem.label || elem.type);
+        if (elem.dataField) label += ': ' + (dataFields[labelTemplate.entityType][elem.dataField] || elem.dataField);
+        html += '<div class="element-item' + (selectedElement === elem.id ? ' selected' : '') + '" onclick="selectElement(\'' + elem.id + '\')">';
+        html += '<div class="element-item-name">' + label + '</div>';
+        html += '<div class="element-item-actions">';
+        html += '<button class="btn-icon delete" onclick="event.stopPropagation(); deleteElement(\'' + elem.id + '\');"><i class="fas fa-trash"></i></button>';
+        html += '</div></div>';
+    });
+    document.getElementById('elementList').innerHTML = html || '<div style="padding: 10px; color: #999;">Keine Elemente</div>';
+}
+
+function renderElementList() {
+    updateElementList();
+}
+
+function showConfigPanel(elemId) {
+    var elem = labelTemplate.elements.find(e => e.id === elemId);
+    var panel = document.getElementById('configPanel');
+    var content = document.getElementById('configContent');
+
+    if (!elem) {
+        panel.classList.remove('visible');
+        return;
+    }
+
+    var html = '<h4>' + elem.label + '</h4>';
+
+    html += '<div class="config-row">';
+    html += '<label>Position X (mm):</label>';
+    html += '<input type="number" step="0.1" value="' + elem.x + '" onchange="updateElementProperty(\'' + elem.id + '\', \'x\', this.value)">';
+    html += '</div>';
+
+    html += '<div class="config-row">';
+    html += '<label>Position Y (mm):</label>';
+    html += '<input type="number" step="0.1" value="' + elem.y + '" onchange="updateElementProperty(\'' + elem.id + '\', \'y\', this.value)">';
+    html += '</div>';
+
+    html += '<div class="config-row">';
+    html += '<label>Breite (mm):</label>';
+    html += '<input type="number" step="0.1" value="' + elem.width + '" onchange="updateElementProperty(\'' + elem.id + '\', \'width\', this.value)">';
+    html += '</div>';
+
+    if (elem.type !== 'line') {
+        html += '<div class="config-row">';
+        html += '<label>Höhe (mm):</label>';
+        html += '<input type="number" step="0.1" value="' + elem.height + '" onchange="updateElementProperty(\'' + elem.id + '\', \'height\', this.value)">';
+        html += '</div>';
+    } else {
+        html += '<div class="config-row">';
+        html += '<label>Dicke (mm):</label>';
+        html += '<input type="number" step="0.1" value="' + elem.height + '" onchange="updateElementProperty(\'' + elem.id + '\', \'height\', this.value)">';
+        html += '</div>';
+    }
+
+    if (elem.type === 'text') {
+        html += '<div class="config-row">';
+        html += '<label>Datenfeld:</label>';
+        var fields = dataFields[labelTemplate.entityType] || {};
+        html += '<select onchange="updateElementProperty(\'' + elem.id + '\', \'dataField\', this.value)">';
+        html += '<option value="">-- Statischer Text --</option>';
+        for (var key in fields) {
+            html += '<option value="' + key + '" ' + (elem.dataField === key ? 'selected' : '') + '>' + fields[key] + '</option>';
+        }
+        html += '</select>';
+        html += '</div>';
+
+        if (!elem.dataField || elem.dataField === '') {
+            html += '<div class="config-row">';
+            html += '<label>Text:</label>';
+            html += '<input type="text" value="' + (elem.staticText || '') + '" onchange="updateElementProperty(\'' + elem.id + '\', \'staticText\', this.value)">';
+            html += '</div>';
+        }
+
+        html += '<div class="config-row">';
+        html += '<label>Schriftgröße (pt):</label>';
+        html += '<input type="number" value="' + (elem.fontSize || 12) + '" onchange="updateElementProperty(\'' + elem.id + '\', \'fontSize\', this.value)">';
+        html += '</div>';
+
+        html += '<div class="config-row">';
+        html += '<label>Präfix:</label>';
+        html += '<input type="text" value="' + (elem.prefix || '') + '" onchange="updateElementProperty(\'' + elem.id + '\', \'prefix\', this.value)">';
+        html += '</div>';
+
+        html += '<div class="config-row">';
+        html += '<label>Suffix:</label>';
+        html += '<input type="text" value="' + (elem.suffix || '') + '" onchange="updateElementProperty(\'' + elem.id + '\', \'suffix\', this.value)">';
+        html += '</div>';
+    } else if (elem.type === 'barcode') {
+        html += '<div class="config-row">';
+        html += '<label>Datenfeld:</label>';
+        var fields = dataFields[labelTemplate.entityType] || {};
+        html += '<select onchange="updateElementProperty(\'' + elem.id + '\', \'dataField\', this.value)">';
+        for (var key in fields) {
+            html += '<option value="' + key + '" ' + (elem.dataField === key ? 'selected' : '') + '>' + fields[key] + '</option>';
+        }
+        html += '</select>';
+        html += '</div>';
+
+        html += '<div class="config-row">';
+        html += '<label>Barcode-Typ:</label>';
+        html += '<select onchange="updateElementProperty(\'' + elem.id + '\', \'barcodeType\', this.value)">';
+        html += '<option value="code128" ' + (elem.barcodeType === 'code128' ? 'selected' : '') + '>Code 128</option>';
+        html += '<option value="code39" ' + (elem.barcodeType === 'code39' ? 'selected' : '') + '>Code 39</option>';
+        html += '</select>';
+        html += '</div>';
+
+        html += '<div class="config-row">';
+        html += '<label>Barcode-Höhe (mm):</label>';
+        html += '<input type="number" step="0.1" value="' + (elem.barcodeHeight || 10) + '" onchange="updateElementProperty(\'' + elem.id + '\', \'barcodeHeight\', this.value)">';
+        html += '</div>';
+    } else if (elem.type === 'qrcode') {
+        html += '<div class="config-row">';
+        html += '<label>Datenfeld:</label>';
+        var fields = dataFields[labelTemplate.entityType] || {};
+        html += '<select onchange="updateElementProperty(\'' + elem.id + '\', \'dataField\', this.value)">';
+        for (var key in fields) {
+            html += '<option value="' + key + '" ' + (elem.dataField === key ? 'selected' : '') + '>' + fields[key] + '</option>';
+        }
+        html += '</select>';
+        html += '</div>';
+    }
+
+    content.innerHTML = html;
+    panel.classList.add('visible');
+}
+
+function updateElementProperty(elemId, prop, value) {
+    var elem = labelTemplate.elements.find(e => e.id === elemId);
+    if (elem) {
+        if (prop === 'x' || prop === 'y' || prop === 'width' || prop === 'height' || prop === 'fontSize' || prop === 'barcodeHeight') {
+            elem[prop] = parseFloat(value);
+        } else {
+            elem[prop] = value;
+        }
+        renderLabelPreview();
+        showConfigPanel(elemId);
+    }
+}
+
+function changeLabelSize() {
+    var sizeKey = document.getElementById('labelSizeSelect').value;
+    if (sizePresets[sizeKey]) {
+        labelTemplate.size = sizePresets[sizeKey];
+        renderLabelPreview();
+    }
+}
+
+function updateDataFields() {
+    labelTemplate.entityType = document.getElementById('entityTypeSelect').value;
+    renderLabelPreview();
+    if (selectedElement) showConfigPanel(selectedElement);
+}
+
+function renderLabelPreview() {
+    var preview = document.getElementById('labelPreview');
+    var scale = 2; // 2x scale for visibility
+    var mmToPx = 3.78; // approximate mm to px conversion at 96dpi * 2 scale
+
+    var width = labelTemplate.size.width * mmToPx * scale;
+    var height = labelTemplate.size.height * mmToPx * scale;
+
+    preview.style.width = width + 'px';
+    preview.style.height = height + 'px';
+    preview.innerHTML = '';
+
+    var entityData = sampleData[labelTemplate.entityType] || {};
+
+    labelTemplate.elements.forEach(function(elem) {
+        var elemDiv = document.createElement('div');
+        elemDiv.className = 'label-preview-element ' + elem.type;
+        elemDiv.id = elem.id;
+
+        var x = elem.x * mmToPx * scale;
+        var y = elem.y * mmToPx * scale;
+        var w = elem.width * mmToPx * scale;
+        var h = elem.height * mmToPx * scale;
+
+        elemDiv.style.left = x + 'px';
+        elemDiv.style.top = y + 'px';
+        elemDiv.style.width = w + 'px';
+        elemDiv.style.height = h + 'px';
+
+        if (selectedElement === elem.id) {
+            elemDiv.classList.add('selected');
+        }
+
+        elemDiv.onclick = function(e) {
+            e.stopPropagation();
+            selectElement(elem.id);
+        };
+
+        if (elem.type === 'text') {
+            elemDiv.style.fontSize = (elem.fontSize * scale / 3) + 'px';
+            var text = '';
+            if (elem.dataField && dataFields[labelTemplate.entityType][elem.dataField]) {
+                text = (elem.prefix || '') + (entityData[elem.dataField] || '') + (elem.suffix || '');
+            } else {
+                text = elem.staticText || 'Text';
+            }
+            elemDiv.textContent = text;
+        } else if (elem.type === 'barcode') {
+            var barcodeData = entityData[elem.dataField] || '000000';
+            elemDiv.textContent = '|' + barcodeData.substring(0, 15) + '|';
+        } else if (elem.type === 'qrcode') {
+            elemDiv.textContent = '█ QR █';
+        } else if (elem.type === 'line') {
+            elemDiv.style.background = '#000';
+        } else if (elem.type === 'box') {
+            elemDiv.style.background = 'transparent';
+            elemDiv.style.border = '1px solid #000';
+        }
+
+        preview.appendChild(elemDiv);
+    });
+
+    generateZPLCode();
+}
+
+function generateZPLCode() {
+    var zpl = '^XA\n';
+    zpl += '^CI28\n'; // UTF-8 character set
+    zpl += '^LL' + Math.round(labelTemplate.size.height * 8) + '\n'; // Label height in dots (8 dots/mm)
+    zpl += '^PW' + Math.round(labelTemplate.size.width * 8) + '\n'; // Label width in dots
+
+    var entityData = sampleData[labelTemplate.entityType] || {};
+
+    labelTemplate.elements.forEach(function(elem) {
+        var x = Math.round(elem.x * 8);
+        var y = Math.round(elem.y * 8);
+
+        if (elem.type === 'text') {
+            var text = '';
+            if (elem.dataField && dataFields[labelTemplate.entityType][elem.dataField]) {
+                text = (elem.prefix || '') + (entityData[elem.dataField] || '') + (elem.suffix || '');
+            } else {
+                text = elem.staticText || '';
+            }
+            zpl += '^FO' + x + ',' + y + '\n';
+            zpl += '^A0N,' + (elem.fontSize || 12) + '\n';
+            zpl += '^FD' + text + '^FS\n';
+        } else if (elem.type === 'barcode') {
+            var barcodeData = entityData[elem.dataField] || '000000';
+            var height = Math.round((elem.barcodeHeight || 10) * 8);
+            zpl += '^FO' + x + ',' + y + '\n';
+            zpl += '^B3N,' + height + '\n';
+            zpl += '^FD' + barcodeData + '^FS\n';
+        } else if (elem.type === 'qrcode') {
+            var qrData = entityData[elem.dataField] || 'RMS';
+            var size = Math.round(elem.width / 5);
+            zpl += '^FO' + x + ',' + y + '\n';
+            zpl += '^BQN,' + size + '\n';
+            zpl += '^FDQA,' + qrData + '^FS\n';
+        } else if (elem.type === 'line') {
+            var width = Math.round(elem.width * 8);
+            var height = Math.round(elem.height * 8);
+            zpl += '^FO' + x + ',' + y + '\n';
+            zpl += '^GB' + width + ',' + height + ',' + height + '\n';
+        } else if (elem.type === 'box') {
+            var width = Math.round(elem.width * 8);
+            var height = Math.round(elem.height * 8);
+            zpl += '^FO' + x + ',' + y + '\n';
+            zpl += '^GB' + width + ',' + height + ',1\n';
+        }
+    });
+
+    zpl += '^XZ';
+    document.getElementById('zplCodeDisplay').textContent = zpl;
+}
+
+function resetTemplate() {
+    labelTemplate = {
+        name: 'Neue Vorlage',
+        size: { width: 57, height: 25 },
+        elements: [],
+        entityType: 'asset'
+    };
+    selectedElement = null;
+    elementIdCounter = 0;
+    document.getElementById('labelSizeSelect').value = '57:25';
+    document.getElementById('entityTypeSelect').value = 'asset';
+    document.getElementById('configPanel').classList.remove('visible');
+    renderLabelPreview();
+    updateElementList();
+    showAlert('Template zurückgesetzt', 'success');
+}
+
+function loadTemplate() {
+    var templateId = document.getElementById('templateSelect').value;
+    if (!templateId) {
+        resetTemplate();
+        return;
+    }
+    showAlert('Template-Laden wird implementiert in: labels/designer.php', 'success');
+}
+
+function saveTemplate() {
+    var templateName = prompt('Template-Name:', labelTemplate.name);
+    if (!templateName) return;
+
+    labelTemplate.name = templateName;
+
+    var data = {
+        action: 'save_template',
+        template: JSON.stringify(labelTemplate)
+    };
+
+    ajaxcall('labels/designer.php', data, function(response) {
+        if (response.success) {
+            showAlert('Template "' + templateName + '" gespeichert', 'success');
+            // Reload template dropdown if needed
+        } else {
+            showAlert('Fehler beim Speichern: ' + (response.message || ''), 'error');
+        }
+    });
+}
+
+function testPrint() {
+    var printerIp = document.getElementById('printerIp').value;
+    if (!printerIp) {
+        showAlert('Bitte geben Sie die Drucker-IP ein', 'error');
+        return;
+    }
+
+    var data = {
+        action: 'print_test',
+        printer_ip: printerIp,
+        zpl_code: document.getElementById('zplCodeDisplay').textContent
+    };
+
+    showAlert('Drucken wird an ' + printerIp + ' gesendet...', 'success');
+    ajaxcall('labels/designer.php', data, function(response) {
+        if (response.success) {
+            showAlert('Test-Druck gesendet', 'success');
+        } else {
+            showAlert('Druck fehlgeschlagen: ' + (response.message || ''), 'error');
+        }
+    });
+}
+
+function showAlert(message, type) {
+    var box = document.getElementById('alertBox');
+    box.className = 'alert visible alert-' + type;
+    box.textContent = message;
+    setTimeout(function() {
+        box.classList.remove('visible');
+    }, 4000);
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', function() {
+    renderLabelPreview();
+    updateElementList();
+});
+</script>
+
+{% endblock %}
