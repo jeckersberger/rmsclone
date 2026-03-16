@@ -250,6 +250,61 @@ switch ($action) {
         }
         break;
 
+    case 'search_assets':
+        // Search assets for "mark as case" modal
+        try {
+            $search = trim($_POST['search'] ?? '');
+            if (strlen($search) < 2) {
+                finish(true, null, []);
+            }
+            $escapedSearch = str_replace(['%', '_', '\\'], ['\\%', '\\_', '\\\\'], $search);
+            $DBLIB->where('a.instances_id', $instanceId);
+            $DBLIB->where('a.assets_deleted', 0);
+            $DBLIB->where('(at.assetTypes_name LIKE ? OR a.assets_tag LIKE ? OR a.assets_serialInternal LIKE ?)',
+                ["%{$escapedSearch}%", "%{$escapedSearch}%", "%{$escapedSearch}%"]);
+            $DBLIB->join('assetTypes at', 'at.assetTypes_id = a.assetTypes_id', 'LEFT');
+            $DBLIB->orderBy('at.assetTypes_name', 'ASC');
+            $assets = $DBLIB->get('assets a', 20, [
+                'a.assets_id',
+                'a.assets_tag',
+                'at.assetTypes_name AS type_name',
+                'a.assets_serialInternal',
+                'a.is_case'
+            ]);
+            finish(true, null, $assets ?: []);
+        } catch (Exception $e) {
+            finish(false, ["message" => $e->getMessage()]);
+        }
+        break;
+
+    case 'update_sort_order':
+        // Update sort order of case contents (drag-and-drop)
+        try {
+            if (!$AUTH->instancePermissionCheck("ASSETS:EDIT")) {
+                finish(false, ["code" => "PERMISSIONS"]);
+            }
+            $sortData = $_POST['sort_data'] ?? '';
+            if (is_string($sortData)) {
+                $sortData = json_decode($sortData, true);
+            }
+            if (!is_array($sortData) || empty($sortData)) {
+                finish(false, ["message" => "sort_data must be a JSON array of {id, sort_order}"]);
+            }
+            foreach ($sortData as $item) {
+                $contentId = (int)($item['id'] ?? 0);
+                $sortOrder = (int)($item['sort_order'] ?? 0);
+                if ($contentId > 0) {
+                    $DBLIB->where('id', $contentId);
+                    $DBLIB->where('instances_id', $instanceId);
+                    $DBLIB->update('case_contents', ['sort_order' => $sortOrder]);
+                }
+            }
+            finish(true, null, ["updated" => count($sortData)]);
+        } catch (Exception $e) {
+            finish(false, ["message" => $e->getMessage()]);
+        }
+        break;
+
     default:
         finish(false, ["message" => "Unknown action: $action"]);
         break;

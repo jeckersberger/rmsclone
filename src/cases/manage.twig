@@ -439,8 +439,8 @@ function renderCaseList() {
       <a href="#" class="list-group-item list-group-item-action ${isSelected}" data-case-id="${caseItem.assets_id}" onclick="selectCase(${caseItem.assets_id}); return false;">
         <div class="d-flex justify-content-between align-items-start">
           <div>
-            <h6 class="mb-1">${escapeHtml(caseItem.asset_name)}</h6>
-            <small class="text-muted">${escapeHtml(caseItem.asset_code || '—')}</small>
+            <h6 class="mb-1">${escapeHtml(caseItem.type_name || ('Asset #' + caseItem.assets_tag))}</h6>
+            <small class="text-muted">${escapeHtml(caseItem.assets_tag || '—')}</small>
           </div>
           <span class="badge badge-info">${contentCount}</span>
         </div>
@@ -468,8 +468,8 @@ function selectCase(caseAssetId) {
   if (!caseItem) return;
 
   // Update panel header
-  $('#selectedCaseName').text(escapeHtml(caseItem.asset_name));
-  $('#selectedCaseTag').text(`(${escapeHtml(caseItem.asset_code || '—')})`);
+  $('#selectedCaseName').text(escapeHtml(caseItem.type_name || ('Asset #' + caseItem.assets_tag)));
+  $('#selectedCaseTag').text(`(${escapeHtml(caseItem.assets_tag || '—')})`);
 
   // Show/hide panels
   $('#noCaseSelectedPanel').hide();
@@ -784,15 +784,15 @@ function renderAssetSearchResults(assets) {
   assets.forEach(asset => {
     const item = $(`
       <a href="#" class="list-group-item list-group-item-action" data-asset-id="${asset.assets_id}">
-        ${escapeHtml(asset.asset_name)}
-        <small class="text-muted d-block">${escapeHtml(asset.asset_code)}</small>
+        ${escapeHtml(asset.type_name || ('Asset #' + asset.assets_tag))}
+        <small class="text-muted d-block">${escapeHtml(asset.assets_tag)}</small>
       </a>
     `);
 
     item.click(function(e) {
       e.preventDefault();
       $('#assetToMark').val(asset.assets_id);
-      $('#assetSearch').val(escapeHtml(asset.asset_name));
+      $('#assetSearch').val(escapeHtml(asset.type_name || ('Asset #' + asset.assets_tag)));
       results.hide();
     });
 
@@ -814,7 +814,7 @@ function populateCopyModal() {
   allCases.forEach(caseItem => {
     // Don't show the currently selected case
     if (caseItem.assets_id !== selectedCaseAssetId) {
-      select.append(`<option value="${caseItem.assets_id}">${escapeHtml(caseItem.asset_name)}</option>`);
+      select.append(`<option value="${caseItem.assets_id}">${escapeHtml(caseItem.type_name || ('Asset #' + caseItem.assets_tag))}</option>`);
     }
   });
 

@@ -6,6 +6,7 @@
  * manage tag assignments, and handle inventory operations.
  */
 require_once __DIR__ . '/../apiHeadSecure.php';
+require_once __DIR__ . '/../../services/RfidService.php';
 require_once __DIR__ . '/../../services/StockItemService.php';
 require_once __DIR__ . '/../../services/CrossInstanceLookupService.php';
 require_once __DIR__ . '/../../services/TagFormatService.php';

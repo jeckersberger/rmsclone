@@ -241,22 +241,41 @@ class StockItemService
     }
 
     /**
-     * Get the next available EPC number for stock instances
-     * Ensures no collision with asset EPCs (RMS-A-xxxxxx) or existing stock EPCs (RMS-I-xxxxxx)
+     * Get the next available EPC number for stock instances.
+     * Supports both old format (RMS-I-000001) and new format (RMS-a3f7b2c1-I-000001).
      */
     private function getNextEpcNumber(int $instanceId): int
     {
-        // Find highest existing stock instance EPC
+        $maxNumber = 0;
+
+        // Search old format: RMS-I-000001
         $this->db->where('instances_id', $instanceId);
         $this->db->where('rfid_tag', 'RMS-I-%', 'LIKE');
         $this->db->orderBy('rfid_tag', 'DESC');
-        $last = $this->db->getOne('stock_instances', null, ['rfid_tag']);
+        $lastOld = $this->db->getOne('stock_instances', null, ['rfid_tag']);
 
-        if ($last && preg_match('/RMS-I-(\d+)/', $last['rfid_tag'], $m)) {
-            return (int) $m[1] + 1;
+        if ($lastOld && preg_match('/RMS-I-(\d+)/', $lastOld['rfid_tag'], $m)) {
+            $maxNumber = max($maxNumber, (int)$m[1]);
         }
 
-        return 1;
+        // Search new format: RMS-{8hex}-I-000001 (e.g. RMS-a3f7b2c1-I-000042)
+        $this->db->where('instances_id', $instanceId);
+        $this->db->where('rfid_tag', 'RMS-________-I-%', 'LIKE');
+        $this->db->orderBy('rfid_tag', 'DESC');
+        $lastNew = $this->db->getOne('stock_instances', null, ['rfid_tag']);
+
+        if ($lastNew && preg_match('/RMS-[a-f0-9]{8}-I-(\d+)/i', $lastNew['rfid_tag'], $m)) {
+            $maxNumber = max($maxNumber, (int)$m[1]);
+        }
+
+        // Also check the simple instance_number max as ultimate fallback
+        $this->db->where('instances_id', $instanceId);
+        $highestNumber = $this->db->getValue('stock_instances', 'MAX(instance_number)');
+        if ($highestNumber) {
+            $maxNumber = max($maxNumber, (int)$highestNumber);
+        }
+
+        return $maxNumber + 1;
     }
 
     /**
