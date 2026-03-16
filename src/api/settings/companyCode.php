@@ -53,11 +53,9 @@ function handleGetCode() {
     $row = $result->fetch_assoc();
     $code = $row['instances_companyCode'];
 
-    // Auto-generate if null
+    // Auto-generate via MD5 if null
     if (is_null($code)) {
-        $code = generateCompanyCode();
-        $updateQuery = "UPDATE instances SET instances_companyCode = ? WHERE instances_id = ?";
-        $DBLIB->query($updateQuery, [$code, $instanceId]);
+        $code = $tagService->generateCompanyCode($instanceId);
     }
 
     finish(true, [
@@ -70,22 +68,23 @@ function handleGetCode() {
  * Generate a new random company code
  */
 function handleGenerate() {
-    global $DBLIB, $instanceId;
+    global $DBLIB, $instanceId, $tagService;
 
-    $newCode = generateCompanyCode();
+    // Get old code for logging
+    $oldQuery = "SELECT instances_companyCode FROM instances WHERE instances_id = ?";
+    $oldResult = $DBLIB->query($oldQuery, [$instanceId]);
+    $oldRow = $oldResult->fetch_assoc();
+    $oldCode = $oldRow['instances_companyCode'];
 
-    $query = "UPDATE instances SET instances_companyCode = ? WHERE instances_id = ?";
-    $result = $DBLIB->query($query, [$newCode, $instanceId]);
-
-    if (!$result) {
-        finish(false, ["message" => "Failed to generate new code"]);
-    }
+    // Generate new MD5-based code
+    $newCode = $tagService->generateCompanyCode($instanceId);
 
     // Log the change
-    logCodeChange('generate', null, $newCode, 'Auto-generated new code');
+    logCodeChange('generate', $oldCode, $newCode, 'MD5-generated new code');
 
     finish(true, [
         "code" => $newCode,
+        "algorithm" => "MD5 (first 8 hex chars)",
         "message" => "Company code generated successfully"
     ]);
 }
@@ -104,7 +103,7 @@ function handleChange() {
     }
 
     if (!isValidCompanyCode($newCode)) {
-        finish(false, ["message" => "Code must be 6 characters, uppercase letters and numbers only"]);
+        finish(false, ["message" => "Code muss 8 Hex-Zeichen sein (0-9, a-f)"]);
     }
 
     // Check if code is already taken by another instance
@@ -243,45 +242,13 @@ function handleGetHistory() {
 }
 
 /**
- * Generate a random 6-character company code (A-Z, 0-9)
- * @return string
- */
-function generateCompanyCode() {
-    $chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    $code = '';
-
-    for ($i = 0; $i < 6; $i++) {
-        $code .= $chars[random_int(0, strlen($chars) - 1)];
-    }
-
-    // Ensure code is not already taken
-    while (isCodeTaken($code, 0)) {
-        $code = '';
-        for ($i = 0; $i < 6; $i++) {
-            $code .= $chars[random_int(0, strlen($chars) - 1)];
-        }
-    }
-
-    return $code;
-}
-
-/**
- * Validate company code format
+ * Validate company code format: 8 hex characters (0-9, a-f)
+ * Derived from MD5 hash of instance identity.
  * @param string $code
  * @return bool
  */
 function isValidCompanyCode($code) {
-    // Must be exactly 6 characters
-    if (strlen($code) !== 6) {
-        return false;
-    }
-
-    // Must contain only uppercase letters and numbers
-    if (!preg_match('/^[A-Z0-9]{6}$/', $code)) {
-        return false;
-    }
-
-    return true;
+    return (bool)preg_match('/^[a-f0-9]{8}$/i', $code);
 }
 
 /**

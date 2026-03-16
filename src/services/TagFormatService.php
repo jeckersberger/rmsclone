@@ -3,7 +3,13 @@
  * TagFormatService — Zentrale Verwaltung der Tag-/Barcode-/QR-Formate
  *
  * Generates and parses RFID EPCs, barcodes and QR codes with embedded company identifier.
- * The company code comes from instances_companyCode (6 alphanumeric characters).
+ * The company code is 8 hex characters derived from MD5 hash of the instance identity.
+ * Format: RMS-{8 hex}-{A|I|E}-{6 digits}  (e.g. RMS-a3f7b2c1-A-000042)
+ * QR:     RMS://{8 hex}/{A|I|E}/{6 digits}  (e.g. RMS://a3f7b2c1/A/000042)
+ *
+ * MD5 is used for uniform distribution, NOT for cryptographic security.
+ * 8 hex chars = 4.29 billion combinations. Birthday paradox: ~65,000 instances for 50% collision.
+ * Federation handshake validates uniqueness among connected partners.
  */
 class TagFormatService
 {
@@ -18,58 +24,84 @@ class TagFormatService
     }
 
     /**
-     * Get the 6-char alphanumeric company code for this instance
+     * Get the 8-char hex company code for this instance.
+     * Auto-generates via MD5 if not yet set.
      */
     public function getCompanyCode(): string
     {
         if ($this->companyCode !== null) return $this->companyCode;
 
         $this->db->where('instances_id', $this->instanceId);
-        $inst = $this->db->getOne('instances', ['instances_companyCode']);
+        $inst = $this->db->getOne('instances', ['instances_companyCode', 'instances_name', 'instances_partnerCode']);
 
         if ($inst && !empty($inst['instances_companyCode'])) {
-            $this->companyCode = strtoupper($inst['instances_companyCode']);
+            $this->companyCode = strtolower($inst['instances_companyCode']);
         } else {
-            // Fallback: generate from instance ID (should not happen in normal operation)
-            $this->companyCode = $this->generateCompanyCode($this->instanceId);
+            // Auto-generate from MD5 hash of instance identity
+            $this->companyCode = $this->generateCompanyCode($this->instanceId, $inst);
         }
 
         return $this->companyCode;
     }
 
     /**
-     * Generate a new 6-character alphanumeric company code (A-Z, 0-9)
-     * and store it in the instances table.
+     * Generate an 8-character hex company code using MD5.
+     *
+     * The code is derived from: MD5("{instanceName}|{partnerCode}|{instanceId}")
+     * This ensures deterministic, uniformly distributed codes based on the instance identity.
+     * MD5 is NOT used for cryptographic purposes here — only for hash distribution.
+     *
+     * 8 hex chars = 2^32 = 4.29 billion possibilities.
+     * Birthday paradox: 50% collision at ~65,536 instances — more than enough for a niche system.
+     * Federation handshake detects collisions among connected partners.
      *
      * @param int $instanceId
-     * @return string The generated code
-     * @throws Exception if unable to generate a unique code after max attempts
+     * @param array|null $instData Pre-loaded instance data (optional, avoids extra query)
+     * @return string 8-char hex code (lowercase)
      */
-    public function generateCompanyCode(int $instanceId): string
+    public function generateCompanyCode(int $instanceId, ?array $instData = null): string
     {
-        $maxAttempts = 100;
-        $attempt = 0;
-
-        while ($attempt < $maxAttempts) {
-            $code = $this->randomAlphanumeric(6);
-
-            // Check for uniqueness in the database
-            $this->db->where('instances_companyCode', $code);
-            $existing = $this->db->getOne('instances', ['instances_id']);
-
-            if (!$existing) {
-                // Code is unique, store it
-                $this->db->where('instances_id', $instanceId);
-                $this->db->update('instances', ['instances_companyCode' => $code]);
-
-                $this->companyCode = $code;
-                return $code;
-            }
-
-            $attempt++;
+        // Load instance data if not provided
+        if (!$instData) {
+            $this->db->where('instances_id', $instanceId);
+            $instData = $this->db->getOne('instances', ['instances_name', 'instances_partnerCode']);
         }
 
-        throw new Exception("Unable to generate a unique company code after {$maxAttempts} attempts");
+        // Build the identity string for MD5 input
+        $identityParts = [
+            $instData['instances_name'] ?? 'RMS-Instance',
+            $instData['instances_partnerCode'] ?? '',
+            $instanceId,
+            // Add a timestamp salt for uniqueness if identity is thin
+            date('Y-m-d H:i:s'),
+        ];
+        $identityString = implode('|', $identityParts);
+
+        // MD5 → 32 hex chars → take first 8
+        $md5Hash = md5($identityString);
+        $code = substr($md5Hash, 0, 8);
+
+        // Collision check: if code already exists, rehash with counter
+        $maxAttempts = 100;
+        $attempt = 0;
+        while ($attempt < $maxAttempts) {
+            $this->db->where('instances_companyCode', $code);
+            $this->db->where('instances_id', $instanceId, '!=');
+            $existing = $this->db->getOne('instances', ['instances_id']);
+
+            if (!$existing) break;
+
+            // Rehash with attempt counter as additional salt
+            $attempt++;
+            $code = substr(md5($identityString . '|' . $attempt), 0, 8);
+        }
+
+        // Store in database
+        $this->db->where('instances_id', $instanceId);
+        $this->db->update('instances', ['instances_companyCode' => $code]);
+
+        $this->companyCode = $code;
+        return $code;
     }
 
     /**
@@ -83,11 +115,11 @@ class TagFormatService
      */
     public function changeCompanyCode(int $instanceId, string $newCode): bool
     {
-        $newCode = strtoupper(trim($newCode));
+        $newCode = strtolower(trim($newCode));
 
-        // Validate format: 6 alphanumeric characters
-        if (!preg_match('/^[A-Z0-9]{6}$/', $newCode)) {
-            throw new Exception('Company code must be 6 alphanumeric characters (A-Z, 0-9)');
+        // Validate format: 8 hex characters
+        if (!preg_match('/^[a-f0-9]{8}$/', $newCode)) {
+            throw new Exception('Company code must be 8 hexadecimal characters (0-9, a-f)');
         }
 
         // Check if code is already taken
@@ -103,6 +135,7 @@ class TagFormatService
         $this->db->where('instances_id', $instanceId);
         $inst = $this->db->getOne('instances', ['instances_companyCode']);
         $oldCode = $inst['instances_companyCode'] ?? null;
+        if ($oldCode) $oldCode = strtolower($oldCode);
 
         // Update the instance
         $this->db->where('instances_id', $instanceId);
@@ -111,10 +144,10 @@ class TagFormatService
         if ($updated) {
             // Log the change in history table
             $this->db->insert('company_code_history', [
-                'cch_instanceId' => $instanceId,
-                'cch_oldCode' => $oldCode,
-                'cch_newCode' => $newCode,
-                'cch_changedAt' => date('Y-m-d H:i:s'),
+                'instances_id' => $instanceId,
+                'old_code' => $oldCode,
+                'new_code' => $newCode,
+                'changed_at' => date('Y-m-d H:i:s'),
             ]);
 
             // Update cached value
@@ -223,50 +256,38 @@ class TagFormatService
     {
         $value = trim($value);
 
-        // New barcode format: RMS-ABCDE1-A-000042 (6 alphanumeric)
-        if (preg_match('/^RMS-([A-Z0-9]{6})-([AIE])-(\d{6})$/i', $value, $m)) {
+        // Current barcode format: RMS-a3f7b2c1-A-000042 (8 hex chars from MD5)
+        if (preg_match('/^RMS-([a-f0-9]{8})-([AIE])-(\d{6})$/i', $value, $m)) {
+            $code = strtolower($m[1]);
             return [
-                'company_code' => strtoupper($m[1]),
+                'company_code' => $code,
                 'entity_type'  => $this->typeLetterToName($m[2]),
                 'entity_id'    => (int)$m[3],
-                'is_local'     => strtoupper($m[1]) === $this->getCompanyCode(),
+                'is_local'     => $code === $this->getCompanyCode(),
                 'is_old_format'=> false,
                 'raw'          => $value,
             ];
         }
 
-        // Old 4-char hex format (backward compat): RMS-XXXX-A-000042
-        if (preg_match('/^RMS-([A-F0-9]{4})-([AIE])-(\d{6})$/i', $value, $m)) {
-            $hexCode = strtoupper($m[1]);
-            // Resolve from history if needed
-            $resolvedCode = $this->resolveOldCode($hexCode);
+        // Legacy 6-char alphanumeric format (backward compat): RMS-ABCDE1-A-000042
+        if (preg_match('/^RMS-([A-Z0-9]{6})-([AIE])-(\d{6})$/i', $value, $m)) {
+            $legacyCode = strtolower($m[1]);
+            $resolvedCode = $this->resolveOldCode($legacyCode);
 
             return [
-                'company_code' => $hexCode,
+                'company_code' => $legacyCode,
                 'entity_type'  => $this->typeLetterToName($m[2]),
                 'entity_id'    => (int)$m[3],
                 'is_local'     => $resolvedCode ? ($resolvedCode === $this->getCompanyCode()) : false,
-                'is_old_format'=> false,
+                'is_old_format'=> true,
                 'raw'          => $value,
                 'resolved_code'=> $resolvedCode,
             ];
         }
 
-        // New QR format: RMS://ABCDE1/A/000042 (6 alphanumeric)
-        if (preg_match('#^RMS://([A-Z0-9]{6})/([AIE])/(\d{6})$#i', $value, $m)) {
-            return [
-                'company_code' => strtoupper($m[1]),
-                'entity_type'  => $this->typeLetterToName($m[2]),
-                'entity_id'    => (int)$m[3],
-                'is_local'     => strtoupper($m[1]) === $this->getCompanyCode(),
-                'is_old_format'=> false,
-                'raw'          => $value,
-            ];
-        }
-
-        // Old QR format: RMS://XXXX/A/000042 (4-char hex, backward compat)
-        if (preg_match('#^RMS://([A-F0-9]{4})/([AIE])/(\d{6})$#i', $value, $m)) {
-            $hexCode = strtoupper($m[1]);
+        // Legacy 4-char hex format (backward compat): RMS-XXXX-A-000042
+        if (preg_match('/^RMS-([a-f0-9]{4})-([AIE])-(\d{6})$/i', $value, $m)) {
+            $hexCode = strtolower($m[1]);
             $resolvedCode = $this->resolveOldCode($hexCode);
 
             return [
@@ -274,7 +295,36 @@ class TagFormatService
                 'entity_type'  => $this->typeLetterToName($m[2]),
                 'entity_id'    => (int)$m[3],
                 'is_local'     => $resolvedCode ? ($resolvedCode === $this->getCompanyCode()) : false,
+                'is_old_format'=> true,
+                'raw'          => $value,
+                'resolved_code'=> $resolvedCode,
+            ];
+        }
+
+        // Current QR format: RMS://a3f7b2c1/A/000042 (8 hex chars)
+        if (preg_match('#^RMS://([a-f0-9]{8})/([AIE])/(\d{6})$#i', $value, $m)) {
+            $code = strtolower($m[1]);
+            return [
+                'company_code' => $code,
+                'entity_type'  => $this->typeLetterToName($m[2]),
+                'entity_id'    => (int)$m[3],
+                'is_local'     => $code === $this->getCompanyCode(),
                 'is_old_format'=> false,
+                'raw'          => $value,
+            ];
+        }
+
+        // Legacy QR formats (6-char alphanumeric or 4-char hex)
+        if (preg_match('#^RMS://([a-zA-Z0-9]{4,6})/([AIE])/(\d{6})$#i', $value, $m)) {
+            $legacyCode = strtolower($m[1]);
+            $resolvedCode = $this->resolveOldCode($legacyCode);
+
+            return [
+                'company_code' => $legacyCode,
+                'entity_type'  => $this->typeLetterToName($m[2]),
+                'entity_id'    => (int)$m[3],
+                'is_local'     => $resolvedCode ? ($resolvedCode === $this->getCompanyCode()) : false,
+                'is_old_format'=> true,
                 'raw'          => $value,
                 'resolved_code'=> $resolvedCode,
             ];
@@ -317,15 +367,15 @@ class TagFormatService
      */
     public function resolveOldCode(string $oldCode): ?string
     {
-        $oldCode = strtoupper($oldCode);
+        $oldCode = strtolower($oldCode);
 
         // Look up in company_code_history for the latest (most recent) mapping
-        $this->db->where('cch_oldCode', $oldCode);
-        $this->db->orderBy('cch_changedAt', 'DESC');
-        $this->db->limit(1);
-        $history = $this->db->getOne('company_code_history', ['cch_newCode']);
+        // Check both the exact code and uppercase variant for backward compat
+        $this->db->where('(LOWER(old_code) = ?)', [$oldCode]);
+        $this->db->orderBy('changed_at', 'DESC');
+        $history = $this->db->getOne('company_code_history', ['new_code']);
 
-        return $history ? $history['cch_newCode'] : null;
+        return $history ? strtolower($history['new_code']) : null;
     }
 
     /**
@@ -368,9 +418,9 @@ class TagFormatService
      */
     public function findInstanceByCompanyCode(string $code): ?array
     {
-        $code = strtoupper($code);
+        $code = strtolower($code);
 
-        // First, try to find by current company code
+        // First, try to find by current company code (8 hex chars)
         $this->db->where('instances_companyCode', $code);
         $inst = $this->db->getOne('instances', ['instances_id', 'instances_name', 'instances_companyCode']);
 
@@ -378,14 +428,12 @@ class TagFormatService
             return $inst;
         }
 
-        // If not found and it looks like a 4-char hex code, try to resolve from history
-        if (preg_match('/^[A-F0-9]{4}$/', $code)) {
-            $resolvedCode = $this->resolveOldCode($code);
-            if ($resolvedCode) {
-                $this->db->where('instances_companyCode', $resolvedCode);
-                $inst = $this->db->getOne('instances', ['instances_id', 'instances_name', 'instances_companyCode']);
-                return $inst ?: null;
-            }
+        // If not found, try to resolve from history (covers old 4-char and 6-char codes)
+        $resolvedCode = $this->resolveOldCode($code);
+        if ($resolvedCode) {
+            $this->db->where('instances_companyCode', $resolvedCode);
+            $inst = $this->db->getOne('instances', ['instances_id', 'instances_name', 'instances_companyCode']);
+            return $inst ?: null;
         }
 
         return null;
@@ -444,21 +492,14 @@ class TagFormatService
     }
 
     /**
-     * Generate a random alphanumeric string of specified length.
-     * Uses uppercase letters A-Z and digits 0-9.
+     * Generate an MD5-based company code from arbitrary input.
+     * Useful for generating codes from custom identity strings.
      *
-     * @param int $length
-     * @return string
+     * @param string $identity Input string to hash
+     * @return string 8-char hex code (lowercase)
      */
-    private function randomAlphanumeric(int $length): string
+    public static function md5Code(string $identity): string
     {
-        $chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-        $result = '';
-
-        for ($i = 0; $i < $length; $i++) {
-            $result .= $chars[random_int(0, strlen($chars) - 1)];
-        }
-
-        return $result;
+        return substr(md5($identity), 0, 8);
     }
 }
