@@ -50,6 +50,10 @@ class CrossInstanceLookupService
         // Pre-process: resolve binary EPC to human-readable if possible
         $resolvedTag = $this->resolveBinaryEpc($tagValue);
 
+        // ── Step 0: Try TID lookup first (fastest path for RFID scans) ──
+        $tidResult = $this->lookupByTid($tagValue);
+        if ($tidResult) return $tidResult;
+
         // Try to parse as structured RMS tag
         $parsed = $this->tagService->parse($resolvedTag);
 
@@ -74,30 +78,116 @@ class CrossInstanceLookupService
         $result = $this->lookupLocalPartners($resolvedTag, $parsed);
         if ($result) return $result;
 
-        // 2. Try federated remote servers
-        $result = $this->lookupFederation($tagValue); // Send original value to remote
+        // 2. Try federated remote servers (sends both tag_value and tid)
+        $result = $this->lookupFederation($tagValue);
         if ($result) return $result;
 
         return null;
     }
 
     /**
-     * Resolve binary EPC hex to human-readable format
+     * Look up a TID across local partner instances and federation.
+     * TIDs are unique hardware identifiers — the primary RFID identification method.
      */
-    private function resolveBinaryEpc(string $tagValue): string
+    public function lookupByTid(string $tid): ?array
     {
-        $clean = strtoupper(trim($tagValue));
+        $tid = strtoupper(trim($tid));
+        if (empty($tid)) return null;
 
-        // Check if it's a 96-bit (24 hex) or 128-bit (32 hex) binary EPC
-        if (preg_match('/^[0-9A-F]{24}$/', $clean) || preg_match('/^[0-9A-F]{32}$/', $clean)) {
-            if (substr($clean, 0, 2) === '52') { // RMS header byte
-                $decoded = $this->tagService->decodeBinaryEpc($clean);
-                if ($decoded && $decoded['crc_valid']) {
-                    return $decoded['human_readable'];
-                }
+        // Check if it looks like a TID (hex string, typically 16-24 chars for UHF)
+        if (!preg_match('/^[0-9A-F]{8,64}$/i', $tid)) return null;
+
+        // 1. Try local: all partner instances share the same DB
+        $partnerIds = $this->getActivePartnerInstanceIds();
+        foreach ($partnerIds as $partnerId) {
+            // Assets
+            $this->db->where('a.assets_rfidTid', $tid);
+            $this->db->where('a.instances_id', $partnerId);
+            $this->db->where('a.assets_deleted', 0);
+            $this->db->join('assetTypes at', 'a.assetTypes_id=at.assetTypes_id', 'LEFT');
+            $asset = $this->db->getOne('assets a', [
+                'a.assets_id', 'a.assets_tag',
+                'at.assetTypes_name AS type_name',
+                'a.instances_id',
+            ]);
+
+            if ($asset) {
+                return [
+                    'found' => true,
+                    'source' => 'local_partner',
+                    'owner_instance_id' => $partnerId,
+                    'owner_instance_name' => $this->getInstanceName($partnerId),
+                    'owner_server_url' => null,
+                    'entity_type' => 'asset',
+                    'entity' => [
+                        'display_name' => trim(($asset['type_name'] ?: '') . ' #' . $asset['assets_tag']),
+                        'type_name' => $asset['type_name'],
+                        'asset_tag' => $asset['assets_tag'],
+                    ],
+                    'rfid_tid' => $tid,
+                ];
+            }
+
+            // Stock instances
+            $this->db->where('si.rfid_tid', $tid);
+            $this->db->join('stock_items sit', 'si.stock_item_id=sit.id', 'LEFT');
+            $this->db->where('sit.instances_id', $partnerId);
+            $stock = $this->db->getOne('stock_instances si', [
+                'si.id', 'si.instance_number',
+                'sit.name AS item_name', 'sit.instances_id',
+            ]);
+
+            if ($stock) {
+                return [
+                    'found' => true,
+                    'source' => 'local_partner',
+                    'owner_instance_id' => $partnerId,
+                    'owner_instance_name' => $this->getInstanceName($partnerId),
+                    'owner_server_url' => null,
+                    'entity_type' => 'stock_instance',
+                    'entity' => [
+                        'display_name' => ($stock['item_name'] ?: 'Artikel') . ' #' . str_pad($stock['instance_number'], 4, '0', STR_PAD_LEFT),
+                        'item_name' => $stock['item_name'],
+                        'instance_number' => $stock['instance_number'],
+                    ],
+                    'rfid_tid' => $tid,
+                ];
+            }
+
+            // External items
+            $this->db->where('rfid_tid', $tid);
+            $this->db->where('instances_id', $partnerId);
+            $ext = $this->db->getOne('external_items', ['id', 'description', 'owner_name', 'instances_id']);
+
+            if ($ext) {
+                return [
+                    'found' => true,
+                    'source' => 'local_partner',
+                    'owner_instance_id' => $partnerId,
+                    'owner_instance_name' => $this->getInstanceName($partnerId),
+                    'owner_server_url' => null,
+                    'entity_type' => 'external',
+                    'entity' => [
+                        'display_name' => $ext['description'] . ' (' . $ext['owner_name'] . ')',
+                    ],
+                    'rfid_tid' => $tid,
+                ];
             }
         }
 
+        // 2. Federation TID lookup is handled by lookupFederation() which sends the TID
+        // as tag_value — the remote tag_lookup.php will check TID columns too.
+        return null;
+    }
+
+    /**
+     * Resolve scanned value: if it looks like a TID or old binary EPC, return as-is.
+     * Binary EPC decoding removed (no longer writing custom EPCs to tags).
+     */
+    private function resolveBinaryEpc(string $tagValue): string
+    {
+        // No binary EPC decoding needed anymore — system uses TID-based pairing.
+        // Just return the raw value for parsing/TID lookup.
         return $tagValue;
     }
 

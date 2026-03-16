@@ -6,16 +6,16 @@ interface RfidManager {
     fun disconnect()
     fun isConnected(): Boolean
 
-    // Reading operations
+    // Reading operations (reads EPC + TID from tags)
     fun startInventory(callback: (RfidEvent) -> Unit)
     fun stopInventory()
-
-    // Writing operations
-    fun writeEpc(newEpc: String): Boolean
-    fun writeEpc(oldEpc: String, newEpc: String): Boolean
 
     // Settings
     fun setPower(dbm: Int)
     fun getPower(): Int
     fun getBatteryLevel(): Int
+
+    // Note: No write operations. The system uses TID-based pairing.
+    // TIDs are unique hardware identifiers burned into each tag at the factory.
+    // The reader reads the TID, and the server pairs it with an entity in the DB.
 }

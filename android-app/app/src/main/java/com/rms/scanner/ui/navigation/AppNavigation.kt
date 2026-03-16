@@ -16,7 +16,7 @@ import com.rms.scanner.ui.screens.LocationScreen
 import com.rms.scanner.ui.screens.LoginScreen
 import com.rms.scanner.ui.screens.MainMenuScreen
 import com.rms.scanner.ui.screens.SettingsScreen
-import com.rms.scanner.ui.screens.TagWriteScreen
+import com.rms.scanner.ui.screens.TagPairScreen
 import com.rms.scanner.ui.screens.PackingListScreen
 import com.rms.scanner.ui.screens.ExternalItemScreen
 import com.rms.scanner.ui.viewmodels.BoxScanViewModel
@@ -25,7 +25,7 @@ import com.rms.scanner.ui.viewmodels.InventoryViewModel
 import com.rms.scanner.ui.viewmodels.LocationViewModel
 import com.rms.scanner.ui.viewmodels.LoginViewModel
 import com.rms.scanner.ui.viewmodels.ScanViewModel
-import com.rms.scanner.ui.viewmodels.TagWriteViewModel
+import com.rms.scanner.ui.viewmodels.TagPairViewModel
 import com.rms.scanner.ui.viewmodels.PackingListViewModel
 import com.rms.scanner.ui.viewmodels.ExternalItemViewModel
 
@@ -94,9 +94,9 @@ fun AppNavigation(
             )
         }
 
-        composable("tag_write") {
-            val viewModel = TagWriteViewModel()
-            TagWriteScreen(
+        composable("tag_pair") {
+            val viewModel = TagPairViewModel(rfidManager)
+            TagPairScreen(
                 viewModel = viewModel,
                 onBack = { navController.popBackStack() }
             )

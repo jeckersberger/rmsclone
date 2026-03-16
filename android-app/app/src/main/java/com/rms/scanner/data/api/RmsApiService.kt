@@ -221,19 +221,28 @@ interface RmsApiService {
         @Field("action") action: String = "get_code"
     ): ApiResponse
 
-    // Binary EPC encode/decode for RFID tag memory
+    // TID-basiertes RFID Pairing
     @FormUrlEncoded
     @POST("api/rfid/scan.php")
-    suspend fun getWriteEpc(
-        @Field("action") action: String = "get_write_epc",
+    suspend fun pairTid(
+        @Field("action") action: String = "pair_tid",
+        @Field("entity_type") entityType: String,
+        @Field("entity_id") entityId: Int,
+        @Field("tid") tid: String
+    ): ApiResponse
+
+    @FormUrlEncoded
+    @POST("api/rfid/scan.php")
+    suspend fun unpairTid(
+        @Field("action") action: String = "unpair_tid",
         @Field("entity_type") entityType: String,
         @Field("entity_id") entityId: Int
     ): ApiResponse
 
     @FormUrlEncoded
     @POST("api/rfid/scan.php")
-    suspend fun decodeEpc(
-        @Field("action") action: String = "decode_epc",
-        @Field("epc_hex") epcHex: String
+    suspend fun lookupTid(
+        @Field("action") action: String = "lookup_tid",
+        @Field("tid") tid: String
     ): ApiResponse
 }

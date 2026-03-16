@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * MockRfidManager - Mock implementation for testing without hardware
  *
- * Generates simulated tag reads every 2 seconds with realistic EPC formats.
+ * Generates simulated tag reads every 2 seconds with realistic TID + EPC formats.
  * Useful for UI testing and development without the physical CF-H906 scanner.
  */
 class MockRfidManager : RfidManager {
@@ -20,7 +20,6 @@ class MockRfidManager : RfidManager {
     private val handler = Handler(Looper.getMainLooper())
     private var inventoryRunnable: Runnable? = null
 
-    private val tagPrefixes = listOf("RMS-A", "RMS-I", "RMS-X", "RMS-E")
     private val generatedTags = mutableSetOf<String>()
 
     override fun connect(): Boolean {
@@ -58,15 +57,13 @@ class MockRfidManager : RfidManager {
         generatedTags.clear()
         isInventoryActive.set(true)
 
-        // Generate initial connected event
         callback.invoke(RfidEvent.Connected)
 
-        // Schedule periodic tag generation
         inventoryRunnable = object : Runnable {
             override fun run() {
                 if (isInventoryActive.get() && isConnected()) {
                     generateAndCallTag()
-                    handler.postDelayed(this, 2000)  // Every 2 seconds
+                    handler.postDelayed(this, 2000)
                 }
             }
         }
@@ -86,34 +83,6 @@ class MockRfidManager : RfidManager {
         }
     }
 
-    override fun writeEpc(newEpc: String): Boolean {
-        if (!isConnected()) return false
-
-        return try {
-            Log.d(tag, "MockRfidManager: Writing EPC: $newEpc")
-            inventoryCallback?.invoke(RfidEvent.TagWritten(newEpc, true))
-            true
-        } catch (e: Exception) {
-            Log.e(tag, "Write failed", e)
-            inventoryCallback?.invoke(RfidEvent.TagWritten(newEpc, false, e.message))
-            false
-        }
-    }
-
-    override fun writeEpc(oldEpc: String, newEpc: String): Boolean {
-        if (!isConnected()) return false
-
-        return try {
-            Log.d(tag, "MockRfidManager: Writing EPC from $oldEpc to $newEpc")
-            inventoryCallback?.invoke(RfidEvent.TagWritten(newEpc, true))
-            true
-        } catch (e: Exception) {
-            Log.e(tag, "Write failed", e)
-            inventoryCallback?.invoke(RfidEvent.TagWritten(newEpc, false, e.message))
-            false
-        }
-    }
-
     override fun setPower(dbm: Int) {
         if (dbm in 5..30) {
             currentPower = dbm
@@ -123,25 +92,19 @@ class MockRfidManager : RfidManager {
 
     override fun getPower(): Int = currentPower
 
-    override fun getBatteryLevel(): Int = 85  // Mock battery level
+    override fun getBatteryLevel(): Int = 85
 
     private fun generateAndCallTag() {
-        val prefix = tagPrefixes.random()
-        val randomNum = (1..9999).random()
-        val epc = "$prefix-${String.format("%06d", randomNum)}"
+        // Generate a realistic TID (unique per tag, like a real UHF chip)
+        val tidHex = String.format("E200%012X", (Math.random() * 0xFFFFFFFFFFFF).toLong())
 
-        // Occasionally generate unknown tags
-        val finalEpc = if (Math.random() < 0.1) {
-            "UNKNOWN-${String.format("%08X", (Math.random() * 0xFFFFFFF).toLong())}"
-        } else {
-            epc
-        }
-
-        val isNewTag = generatedTags.add(finalEpc)
+        val isNewTag = generatedTags.add(tidHex)
         val rssi = (-95..-30).random()
-        val count = if (isNewTag) 1 else (generatedTags.count { it == finalEpc })
+        val count = if (isNewTag) 1 else 2
 
-        Log.d(tag, "MockRfidManager: Tag read: $finalEpc (RSSI: $rssi, Count: $count)")
-        inventoryCallback?.invoke(RfidEvent.TagRead(finalEpc, rssi, count))
+        Log.d(tag, "MockRfidManager: Tag read — TID: $tidHex (RSSI: $rssi)")
+        // In the real Chafon SDK, both EPC and TID are provided.
+        // For mock, we report the TID as the primary identifier.
+        inventoryCallback?.invoke(RfidEvent.TagRead(tidHex, rssi, count))
     }
 }

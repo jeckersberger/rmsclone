@@ -28,7 +28,6 @@ import com.rms.scanner.ui.theme.SurfaceLight
 import com.rms.scanner.ui.theme.Success
 import com.rms.scanner.ui.theme.TextPrimary
 import com.rms.scanner.ui.theme.TextSecondary
-import com.rms.scanner.ui.theme.WriteTag
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Handshake
 
@@ -47,7 +46,7 @@ fun MainMenuScreen(
         MenuItemData("Rückgabe", Checkin, "checkin"),
         MenuItemData("Kisten-Scan", BoxScan, "box_scan"),
         MenuItemData("Inventur", Inventory, "inventory"),
-        MenuItemData("Tag schreiben", WriteTag, "tag_write"),
+        MenuItemData("Tag zuordnen", Success, "tag_pair"),
         MenuItemData("Packliste", androidx.compose.ui.graphics.Color(0xFF06B6D4), "packing_list"),
         MenuItemData("Fremdmaterial", androidx.compose.ui.graphics.Color(0xFFF43F5E), "external_items"),
         MenuItemData("Einstellungen", Settings, "settings"),

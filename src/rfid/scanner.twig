@@ -384,7 +384,7 @@
         <button class="mode-btn" data-mode="checkin"><i class="fas fa-sign-in-alt"></i> Rueckgabe</button>
         <button class="mode-btn" data-mode="box_scan"><i class="fas fa-box-open"></i> Kisten-Scan</button>
         <button class="mode-btn" data-mode="inventory"><i class="fas fa-clipboard-list"></i> Inventur</button>
-        <button class="mode-btn" data-mode="write_tag"><i class="fas fa-pen"></i> Tag schreiben</button>
+        <button class="mode-btn" data-mode="pair_tag"><i class="fas fa-link"></i> Tag zuordnen</button>
         <button class="mode-btn" data-mode="relocate"><i class="fas fa-dolly"></i> Umlagern</button>
         <button class="mode-btn" data-mode="print_label"><i class="fas fa-print"></i> Label drucken</button>
     </div>
@@ -458,24 +458,27 @@
         </div>
     </div>
 
-    {# ── Tag Write Section ── #}
-    <div id="writeTagSection" style="display:none; margin-bottom: 20px;">
-        <div class="card card-warning card-outline">
-            <div class="card-header"><h3 class="card-title"><i class="fas fa-pen"></i> RFID-Tag beschreiben</h3></div>
+    {# ── TID Pairing Section ── #}
+    <div id="pairTagSection" style="display:none; margin-bottom: 20px;">
+        <div class="card card-success card-outline">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-link"></i> RFID-Tag zuordnen (TID Pairing)</h3></div>
             <div class="card-body">
-                <p style="font-size:16px;">1. Geraet oder Artikel-Instanz auswaehlen &rarr; 2. EPC generieren &rarr; 3. Tag beschreiben</p>
+                <p style="font-size:16px;">1. RFID-Tag scannen (TID wird automatisch gelesen) &rarr; 2. Geraet/Instanz auswaehlen &rarr; 3. Zuordnen</p>
                 <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
-                    <select id="writeEntitySelector" class="project-selector" style="display:block; flex:2;">
+                    <input type="text" id="pairTidInput" class="rfid-input" style="flex:1; max-width:none;" placeholder="TID wird beim Scannen automatisch eingetragen..." readonly />
+                    <select id="pairEntitySelector" class="project-selector" style="display:block; flex:2;">
                         <option value="">-- Geraet / Instanz waehlen --</option>
                     </select>
-                    <input type="text" id="writeEpcInput" class="rfid-input" style="flex:1; max-width:none;" placeholder="EPC (z.B. RMS-A-000001)" />
-                    <button onclick="generateEpc()" style="padding:12px 20px; font-size:16px; background:#ffc107; border:none; border-radius:5px; cursor:pointer; min-height:48px; white-space:nowrap;">
-                        <i class="fas fa-magic"></i> Auto-EPC
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button onclick="pairTid()" style="padding:15px 30px; font-size:18px; font-weight:bold; background:#28a745; color:white; border:none; border-radius:5px; cursor:pointer; min-height:56px; flex:1;">
+                        <i class="fas fa-link"></i> Tag zuordnen
+                    </button>
+                    <button onclick="unpairTid()" style="padding:15px 20px; font-size:16px; background:#dc3545; color:white; border:none; border-radius:5px; cursor:pointer; min-height:56px;">
+                        <i class="fas fa-unlink"></i> Zuordnung entfernen
                     </button>
                 </div>
-                <button onclick="writeTag()" style="padding:15px 30px; font-size:18px; font-weight:bold; background:#28a745; color:white; border:none; border-radius:5px; cursor:pointer; min-height:56px; width:100%;">
-                    <i class="fas fa-save"></i> Tag beschreiben &amp; zuweisen
-                </button>
+                <div id="pairTidStatus" style="margin-top:10px; font-size:14px; color:#666;"></div>
             </div>
         </div>
     </div>
@@ -598,7 +601,7 @@
         completeBtn.style.display = 'none';
         inventoryResults.classList.remove('visible');
         resultDisplay.classList.remove('visible');
-        document.getElementById('writeTagSection').style.display = 'none';
+        document.getElementById('pairTagSection').style.display = 'none';
         document.getElementById('printLabelSection').style.display = 'none';
         document.getElementById('boxScanSection').classList.remove('visible');
         document.getElementById('relocateSection').style.display = 'none';
@@ -635,11 +638,11 @@
                 inventorySessionId = null;
                 break;
 
-            case 'write_tag':
-                rfidInput.style.display = 'none';
-                rfidLabel.style.display = 'none';
-                document.getElementById('writeTagSection').style.display = 'block';
-                loadEntitiesForWrite();
+            case 'pair_tag':
+                rfidInput.placeholder = 'RFID-Tag scannen (TID wird gelesen)...';
+                rfidLabel.textContent = 'Tag zuordnen - Tag scannen:';
+                document.getElementById('pairTagSection').style.display = 'block';
+                loadEntitiesForPair();
                 break;
 
             case 'relocate':
@@ -678,10 +681,20 @@
         rfidTag = rfidTag.trim();
         if (!rfidTag) return;
 
-        // Write tag mode: just display the scanned tag
-        if (currentMode === 'write_tag') {
-            document.getElementById('currentTagDisplay').textContent = rfidTag;
-            showResult('Tag gelesen: ' + rfidTag, 'success');
+        // Pair tag mode: put scanned TID into the pair input and do a lookup
+        if (currentMode === 'pair_tag') {
+            document.getElementById('pairTidInput').value = rfidTag;
+            // Look up if TID is already assigned
+            ajaxcall('rfid/scan.php', { action: 'lookup_tid', tid: rfidTag }, function(response) {
+                var statusEl = document.getElementById('pairTidStatus');
+                if (response.result && response.response && response.response.found) {
+                    var ent = response.response.entity || response.response;
+                    statusEl.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:#ffc107;"></i> TID bereits zugeordnet: <strong>' + (ent.display_name || 'Unbekannt') + '</strong>';
+                } else {
+                    statusEl.innerHTML = '<i class="fas fa-info-circle" style="color:#28a745;"></i> TID noch nicht zugeordnet — bereit zum Pairing.';
+                }
+            }, true);
+            showResult('TID gelesen: ' + rfidTag, 'success');
             playSound('success');
             document.getElementById('rfidInput').value = '';
             document.getElementById('rfidInput').focus();
@@ -1240,8 +1253,8 @@
     // ══════════════════════════════════════
     // Tag Write Functions
     // ══════════════════════════════════════
-    function loadEntitiesForWrite() {
-        var sel = document.getElementById('writeEntitySelector');
+    function loadEntitiesForPair() {
+        var sel = document.getElementById('pairEntitySelector');
         sel.innerHTML = '<option value="">-- Geraet / Instanz waehlen --</option>';
 
         // Load assets
@@ -1253,7 +1266,7 @@
                     var opt = document.createElement('option');
                     opt.value = 'asset:' + a.assets_id;
                     opt.textContent = (a.assetTypes_name || '') + ' #' + (a.assets_tag || a.assets_id);
-                    if (a.rfid_tag) opt.textContent += ' [RFID: ' + a.rfid_tag + ']';
+                    if (a.rfid_tag) opt.textContent += ' [EPC: ' + a.rfid_tag + ']';
                     opt.dataset.entityType = 'asset';
                     opt.dataset.entityId = a.assets_id;
                     optGroup.appendChild(opt);
@@ -1277,7 +1290,7 @@
                                 var opt = document.createElement('option');
                                 opt.value = 'stock_instance:' + inst.id;
                                 opt.textContent = item.name + ' #' + String(inst.instance_number).padStart(4, '0');
-                                if (inst.rfid_tag) opt.textContent += ' [RFID: ' + inst.rfid_tag + ']';
+                                if (inst.rfid_tag) opt.textContent += ' [EPC: ' + inst.rfid_tag + ']';
                                 opt.dataset.entityType = 'stock_instance';
                                 opt.dataset.entityId = inst.id;
                                 opt.dataset.instanceNumber = inst.instance_number;
@@ -1330,69 +1343,63 @@
         }, false);
     }
 
-    function generateEpc() {
-        var sel = document.getElementById('writeEntitySelector');
-        if (!sel.value) {
-            showResult('Bitte zuerst ein Geraet oder eine Instanz auswaehlen', 'warning');
-            return;
-        }
+    /**
+     * TID Pairing: Ordnet eine gescannte TID einem Geraet/Artikel zu.
+     * Die TID wird beim Scannen im pair_tag-Modus automatisch ins Input geschrieben.
+     */
+    function pairTid() {
+        var tid = document.getElementById('pairTidInput').value.trim();
+        var sel = document.getElementById('pairEntitySelector');
+
+        if (!tid) { showResult('Bitte zuerst einen RFID-Tag scannen (TID fehlt)', 'warning'); return; }
+        if (!sel.value) { showResult('Bitte Geraet oder Instanz auswaehlen', 'warning'); return; }
+
         var parts = sel.value.split(':');
         var entityType = parts[0];
         var entityId = parts[1];
 
-        if (entityType === 'asset') {
-            document.getElementById('writeEpcInput').value = 'RMS-' + companyCode + '-A-' + String(entityId).padStart(6, '0');
-        } else if (entityType === 'stock_instance') {
-            var selectedOpt = sel.options[sel.selectedIndex];
-            var instNum = selectedOpt.dataset.instanceNumber || entityId;
-            document.getElementById('writeEpcInput').value = 'RMS-' + companyCode + '-I-' + String(instNum).padStart(6, '0');
-        }
+        ajaxcall('rfid/scan.php', {
+            action: 'pair_tid',
+            entity_type: entityType,
+            entity_id: entityId,
+            tid: tid
+        }, function(response) {
+            if (response.result) {
+                playSound('success');
+                var label = sel.options[sel.selectedIndex].textContent;
+                showResult('<i class="fas fa-check-circle"></i> TID erfolgreich zugeordnet: ' + label, 'success');
+                addToHistory(tid, 'TID zugeordnet → ' + label, 'success');
+                document.getElementById('pairTidInput').value = '';
+                document.getElementById('pairTidStatus').innerHTML = '';
+            } else {
+                playSound('error');
+                showResult('Fehler: ' + (response.response ? response.response.message : 'Zuordnung fehlgeschlagen'), 'error');
+            }
+        }, true);
     }
 
-    function writeTag() {
-        var sel = document.getElementById('writeEntitySelector');
-        var newEpc = document.getElementById('writeEpcInput').value.trim();
-
+    function unpairTid() {
+        var sel = document.getElementById('pairEntitySelector');
         if (!sel.value) { showResult('Bitte Geraet oder Instanz auswaehlen', 'warning'); return; }
-        if (!newEpc) { showResult('Bitte EPC eingeben oder generieren', 'warning'); return; }
 
         var parts = sel.value.split(':');
         var entityType = parts[0];
         var entityId = parts[1];
 
-        if (entityType === 'asset') {
-            // Assign to asset via existing endpoint
-            ajaxcall('rfid/scan.php', {
-                action: 'assign_tag',
-                asset_id: entityId,
-                rfid_tag: newEpc
-            }, function(response) {
-                if (response.result) {
-                    playSound('success');
-                    showResult('<i class="fas fa-check-circle"></i> EPC "' + newEpc + '" erfolgreich auf Tag geschrieben und Geraet zugewiesen!', 'success');
-                    addToHistory(newEpc, 'Tag geschrieben (Asset #' + entityId + ')', 'success');
-                } else {
-                    playSound('error');
-                    showResult('Fehler: ' + (response.response ? response.response.message : 'Tag bereits vergeben'), 'error');
-                }
-            }, true);
-        } else if (entityType === 'stock_instance') {
-            // Assign to stock instance
-            ajaxcall('stock/items.php', {
-                action: 'assign_rfid',
-                instance_id: entityId,
-                rfid_tag: newEpc
-            }, function(response) {
-                if (response.success) {
-                    playSound('success');
-                    showResult('<i class="fas fa-check-circle"></i> EPC "' + newEpc + '" erfolgreich auf Tag geschrieben und Artikel-Instanz zugewiesen!', 'success');
-                    addToHistory(newEpc, 'Tag geschrieben (Instanz #' + entityId + ')', 'success');
-                } else {
-                    playSound('error');
-                    showResult('Fehler: ' + (response.message || 'Tag bereits vergeben oder Instanz nicht gefunden'), 'error');
-                }
-            }, true);
-        }
+        ajaxcall('rfid/scan.php', {
+            action: 'unpair_tid',
+            entity_type: entityType,
+            entity_id: entityId
+        }, function(response) {
+            if (response.result) {
+                playSound('success');
+                showResult('<i class="fas fa-check-circle"></i> TID-Zuordnung entfernt', 'success');
+                addToHistory(entityType + ':' + entityId, 'TID-Zuordnung entfernt', 'info');
+            } else {
+                playSound('error');
+                showResult('Fehler: ' + (response.response ? response.response.message : 'Entfernen fehlgeschlagen'), 'error');
+            }
+        }, true);
     }
 
     // ══════════════════════════════════════

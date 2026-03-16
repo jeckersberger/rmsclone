@@ -456,203 +456,171 @@ class TagFormatService
     }
 
     // ══════════════════════════════════════
-    // Binary EPC for RFID Tags (96-bit / 128-bit)
+    // TID-basiertes RFID Pairing
     // ══════════════════════════════════════
+    //
+    // UHF-RFID-Tags haben eine eindeutige TID (Tag Identifier) vom Chip-Hersteller.
+    // Statt eigene EPCs auf Tags zu schreiben (braucht Writer-Gerät), liest das System
+    // die TID und speichert sie in der Datenbank (braucht nur Reader).
+    //
+    // Workflow: Tag scannen → TID lesen → TID in DB dem Asset zuordnen ("Pairing")
 
     /**
-     * EPC Memory Layout (96 bits = 12 bytes = 24 hex chars):
+     * Pair a scanned RFID TID with an asset.
      *
-     *  Byte 0:     Header       (0x52 = 'R' for RMS)
-     *  Byte 1-4:   Company Code (32 bits, MD5-derived, e.g. 0xa3f7b2c1)
-     *  Byte 5:     Entity Type  (0x41='A' Asset, 0x49='I' Instance, 0x45='E' External)
-     *  Byte 6-9:   Entity ID    (32 bits, up to 4,294,967,295)
-     *  Byte 10-11: CRC-16       (CRC-CCITT of bytes 0-9)
-     *
-     * 128-bit layout adds 4 bytes:
-     *  Byte 12-13: Sub-ID       (16 bits, for future use / stock instance serial)
-     *  Byte 14-15: Reserved     (0x0000)
-     *
-     * Human-readable:  RMS-a3f7b2c1-A-000042
-     * Binary (96-bit): 52a3f7b2c141000000002A1F  (hex string)
-     * Binary (128-bit): 52a3f7b2c14100000000xxxx00002A1F
+     * @param int $assetId The asset to pair
+     * @param string $tid The TID hex string from the RFID reader
+     * @return bool true on success
+     * @throws Exception if TID is already in use
      */
-
-    private const EPC_HEADER = 0x52; // 'R' for RMS
-    private const TYPE_ASSET = 0x41;  // 'A'
-    private const TYPE_INSTANCE = 0x49; // 'I'
-    private const TYPE_EXTERNAL = 0x45; // 'E'
-
-    /**
-     * Encode a human-readable tag to 96-bit binary EPC (24 hex chars).
-     * This is what gets written to the RFID tag memory.
-     *
-     * @param string $entityType 'asset', 'stock_instance', or 'external'
-     * @param int $entityId The entity ID
-     * @return string 24-char hex string (96 bits)
-     */
-    public function encodeBinaryEpc(string $entityType, int $entityId): string
+    public function pairAssetTid(int $assetId, string $tid): bool
     {
-        $companyCodeHex = $this->getCompanyCode(); // 8 hex chars = 32 bits
+        $tid = strtoupper(trim($tid));
+        if (empty($tid)) throw new Exception('TID darf nicht leer sein');
 
-        $typeByte = match ($entityType) {
-            'asset'          => self::TYPE_ASSET,
-            'stock_instance' => self::TYPE_INSTANCE,
-            'external'       => self::TYPE_EXTERNAL,
-            default          => throw new \InvalidArgumentException("Unknown entity type: {$entityType}"),
-        };
+        // Check if TID is already assigned to another entity
+        $conflict = $this->findEntityByTid($tid);
+        if ($conflict) {
+            throw new Exception("TID '{$tid}' ist bereits vergeben an: " . $conflict['display_name']);
+        }
 
-        // Pack: header(1) + company(4) + type(1) + id(4) = 10 bytes
-        $payload = pack('C', self::EPC_HEADER)               // 1 byte header
-                 . hex2bin($companyCodeHex)                    // 4 bytes company code
-                 . pack('C', $typeByte)                       // 1 byte entity type
-                 . pack('N', $entityId);                      // 4 bytes entity ID (big-endian)
-
-        // CRC-16 CCITT over the 10 payload bytes
-        $crc = $this->crc16ccitt($payload);
-        $epc = $payload . pack('n', $crc); // 2 bytes CRC (big-endian)
-
-        return strtoupper(bin2hex($epc)); // 24 hex chars = 96 bits
+        $this->db->where('assets_id', $assetId);
+        $this->db->where('instances_id', $this->instanceId);
+        return $this->db->update('assets', ['assets_rfidTid' => $tid]) > 0;
     }
 
     /**
-     * Encode to 128-bit binary EPC (32 hex chars).
-     * Adds a sub-ID field for stock instance serial numbers.
+     * Pair a scanned RFID TID with a stock instance.
+     */
+    public function pairStockTid(int $stockInstanceId, string $tid): bool
+    {
+        $tid = strtoupper(trim($tid));
+        if (empty($tid)) throw new Exception('TID darf nicht leer sein');
+
+        $conflict = $this->findEntityByTid($tid);
+        if ($conflict) {
+            throw new Exception("TID '{$tid}' ist bereits vergeben an: " . $conflict['display_name']);
+        }
+
+        $this->db->where('id', $stockInstanceId);
+        return $this->db->update('stock_instances', ['rfid_tid' => $tid]) > 0;
+    }
+
+    /**
+     * Pair a scanned RFID TID with an external item.
+     */
+    public function pairExternalTid(int $externalItemId, string $tid): bool
+    {
+        $tid = strtoupper(trim($tid));
+        if (empty($tid)) throw new Exception('TID darf nicht leer sein');
+
+        $conflict = $this->findEntityByTid($tid);
+        if ($conflict) {
+            throw new Exception("TID '{$tid}' ist bereits vergeben an: " . $conflict['display_name']);
+        }
+
+        $this->db->where('id', $externalItemId);
+        $this->db->where('instances_id', $this->instanceId);
+        return $this->db->update('external_items', ['rfid_tid' => $tid]) > 0;
+    }
+
+    /**
+     * Remove TID pairing from an asset.
+     */
+    public function unpairAssetTid(int $assetId): bool
+    {
+        $this->db->where('assets_id', $assetId);
+        $this->db->where('instances_id', $this->instanceId);
+        return $this->db->update('assets', ['assets_rfidTid' => null]) > 0;
+    }
+
+    /**
+     * Look up an entity by its TID across all entity tables.
+     * Returns null if TID is not paired to anything.
      *
-     * @param string $entityType
-     * @param int $entityId
-     * @param int $subId Optional sub-ID (e.g., stock instance serial within a type)
-     * @return string 32-char hex string (128 bits)
+     * @param string $tid The TID hex string
+     * @return array|null { 'entity_type', 'entity_id', 'display_name', 'instance_id' }
      */
-    public function encodeBinaryEpc128(string $entityType, int $entityId, int $subId = 0): string
+    public function findEntityByTid(string $tid): ?array
     {
-        $epc96 = hex2bin($this->encodeBinaryEpc($entityType, $entityId));
+        $tid = strtoupper(trim($tid));
+        if (empty($tid)) return null;
 
-        // Remove CRC from 96-bit version (last 2 bytes)
-        $payload = substr($epc96, 0, 10);
+        // Check assets
+        $this->db->where('a.assets_rfidTid', $tid);
+        $this->db->where('a.assets_deleted', 0);
+        $this->db->join('assetTypes at', 'at.assetTypes_id = a.assetTypes_id', 'LEFT');
+        $asset = $this->db->getOne('assets a', [
+            'a.assets_id', 'a.assets_tag', 'a.instances_id',
+            'at.assetTypes_name AS type_name',
+            'a.assets_serialInternal',
+        ]);
 
-        // Add sub-ID (2 bytes) + reserved (2 bytes)
-        $payload .= pack('n', $subId & 0xFFFF)  // 2 bytes sub-ID
-                  . pack('n', 0x0000);            // 2 bytes reserved
+        if ($asset) {
+            return [
+                'entity_type' => 'asset',
+                'entity_id' => (int)$asset['assets_id'],
+                'display_name' => trim(($asset['type_name'] ?: '') . ' #' . $asset['assets_tag']),
+                'instance_id' => (int)$asset['instances_id'],
+                'type_name' => $asset['type_name'],
+                'asset_tag' => $asset['assets_tag'],
+                'serial_internal' => $asset['assets_serialInternal'],
+            ];
+        }
 
-        // New CRC over 14 bytes
-        $crc = $this->crc16ccitt($payload);
-        $epc128 = $payload . pack('n', $crc);
+        // Check stock_instances
+        $this->db->where('si.rfid_tid', $tid);
+        $this->db->join('stock_items sit', 'sit.id = si.stock_item_id', 'LEFT');
+        $stock = $this->db->getOne('stock_instances si', [
+            'si.id', 'si.instance_number', 'sit.name AS item_name',
+            'sit.instances_id', 'sit.category',
+        ]);
 
-        return strtoupper(bin2hex($epc128)); // 32 hex chars = 128 bits
+        if ($stock) {
+            return [
+                'entity_type' => 'stock_instance',
+                'entity_id' => (int)$stock['id'],
+                'display_name' => ($stock['item_name'] ?: 'Artikel') . ' #' . str_pad($stock['instance_number'], 4, '0', STR_PAD_LEFT),
+                'instance_id' => (int)$stock['instances_id'],
+                'item_name' => $stock['item_name'],
+                'instance_number' => $stock['instance_number'],
+            ];
+        }
+
+        // Check external_items
+        $this->db->where('rfid_tid', $tid);
+        $ext = $this->db->getOne('external_items', [
+            'id', 'description', 'owner_name', 'instances_id',
+        ]);
+
+        if ($ext) {
+            return [
+                'entity_type' => 'external',
+                'entity_id' => (int)$ext['id'],
+                'display_name' => $ext['description'] . ' (' . $ext['owner_name'] . ')',
+                'instance_id' => (int)$ext['instances_id'],
+            ];
+        }
+
+        return null;
     }
 
     /**
-     * Decode a binary EPC (hex string) back to structured data.
-     * Accepts both 96-bit (24 hex) and 128-bit (32 hex) EPCs.
-     *
-     * @param string $hexEpc The hex string from the RFID tag
-     * @return array|null Decoded data or null if invalid
+     * Look up entity by TID, but only within the current instance.
+     * This is the primary scan-to-identify method.
      */
-    public function decodeBinaryEpc(string $hexEpc): ?array
+    public function lookupTid(string $tid): ?array
     {
-        $hexEpc = strtoupper(trim($hexEpc));
-        $len = strlen($hexEpc);
-
-        if ($len !== 24 && $len !== 32) return null; // Must be 96 or 128 bits
-
-        $raw = hex2bin($hexEpc);
-        if ($raw === false) return null;
-
-        // Check header
-        $header = ord($raw[0]);
-        if ($header !== self::EPC_HEADER) return null; // Not an RMS tag
-
-        // Extract company code (bytes 1-4)
-        $companyCode = strtolower(bin2hex(substr($raw, 1, 4)));
-
-        // Extract entity type (byte 5)
-        $typeByte = ord($raw[5]);
-        $entityType = match ($typeByte) {
-            self::TYPE_ASSET    => 'asset',
-            self::TYPE_INSTANCE => 'stock_instance',
-            self::TYPE_EXTERNAL => 'external',
-            default             => null,
-        };
-        if ($entityType === null) return null;
-
-        // Extract entity ID (bytes 6-9, big-endian unsigned 32-bit)
-        $entityId = unpack('N', substr($raw, 6, 4))[1];
-
-        // Verify CRC
-        if ($len === 24) {
-            // 96-bit: CRC over bytes 0-9, CRC at bytes 10-11
-            $payload = substr($raw, 0, 10);
-            $storedCrc = unpack('n', substr($raw, 10, 2))[1];
-        } else {
-            // 128-bit: CRC over bytes 0-13, CRC at bytes 14-15
-            $payload = substr($raw, 0, 14);
-            $storedCrc = unpack('n', substr($raw, 14, 2))[1];
+        $result = $this->findEntityByTid($tid);
+        if ($result && (int)$result['instance_id'] === $this->instanceId) {
+            $result['is_local'] = true;
+            return $result;
         }
-
-        $computedCrc = $this->crc16ccitt($payload);
-        $crcValid = ($storedCrc === $computedCrc);
-
-        // Extract sub-ID for 128-bit
-        $subId = 0;
-        if ($len === 32) {
-            $subId = unpack('n', substr($raw, 10, 2))[1];
+        if ($result) {
+            $result['is_local'] = false;
+            return $result;
         }
-
-        // Convert to human-readable format
-        $typeLetter = match ($entityType) {
-            'asset'          => 'A',
-            'stock_instance' => 'I',
-            'external'       => 'E',
-        };
-        $humanReadable = 'RMS-' . $companyCode . '-' . $typeLetter . '-' . str_pad($entityId, 6, '0', STR_PAD_LEFT);
-
-        return [
-            'company_code'   => $companyCode,
-            'entity_type'    => $entityType,
-            'entity_id'      => $entityId,
-            'sub_id'         => $subId,
-            'is_local'       => $companyCode === $this->getCompanyCode(),
-            'crc_valid'      => $crcValid,
-            'human_readable' => $humanReadable,
-            'epc_bits'       => $len * 4, // 96 or 128
-            'raw_hex'        => $hexEpc,
-        ];
-    }
-
-    /**
-     * Convert a human-readable tag (RMS-a3f7b2c1-A-000042) to binary EPC hex.
-     * Convenience method for the tag write workflow.
-     */
-    public function humanToBinaryEpc(string $humanTag, bool $use128bit = false): ?string
-    {
-        $parsed = $this->parse($humanTag);
-        if (!$parsed) return null;
-
-        if ($use128bit) {
-            return $this->encodeBinaryEpc128($parsed['entity_type'], $parsed['entity_id']);
-        }
-        return $this->encodeBinaryEpc($parsed['entity_type'], $parsed['entity_id']);
-    }
-
-    /**
-     * CRC-16 CCITT (0xFFFF initial, polynomial 0x1021)
-     * Standard checksum used in EPC Gen2 RFID tags.
-     */
-    private function crc16ccitt(string $data): int
-    {
-        $crc = 0xFFFF;
-        for ($i = 0; $i < strlen($data); $i++) {
-            $crc ^= ord($data[$i]) << 8;
-            for ($j = 0; $j < 8; $j++) {
-                if ($crc & 0x8000) {
-                    $crc = ($crc << 1) ^ 0x1021;
-                } else {
-                    $crc = $crc << 1;
-                }
-                $crc &= 0xFFFF;
-            }
-        }
-        return $crc;
+        return null;
     }
 
     // ══════════════════════════════════════

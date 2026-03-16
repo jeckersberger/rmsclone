@@ -504,44 +504,4 @@ class RmsRepository {
         }
     }
 
-    /**
-     * Get binary EPC hex for writing to an RFID tag.
-     * Returns both 96-bit and 128-bit binary formats plus human-readable.
-     */
-    suspend fun getWriteEpc(entityType: String, entityId: Int): Result<Map<String, Any>> = withContext(Dispatchers.IO) {
-        try {
-            val response = apiService.getWriteEpc(entityType = entityType, entityId = entityId)
-            if (response.result == true && response.response != null) {
-                val jsonStr = gson.toJson(response.response)
-                @Suppress("UNCHECKED_CAST")
-                val data = gson.fromJson(jsonStr, Map::class.java) as Map<String, Any>
-                Result.success(data)
-            } else {
-                Result.failure(Exception(response.error ?: "EPC generation failed"))
-            }
-        } catch (e: Exception) {
-            Log.e(tag, "getWriteEpc failed", e)
-            Result.failure(e)
-        }
-    }
-
-    /**
-     * Decode a binary EPC hex string read from an RFID tag.
-     */
-    suspend fun decodeEpc(epcHex: String): Result<Map<String, Any>> = withContext(Dispatchers.IO) {
-        try {
-            val response = apiService.decodeEpc(epcHex = epcHex)
-            if (response.result == true && response.response != null) {
-                val jsonStr = gson.toJson(response.response)
-                @Suppress("UNCHECKED_CAST")
-                val data = gson.fromJson(jsonStr, Map::class.java) as Map<String, Any>
-                Result.success(data)
-            } else {
-                Result.failure(Exception(response.error ?: "EPC decode failed"))
-            }
-        } catch (e: Exception) {
-            Log.e(tag, "decodeEpc failed", e)
-            Result.failure(e)
-        }
-    }
 }

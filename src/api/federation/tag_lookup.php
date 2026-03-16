@@ -34,22 +34,29 @@ if (empty($tagValue)) {
     finish(false, ['code' => 'INVALID', 'message' => 'tag_value required']);
 }
 
-// ── Step 1: Try to resolve binary EPC hex (from Chafon reader or similar) ──
-$resolvedTag = $tagValue;
-$binaryDecoded = null;
-$cleanHex = strtoupper(trim($tagValue));
-
-if (preg_match('/^[0-9A-F]{24}$/', $cleanHex) || preg_match('/^[0-9A-F]{32}$/', $cleanHex)) {
-    if (substr($cleanHex, 0, 2) === '52') {
-        $binaryDecoded = $tagService->decodeBinaryEpc($cleanHex);
-        if ($binaryDecoded && $binaryDecoded['crc_valid']) {
-            $resolvedTag = $binaryDecoded['human_readable'];
-        }
-    }
+// ── Step 1: Try TID lookup first (primary RFID identification) ──
+$tidResult = $tagService->findEntityByTid($tagValue);
+if ($tidResult && (int)$tidResult['instance_id'] === $localInstanceId) {
+    $entityType = $tidResult['entity_type'];
+    finish(true, null, [
+        'found' => true,
+        'entity_type' => $entityType,
+        'company_code' => $tagService->getCompanyCode(),
+        'lookup_method' => 'tid',
+        'entity' => [
+            'display_name' => $tidResult['display_name'],
+            'type_name' => $tidResult['type_name'] ?? null,
+            'asset_tag' => $tidResult['asset_tag'] ?? null,
+            'serial_internal' => $tidResult['serial_internal'] ?? null,
+            'item_name' => $tidResult['item_name'] ?? null,
+            'instance_number' => $tidResult['instance_number'] ?? null,
+        ],
+    ]);
 }
 
 // ── Step 2: Try to parse as RMS format (new or legacy) ──
-$parsed = $tagService->parse($resolvedTag);
+// Binary EPC decoding removed — system uses TID-based pairing
+$parsed = $tagService->parse($tagValue);
 
 if ($parsed) {
     // We have a structured RMS tag — look up by entity type + ID
@@ -121,12 +128,12 @@ if ($parsed) {
     }
 }
 
-// ── Step 3: Fallback — search by raw RFID tag value in all entity tables ──
+// ── Step 3: Fallback — search by raw RFID tag value / old EPC in all entity tables ──
 
-// Check assets by RFID tag field
+// Check assets by old RFID tag field (asset_definableFields_1) or TID
 $DBLIB->where('a.instances_id', $localInstanceId);
 $DBLIB->where('a.assets_deleted', 0);
-$DBLIB->where('a.asset_definableFields_1', $tagValue);
+$DBLIB->where('(a.asset_definableFields_1 = ? OR a.assets_rfidTid = ?)', [$tagValue, strtoupper($tagValue)]);
 $DBLIB->join('assetTypes at', 'a.assetTypes_id=at.assetTypes_id', 'LEFT');
 $asset = $DBLIB->getOne('assets a', [
     'a.assets_id', 'a.assets_tag', 'a.assets_name',
@@ -146,8 +153,8 @@ if ($asset) {
     ]);
 }
 
-// Check stock_instances by RFID tag
-$DBLIB->where('si.rfid_tag', $tagValue);
+// Check stock_instances by old rfid_tag or TID
+$DBLIB->where('(si.rfid_tag = ? OR si.rfid_tid = ?)', [$tagValue, strtoupper($tagValue)]);
 $DBLIB->join('stock_items sit', 'si.stock_item_id=sit.id', 'LEFT');
 $DBLIB->where('sit.instances_id', $localInstanceId);
 $stockInst = $DBLIB->getOne('stock_instances si', [
@@ -168,9 +175,9 @@ if ($stockInst) {
     ]);
 }
 
-// Check external_items by barcode or RFID
+// Check external_items by barcode, old rfid_tag, or TID
 $DBLIB->where('e.instances_id', $localInstanceId);
-$DBLIB->where('(e.barcode = ? OR e.rfid_tag = ?)', [$tagValue, $tagValue]);
+$DBLIB->where('(e.barcode = ? OR e.rfid_tag = ? OR e.rfid_tid = ?)', [$tagValue, $tagValue, strtoupper($tagValue)]);
 $ext = $DBLIB->getOne('external_items e', [
     'e.id', 'e.description', 'e.owner_name'
 ]);

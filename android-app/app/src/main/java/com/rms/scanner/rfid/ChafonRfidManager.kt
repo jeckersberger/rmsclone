@@ -8,11 +8,12 @@ import android.util.Log
  * This is a STUB implementation with TODO comments for integrating the actual Chafon SDK.
  * The Chafon SDK is available at: https://www.chafon.com/Download
  *
- * Typical integration points:
- * - UHFReader singleton from Chafon SDK
- * - Inventory callbacks
- * - Power control methods
- * - Tag write operations
+ * The CF-H906 is a READ-ONLY UHF RFID scanner. It reads:
+ * - EPC (Electronic Product Code) from tag user memory
+ * - TID (Tag Identifier) — unique factory-burned hardware ID
+ *
+ * The system uses TID-based pairing: scan tag → read TID → pair in database.
+ * No tag writing is needed or possible with this device.
  */
 class ChafonRfidManager : RfidManager {
     private val tag = "ChafonRfidManager"
@@ -44,8 +45,6 @@ class ChafonRfidManager : RfidManager {
     override fun disconnect() {
         try {
             // TODO: Replace with actual Chafon SDK shutdown
-            // Example: val reader = UHFReader.getInstance()
-            // reader.disconnect()
             Log.d(tag, "Disconnecting from Chafon RFID reader...")
             isConnectedState = false
             inventoryCallback?.invoke(RfidEvent.Disconnected)
@@ -65,13 +64,16 @@ class ChafonRfidManager : RfidManager {
         inventoryCallback = callback
         try {
             // TODO: Replace with actual Chafon SDK inventory call
+            // The Chafon SDK typically provides both EPC and TID in its callback.
             // Example:
             // val reader = UHFReader.getInstance()
             // reader.inventoryStart()
-            // Then set up a listener for:
-            // reader.setOnInventoryListener { epc, rssi ->
-            //     callback.invoke(RfidEvent.TagRead(epc, rssi))
+            // reader.setOnInventoryListener { epc, tid, rssi ->
+            //     callback.invoke(RfidEvent.TagRead(epc = epc, tid = tid, rssi = rssi))
             // }
+            //
+            // IMPORTANT: Make sure to read TID bank (bank 02) in addition to EPC.
+            // The TID is the primary identifier used for pairing.
             Log.d(tag, "Starting inventory scan...")
             callback.invoke(RfidEvent.Connected)
         } catch (e: Exception) {
@@ -83,58 +85,10 @@ class ChafonRfidManager : RfidManager {
     override fun stopInventory() {
         try {
             // TODO: Replace with actual Chafon SDK stop call
-            // Example: val reader = UHFReader.getInstance()
-            // reader.inventoryStop()
             Log.d(tag, "Stopping inventory scan...")
         } catch (e: Exception) {
             Log.e(tag, "Error stopping inventory", e)
             inventoryCallback?.invoke(RfidEvent.Error("Failed to stop inventory: ${e.message}"))
-        }
-    }
-
-    override fun writeEpc(newEpc: String): Boolean {
-        if (!isConnected()) {
-            return false
-        }
-
-        return try {
-            // TODO: Replace with actual Chafon SDK write call
-            // Example:
-            // val reader = UHFReader.getInstance()
-            // val result = reader.writeEpc(newEpc)
-            // return result.isSuccess
-            Log.d(tag, "Writing new EPC: $newEpc")
-
-            // Simulate write operation
-            inventoryCallback?.invoke(RfidEvent.TagWritten(newEpc, true))
-            true
-        } catch (e: Exception) {
-            Log.e(tag, "Failed to write EPC", e)
-            inventoryCallback?.invoke(RfidEvent.TagWritten(newEpc, false, e.message))
-            false
-        }
-    }
-
-    override fun writeEpc(oldEpc: String, newEpc: String): Boolean {
-        if (!isConnected()) {
-            return false
-        }
-
-        return try {
-            // TODO: Replace with actual Chafon SDK write call with verification
-            // Example:
-            // val reader = UHFReader.getInstance()
-            // val result = reader.writeEpc(oldEpc, newEpc)
-            // return result.isSuccess
-            Log.d(tag, "Writing EPC from $oldEpc to $newEpc")
-
-            // Simulate write operation
-            inventoryCallback?.invoke(RfidEvent.TagWritten(newEpc, true))
-            true
-        } catch (e: Exception) {
-            Log.e(tag, "Failed to write EPC", e)
-            inventoryCallback?.invoke(RfidEvent.TagWritten(newEpc, false, e.message))
-            false
         }
     }
 
@@ -146,8 +100,6 @@ class ChafonRfidManager : RfidManager {
 
         try {
             // TODO: Replace with actual Chafon SDK power control
-            // Example: val reader = UHFReader.getInstance()
-            // reader.setPower(dbm)
             currentPower = dbm
             Log.d(tag, "Set RFID power to $dbm dBm")
         } catch (e: Exception) {
@@ -158,7 +110,6 @@ class ChafonRfidManager : RfidManager {
     override fun getPower(): Int {
         try {
             // TODO: Replace with actual Chafon SDK query
-            // Example: return UHFReader.getInstance().getPower()
             return currentPower
         } catch (e: Exception) {
             Log.e(tag, "Failed to get power", e)
@@ -169,8 +120,6 @@ class ChafonRfidManager : RfidManager {
     override fun getBatteryLevel(): Int {
         try {
             // TODO: Replace with actual Chafon SDK battery query
-            // Example: return UHFReader.getInstance().getBatteryLevel()
-            // Typically returns 0-100 for percentage
             Log.d(tag, "Getting battery level...")
             return 85  // Placeholder
         } catch (e: Exception) {

@@ -189,10 +189,9 @@ class StockItemService
      * @param int $itemId Stock item type ID
      * @param int $instanceId Tenant instance ID
      * @param int $quantity How many instances to create
-     * @param bool $autoRfid Auto-generate RFID EPCs
      * @return array Created instance IDs
      */
-    public function createInstances(int $itemId, int $instanceId, int $quantity, bool $autoRfid = true): array
+    public function createInstances(int $itemId, int $instanceId, int $quantity): array
     {
         $now = date('Y-m-d H:i:s');
         $createdIds = [];
@@ -203,25 +202,15 @@ class StockItemService
         $last = $this->db->getOne('stock_instances', null, ['instance_number']);
         $nextNumber = $last ? $last['instance_number'] + 1 : 1;
 
-        // Get next global EPC number
-        $nextEpc = $this->getNextEpcNumber($instanceId);
-
         for ($i = 0; $i < $quantity; $i++) {
-            $rfidTag = null;
-            if ($autoRfid) {
-                if ($this->tagFormatService) {
-                    $rfidTag = $this->tagFormatService->generateStockInstanceEpc($nextEpc);
-                } else {
-                    $rfidTag = sprintf('RMS-I-%06d', $nextEpc); // fallback
-                }
-                $nextEpc++;
-            }
-
+            // rfid_tag kept for backward compat (old barcode labels).
+            // rfid_tid is set later via TID pairing (scan tag → assign to instance).
             $id = $this->db->insert('stock_instances', [
                 'stock_item_id'   => $itemId,
                 'instances_id'    => $instanceId,
                 'instance_number' => $nextNumber + $i,
-                'rfid_tag'        => $rfidTag,
+                'rfid_tag'        => null,
+                'rfid_tid'        => null,
                 'status'          => 'available',
                 'condition'       => 'good',
                 'location'        => '',
