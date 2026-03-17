@@ -218,13 +218,77 @@ HTML;
     }
 
     /**
-     * Nur der erste Teil des HTML (ohne Empfehlungen)
+     * Erster Teil des HTML-Reports: Header, Titel, Übersicht und Statistiken
      */
     private function renderReportHtml_part1(int $instanceId, int $year, array $stats): string
     {
-        // Wird ueber renderReportHtml aufgerufen, gibt den Anfang zurueck
-        // Diese Methode existiert fuer die Trennung - das HTML wird in renderReportHtml zusammengebaut
-        return '';
+        $this->db->where('instances_id', $instanceId);
+        $business = $this->db->getOne('instances');
+        $companyName = htmlspecialchars($business['instances_name'] ?? 'Unbekannt');
+        $date = date('d.m.Y');
+
+        // DSGVO-Aktionen für Tabelle vorbereiten
+        $actionsHtml = '';
+        if (!empty($stats['dsgvo_actions'])) {
+            foreach ($stats['dsgvo_actions'] as $a) {
+                $label = self::actionLabel($a['action']);
+                $actionsHtml .= "<tr><td>{$label}</td><td>{$a['cnt']}</td></tr>";
+            }
+        } else {
+            $actionsHtml = '<tr><td colspan="2" style="color:#999;">Keine DSGVO-Aktionen in diesem Zeitraum</td></tr>';
+        }
+
+        // Cookie-Consents vorbereiten
+        $cookieTotal = (int)($stats['cookie_consents']['total'] ?? 0);
+        $cookieAccepted = (int)($stats['cookie_consents']['accepted'] ?? 0);
+        $cookieRevoked = (int)($stats['cookie_consents']['revoked'] ?? 0);
+
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<style>
+body { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 10pt; line-height: 1.5; color: #333; margin: 20mm; }
+h1 { font-size: 18pt; color: #1a1a1a; border-bottom: 2px solid #2980b9; padding-bottom: 5mm; }
+h2 { font-size: 13pt; color: #2c3e50; margin-top: 8mm; }
+table { width: 100%; border-collapse: collapse; margin: 3mm 0; font-size: 9pt; }
+th, td { border: 1px solid #ddd; padding: 2mm 3mm; text-align: left; }
+th { background: #ecf0f1; }
+.meta { color: #666; font-size: 8pt; }
+.alert { background: #fff3cd; padding: 3mm 4mm; border-left: 3px solid #f39c12; margin: 3mm 0; }
+.ok { background: #d4edda; padding: 3mm 4mm; border-left: 3px solid #28a745; margin: 3mm 0; }
+.footer { margin-top: 10mm; border-top: 1px solid #ccc; padding-top: 3mm; font-size: 8pt; color: #999; }
+</style>
+</head>
+<body>
+<h1>DSGVO-Jahresbericht {$year}</h1>
+<p class="meta">Erstellt am {$date} | {$companyName}</p>
+
+<h2>1. Bestandsaufnahme personenbezogener Daten</h2>
+<table>
+<tr><th>Kategorie</th><th>Anzahl</th><th>Rechtsgrundlage</th></tr>
+<tr><td>Kundendaten</td><td>{$stats['total_clients']}</td><td>Art. 6 Abs. 1 lit. b DSGVO (Vertragserfuellung)</td></tr>
+<tr><td>Benutzerdaten</td><td>{$stats['total_users']}</td><td>Art. 6 Abs. 1 lit. b DSGVO (Vertragserfuellung)</td></tr>
+<tr><td>Dokumente mit abgelaufener Aufbewahrungsfrist</td><td>{$stats['expired_docs']}</td><td>§ 147 AO (Aufbewahrungspflicht)</td></tr>
+</table>
+
+<h2>2. Durchgefuehrte DSGVO-Aktionen</h2>
+<table>
+<tr><th>Aktion</th><th>Anzahl</th></tr>
+{$actionsHtml}
+</table>
+
+<h2>3. Cookie-Consent-Statistiken</h2>
+<table>
+<tr><th>Kennzahl</th><th>Wert</th></tr>
+<tr><td>Consent-Anfragen gesamt</td><td>{$cookieTotal}</td></tr>
+<tr><td>Akzeptiert</td><td>{$cookieAccepted}</td></tr>
+<tr><td>Widerrufen</td><td>{$cookieRevoked}</td></tr>
+</table>
+
+<h2>4. Empfehlungen</h2>
+HTML;
     }
 
     private static function actionLabel(string $action): string
