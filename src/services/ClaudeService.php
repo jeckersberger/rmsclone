@@ -33,6 +33,7 @@ class ClaudeService
         'price_suggestion'  => 'instances_aiFeaturePriceSuggestion',
         'damage_report'     => 'instances_aiFeatureDamageReport',
         'asset_allocation'  => 'instances_aiFeatureAssetAllocation',
+        'asset_lookup'      => 'instances_aiFeatureAssetLookup',
         'client_risk'       => 'instances_aiFeatureClientRisk',
         'email_reply'       => 'instances_aiFeatureEmailReply',
         'finance_forecast'  => 'instances_aiFeatureFinanceForecast',

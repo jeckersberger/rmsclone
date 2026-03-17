@@ -10,6 +10,7 @@ require_once __DIR__ . '/../apiHeadSecure.php';
 if (!$AUTH->instancePermissionCheck("EMAIL_INBOX:EDIT") && !$AUTH->instancePermissionCheck("PROJECTS:VIEW")) finish(false, ["code" => "PERMISSIONS"]);
 
 $instanceId = $AUTH->data['instance']['instances_id'];
+$userId = $AUTH->data['users_userid'] ?? 0;
 $emailId = (int)($_POST['id'] ?? 0);
 $projectId = (int)($_POST['project_id'] ?? 0);
 
@@ -29,9 +30,21 @@ if ($projectId > 0) {
     if (!$project) finish(false, ["code" => "PROJECT_NOT_FOUND"]);
 }
 
-$DBLIB->where('emailReceived_id', $emailId);
-$updated = $DBLIB->update('emailReceived', [
+$updateData = [
     'projects_id' => $projectId > 0 ? $projectId : null,
-]);
+];
+
+// Zuordnungs-Metadaten speichern wenn zugeordnet wird
+if ($projectId > 0) {
+    $updateData['assigned_by'] = $userId;
+    $updateData['assigned_at'] = date('Y-m-d H:i:s');
+} else {
+    // Entfernen der Zuordnung löscht auch die Metadaten
+    $updateData['assigned_by'] = null;
+    $updateData['assigned_at'] = null;
+}
+
+$DBLIB->where('emailReceived_id', $emailId);
+$updated = $DBLIB->update('emailReceived', $updateData);
 
 finish((bool)$updated);

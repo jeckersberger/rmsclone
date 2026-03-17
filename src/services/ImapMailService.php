@@ -476,4 +476,108 @@ class ImapMailService
         $this->disconnect();
         return $info;
     }
+
+    /**
+     * E-Mail einem Projekt zuordnen
+     */
+    public function assignToProject(int $emailId, int $projectId, int $userId): bool
+    {
+        $this->db->where('emailReceived_id', $emailId);
+        $this->db->where('instances_id', $this->instanceId);
+        $email = $this->db->getOne('emailReceived', null, ['emailReceived_id']);
+
+        if (!$email) {
+            return false;
+        }
+
+        $this->db->where('emailReceived_id', $emailId);
+        $this->db->update('emailReceived', [
+            'projects_id' => $projectId,
+            'assigned_by' => $userId,
+            'assigned_at' => date('Y-m-d H:i:s')
+        ]);
+
+        return $this->db->affectedRows() > 0;
+    }
+
+    /**
+     * Projektzuordnung entfernen
+     */
+    public function unassignFromProject(int $emailId): bool
+    {
+        $this->db->where('emailReceived_id', $emailId);
+        $this->db->where('instances_id', $this->instanceId);
+        $this->db->update('emailReceived', [
+            'projects_id' => null,
+            'assigned_by' => null,
+            'assigned_at' => null
+        ]);
+
+        return $this->db->affectedRows() > 0;
+    }
+
+    /**
+     * Alle E-Mails eines Projekts laden
+     */
+    public function getProjectEmails(int $projectId, int $limit = 50, int $offset = 0): array
+    {
+        $this->db->where('projects_id', $projectId);
+        $this->db->where('instances_id', $this->instanceId);
+        $this->db->orderBy('emailReceived_date', 'DESC');
+
+        $emails = $this->db->get('emailReceived', [$offset, $limit], [
+            'emailReceived_id', 'emailReceived_fromEmail', 'emailReceived_fromName', 'emailReceived_toEmail',
+            'emailReceived_subject', 'emailReceived_date', 'emailReceived_isRead', 'emailReceived_hasAttachments',
+            'assigned_by', 'assigned_at', 'clients_id'
+        ]) ?: [];
+
+        // Gesamtanzahl ermitteln
+        $this->db->where('projects_id', $projectId);
+        $this->db->where('instances_id', $this->instanceId);
+        $total = $this->db->getValue('emailReceived', 'count(*)');
+
+        return [
+            'emails' => $emails,
+            'total' => (int)$total
+        ];
+    }
+
+    /**
+     * E-Mails automatisch einem Projekt zuordnen basierend auf Client-E-Mail
+     */
+    public function autoAssignByClient(int $projectId): int
+    {
+        // Lade den Client des Projekts
+        $this->db->join('clients c', 'p.clients_id=c.clients_id', 'LEFT');
+        $this->db->where('p.projects_id', $projectId);
+        $this->db->where('p.instances_id', $this->instanceId);
+        $project = $this->db->getOne('projects p', null, ['c.clients_email', 'c.clients_id']);
+
+        if (!$project || empty($project['clients_email'])) {
+            return 0;
+        }
+
+        // Finde unzugeordnete E-Mails von/an diesen Client
+        $clientEmail = $project['clients_email'];
+
+        $emails = $this->db->rawQuery(
+            "SELECT emailReceived_id FROM emailReceived
+             WHERE instances_id = ?
+             AND projects_id IS NULL
+             AND (emailReceived_fromEmail = ? OR emailReceived_toEmail = ?)",
+            [$this->instanceId, $clientEmail, $clientEmail]
+        ) ?: [];
+
+        $count = 0;
+        foreach ($emails as $email) {
+            $this->db->where('emailReceived_id', $email['emailReceived_id']);
+            $this->db->update('emailReceived', [
+                'projects_id' => $projectId,
+                'assigned_at' => date('Y-m-d H:i:s')
+            ]);
+            $count++;
+        }
+
+        return $count;
+    }
 }
