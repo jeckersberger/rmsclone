@@ -331,11 +331,13 @@ class IncomingInvoiceService
         $instanceId = $filters['instances_id'] ?? 0;
 
         // Gesamtbetrag nach Status
-        $this->db->where('deleted', 0);
-        $this->db->where('instances_id', $instanceId);
-        $this->db->groupBy('status');
-        $this->db->select(['status', 'COUNT(*) as count', 'SUM(gross_amount) as total']);
-        $byStatus = $this->db->get('incoming_invoices') ?: [];
+        $byStatus = $this->db->rawQuery(
+            "SELECT status, COUNT(*) as count, SUM(gross_amount) as total
+             FROM incoming_invoices
+             WHERE deleted = 0 AND instances_id = ?
+             GROUP BY status",
+            [$instanceId]
+        ) ?: [];
 
         // Unbezahlte Rechnungen
         $this->db->where('deleted', 0);
@@ -360,11 +362,13 @@ class IncomingInvoiceService
             ->getValue('incoming_invoices', 'SUM(gross_amount)') ?? 0;
 
         // Nach Kategorie
-        $this->db->where('deleted', 0);
-        $this->db->where('instances_id', $instanceId);
-        $this->db->groupBy('category_id');
-        $this->db->select(['category_id', 'COUNT(*) as count', 'SUM(gross_amount) as total']);
-        $byCategory = $this->db->get('incoming_invoices') ?: [];
+        $byCategory = $this->db->rawQuery(
+            "SELECT category_id, COUNT(*) as count, SUM(gross_amount) as total
+             FROM incoming_invoices
+             WHERE deleted = 0 AND instances_id = ?
+             GROUP BY category_id",
+            [$instanceId]
+        ) ?: [];
 
         return [
             'by_status' => $byStatus,

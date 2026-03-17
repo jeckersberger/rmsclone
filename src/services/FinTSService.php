@@ -561,7 +561,7 @@ class FinTSService
             'status'     => 'expired',
             'persist_data' => null, // Sensible Daten loeschen
         ]);
-        $cleaned = $this->db->count;
+        $cleaned = $this->db->affectedRows();
 
         // Alte abgeschlossene Sessions loeschen (aelter als 24h)
         $this->db->where('status', ['completed', 'failed', 'expired'], 'IN');
