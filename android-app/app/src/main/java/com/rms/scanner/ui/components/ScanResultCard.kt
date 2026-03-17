@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DeviceHub
 import androidx.compose.material.icons.filled.Error
@@ -66,48 +67,115 @@ fun ScanResultCard(
         colors = CardDefaults.cardColors(containerColor = SurfaceCard),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(14.dp)
         ) {
-            // Entity type icon
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(entityColor.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
+            // Owner badge for foreign items
+            if (result.isForeign && result.ownerName != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Color(0xFFFFF3E0), // light orange
+                            RoundedCornerShape(6.dp)
+                        )
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Filled.Business,
+                        contentDescription = null,
+                        tint = Color(0xFFE65100),
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        "Gehört: ${result.ownerName}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color(0xFFE65100),
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = entityIcon,
-                    contentDescription = result.entityType,
-                    tint = entityColor,
-                    modifier = Modifier.size(24.dp)
-                )
+                // Entity type icon
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(entityColor.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = entityIcon,
+                        contentDescription = result.entityType,
+                        tint = entityColor,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = result.entityName,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = result.entityType,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = entityColor
+                    )
+                }
+
+                // Status badge
+                EntityBadge(type = result.status, color = entityColor)
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            // Entity details for foreign items
+            result.entityDetails?.let { details ->
+                val status = details["status"] as? String
+                val assignment = details["current_assignment"] as? Map<*, *>
 
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = result.entityName,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = TextPrimary,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = result.entityType,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = entityColor
-                )
+                if (status != null || assignment != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color.White, RoundedCornerShape(6.dp))
+                            .padding(horizontal = 8.dp, vertical = 6.dp)
+                    ) {
+                        if (status != null) {
+                            Text(
+                                "Status: ${if (status == "checked_out") "Ausgeliehen" else "Verfügbar"}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (status == "checked_out") Color(0xFFE65100) else Color(0xFF2E7D32),
+                            )
+                        }
+                        assignment?.let { assign ->
+                            val projectName = assign["project_name"] as? String
+                            if (projectName != null) {
+                                Text(
+                                    "Projekt: $projectName",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
             }
-
-            // Status badge
-            EntityBadge(type = result.status, color = entityColor)
         }
     }
 }

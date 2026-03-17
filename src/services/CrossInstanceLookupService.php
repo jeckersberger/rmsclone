@@ -112,6 +112,15 @@ class CrossInstanceLookupService
             ]);
 
             if ($asset) {
+                // Get current assignment
+                $this->db->where('assets_id', $asset['assets_id']);
+                $this->db->where('assetsAssignments_end', null);
+                $this->db->orderBy('assetsAssignments_id', 'DESC');
+                $this->db->join('projects p', 'aa.projects_id=p.projects_id', 'LEFT');
+                $assignment = $this->db->getOne('assetsAssignments aa', null, [
+                    'p.projects_name', 'aa.assetsAssignments_start'
+                ]);
+
                 return [
                     'found' => true,
                     'source' => 'local_partner',
@@ -123,6 +132,11 @@ class CrossInstanceLookupService
                         'display_name' => trim(($asset['type_name'] ?: '') . ' #' . $asset['assets_tag']),
                         'type_name' => $asset['type_name'],
                         'asset_tag' => $asset['assets_tag'],
+                        'status' => $assignment ? 'checked_out' : 'available',
+                        'current_assignment' => $assignment ? [
+                            'project_name' => $assignment['projects_name'],
+                            'checked_out_since' => $assignment['assetsAssignments_start'],
+                        ] : null,
                     ],
                     'rfid_tid' => $tid,
                 ];
@@ -209,6 +223,15 @@ class CrossInstanceLookupService
             ]);
 
             if ($asset) {
+                // Get current assignment
+                $this->db->where('assets_id', $asset['assets_id']);
+                $this->db->where('assetsAssignments_end', null);
+                $this->db->orderBy('assetsAssignments_id', 'DESC');
+                $this->db->join('projects p', 'aa.projects_id=p.projects_id', 'LEFT');
+                $assignment = $this->db->getOne('assetsAssignments aa', null, [
+                    'p.projects_name', 'aa.assetsAssignments_start'
+                ]);
+
                 return [
                     'found' => true,
                     'source' => 'local_partner',
@@ -221,6 +244,11 @@ class CrossInstanceLookupService
                         'type_name' => $asset['type_name'],
                         'asset_tag' => $asset['assets_tag'],
                         'rfid_tag' => $asset['rfid_tag'],
+                        'status' => $assignment ? 'checked_out' : 'available',
+                        'current_assignment' => $assignment ? [
+                            'project_name' => $assignment['projects_name'],
+                            'checked_out_since' => $assignment['assetsAssignments_start'],
+                        ] : null,
                     ],
                     'rfid_tag' => $asset['rfid_tag'] ?? '',
                 ];
@@ -316,6 +344,15 @@ class CrossInstanceLookupService
             ]);
 
             if ($asset) {
+                // Get current assignment
+                $this->db->where('assets_id', $asset['assets_id']);
+                $this->db->where('assetsAssignments_end', null);
+                $this->db->orderBy('assetsAssignments_id', 'DESC');
+                $this->db->join('projects p', 'aa.projects_id=p.projects_id', 'LEFT');
+                $assignment = $this->db->getOne('assetsAssignments aa', null, [
+                    'p.projects_name', 'aa.assetsAssignments_start'
+                ]);
+
                 $instanceName = $this->getInstanceName($partnerId);
                 return [
                     'found' => true,
@@ -329,6 +366,11 @@ class CrossInstanceLookupService
                         'type_name' => $asset['type_name'],
                         'asset_tag' => $asset['assets_tag'],
                         'rfid_tag' => $asset['rfid_tag'],
+                        'status' => $assignment ? 'checked_out' : 'available',
+                        'current_assignment' => $assignment ? [
+                            'project_name' => $assignment['projects_name'],
+                            'checked_out_since' => $assignment['assetsAssignments_start'],
+                        ] : null,
                     ],
                     'rfid_tag' => $tagValue,
                 ];

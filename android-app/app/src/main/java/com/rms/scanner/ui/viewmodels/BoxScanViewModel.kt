@@ -20,6 +20,7 @@ data class BoxScanUiState(
     val selectedProjectId: Int? = null,
     val scannedTags: MutableSet<String> = mutableSetOf(),
     val scanResults: List<BoxScanResultItem> = emptyList(),
+    val partnerItems: List<BoxScanResultItem> = emptyList(),
     val assetCount: Int = 0,
     val stockCount: Int = 0,
     val unknownCount: Int = 0,
@@ -131,7 +132,11 @@ class BoxScanViewModel(
                 val result = repository.boxScan(tags)
                 if (result.isSuccess) {
                     val response = result.getOrNull()!!
-                    val scanResults = response.results ?: emptyList()
+                    val allResults = response.results ?: emptyList()
+
+                    // Separate partner items from regular items
+                    val scanResults = allResults.filter { it.is_foreign != true }
+                    val partnerItems = allResults.filter { it.is_foreign == true }
 
                     val assetCount = scanResults.count { it.entity_type == "asset" }
                     val stockCount = scanResults.count { it.entity_type == "stock" }
@@ -139,6 +144,7 @@ class BoxScanViewModel(
 
                     _uiState.value = _uiState.value.copy(
                         scanResults = scanResults,
+                        partnerItems = partnerItems,
                         assetCount = assetCount,
                         stockCount = stockCount,
                         unknownCount = unknownCount,
@@ -211,7 +217,10 @@ class BoxScanViewModel(
     fun reset() {
         _uiState.value = BoxScanUiState(
             projects = _uiState.value.projects,
-            selectedProjectId = _uiState.value.selectedProjectId
+            selectedProjectId = _uiState.value.selectedProjectId,
+            scannedTags = mutableSetOf(),
+            scanResults = emptyList(),
+            partnerItems = emptyList()
         )
     }
 

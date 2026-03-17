@@ -17,6 +17,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.rms.scanner.ui.components.BoxResultGroup
@@ -118,6 +119,9 @@ fun BoxScanScreen(
                     .filter { it.entity_type == "unknown" }
                     .mapNotNull { it.tag }
 
+                val partnerResults = uiState.partnerItems
+                    .mapNotNull { it.entity_name ?: it.tag }
+
                 BoxResultGroup(
                     title = "Geräte",
                     results = assetResults,
@@ -135,7 +139,16 @@ fun BoxScanScreen(
                 BoxResultGroup(
                     title = "Unbekannt",
                     results = unknownResults,
-                    color = UnknownColor
+                    color = UnknownColor,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+
+                // Partner/foreign items section
+                BoxResultGroup(
+                    title = "Fremdgeräte",
+                    results = partnerResults,
+                    color = Color(0xFFE65100), // orange for partner items
+                    modifier = Modifier.padding(bottom = 12.dp)
                 )
             }
         }

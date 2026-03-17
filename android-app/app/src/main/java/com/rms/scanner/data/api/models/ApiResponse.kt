@@ -22,7 +22,13 @@ data class UniversalScanResponse(
     val entity_id: Int? = null,
     val entity_name: String? = null,
     val status: String? = null,
-    val details: Map<String, String>? = null
+    val details: Map<String, String>? = null,
+    // Partner/foreign entity fields
+    val is_foreign: Boolean? = false,
+    val owner_name: String? = null,
+    val message: String? = null,
+    val action_taken: String? = null,
+    val entity_details: Map<String, Any?>? = null
 )
 
 data class UniversalLookupRequest(
@@ -53,7 +59,11 @@ data class BoxScanResultItem(
     val entity_type: String? = null,
     val entity_id: Int? = null,
     val entity_name: String? = null,
-    val status: String? = null
+    val status: String? = null,
+    // Partner/foreign entity fields
+    val is_foreign: Boolean? = false,
+    val owner_name: String? = null,
+    val entity_details: Map<String, Any?>? = null
 )
 
 data class BoxScanSummary(

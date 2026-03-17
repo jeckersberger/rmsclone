@@ -14,6 +14,7 @@ class StockItemService
 {
     private $db;
     private ?TagFormatService $tagFormatService = null;
+    private ?CrossInstanceLookupService $crossLookup = null;
 
     public function __construct($db)
     {
@@ -23,6 +24,11 @@ class StockItemService
     public function setTagFormatService(TagFormatService $svc): void
     {
         $this->tagFormatService = $svc;
+    }
+
+    public function setCrossLookupService(CrossInstanceLookupService $service): void
+    {
+        $this->crossLookup = $service;
     }
 
     // ═══════════════════════════════════════════
@@ -485,6 +491,7 @@ class StockItemService
         $assets = [];
         $stockGroups = [];  // Grouped by stock_item_id
         $unknown = [];
+        $partner_items = [];
         $seen = [];  // Deduplicate
 
         foreach ($rfidTags as $tag) {
@@ -548,6 +555,21 @@ class StockItemService
                 continue;
             }
 
+            // Try cross-instance lookup
+            if ($this->crossLookup) {
+                $crossResult = $this->crossLookup->lookupTag($tag);
+                if ($crossResult) {
+                    $partner_items[] = [
+                        'rfid_tag' => $tag,
+                        'entity_type' => $crossResult['entity_type'],
+                        'display_name' => $crossResult['entity']['display_name'] ?? 'Unbekannt',
+                        'owner_name' => $crossResult['owner_instance_name'],
+                        'source' => $crossResult['source'],
+                    ];
+                    continue;
+                }
+            }
+
             // Unknown tag
             $unknown[] = $tag;
         }
@@ -559,13 +581,15 @@ class StockItemService
         });
 
         return [
-            'assets'      => $assets,
-            'stock'       => array_values($stockGroups),
-            'unknown'     => $unknown,
-            'summary'     => [
+            'assets'        => $assets,
+            'stock'         => array_values($stockGroups),
+            'partner_items' => $partner_items,
+            'unknown'       => $unknown,
+            'summary'       => [
                 'total_scanned'   => count($seen),
                 'total_assets'    => count($assets),
                 'total_stock'     => array_sum(array_column(array_values($stockGroups), 'count')),
+                'total_partner'   => count($partner_items),
                 'total_unknown'   => count($unknown),
                 'stock_types'     => count($stockGroups),
             ],

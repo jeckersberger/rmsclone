@@ -25,6 +25,7 @@ $crossLookup = new CrossInstanceLookupService($DBLIB, $instanceId);
 $tagFormat = new TagFormatService($DBLIB, $instanceId);
 $rfidService->setStockService($stockService);
 $rfidService->setCrossLookupService($crossLookup);
+$stockService->setCrossLookupService($crossLookup);
 
 // Get the action parameter
 $action = $_POST['action'] ?? null;
@@ -218,11 +219,18 @@ function handleScan($rfidService, $instanceId, $userId)
     $result = $rfidService->processScan($instanceId, $rfidTag, $scanAction, $userId, $projectId);
 
     if ($result['success']) {
-        finish(true, null, [
+        $response = [
             'asset' => $result['asset'],
             'message' => $result['message'],
             'action_taken' => $result['action_taken'],
-        ]);
+        ];
+        // Pass through partner/foreign fields
+        if (!empty($result['is_foreign'])) {
+            $response['is_foreign']      = true;
+            $response['owner_name']      = $result['owner_name'] ?? null;
+            $response['entity_details']  = $result['entity_details'] ?? [];
+        }
+        finish(true, null, $response);
     } else {
         finish(false, [
             "code" => "SCAN_FAILED",
@@ -426,12 +434,19 @@ function handleUniversalScan($rfidService, $instanceId, $userId)
     $result = $rfidService->processUniversalScan($instanceId, $rfidTag, $scanAction, $userId, $projectId);
 
     if ($result['success']) {
-        finish(true, null, [
-            'entity_type'  => $result['entity_type'],
-            'entity'       => $result['entity'] ?? $result['asset'] ?? null,
-            'message'      => $result['message'],
-            'action_taken' => $result['action_taken'],
-        ]);
+        $response = [
+            'entity_type'    => $result['entity_type'],
+            'entity'         => $result['entity'] ?? $result['asset'] ?? null,
+            'message'        => $result['message'],
+            'action_taken'   => $result['action_taken'],
+        ];
+        // Pass through partner/foreign fields
+        if (!empty($result['is_foreign'])) {
+            $response['is_foreign']      = true;
+            $response['owner_name']      = $result['owner_name'] ?? null;
+            $response['entity_details']  = $result['entity_details'] ?? [];
+        }
+        finish(true, null, $response);
     } else {
         finish(false, [
             "code"        => "SCAN_FAILED",

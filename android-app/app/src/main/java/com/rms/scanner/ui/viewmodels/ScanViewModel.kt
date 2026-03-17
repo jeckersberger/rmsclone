@@ -20,7 +20,11 @@ data class ScanResult(
     val entityType: String,
     val entityName: String,
     val status: String,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    // Partner/foreign entity fields
+    val isForeign: Boolean = false,
+    val ownerName: String? = null,
+    val entityDetails: Map<String, Any?>? = null
 )
 
 data class ScanUiState(
@@ -134,8 +138,11 @@ class ScanViewModel(
                     val scanResult = ScanResult(
                         tag = tag,
                         entityType = response.entity_type ?: "Unknown",
-                        entityName = response.entity_name ?: "Unbekannt",
-                        status = response.status ?: "OK"
+                        entityName = response.entity_name ?: response.message ?: "Unbekannt",
+                        status = response.status ?: "OK",
+                        isForeign = response.is_foreign == true,
+                        ownerName = response.owner_name,
+                        entityDetails = response.entity_details
                     )
 
                     val history = (_uiState.value.scanHistory + scanResult).takeLast(50)

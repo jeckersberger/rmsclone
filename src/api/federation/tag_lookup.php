@@ -38,6 +38,28 @@ if (empty($tagValue)) {
 $tidResult = $tagService->findEntityByTid($tagValue);
 if ($tidResult && (int)$tidResult['instance_id'] === $localInstanceId) {
     $entityType = $tidResult['entity_type'];
+
+    // Get current assignment status if asset
+    $status = 'available';
+    $currentAssignment = null;
+    if ($entityType === 'asset' && isset($tidResult['assets_id'])) {
+        $DBLIB->where('assets_id', $tidResult['assets_id']);
+        $DBLIB->where('assetsAssignments_end', null);
+        $DBLIB->orderBy('assetsAssignments_id', 'DESC');
+        $DBLIB->join('projects p', 'aa.projects_id=p.projects_id', 'LEFT');
+        $assignment = $DBLIB->getOne('assetsAssignments aa', null, [
+            'aa.assetsAssignments_id', 'aa.projects_id',
+            'p.projects_name', 'aa.assetsAssignments_start'
+        ]);
+        if ($assignment) {
+            $status = 'checked_out';
+            $currentAssignment = [
+                'project_name' => $assignment['projects_name'],
+                'checked_out_since' => $assignment['assetsAssignments_start'],
+            ];
+        }
+    }
+
     finish(true, null, [
         'found' => true,
         'entity_type' => $entityType,
@@ -50,6 +72,8 @@ if ($tidResult && (int)$tidResult['instance_id'] === $localInstanceId) {
             'serial_internal' => $tidResult['serial_internal'] ?? null,
             'item_name' => $tidResult['item_name'] ?? null,
             'instance_number' => $tidResult['instance_number'] ?? null,
+            'status' => $status,
+            'current_assignment' => $currentAssignment,
         ],
     ]);
 }
@@ -75,6 +99,16 @@ if ($parsed) {
         ]);
 
         if ($asset) {
+            // Get current assignment status
+            $DBLIB->where('assets_id', $asset['assets_id']);
+            $DBLIB->where('assetsAssignments_end', null);
+            $DBLIB->orderBy('assetsAssignments_id', 'DESC');
+            $DBLIB->join('projects p', 'aa.projects_id=p.projects_id', 'LEFT');
+            $assignment = $DBLIB->getOne('assetsAssignments aa', null, [
+                'aa.assetsAssignments_id', 'aa.projects_id',
+                'p.projects_name', 'aa.assetsAssignments_start'
+            ]);
+
             finish(true, null, [
                 'found' => true,
                 'entity_type' => 'asset',
@@ -84,6 +118,11 @@ if ($parsed) {
                     'type_name' => $asset['type_name'],
                     'asset_tag' => $asset['assets_tag'],
                     'serial_internal' => $asset['assets_serialInternal'] ?? null,
+                    'status' => $assignment ? 'checked_out' : 'available',
+                    'current_assignment' => $assignment ? [
+                        'project_name' => $assignment['projects_name'],
+                        'checked_out_since' => $assignment['assetsAssignments_start'],
+                    ] : null,
                 ]
             ]);
         }
@@ -130,17 +169,39 @@ if ($parsed) {
 
 // ── Step 3: Fallback — search by raw RFID tag value / old EPC in all entity tables ──
 
-// Check assets by old RFID tag field (asset_definableFields_1) or TID
+// Check assets by old RFID tag field (asset_definableFields_1) first, then TID
 $DBLIB->where('a.instances_id', $localInstanceId);
 $DBLIB->where('a.assets_deleted', 0);
-$DBLIB->where('(a.asset_definableFields_1 = ? OR a.assets_rfidTid = ?)', [$tagValue, strtoupper($tagValue)]);
+$DBLIB->where('a.asset_definableFields_1', $tagValue);
 $DBLIB->join('assetTypes at', 'a.assetTypes_id=at.assetTypes_id', 'LEFT');
 $asset = $DBLIB->getOne('assets a', [
     'a.assets_id', 'a.assets_tag', 'a.assets_name',
     'at.assetTypes_name AS type_name'
 ]);
 
+// Try TID if not found
+if (!$asset) {
+    $DBLIB->where('a.instances_id', $localInstanceId);
+    $DBLIB->where('a.assets_deleted', 0);
+    $DBLIB->where('a.assets_rfidTid', strtoupper($tagValue));
+    $DBLIB->join('assetTypes at', 'a.assetTypes_id=at.assetTypes_id', 'LEFT');
+    $asset = $DBLIB->getOne('assets a', [
+        'a.assets_id', 'a.assets_tag', 'a.assets_name',
+        'at.assetTypes_name AS type_name'
+    ]);
+}
+
 if ($asset) {
+    // Get current assignment status
+    $DBLIB->where('assets_id', $asset['assets_id']);
+    $DBLIB->where('assetsAssignments_end', null);
+    $DBLIB->orderBy('assetsAssignments_id', 'DESC');
+    $DBLIB->join('projects p', 'aa.projects_id=p.projects_id', 'LEFT');
+    $assignment = $DBLIB->getOne('assetsAssignments aa', null, [
+        'aa.assetsAssignments_id', 'aa.projects_id',
+        'p.projects_name', 'aa.assetsAssignments_start'
+    ]);
+
     finish(true, null, [
         'found' => true,
         'entity_type' => 'asset',
@@ -149,18 +210,34 @@ if ($asset) {
             'display_name' => trim(($asset['type_name'] ?: '') . ' ' . ($asset['assets_name'] ?: '#' . $asset['assets_tag'])),
             'type_name' => $asset['type_name'],
             'asset_tag' => $asset['assets_tag'],
+            'status' => $assignment ? 'checked_out' : 'available',
+            'current_assignment' => $assignment ? [
+                'project_name' => $assignment['projects_name'],
+                'checked_out_since' => $assignment['assetsAssignments_start'],
+            ] : null,
         ]
     ]);
 }
 
-// Check stock_instances by old rfid_tag or TID
-$DBLIB->where('(si.rfid_tag = ? OR si.rfid_tid = ?)', [$tagValue, strtoupper($tagValue)]);
+// Check stock_instances by old rfid_tag first, then TID
+$DBLIB->where('si.rfid_tag', $tagValue);
 $DBLIB->join('stock_items sit', 'si.stock_item_id=sit.id', 'LEFT');
 $DBLIB->where('sit.instances_id', $localInstanceId);
 $stockInst = $DBLIB->getOne('stock_instances si', [
     'si.id', 'si.instance_number',
     'sit.name AS item_name', 'sit.category'
 ]);
+
+// Try TID if not found
+if (!$stockInst) {
+    $DBLIB->where('si.rfid_tid', strtoupper($tagValue));
+    $DBLIB->join('stock_items sit', 'si.stock_item_id=sit.id', 'LEFT');
+    $DBLIB->where('sit.instances_id', $localInstanceId);
+    $stockInst = $DBLIB->getOne('stock_instances si', [
+        'si.id', 'si.instance_number',
+        'sit.name AS item_name', 'sit.category'
+    ]);
+}
 
 if ($stockInst) {
     finish(true, null, [
@@ -171,16 +248,35 @@ if ($stockInst) {
             'display_name' => ($stockInst['item_name'] ?: 'Artikel') . ' #' . str_pad($stockInst['instance_number'], 4, '0', STR_PAD_LEFT),
             'item_name' => $stockInst['item_name'],
             'category' => $stockInst['category'],
+            'status' => 'available', // stock instances typically don't have checkout tracking in this structure
         ]
     ]);
 }
 
-// Check external_items by barcode, old rfid_tag, or TID
+// Check external_items by barcode first
 $DBLIB->where('e.instances_id', $localInstanceId);
-$DBLIB->where('(e.barcode = ? OR e.rfid_tag = ? OR e.rfid_tid = ?)', [$tagValue, $tagValue, strtoupper($tagValue)]);
+$DBLIB->where('e.barcode', $tagValue);
 $ext = $DBLIB->getOne('external_items e', [
     'e.id', 'e.description', 'e.owner_name'
 ]);
+
+// Try rfid_tag if not found
+if (!$ext) {
+    $DBLIB->where('e.instances_id', $localInstanceId);
+    $DBLIB->where('e.rfid_tag', $tagValue);
+    $ext = $DBLIB->getOne('external_items e', [
+        'e.id', 'e.description', 'e.owner_name'
+    ]);
+}
+
+// Try rfid_tid if still not found
+if (!$ext) {
+    $DBLIB->where('e.instances_id', $localInstanceId);
+    $DBLIB->where('e.rfid_tid', strtoupper($tagValue));
+    $ext = $DBLIB->getOne('external_items e', [
+        'e.id', 'e.description', 'e.owner_name'
+    ]);
+}
 
 if ($ext) {
     finish(true, null, [
@@ -189,6 +285,7 @@ if ($ext) {
         'company_code' => $tagService->getCompanyCode(),
         'entity' => [
             'display_name' => $ext['description'] . ' (' . $ext['owner_name'] . ')',
+            'status' => 'available',
         ]
     ]);
 }

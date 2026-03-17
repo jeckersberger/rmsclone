@@ -75,6 +75,9 @@ class RfidService
                     'source' => $crossResult['source'],
                     'is_foreign' => true,
                     'rfid_tag' => $rfidTag,
+                    'entity_details' => $crossResult['entity'] ?? [],
+                    'status' => $crossResult['entity']['status'] ?? 'unknown',
+                    'current_assignment' => $crossResult['entity']['current_assignment'] ?? null,
                 ];
             }
         }
@@ -174,6 +177,50 @@ class RfidService
             }
         }
 
+        // ── Partner/Foreign entity handling (Weitervermietung / Sub-Rental) ──
+        // When scanning a partner's item, we DON'T modify their assignment.
+        // Their original job stays active. We only create a foreign_loans
+        // entry on OUR instance, booked to OUR end-customer project.
+        if (str_starts_with($entity['entity_type'], 'partner_')) {
+            // Log the foreign scan in foreign_loans table (with our project_id)
+            $this->logForeignScan(
+                $instanceId, $entity, $action, $userId, $projectId
+            );
+
+            $ownerName = $entity['owner_name'] ?? 'Unbekannt';
+            $displayName = $entity['display_name'] ?? 'Unbekannt';
+            $baseType = str_replace('partner_', '', $entity['entity_type']);
+            $entityStatus = $entity['entity_details']['status'] ?? $entity['status'] ?? null;
+            $partnerProject = $entity['entity_details']['current_assignment']['project_name'] ?? null;
+
+            // Build checkout message with project context
+            $checkoutMsg = "Fremd-Ausleihe erfasst: {$displayName}";
+            if ($partnerProject) {
+                $checkoutMsg .= " (verliehen von {$ownerName} auf Job: {$partnerProject})";
+            } else {
+                $checkoutMsg .= " (Eigentümer: {$ownerName})";
+            }
+
+            $actionMessages = [
+                'checkout' => $checkoutMsg,
+                'checkin'  => "Fremd-Rückgabe erfasst: {$displayName} (zurück an: {$ownerName})",
+                'locate'   => "Fremdgerät lokalisiert: {$displayName} (Eigentümer: {$ownerName})",
+                'inventory' => "Fremdgerät erfasst: {$displayName} (Eigentümer: {$ownerName})",
+            ];
+
+            return [
+                'success'      => true,
+                'entity_type'  => $entity['entity_type'],
+                'entity'       => $entity,
+                'asset'        => $entity,
+                'message'      => $actionMessages[$action] ?? "Fremdes Gerät: {$displayName}",
+                'action_taken' => $action,
+                'is_foreign'   => true,
+                'owner_name'   => $ownerName,
+                'entity_details' => $entity['entity_details'] ?? [],
+            ];
+        }
+
         return [
             'success'      => false,
             'entity_type'  => $entity['entity_type'],
@@ -246,6 +293,13 @@ class RfidService
         $this->db->where('instances_id', $instanceId);
         $asset = $this->db->getOne('assets', null, ['assets_id', 'assets_name', 'assetTypes_id', 'asset_definableFields_1', 'asset_definableFields_2', 'asset_definableFields_3', 'asset_definableFields_4', 'asset_definableFields_5']);
 
+        // If not found by EPC tag, try TID lookup (primary method for CF-H906)
+        if (!$asset) {
+            $this->db->where('assets_rfidTid', strtoupper(trim($rfidTag)));
+            $this->db->where('instances_id', $instanceId);
+            $asset = $this->db->getOne('assets', null, ['assets_id', 'assets_name', 'assetTypes_id', 'asset_definableFields_1', 'asset_definableFields_2', 'asset_definableFields_3', 'asset_definableFields_4', 'asset_definableFields_5']);
+        }
+
         if (!$asset) {
             return null;
         }
@@ -302,6 +356,49 @@ class RfidService
         $asset = $this->findByTag($instanceId, $rfidTag);
 
         if (!$asset) {
+            // Try cross-instance lookup for partner tags
+            if ($this->crossLookup) {
+                $crossResult = $this->crossLookup->lookupTag($rfidTag);
+                if ($crossResult) {
+                    $entity = [
+                        'entity_type' => 'partner_' . $crossResult['entity_type'],
+                        'display_name' => $crossResult['entity']['display_name'] ?? 'Unbekannt',
+                        'owner_name' => $crossResult['owner_instance_name'],
+                        'owner_server_url' => $crossResult['owner_server_url'] ?? null,
+                        'owner_instance_id' => $crossResult['owner_instance_id'] ?? null,
+                        'source' => $crossResult['source'],
+                        'is_foreign' => true,
+                        'rfid_tag' => $rfidTag,
+                        'rfid_tid' => $crossResult['rfid_tid'] ?? null,
+                        'entity_details' => $crossResult['entity'] ?? [],
+                    ];
+
+                    $this->logForeignScan($instanceId, $entity, $action, $userId, $projectId);
+
+                    $ownerName = $entity['owner_name'];
+                    $displayName = $entity['display_name'];
+                    $partnerProject = $crossResult['entity']['current_assignment']['project_name'] ?? null;
+
+                    $msg = match($action) {
+                        'checkout' => $partnerProject
+                            ? "Fremd-Ausleihe: {$displayName} (von {$ownerName}, Job: {$partnerProject})"
+                            : "Fremd-Ausleihe: {$displayName} (Eigentümer: {$ownerName})",
+                        'checkin' => "Fremd-Rückgabe: {$displayName} (zurück an: {$ownerName})",
+                        default => "Fremdgerät: {$displayName} (Eigentümer: {$ownerName})",
+                    };
+
+                    return [
+                        'success' => true,
+                        'asset' => $entity,
+                        'message' => $msg,
+                        'action_taken' => $action,
+                        'is_foreign' => true,
+                        'owner_name' => $ownerName,
+                        'entity_details' => $crossResult['entity'] ?? [],
+                    ];
+                }
+            }
+
             return [
                 'success' => false,
                 'asset' => null,
@@ -490,6 +587,69 @@ class RfidService
     }
 
     /**
+     * Log a scan of a foreign/partner entity to the foreign_loans table.
+     */
+    private function logForeignScan(int $instanceId, array $entity, string $action, int $userId, ?int $projectId = null): void
+    {
+        try {
+            $data = [
+                'instances_id'        => $instanceId,
+                'source'              => $entity['source'] ?? 'local_partner',
+                'entity_type'         => str_replace('partner_', '', $entity['entity_type']),
+                'entity_display_name' => $entity['display_name'] ?? 'Unbekannt',
+                'owner_name'          => $entity['owner_name'] ?? null,
+                'rfid_tag'            => $entity['rfid_tag'] ?? null,
+                'rfid_tid'            => $entity['rfid_tid'] ?? null,
+                'action'              => $action,
+                'projects_id'         => $projectId,
+                'users_userid'        => $userId,
+                'scanned_at'          => date('Y-m-d H:i:s'),
+            ];
+
+            if (!empty($entity['owner_instance_id'])) {
+                $data['partner_instance_id'] = (int)$entity['owner_instance_id'];
+            }
+            if (!empty($entity['owner_server_url'])) {
+                $data['partner_server_name'] = $entity['owner_name'] ?? null;
+                $data['partner_server_url'] = $entity['owner_server_url'];
+            }
+
+            // For checkin: try to mark the matching checkout as returned
+            if ($action === 'checkin') {
+                $tid = $entity['rfid_tid'] ?? $entity['rfid_tag'] ?? null;
+                if ($tid) {
+                    // Try by TID first, then by rfid_tag
+                    $openLoan = null;
+                    $this->db->where('instances_id', $instanceId);
+                    $this->db->where('action', 'checkout');
+                    $this->db->where('returned_at', null, 'IS');
+                    $this->db->where('rfid_tid', $tid);
+                    $this->db->orderBy('scanned_at', 'DESC');
+                    $openLoan = $this->db->getOne('foreign_loans', null, ['id']);
+
+                    if (!$openLoan) {
+                        $this->db->where('instances_id', $instanceId);
+                        $this->db->where('action', 'checkout');
+                        $this->db->where('returned_at', null, 'IS');
+                        $this->db->where('rfid_tag', $tid);
+                        $this->db->orderBy('scanned_at', 'DESC');
+                        $openLoan = $this->db->getOne('foreign_loans', null, ['id']);
+                    }
+
+                    if ($openLoan) {
+                        $this->db->where('id', $openLoan['id']);
+                        $this->db->update('foreign_loans', ['returned_at' => date('Y-m-d H:i:s')]);
+                    }
+                }
+            }
+
+            $this->db->insert('foreign_loans', $data);
+        } catch (\Exception $e) {
+            // Don't let logging failures block the scan
+        }
+    }
+
+    /**
      * Log a scan event to history
      *
      * @param int $instanceId Instance ID
@@ -615,7 +775,37 @@ class RfidService
             }
         }
 
-        // 3. Unknown tag - log as unknown
+        // 3. Try cross-instance lookup (partner tags)
+        if ($this->crossLookup) {
+            $crossResult = $this->crossLookup->lookupTag($rfidTag);
+            if ($crossResult) {
+                $displayName = $crossResult['entity']['display_name'] ?? 'Unbekannt';
+                $ownerName = $crossResult['owner_instance_name'] ?? 'Unbekannt';
+
+                $this->db->insert('rfidInventoryScans', [
+                    'rfidInventorySessions_id' => $sessionId,
+                    'assets_id' => null,
+                    'stock_instance_id' => null,
+                    'rfid_tag' => trim($rfidTag),
+                    'entity_type' => 'partner_' . $crossResult['entity_type'],
+                    'found' => 1,
+                    'scan_timestamp' => date('Y-m-d H:i:s'),
+                ]);
+
+                return [
+                    'success' => true,
+                    'message' => "Fremdgerät erfasst: {$displayName} ({$ownerName})",
+                    'asset' => [
+                        'display_name' => $displayName,
+                        'owner_name' => $ownerName,
+                        'is_foreign' => true,
+                        'entity_type' => 'partner_' . $crossResult['entity_type'],
+                    ],
+                ];
+            }
+        }
+
+        // 4. Unknown tag - log as unknown
         $this->db->insert('rfidInventoryScans', [
             'rfidInventorySessions_id' => $sessionId,
             'assets_id' => null,
