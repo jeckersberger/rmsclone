@@ -56,7 +56,7 @@ class EquipmentLifecycleService
     {
         $this->db->where('assets_id', $assetId);
         $this->db->where('assets_deleted', 0);
-        $asset = $this->db->getOne('assets', [
+        $asset = $this->db->getOne('assets', null, [
             'assets_id',
             'assets_lifecycle_status',
             'assets_lifecycle_ordered_date',

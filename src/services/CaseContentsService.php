@@ -94,14 +94,14 @@ class CaseContentsService
         if ($contentType === 'asset_type') {
             $this->db->where('assetTypes_id', $contentTypeId);
             $this->db->where('instances_id', $this->instanceId);
-            $type = $this->db->getOne('assetTypes', ['assetTypes_id']);
+            $type = $this->db->getOne('assetTypes', null, ['assetTypes_id']);
             if (!$type) {
                 throw new Exception('Asset type not found');
             }
         } elseif ($contentType === 'stock_item') {
             $this->db->where('id', $contentTypeId);
             $this->db->where('instances_id', $this->instanceId);
-            $type = $this->db->getOne('stock_items', ['id']);
+            $type = $this->db->getOne('stock_items', null, ['id']);
             if (!$type) {
                 throw new Exception('Stock item not found');
             }
@@ -113,7 +113,7 @@ class CaseContentsService
         $this->db->where('content_type_id', $contentTypeId);
         $this->db->where('instances_id', $this->instanceId);
 
-        $existing = $this->db->getOne('case_contents', ['id', 'quantity']);
+        $existing = $this->db->getOne('case_contents', null, ['id', 'quantity']);
 
         if ($existing) {
             // Already exists, just update quantity
@@ -128,7 +128,7 @@ class CaseContentsService
         $this->db->where('instances_id', $this->instanceId);
         $this->db->orderBy('sort_order', 'DESC');
 
-        $lastItem = $this->db->getOne('case_contents', ['sort_order']);
+        $lastItem = $this->db->getOne('case_contents', null, ['sort_order']);
         $nextSort = ($lastItem && isset($lastItem['sort_order'])) ? $lastItem['sort_order'] + 1 : 1;
 
         $data = [
@@ -232,27 +232,16 @@ class CaseContentsService
      */
     public function listCases(): array
     {
-        $this->db->where('a.is_case', 1);
-        $this->db->where('a.instances_id', $this->instanceId);
-        $this->db->where('a.assets_deleted', 0);
+        $sql = "SELECT a.assets_id, a.assets_tag, at.assetTypes_name AS type_name,
+                       a.assets_serialInternal, COUNT(cc.id) as content_count
+                FROM assets a
+                LEFT JOIN assetTypes at ON at.assetTypes_id = a.assetTypes_id
+                LEFT JOIN case_contents cc ON a.assets_id = cc.case_asset_id
+                WHERE a.is_case = 1 AND a.instances_id = ? AND a.assets_deleted = 0
+                GROUP BY a.assets_id
+                ORDER BY at.assetTypes_name ASC, a.assets_tag ASC";
 
-        // Join assetTypes for display name
-        $this->db->join('assetTypes at', 'at.assetTypes_id = a.assetTypes_id', 'LEFT');
-
-        // Count contents for each case
-        $this->db->join('case_contents cc', 'a.assets_id = cc.case_asset_id', 'LEFT');
-
-        $this->db->orderBy('at.assetTypes_name', 'ASC');
-        $this->db->orderBy('a.assets_tag', 'ASC');
-        $this->db->groupBy('a.assets_id');
-
-        $results = $this->db->get('assets a', null, [
-            'a.assets_id',
-            'a.assets_tag',
-            'at.assetTypes_name AS type_name',
-            'a.assets_serialInternal',
-            'COUNT(cc.id) as content_count'
-        ]);
+        $results = $this->db->rawQuery($sql, [$this->instanceId]);
 
         return is_array($results) ? $results : [];
     }
@@ -284,14 +273,14 @@ class CaseContentsService
             if ($item['type'] === 'asset') {
                 // Look up assetTypes_id from assets table
                 $this->db->where('assets_id', $item['id']);
-                $asset = $this->db->getOne('assets', ['assetTypes_id']);
+                $asset = $this->db->getOne('assets', null, ['assetTypes_id']);
                 if ($asset) {
                     $key = 'asset_type:' . $asset['assetTypes_id'];
                     $scannedByType[$key] = ($scannedByType[$key] ?? 0) + 1;
                 }
             } elseif ($item['type'] === 'stock_instance') {
                 $this->db->where('id', $item['id']);
-                $inst = $this->db->getOne('stock_instances', ['stock_item_id']);
+                $inst = $this->db->getOne('stock_instances', null, ['stock_item_id']);
                 if ($inst) {
                     $key = 'stock_item:' . $inst['stock_item_id'];
                     $scannedByType[$key] = ($scannedByType[$key] ?? 0) + 1;
@@ -365,11 +354,11 @@ class CaseContentsService
     {
         if ($contentType === 'asset_type') {
             $this->db->where('assetTypes_id', $typeId);
-            $t = $this->db->getOne('assetTypes', ['assetTypes_name']);
+            $t = $this->db->getOne('assetTypes', null, ['assetTypes_name']);
             return $t ? $t['assetTypes_name'] : 'Unbekannt';
         } else {
             $this->db->where('id', $typeId);
-            $t = $this->db->getOne('stock_items', ['name']);
+            $t = $this->db->getOne('stock_items', null, ['name']);
             return $t ? $t['name'] : 'Unbekannt';
         }
     }
@@ -500,7 +489,7 @@ class CaseContentsService
         $this->db->where('instances_id', $this->instanceId);
         $this->db->orderBy('created_at', 'DESC');
 
-        $lastCheck = $this->db->getOne('case_content_checks', [
+        $lastCheck = $this->db->getOne('case_content_checks', null, [
             'id',
             'check_type',
             'all_complete',

@@ -19,10 +19,16 @@
 class ShippingService
 {
     private $db;
+    private $dhlApiEndpoint;
 
-    public function __construct($db)
+    public function __construct($db, ?string $dhlApiEndpoint = null)
     {
         $this->db = $db;
+        // Default to production; allow override for sandbox/testing
+        // Set via environment variable DHL_API_ENDPOINT or constructor param
+        $this->dhlApiEndpoint = $dhlApiEndpoint
+            ?? getenv('DHL_API_ENDPOINT')
+            ?? 'https://api-eu.dhl.com/parcel/de/shipping/v2/orders';
     }
 
     /**
@@ -123,7 +129,7 @@ class ShippingService
             ]],
         ];
 
-        $ch = curl_init('https://api-eu.dhl.com/parcel/de/shipping/v2/orders');
+        $ch = curl_init($this->dhlApiEndpoint);
         curl_setopt_array($ch, [
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => json_encode($shipmentData),
@@ -225,7 +231,11 @@ class ShippingService
         $apiKey = getenv('DHL_API_KEY') ?: '';
         if (empty($apiKey)) return ['success' => false, 'error' => 'DHL nicht konfiguriert'];
 
-        $ch = curl_init('https://api-eu.dhl.com/track/shipments?trackingNumber=' . urlencode($trackingNumber));
+        // Extract base URL from endpoint and build tracking URL
+        $baseUrl = preg_replace('/\/parcel\/de\/shipping\/.*/', '', $this->dhlApiEndpoint);
+        $trackUrl = $baseUrl . '/track/shipments?trackingNumber=' . urlencode($trackingNumber);
+
+        $ch = curl_init($trackUrl);
         curl_setopt_array($ch, [
             CURLOPT_HTTPHEADER => ['dhl-api-key: ' . $apiKey],
             CURLOPT_RETURNTRANSFER => true,

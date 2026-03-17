@@ -197,17 +197,18 @@ class ClaudeService
         $start = sprintf('%04d-%02d-01', $year, $month);
         $end = date('Y-m-t', strtotime($start));
 
-        $this->db->where('instances_id', $this->instanceId);
-        $this->db->where('created_at', $start, '>=');
-        $this->db->where('created_at', $end . ' 23:59:59', '<=');
-        $this->db->groupBy('feature');
-        $rows = $this->db->get('ai_usage_log', null, [
-            'feature',
-            'COUNT(*) as calls',
-            'SUM(input_tokens) as total_input',
-            'SUM(output_tokens) as total_output',
-            'SUM(cost_estimate_usd) as total_cost',
-        ]) ?: [];
+        $sql = "SELECT feature,
+                       COUNT(*) as calls,
+                       SUM(input_tokens) as total_input,
+                       SUM(output_tokens) as total_output,
+                       SUM(cost_estimate_usd) as total_cost
+                FROM ai_usage_log
+                WHERE instances_id = ?
+                  AND created_at >= ?
+                  AND created_at <= ?
+                GROUP BY feature";
+
+        $rows = $this->db->rawQuery($sql, [$this->instanceId, $start, $end . ' 23:59:59']) ?: [];
 
         $totalCost = 0;
         $totalCalls = 0;

@@ -33,7 +33,7 @@ class DunningLetterService
         $this->db->where('dh.id', $dunningId);
         $this->db->where('dh.instances_id', $instanceId);
         $this->db->join('dunning_levels dl', 'dh.dunning_level_id=dl.id', 'LEFT');
-        $dunning = $this->db->getOne('dunning_history dh', [
+        $dunning = $this->db->getOne('dunning_history dh', null, [
             'dh.*', 'dl.name as level_name', 'dl.level', 'dl.fee as level_fee',
             'dl.interest_rate as level_interest_rate'
         ]);
@@ -44,7 +44,7 @@ class DunningLetterService
         $this->db->where('dl.instances_id', $instanceId);
         $this->db->join('projects p', 'dl.projects_id=p.projects_id', 'LEFT');
         $this->db->join('clients c', 'p.clients_id=c.clients_id', 'LEFT');
-        $invoice = $this->db->getOne('document_lifecycle dl', [
+        $invoice = $this->db->getOne('document_lifecycle dl', null, [
             'dl.*',
             'p.projects_name', 'p.projects_id',
             'c.clients_name', 'c.clients_address', 'c.clients_email',

@@ -43,7 +43,7 @@ class InventoryService
         $this->db->where('(assets_tag = ? OR assets_barcode = ?)', [$tagOrBarcode, $tagOrBarcode]);
         $this->db->where('assets_deleted', 0);
         $this->db->join('assetTypes', 'assets.assetTypes_id = assetTypes.assetTypes_id', 'LEFT');
-        $asset = $this->db->getOne('assets', ['assets.assets_id', 'assets.assets_tag', 'assetTypes.assetTypes_name']);
+        $asset = $this->db->getOne('assets', null, ['assets.assets_id', 'assets.assets_tag', 'assetTypes.assetTypes_name']);
 
         if (!$asset) {
             return ['success' => false, 'error' => 'asset_not_found', 'tag' => $tagOrBarcode];

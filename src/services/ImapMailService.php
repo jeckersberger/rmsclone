@@ -79,7 +79,7 @@ class ImapMailService
         // Letzten Abruf-Zeitpunkt ermitteln
         $this->db->where('instances_id', $this->instanceId);
         $this->db->orderBy('emailReceived_fetchedAt', 'DESC');
-        $lastEmail = $this->db->getOne('emailReceived', ['emailReceived_date']);
+        $lastEmail = $this->db->getOne('emailReceived', null, ['emailReceived_date']);
 
         if ($lastEmail) {
             $since = date('d-M-Y', strtotime($lastEmail['emailReceived_date'] . ' -1 day'));
@@ -135,7 +135,7 @@ class ImapMailService
         if (!empty($messageId)) {
             $this->db->where('emailReceived_messageId', $messageId);
             $this->db->where('instances_id', $this->instanceId);
-            $existing = $this->db->getOne('emailReceived', ['emailReceived_id']);
+            $existing = $this->db->getOne('emailReceived', null, ['emailReceived_id']);
             if ($existing) {
                 return null;
             }
@@ -177,7 +177,7 @@ class ImapMailService
         if (!empty($fromEmail)) {
             $this->db->where('instances_id', $this->instanceId);
             $this->db->where('clients_email', $fromEmail);
-            $client = $this->db->getOne('clients', ['clients_id']);
+            $client = $this->db->getOne('clients', null, ['clients_id']);
             if ($client) {
                 $clientId = (int)$client['clients_id'];
             }
@@ -484,7 +484,7 @@ class ImapMailService
     {
         $this->db->where('emailReceived_id', $emailId);
         $this->db->where('instances_id', $this->instanceId);
-        $email = $this->db->getOne('emailReceived', null, ['emailReceived_id']);
+        $email = $this->db->getOne('emailReceived');
 
         if (!$email) {
             return false;

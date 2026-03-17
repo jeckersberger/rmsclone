@@ -50,7 +50,7 @@ class FederationService
 
         // Unseren Firmennamen und Company Code holen
         $this->db->where('instances_id', $instanceId);
-        $instance = $this->db->getOne('instances', ['instances_name', 'instances_companyCode']);
+        $instance = $this->db->getOne('instances', null, ['instances_name', 'instances_companyCode']);
         $ourName = $instance ? $instance['instances_name'] : 'Unbekannt';
         $ourCompanyCode = $instance['instances_companyCode'] ?? null;
 
@@ -125,7 +125,7 @@ class FederationService
         // Partner-Code pruefen
         $this->db->where('instances_partnerCode', $partnerCode);
         $this->db->where('instances_deleted', 0);
-        $instance = $this->db->getOne('instances', ['instances_id', 'instances_name']);
+        $instance = $this->db->getOne('instances', null, ['instances_id', 'instances_name']);
 
         if (!$instance) {
             return ['success' => false, 'error' => 'invalid_code'];
@@ -148,7 +148,7 @@ class FederationService
 
         // Unseren Company Code holen
         $this->db->where('instances_id', $instanceId);
-        $instData = $this->db->getOne('instances', ['instances_companyCode']);
+        $instData = $this->db->getOne('instances', null, ['instances_companyCode']);
         $ourCompanyCode = $instData['instances_companyCode'] ?? null;
 
         // Verbindung speichern

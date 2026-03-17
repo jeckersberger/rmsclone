@@ -57,7 +57,7 @@ class ExternalItemService
         // Check barcode uniqueness
         if (!empty($insertData['barcode'])) {
             $this->db->where('barcode', $insertData['barcode']);
-            $existing = $this->db->getOne('external_items', ['id']);
+            $existing = $this->db->getOne('external_items', null, ['id']);
             if ($existing) return null;
         }
 
@@ -122,7 +122,7 @@ class ExternalItemService
         $this->db->where('e.id', $id);
         $this->db->join('locations l', 'e.location_id=l.id', 'LEFT');
         $this->db->join('projects p', 'e.project_id=p.projects_id', 'LEFT');
-        $item = $this->db->getOne('external_items e', [
+        $item = $this->db->getOne('external_items e', null, [
             'e.*',
             'l.name AS location_name',
             'l.color AS location_color',
@@ -174,7 +174,7 @@ class ExternalItemService
         $this->db->where('barcode', $barcode);
         $this->db->join('locations l', 'e.location_id=l.id', 'LEFT');
         $this->db->join('projects p', 'e.project_id=p.projects_id', 'LEFT');
-        $item = $this->db->getOne('external_items e', [
+        $item = $this->db->getOne('external_items e', null, [
             'e.*',
             'l.name AS location_name',
             'p.projects_name AS project_name'
@@ -190,7 +190,7 @@ class ExternalItemService
         $this->db->where('rfid_tag', $rfidTag);
         $this->db->join('locations l', 'e.location_id=l.id', 'LEFT');
         $this->db->join('projects p', 'e.project_id=p.projects_id', 'LEFT');
-        $item = $this->db->getOne('external_items e', [
+        $item = $this->db->getOne('external_items e', null, [
             'e.*',
             'l.name AS location_name',
             'p.projects_name AS project_name'
@@ -255,7 +255,7 @@ class ExternalItemService
             }
 
             $this->db->where('barcode', $barcode);
-            $exists = $this->db->getOne('external_items', ['id']);
+            $exists = $this->db->getOne('external_items', null, ['id']);
             if (!$exists) return $barcode;
         }
         // Fallback with timestamp
@@ -265,7 +265,7 @@ class ExternalItemService
     private function getNextBarcodeNumber(): int
     {
         $this->db->orderBy('id', 'DESC');
-        $last = $this->db->getOne('external_items', ['id', 'barcode']);
+        $last = $this->db->getOne('external_items', null, ['id', 'barcode']);
         if (!$last || empty($last['barcode'])) return 1;
 
         // Extract number from EXT-xxxxxx
@@ -286,15 +286,15 @@ class ExternalItemService
     {
         // Check external_items
         $this->db->where('rfid_tag', $rfidTag);
-        if ($this->db->getOne('external_items', ['id'])) return false;
+        if ($this->db->getOne('external_items', null, ['id'])) return false;
 
         // Check assets
         $this->db->where('asset_definableFields_1', $rfidTag);
-        if ($this->db->getOne('assets', ['assets_id'])) return false;
+        if ($this->db->getOne('assets', null, ['assets_id'])) return false;
 
         // Check stock_instances
         $this->db->where('rfid_tag', $rfidTag);
-        if ($this->db->getOne('stock_instances', ['id'])) return false;
+        if ($this->db->getOne('stock_instances', null, ['id'])) return false;
 
         return true;
     }

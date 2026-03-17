@@ -53,7 +53,7 @@ class DeliveryNoteQrService
     {
         $this->db->where('delivery_note_id', $deliveryNoteId);
         $this->db->where('active', 1);
-        $existing = $this->db->getOne('delivery_note_tokens', ['token']);
+        $existing = $this->db->getOne('delivery_note_tokens', null, ['token']);
         if ($existing) return $existing['token'];
 
         $token = bin2hex(random_bytes(16));
@@ -75,7 +75,7 @@ class DeliveryNoteQrService
         $this->db->where('token', $token);
         $this->db->where('active', 1);
         $this->db->where('expires_at', date('Y-m-d H:i:s'), '>=');
-        $result = $this->db->getOne('delivery_note_tokens', ['delivery_note_id']);
+        $result = $this->db->getOne('delivery_note_tokens', null, ['delivery_note_id']);
         return $result ? (int) $result['delivery_note_id'] : null;
     }
 

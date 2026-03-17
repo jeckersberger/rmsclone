@@ -231,12 +231,14 @@ class KassenbuchService
         $ausgaben = (float)($aus['total'] ?? 0);
 
         // Summen nach Kategorie
-        $this->db->where('instances_id', $instanceId);
-        $this->db->where('entry_date', $dateFrom, '>=');
-        $this->db->where('entry_date', $dateTo, '<=');
-        $this->db->groupBy('category');
-        $this->db->groupBy('type');
-        $categoryRows = $this->db->get('kassenbuch_entries', null, 'category, type, SUM(amount) as total, COUNT(*) as count') ?: [];
+        $sql = "SELECT category, type, SUM(amount) as total, COUNT(*) as count
+                FROM kassenbuch_entries
+                WHERE instances_id = ?
+                  AND entry_date >= ?
+                  AND entry_date <= ?
+                GROUP BY category, type";
+
+        $categoryRows = $this->db->rawQuery($sql, [$instanceId, $dateFrom, $dateTo]) ?: [];
 
         return [
             'year'              => $year,

@@ -105,7 +105,7 @@ class CheckInOutService
         // Check if asset is a case
         $this->db->where('assets_id', $assetId);
         $this->db->where('instances_id', $instanceId);
-        $asset = $this->db->getOne('assets', ['is_case']);
+        $asset = $this->db->getOne('assets', null, ['is_case']);
 
         $result = [
             'checkinId' => null,
@@ -261,7 +261,7 @@ class CheckInOutService
 
         // Check if asset is a case
         $this->db->where('assets_id', $assetId);
-        $asset = $this->db->getOne('assets', ['is_case']);
+        $asset = $this->db->getOne('assets', null, ['is_case']);
 
         if ($asset && $asset['is_case']) {
             $warnings['case_verification_needed'] = true;

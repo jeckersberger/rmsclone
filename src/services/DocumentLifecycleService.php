@@ -25,7 +25,7 @@ class DocumentLifecycleService
         if ($docType === 'quote' && $validUntil === null) {
             // Check instance setting for default days, fallback to 30
             $this->db->where('instances_id', $instanceId);
-            $inst = $this->db->getOne('instances', ['valid_until_default_days']);
+            $inst = $this->db->getOne('instances', null, ['valid_until_default_days']);
             $defaultDays = (int)($inst['valid_until_default_days'] ?? 30) ?: 30;
             $validUntil = date('Y-m-d', strtotime("+{$defaultDays} days"));
         }
@@ -64,7 +64,7 @@ class DocumentLifecycleService
         if ($instanceId !== null) {
             $this->db->where('instances_id', $instanceId);
         }
-        $doc = $this->db->getOne('document_lifecycle');
+        $doc = $this->db->getOne('document_lifecycle', null);
         if (!$doc) return false;
 
         $allowed = $this->getAllowedTransitions($doc['doc_type'], $doc['status']);
@@ -97,7 +97,7 @@ class DocumentLifecycleService
         if ($instanceId !== null) {
             $this->db->where('instances_id', $instanceId);
         }
-        $sourceDoc = $this->db->getOne('document_lifecycle');
+        $sourceDoc = $this->db->getOne('document_lifecycle', null);
         if (!$sourceDoc) return null;
 
         // Validate conversion path
@@ -158,7 +158,7 @@ class DocumentLifecycleService
     public function markPaid(int $docId, float $amount, int $userId, ?string $reference = null): bool
     {
         $this->db->where('id', $docId);
-        $doc = $this->db->getOne('document_lifecycle');
+        $doc = $this->db->getOne('document_lifecycle', null);
         if (!$doc || $doc['doc_type'] !== 'invoice') return false;
 
         $this->db->where('id', $docId);
@@ -183,13 +183,13 @@ class DocumentLifecycleService
 
         // Find the root document
         $this->db->where('id', $docId);
-        $doc = $this->db->getOne('document_lifecycle');
+        $doc = $this->db->getOne('document_lifecycle', null);
         if (!$doc) return $chain;
 
         // Walk up to root
         while ($doc['parent_doc_id']) {
             $this->db->where('id', $doc['parent_doc_id']);
-            $doc = $this->db->getOne('document_lifecycle');
+            $doc = $this->db->getOne('document_lifecycle', null);
             if (!$doc) break;
         }
 
@@ -364,7 +364,7 @@ class DocumentLifecycleService
         // Projekt-Gesamtbetrag ermitteln
         $this->db->where('doc_number', $result['doc_number']);
         $this->db->where('instances_id', $instanceId);
-        $export = $this->db->getOne('document_exports', ['totals_json']);
+        $export = $this->db->getOne('document_exports', null, ['totals_json']);
         $totals = $export ? json_decode($export['totals_json'], true) : [];
         $fullGross = (float)($totals['gross'] ?? 0);
         $fullNet = (float)($totals['net'] ?? 0);
@@ -452,7 +452,7 @@ class DocumentLifecycleService
         // Gesamtbetrag aus Export
         $this->db->where('doc_number', $result['doc_number']);
         $this->db->where('instances_id', $instanceId);
-        $export = $this->db->getOne('document_exports', ['totals_json']);
+        $export = $this->db->getOne('document_exports', null, ['totals_json']);
         $totals = $export ? json_decode($export['totals_json'], true) : [];
         $fullGross = (float)($totals['gross'] ?? 0);
         $fullNet = (float)($totals['net'] ?? 0);
@@ -551,7 +551,7 @@ class DocumentLifecycleService
     {
         // Original-Eintrag laden
         $this->db->where('id', $documentExportsId);
-        $original = $this->db->getOne('document_exports');
+        $original = $this->db->getOne('document_exports', null);
         if (!$original) return null;
 
         // Nur Angebote (quotes) duerfen versioniert werden
@@ -566,11 +566,11 @@ class DocumentLifecycleService
         // Hoechste bestehende Version fuer diese Angebots-Kette ermitteln
         $this->db->where('document_exports_parentVersionId', $parentId);
         $this->db->orderBy('document_exports_version', 'DESC');
-        $latestChild = $this->db->getOne('document_exports', ['document_exports_version']);
+        $latestChild = $this->db->getOne('document_exports', null, ['document_exports_version']);
 
         // Auch die Version des Originals beruecksichtigen
         $this->db->where('id', $parentId);
-        $parentDoc = $this->db->getOne('document_exports', ['document_exports_version']);
+        $parentDoc = $this->db->getOne('document_exports', null, ['document_exports_version']);
         $parentVersion = (int)($parentDoc['document_exports_version'] ?? 1);
 
         $latestChildVersion = $latestChild ? (int)$latestChild['document_exports_version'] : 0;
@@ -620,7 +620,7 @@ class DocumentLifecycleService
     {
         // Erst das Original laden, um den parentId zu ermitteln
         $this->db->where('id', $documentExportsId);
-        $doc = $this->db->getOne('document_exports');
+        $doc = $this->db->getOne('document_exports', null);
         if (!$doc) return [];
 
         $parentId = !empty($doc['document_exports_parentVersionId'])
@@ -629,7 +629,7 @@ class DocumentLifecycleService
 
         // Alle Versionen laden: das Original selbst + alle Kinder
         $this->db->where('id', $parentId);
-        $parent = $this->db->getOne('document_exports');
+        $parent = $this->db->getOne('document_exports', null);
         $versions = $parent ? [$parent] : [];
 
         $this->db->where('document_exports_parentVersionId', $parentId);

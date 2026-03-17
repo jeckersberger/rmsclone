@@ -99,7 +99,7 @@ class SurchargeService
         if (!$instanceId) return $defaults;
 
         $this->db->where('instances_id', $instanceId);
-        $instance = $this->db->getOne('instances', [
+        $instance = $this->db->getOne('instances', null, [
             'instances_surchargeEnabled',
             'instances_weekendSurchargeRate',
             'instances_holidaySurchargeRate',

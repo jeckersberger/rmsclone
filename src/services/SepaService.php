@@ -73,7 +73,7 @@ class SepaService
         $this->db->where('id', $mandateId);
         $this->db->where('instances_id', $instanceId);
         $this->db->where('status', 'active');
-        $mandate = $this->db->getOne('sepa_mandates');
+        $mandate = $this->db->getOne('sepa_mandates', null);
         if (!$mandate) return false;
 
         $this->db->where('id', $mandateId);
@@ -144,7 +144,7 @@ class SepaService
     {
         $this->db->where('id', $mandateId);
         $this->db->where('instances_id', $instanceId);
-        return $this->db->getOne('sepa_mandates') ?: null;
+        return $this->db->getOne('sepa_mandates', null) ?: null;
     }
 
     /**
@@ -160,7 +160,7 @@ class SepaService
 
         // Instanzdaten laden (Glaeubiger)
         $this->db->where('instances_id', $instanceId);
-        $instance = $this->db->getOne('instances');
+        $instance = $this->db->getOne('instances', null);
         if (!$instance) return null;
 
         // Rechnungen mit Mandaten laden
@@ -203,14 +203,14 @@ class SepaService
         if ($amount <= 0) return null;
 
         $this->db->where('instances_id', $instanceId);
-        $instance = $this->db->getOne('instances');
+        $instance = $this->db->getOne('instances', null);
         if (!$instance) return null;
 
         $this->db->where('sm.id', $mandateId);
         $this->db->where('sm.instances_id', $instanceId);
         $this->db->where('sm.status', 'active');
         $this->db->join('clients c', 'sm.clients_id=c.clients_id', 'LEFT');
-        $mandate = $this->db->getOne('sepa_mandates sm', ['sm.*', 'c.clients_name']);
+        $mandate = $this->db->getOne('sepa_mandates sm', null, ['sm.*', 'c.clients_name']);
         if (!$mandate) return null;
 
         $singleInvoice = [[
@@ -337,7 +337,7 @@ class SepaService
         $this->db->where('instances_id', $instanceId);
         $this->db->where('mandate_reference', "MNDT-$year-%", 'LIKE');
         $this->db->orderBy('mandate_reference', 'DESC');
-        $last = $this->db->getOne('sepa_mandates', ['mandate_reference']);
+        $last = $this->db->getOne('sepa_mandates', null, ['mandate_reference']);
 
         $nextNum = 1;
         if ($last && preg_match('/MNDT-\d{4}-(\d{4})$/', $last['mandate_reference'], $m)) {

@@ -32,7 +32,7 @@ class PartnerService
         // Find the partner by their unique code
         $this->db->where('instances_partnerCode', $partnerCode);
         $this->db->where('instances_deleted', 0);
-        $partner = $this->db->getOne('instances', ['instances_id', 'instances_name']);
+        $partner = $this->db->getOne('instances', null, ['instances_id', 'instances_name']);
         if (!$partner) return ['success' => false, 'error' => 'partner_not_found'];
         if ($partner['instances_id'] == $fromInstanceId) return ['success' => false, 'error' => 'self_link'];
 
@@ -40,7 +40,7 @@ class PartnerService
         $this->db->where('(instance_a_id = ? AND instance_b_id = ?) OR (instance_a_id = ? AND instance_b_id = ?)',
             [$fromInstanceId, $partner['instances_id'], $partner['instances_id'], $fromInstanceId]);
         $this->db->where('deleted', 0);
-        $existing = $this->db->getOne('partner_links');
+        $existing = $this->db->getOne('partner_links', null);
         if ($existing) return ['success' => false, 'error' => 'already_linked'];
 
         $this->db->insert('partner_links', [
@@ -184,7 +184,7 @@ class PartnerService
         $this->db->where('partner_instance_id', $myInstanceId);
         $this->db->where('assetTypes_id', $assetTypeId);
         $this->db->where('deleted', 0);
-        $specific = $this->db->getOne('partner_price_rules');
+        $specific = $this->db->getOne('partner_price_rules', null);
         if ($specific) return $specific;
 
         // Fallback: global partner discount
@@ -192,7 +192,7 @@ class PartnerService
         $this->db->where('partner_instance_id', $myInstanceId);
         $this->db->where('assetTypes_id IS NULL');
         $this->db->where('deleted', 0);
-        return $this->db->getOne('partner_price_rules');
+        return $this->db->getOne('partner_price_rules', null);
     }
 
     /**
@@ -209,7 +209,7 @@ class PartnerService
             $this->db->where('assetTypes_id IS NULL');
         }
         $this->db->where('deleted', 0);
-        $existing = $this->db->getOne('partner_price_rules');
+        $existing = $this->db->getOne('partner_price_rules', null);
 
         $data = [
             'owner_instance_id' => $ownerInstanceId,
@@ -254,7 +254,7 @@ class PartnerService
             $this->db->where('assetTypes_id', $assetTypeId);
             $this->db->where('instances_id', $toInstanceId);
             $this->db->where('assetTypes_deleted', 0);
-            $validAsset = $this->db->getOne('assetTypes', ['assetTypes_id']);
+            $validAsset = $this->db->getOne('assetTypes', null, ['assetTypes_id']);
             if (!$validAsset) {
                 continue; // Skip invalid/unauthorized asset types
             }
@@ -334,7 +334,7 @@ class PartnerService
         $code = strtoupper(bin2hex(random_bytes(4))); // 8 hex Zeichen
         // Kollisionspruefung
         $this->db->where('instances_partnerCode', $code);
-        if ($this->db->getOne('instances')) {
+        if ($this->db->getOne('instances', null)) {
             return $this->generatePartnerCode($instanceId); // Retry bei Kollision
         }
         $this->db->where('instances_id', $instanceId);

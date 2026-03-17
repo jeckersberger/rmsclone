@@ -29,7 +29,7 @@ class DocumentRenderer {
         $db->where('instances_id', $instanceId);
         $db->where('projects_id', $projectId);
         $db->where('type', 'invoice');
-        $existing = $db->getOne('document_exports', ['doc_number', 'generated_at']);
+        $existing = $db->getOne('document_exports', null, ['doc_number', 'generated_at']);
         if ($existing) {
             throw new \RuntimeException(
                 'GoBD-Sperre: Fuer dieses Projekt existiert bereits Rechnung ' . $existing['doc_number']
@@ -159,7 +159,7 @@ class DocumentRenderer {
         $docData['valid_until'] = new DateTime($validUntilStr);
       } else {
         $db->where('instances_id', $instanceId);
-        $instRow = $db->getOne('instances', ['valid_until_default_days']);
+        $instRow = $db->getOne('instances', null, ['valid_until_default_days']);
         $defaultDays = (int)($instRow['valid_until_default_days'] ?? 30) ?: 30;
         $docData['valid_until'] = (clone $docDate)->modify("+{$defaultDays} days");
       }
@@ -404,7 +404,7 @@ class DocumentRenderer {
         $docData['valid_until'] = new DateTime($validUntilStr);
       } else {
         $db->where('instances_id', $instanceId);
-        $instRow = $db->getOne('instances', ['valid_until_default_days']);
+        $instRow = $db->getOne('instances', null, ['valid_until_default_days']);
         $defaultDays = (int)($instRow['valid_until_default_days'] ?? 30) ?: 30;
         $docData['valid_until'] = (clone $docDate)->modify("+{$defaultDays} days");
       }
@@ -639,7 +639,7 @@ class DocumentRenderer {
     $db->where('instances_id', $instanceId);
     $db->where('projects_id', $projectId);
     $db->orderBy('created_at', 'DESC');
-    $packingList = $db->getOne('packing_lists', ['id']);
+    $packingList = $db->getOne('packing_lists', null, ['id']);
 
     if (!$packingList) {
       return null;

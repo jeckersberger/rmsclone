@@ -27,7 +27,7 @@ class GobdArchiveService
         $this->db->where('document_exports_id', $documentId);
         $this->db->where('instances_id', $instanceId);
         $this->db->where('document_exports_deleted', 0);
-        $document = $this->db->getOne('document_exports', [
+        $document = $this->db->getOne('document_exports', null, [
             'document_exports_id',
             'instances_id',
             'document_exports_number',
@@ -156,7 +156,7 @@ class GobdArchiveService
         $this->db->where('document_exports_id', $documentId);
         $this->db->where('instances_id', $instanceId);
         $this->db->where('document_exports_deleted', 0);
-        $document = $this->db->getOne('document_exports', [
+        $document = $this->db->getOne('document_exports', null, [
             'document_exports_id',
             'instances_id',
             'document_exports_number',

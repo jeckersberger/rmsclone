@@ -145,7 +145,7 @@ class AiAssetLookupService
         $key = md5(strtolower($name . '|' . $manufacturer));
         $this->db->where('cache_key', $key);
         $this->db->where('created_at', date('Y-m-d H:i:s', strtotime('-7 days')), '>=');
-        $cached = $this->db->getOne('ai_lookup_cache', ['response_data']);
+        $cached = $this->db->getOne('ai_lookup_cache', null, ['response_data']);
 
         if (!$cached) return null;
 

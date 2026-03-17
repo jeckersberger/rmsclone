@@ -32,7 +32,7 @@ class TagFormatService
         if ($this->companyCode !== null) return $this->companyCode;
 
         $this->db->where('instances_id', $this->instanceId);
-        $inst = $this->db->getOne('instances', ['instances_companyCode', 'instances_name', 'instances_partnerCode']);
+        $inst = $this->db->getOne('instances', null, ['instances_companyCode', 'instances_name', 'instances_partnerCode']);
 
         if ($inst && !empty($inst['instances_companyCode'])) {
             $this->companyCode = strtolower($inst['instances_companyCode']);
@@ -64,7 +64,7 @@ class TagFormatService
         // Load instance data if not provided
         if (!$instData) {
             $this->db->where('instances_id', $instanceId);
-            $instData = $this->db->getOne('instances', ['instances_name', 'instances_partnerCode']);
+            $instData = $this->db->getOne('instances', null, ['instances_name', 'instances_partnerCode']);
         }
 
         // Build the identity string for MD5 input
@@ -87,7 +87,7 @@ class TagFormatService
         while ($attempt < $maxAttempts) {
             $this->db->where('instances_companyCode', $code);
             $this->db->where('instances_id', $instanceId, '!=');
-            $existing = $this->db->getOne('instances', ['instances_id']);
+            $existing = $this->db->getOne('instances', null, ['instances_id']);
 
             if (!$existing) break;
 
@@ -125,7 +125,7 @@ class TagFormatService
         // Check if code is already taken
         $this->db->where('instances_companyCode', $newCode);
         $this->db->where('instances_id', $instanceId, '!=');
-        $existing = $this->db->getOne('instances', ['instances_id']);
+        $existing = $this->db->getOne('instances', null, ['instances_id']);
 
         if ($existing) {
             throw new Exception("Company code '{$newCode}' is already in use");
@@ -133,7 +133,7 @@ class TagFormatService
 
         // Get the old code for logging
         $this->db->where('instances_id', $instanceId);
-        $inst = $this->db->getOne('instances', ['instances_companyCode']);
+        $inst = $this->db->getOne('instances', null, ['instances_companyCode']);
         $oldCode = $inst['instances_companyCode'] ?? null;
         if ($oldCode) $oldCode = strtolower($oldCode);
 
@@ -178,7 +178,7 @@ class TagFormatService
         $code = strtolower($code);
         $this->db->where('instances_companyCode', $code);
         $this->db->where('instances_id', $partnerInstanceIds, 'IN');
-        $result = $this->db->getOne('instances', ['instances_id']);
+        $result = $this->db->getOne('instances', null, ['instances_id']);
 
         return (bool)$result;
     }
@@ -373,7 +373,7 @@ class TagFormatService
         // Check both the exact code and uppercase variant for backward compat
         $this->db->where('(LOWER(old_code) = ?)', [$oldCode]);
         $this->db->orderBy('changed_at', 'DESC');
-        $history = $this->db->getOne('company_code_history', ['new_code']);
+        $history = $this->db->getOne('company_code_history', null, ['new_code']);
 
         return $history ? strtolower($history['new_code']) : null;
     }
@@ -422,7 +422,7 @@ class TagFormatService
 
         // First, try to find by current company code (8 hex chars)
         $this->db->where('instances_companyCode', $code);
-        $inst = $this->db->getOne('instances', ['instances_id', 'instances_name', 'instances_companyCode']);
+        $inst = $this->db->getOne('instances', null, ['instances_id', 'instances_name', 'instances_companyCode']);
 
         if ($inst) {
             return $inst;
@@ -432,7 +432,7 @@ class TagFormatService
         $resolvedCode = $this->resolveOldCode($code);
         if ($resolvedCode) {
             $this->db->where('instances_companyCode', $resolvedCode);
-            $inst = $this->db->getOne('instances', ['instances_id', 'instances_name', 'instances_companyCode']);
+            $inst = $this->db->getOne('instances', null, ['instances_id', 'instances_name', 'instances_companyCode']);
             return $inst ?: null;
         }
 
@@ -550,7 +550,7 @@ class TagFormatService
         $this->db->where('a.assets_rfidTid', $tid);
         $this->db->where('a.assets_deleted', 0);
         $this->db->join('assetTypes at', 'at.assetTypes_id = a.assetTypes_id', 'LEFT');
-        $asset = $this->db->getOne('assets a', [
+        $asset = $this->db->getOne('assets a', null, [
             'a.assets_id', 'a.assets_tag', 'a.instances_id',
             'at.assetTypes_name AS type_name',
             'a.assets_serialInternal',
@@ -571,7 +571,7 @@ class TagFormatService
         // Check stock_instances
         $this->db->where('si.rfid_tid', $tid);
         $this->db->join('stock_items sit', 'sit.id = si.stock_item_id', 'LEFT');
-        $stock = $this->db->getOne('stock_instances si', [
+        $stock = $this->db->getOne('stock_instances si', null, [
             'si.id', 'si.instance_number', 'sit.name AS item_name',
             'sit.instances_id', 'sit.category',
         ]);
@@ -589,7 +589,7 @@ class TagFormatService
 
         // Check external_items
         $this->db->where('rfid_tid', $tid);
-        $ext = $this->db->getOne('external_items', [
+        $ext = $this->db->getOne('external_items', null, [
             'id', 'description', 'owner_name', 'instances_id',
         ]);
 
@@ -638,7 +638,7 @@ class TagFormatService
     {
         // Get asset type short name or abbreviation
         $this->db->where('assetTypes_id', $assetTypeId);
-        $assetType = $this->db->getOne('assetTypes', ['assetTypes_id', 'assetTypes_name']);
+        $assetType = $this->db->getOne('assetTypes', null, ['assetTypes_id', 'assetTypes_name']);
 
         if (!$assetType) {
             throw new Exception("Asset type {$assetTypeId} not found");

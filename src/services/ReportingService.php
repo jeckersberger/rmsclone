@@ -106,29 +106,29 @@ class ReportingService
     public function assetUtilization(string $from, string $to): array
     {
         // Total assets per type
-        $this->db->where('a.instances_id', $this->instanceId);
-        $this->db->where('a.assets_deleted', 0);
-        $this->db->join('assetTypes at', 'a.assetTypes_id=at.assetTypes_id', 'LEFT');
-        $this->db->groupBy('at.assetTypes_id');
-        $this->db->orderBy('total_assets', 'DESC');
-        $assetCounts = $this->db->get('assets a', null, [
-            'at.assetTypes_id',
-            'at.assetTypes_name',
-            'COUNT(*) AS total_assets'
-        ]);
+        $sql1 = "SELECT at.assetTypes_id, at.assetTypes_name, COUNT(*) AS total_assets
+                 FROM assets a
+                 LEFT JOIN assetTypes at ON a.assetTypes_id = at.assetTypes_id
+                 WHERE a.instances_id = ? AND a.assets_deleted = 0
+                 GROUP BY at.assetTypes_id
+                 ORDER BY total_assets DESC";
+
+        $assetCounts = $this->db->rawQuery($sql1, [$this->instanceId]);
 
         // Assignments in period
-        $this->db->where('aa.instances_id', $this->instanceId);
-        $this->db->join('assets a', 'aa.assets_id=a.assets_id', 'INNER');
-        $this->db->join('assetTypes at', 'a.assetTypes_id=at.assetTypes_id', 'LEFT');
-        $this->db->join('projects p', 'aa.projects_id=p.projects_id', 'LEFT');
-        $this->db->where('(p.projects_dates_use_start <= ? AND p.projects_dates_use_end >= ?)', [$to, $from]);
-        $this->db->groupBy('at.assetTypes_id');
-        $assignmentCounts = $this->db->get('assetsAssignments aa', null, [
-            'at.assetTypes_id',
-            'COUNT(DISTINCT a.assets_id) AS used_assets',
-            'COUNT(*) AS assignment_count'
-        ]);
+        $sql2 = "SELECT at.assetTypes_id,
+                        COUNT(DISTINCT a.assets_id) AS used_assets,
+                        COUNT(*) AS assignment_count
+                 FROM assetsAssignments aa
+                 INNER JOIN assets a ON aa.assets_id = a.assets_id
+                 LEFT JOIN assetTypes at ON a.assetTypes_id = at.assetTypes_id
+                 LEFT JOIN projects p ON aa.projects_id = p.projects_id
+                 WHERE aa.instances_id = ?
+                   AND p.projects_dates_use_start <= ?
+                   AND p.projects_dates_use_end >= ?
+                 GROUP BY at.assetTypes_id";
+
+        $assignmentCounts = $this->db->rawQuery($sql2, [$this->instanceId, $to, $from]);
 
         // Index assignments
         $assignments = [];

@@ -36,7 +36,7 @@ class PartnerBillingService
             if ($rule['discount_pct'] > 0) {
                 // Hole aktuellen Katalogpreis
                 $this->db->where('assetTypes_id', $rule['assetTypes_id']);
-                $assetType = $this->db->getOne('assetTypes', ['assetTypes_dayRate', 'assetTypes_weekRate']);
+                $assetType = $this->db->getOne('assetTypes', null, ['assetTypes_dayRate', 'assetTypes_weekRate']);
                 if (!$assetType) continue;
 
                 $discountFactor = 1 - ($rule['discount_pct'] / 100);
@@ -84,7 +84,7 @@ class PartnerBillingService
     public function calculateRevenueSplit(int $orderId): array
     {
         $this->db->where('id', $orderId);
-        $order = $this->db->getOne('partner_orders');
+        $order = $this->db->getOne('partner_orders', null);
         if (!$order) return ['error' => 'Order not found'];
 
         $totalAmount = (float) $order['total_amount'];

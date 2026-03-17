@@ -145,11 +145,12 @@ class StockItemService
      */
     public function getCategories(int $instanceId): array
     {
-        $this->db->where('instances_id', $instanceId);
-        $this->db->where('deleted', 0);
-        $this->db->groupBy('category');
-        $this->db->orderBy('category', 'ASC');
-        $rows = $this->db->get('stock_items', null, ['category']) ?: [];
+        $sql = "SELECT DISTINCT category
+                FROM stock_items
+                WHERE instances_id = ? AND deleted = 0
+                ORDER BY category ASC";
+
+        $rows = $this->db->rawQuery($sql, [$instanceId]) ?: [];
         return array_column($rows, 'category');
     }
 

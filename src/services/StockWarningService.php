@@ -158,7 +158,7 @@ class StockWarningService
 
         // Get project dates
         $this->db->where('projects_id', $projectId);
-        $project = $this->db->getOne('projects', ['projects_dates_use_start', 'projects_dates_use_end']);
+        $project = $this->db->getOne('projects', null, ['projects_dates_use_start', 'projects_dates_use_end']);
 
         $conflictAssets = [];
 
@@ -389,7 +389,7 @@ class StockWarningService
     {
         // Check if RFID tracking is active for this instance
         $this->db->where('instances_id', $instanceId);
-        $instance = $this->db->getOne('instances', ['instances_rfid_active']);
+        $instance = $this->db->getOne('instances', null, ['instances_rfid_active']);
 
         if (!$instance || !$instance['instances_rfid_active']) {
             return [];

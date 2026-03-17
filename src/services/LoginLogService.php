@@ -58,19 +58,21 @@ class LoginLogService
      */
     public function getLogByInstance(int $instanceId, int $limit = 100): ?array
     {
-        $this->db->join('users', 'login_log.users_userid = users.users_userid', 'LEFT');
-        $this->db->join('userInstances', 'users.users_userid = userInstances.users_userid', 'LEFT');
-        $this->db->join('instancePositions', 'userInstances.instancePositions_id = instancePositions.instancePositions_id', 'LEFT');
-        $this->db->where('instancePositions.instances_id', $instanceId);
-        $this->db->where('userInstances.userInstances_deleted', 0);
-        $this->db->orderBy('login_log.created_at', 'DESC');
-        $this->db->groupBy('login_log.id');
-        return $this->db->get('login_log', $limit, [
-            'login_log.*',
-            'users.users_name1',
-            'users.users_name2',
-            'users.users_email',
-        ]);
+        $sql = "SELECT login_log.*,
+                       users.users_name1,
+                       users.users_name2,
+                       users.users_email
+                FROM login_log
+                LEFT JOIN users ON login_log.users_userid = users.users_userid
+                LEFT JOIN userInstances ON users.users_userid = userInstances.users_userid
+                LEFT JOIN instancePositions ON userInstances.instancePositions_id = instancePositions.instancePositions_id
+                WHERE instancePositions.instances_id = ?
+                  AND userInstances.userInstances_deleted = 0
+                GROUP BY login_log.id
+                ORDER BY login_log.created_at DESC
+                LIMIT ?";
+
+        return $this->db->rawQuery($sql, [$instanceId, $limit]);
     }
 
     /**

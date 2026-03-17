@@ -153,7 +153,7 @@ class ViesValidationService
     {
         // Kunden-USt-IdNr. laden
         $this->db->where('clients_id', $clientId);
-        $client = $this->db->getOne('clients', ['clients_vatId']);
+        $client = $this->db->getOne('clients', null, ['clients_vatId']);
 
         if (!$client || empty($client['clients_vatId'])) {
             return [];
@@ -179,7 +179,7 @@ class ViesValidationService
         $this->db->where('country_code', $countryCode);
         $this->db->where('expires_at', date('Y-m-d H:i:s'), '>');
         $this->db->orderBy('validated_at', 'DESC');
-        $result = $this->db->getOne('vies_validation_cache');
+        $result = $this->db->getOne('vies_validation_cache', null);
 
         return $result ?: null;
     }

@@ -137,7 +137,7 @@ class TotpService
         $code = str_replace('-', '', strtoupper(trim($code)));
 
         $this->db->where('users_userid', $userId);
-        $user = $this->db->getOne('users', ['users_totpBackupCodes']);
+        $user = $this->db->getOne('users', null, ['users_totpBackupCodes']);
         if (!$user || empty($user['users_totpBackupCodes'])) {
             return false;
         }
@@ -193,7 +193,7 @@ class TotpService
     public function isTotpEnabled(int $userId): bool
     {
         $this->db->where('users_userid', $userId);
-        $user = $this->db->getOne('users', ['users_totpEnabled']);
+        $user = $this->db->getOne('users', null, ['users_totpEnabled']);
         return $user && (int)$user['users_totpEnabled'] === 1;
     }
 

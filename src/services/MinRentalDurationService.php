@@ -30,7 +30,7 @@ class MinRentalDurationService
     public function getMinDuration(int $assetTypeId): int
     {
         $this->db->where('assetTypes_id', $assetTypeId);
-        $result = $this->db->getOne('assetTypes', ['assetTypes_minRentalDays']);
+        $result = $this->db->getOne('assetTypes', null, ['assetTypes_minRentalDays']);
         return $result ? (int) ($result['assetTypes_minRentalDays'] ?? 0) : 0;
     }
 

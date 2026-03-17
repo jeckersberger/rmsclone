@@ -93,7 +93,7 @@ class RateLimitService
     {
         $cutoff = date('Y-m-d H:i:s', strtotime("-{$olderThanHours} hours"));
         $this->db->where('attempted_at < ?', [$cutoff]);
-        return $this->db->delete('rate_limits') ? $this->db->count : 0;
+        return $this->db->delete('rate_limits') ? $this->db->affectedRows() : 0;
     }
 
     private static function getClientIp(): ?string

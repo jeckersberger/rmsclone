@@ -105,7 +105,7 @@ class CrossInstanceLookupService
             $this->db->where('a.instances_id', $partnerId);
             $this->db->where('a.assets_deleted', 0);
             $this->db->join('assetTypes at', 'a.assetTypes_id=at.assetTypes_id', 'LEFT');
-            $asset = $this->db->getOne('assets a', [
+            $asset = $this->db->getOne('assets a', null, [
                 'a.assets_id', 'a.assets_tag',
                 'at.assetTypes_name AS type_name',
                 'a.instances_id',
@@ -146,7 +146,7 @@ class CrossInstanceLookupService
             $this->db->where('si.rfid_tid', $tid);
             $this->db->join('stock_items sit', 'si.stock_item_id=sit.id', 'LEFT');
             $this->db->where('sit.instances_id', $partnerId);
-            $stock = $this->db->getOne('stock_instances si', [
+            $stock = $this->db->getOne('stock_instances si', null, [
                 'si.id', 'si.instance_number',
                 'sit.name AS item_name', 'sit.instances_id',
             ]);
@@ -171,7 +171,7 @@ class CrossInstanceLookupService
             // External items
             $this->db->where('rfid_tid', $tid);
             $this->db->where('instances_id', $partnerId);
-            $ext = $this->db->getOne('external_items', ['id', 'description', 'owner_name', 'instances_id']);
+            $ext = $this->db->getOne('external_items', null, ['id', 'description', 'owner_name', 'instances_id']);
 
             if ($ext) {
                 return [
@@ -215,7 +215,7 @@ class CrossInstanceLookupService
             $this->db->where('a.instances_id', $instanceId);
             $this->db->where('a.assets_deleted', 0);
             $this->db->join('assetTypes at', 'a.assetTypes_id=at.assetTypes_id', 'LEFT');
-            $asset = $this->db->getOne('assets a', [
+            $asset = $this->db->getOne('assets a', null, [
                 'a.assets_id', 'a.assets_tag', 'a.assets_name',
                 'a.asset_definableFields_1 AS rfid_tag',
                 'at.assetTypes_name AS type_name',
@@ -257,7 +257,7 @@ class CrossInstanceLookupService
             $this->db->where('si.instance_number', $entityId);
             $this->db->join('stock_items sit', 'si.stock_item_id=sit.id', 'LEFT');
             $this->db->where('sit.instances_id', $instanceId);
-            $stockInst = $this->db->getOne('stock_instances si', [
+            $stockInst = $this->db->getOne('stock_instances si', null, [
                 'si.id', 'si.instance_number', 'si.rfid_tag',
                 'sit.name AS item_name', 'sit.category', 'sit.instances_id'
             ]);
@@ -283,7 +283,7 @@ class CrossInstanceLookupService
         } elseif ($entityType === 'external') {
             $this->db->where('e.id', $entityId);
             $this->db->where('e.instances_id', $instanceId);
-            $ext = $this->db->getOne('external_items e', [
+            $ext = $this->db->getOne('external_items e', null, [
                 'e.id', 'e.description', 'e.owner_name', 'e.barcode', 'e.rfid_tag', 'e.instances_id'
             ]);
 
@@ -336,7 +336,7 @@ class CrossInstanceLookupService
             $this->db->where('a.assets_deleted', 0);
             $this->db->where('a.asset_definableFields_1', $tagValue);
             $this->db->join('assetTypes at', 'a.assetTypes_id=at.assetTypes_id', 'LEFT');
-            $asset = $this->db->getOne('assets a', [
+            $asset = $this->db->getOne('assets a', null, [
                 'a.assets_id', 'a.assets_tag', 'a.assets_name',
                 'a.asset_definableFields_1 AS rfid_tag',
                 'at.assetTypes_name AS type_name',
@@ -380,7 +380,7 @@ class CrossInstanceLookupService
             $this->db->where('si.rfid_tag', $tagValue);
             $this->db->join('stock_items sit', 'si.stock_item_id=sit.id', 'LEFT');
             $this->db->where('sit.instances_id', $partnerId);
-            $stockInst = $this->db->getOne('stock_instances si', [
+            $stockInst = $this->db->getOne('stock_instances si', null, [
                 'si.id', 'si.instance_number', 'si.rfid_tag',
                 'sit.name AS item_name', 'sit.category', 'sit.instances_id'
             ]);
@@ -408,7 +408,7 @@ class CrossInstanceLookupService
             // Check external_items by barcode or RFID
             $this->db->where('e.instances_id', $partnerId);
             $this->db->where('(e.barcode = ? OR e.rfid_tag = ?)', [$tagValue, $tagValue]);
-            $ext = $this->db->getOne('external_items e', [
+            $ext = $this->db->getOne('external_items e', null, [
                 'e.id', 'e.description', 'e.owner_name', 'e.barcode', 'e.rfid_tag', 'e.instances_id'
             ]);
 
@@ -448,7 +448,7 @@ class CrossInstanceLookupService
         $servers = $this->db->get('partner_servers', null, [
             'partner_servers_id', 'partner_servers_url', 'partner_servers_name',
             'partner_servers_apiKey'
-        ]);
+        ]) ?: [];
 
         if (!$servers) return null;
 
@@ -553,7 +553,7 @@ class CrossInstanceLookupService
     private function getInstanceName(int $instanceId): string
     {
         $this->db->where('instances_id', $instanceId);
-        $inst = $this->db->getOne('instances', ['instances_name']);
+        $inst = $this->db->getOne('instances', null, ['instances_name']);
         return $inst ? $inst['instances_name'] : 'Unbekannt';
     }
 }

@@ -50,12 +50,12 @@ class InvoiceMailService
 
         // Lade Business-Daten
         $this->db->where('instances_id', $instanceId);
-        $instance = $this->db->getOne('instances');
+        $instance = $this->db->getOne('instances', null);
         $businessName = $instance['instances_name'] ?? $CONFIG['PROJECT_NAME'];
 
         // Lade Projekt-Daten
         $this->db->where('projects_id', $projectId);
-        $project = $this->db->getOne('projects');
+        $project = $this->db->getOne('projects', null);
         $projectName = $project['projects_name'] ?? '';
 
         // Typ-Labels
@@ -74,7 +74,7 @@ class InvoiceMailService
 
         // PDF-Datei laden
         $this->db->where('s3files_id', $s3fileId);
-        $s3file = $this->db->getOne('s3files');
+        $s3file = $this->db->getOne('s3files', null);
         if (!$s3file) {
             return ['success' => false, 'message' => 'PDF-Datei nicht gefunden.'];
         }
@@ -111,7 +111,7 @@ class InvoiceMailService
             // Log in document_lifecycle
             $this->db->where('instances_id', $instanceId);
             $this->db->where('doc_number', $docNumber);
-            $doc = $this->db->getOne('document_lifecycle');
+            $doc = $this->db->getOne('document_lifecycle', null);
             if ($doc) {
                 $this->db->where('id', $doc['id']);
                 $this->db->update('document_lifecycle', [
@@ -147,7 +147,7 @@ class InvoiceMailService
         // Lade Kunden-E-Mail aus Projekt
         $this->db->join('clients c', 'p.clients_id=c.clients_id', 'LEFT');
         $this->db->where('p.projects_id', $projectId);
-        $result = $this->db->getOne('projects p', ['c.clients_email', 'c.clients_name']);
+        $result = $this->db->getOne('projects p', null, ['c.clients_email', 'c.clients_name']);
 
         if (!$result || empty($result['clients_email'])) {
             return ['success' => false, 'message' => 'Kunde hat keine E-Mail-Adresse hinterlegt.'];
@@ -211,16 +211,27 @@ class InvoiceMailService
 
     private function getPdfData(array $s3file): ?string
     {
+        // Dependency: $bCMS global must be available and have localFilePath() method
+        // This is typically set up in the bootstrap/initialization files
         global $bCMS;
+
         try {
             if (isset($s3file['s3files_id']) && $s3file['s3files_id']) {
+                // Check if $bCMS is available and has the required method
+                if (!isset($bCMS) || !is_object($bCMS) || !method_exists($bCMS, 'localFilePath')) {
+                    // Fallback: try direct S3 or database retrieval
+                    return null;
+                }
+
                 $localPath = $bCMS->localFilePath($s3file['s3files_id']);
                 if ($localPath && file_exists($localPath)) {
                     $data = file_get_contents($localPath);
                     if ($data !== false) return $data;
                 }
             }
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+            // Log silently; method not available in this context
+        }
 
         return null;
     }

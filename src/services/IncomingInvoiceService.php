@@ -529,13 +529,16 @@ class IncomingInvoiceService
      */
     public function searchByVendor(string $query, int $instanceId): array
     {
-        $this->db->where('deleted', 0);
-        $this->db->where('instances_id', $instanceId);
-        $this->db->where('vendor_name', '%' . $query . '%', 'LIKE');
-        $this->db->groupBy('vendor_name');
-        $this->db->orderBy('vendor_name', 'ASC');
-        $this->db->limit(10);
-        $results = $this->db->get('incoming_invoices') ?: [];
+        $sql = "SELECT vendor_name
+                FROM incoming_invoices
+                WHERE deleted = 0
+                  AND instances_id = ?
+                  AND vendor_name LIKE ?
+                GROUP BY vendor_name
+                ORDER BY vendor_name ASC
+                LIMIT 10";
+
+        $results = $this->db->rawQuery($sql, [$instanceId, '%' . $query . '%']) ?: [];
 
         return array_map(function ($row) {
             return ['name' => $row['vendor_name']];
