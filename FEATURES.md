@@ -395,3 +395,6 @@ Teilweise implementiert (AppPreferences vorhanden). Sync-Mechanismus, Conflict R
 
 ### 11.7 Federation Freundescode Pairing Flow
 Konkreter User-Flow für das Verbinden zweier Instanzen per Freundescode muss noch designed werden.
+
+### 11.8 KI unterstützung bei der Asset anlage
+Wenn die KI Funktionen aktiviert wurden, soll beim Anlegen von assets Anhand vom Gerätenamen und Hersteller mit hilfe der KI ssachen wie Gewicht, sell Preis, Größe usw Rechergiert werden und in das Asset gespeichert werden
