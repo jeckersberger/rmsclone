@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rms.scanner.data.api.models.ProjectItem
 import com.rms.scanner.data.repository.RmsRepository
+import com.rms.scanner.rfid.ScanTriggerManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -40,6 +41,7 @@ class PackingListViewModel : ViewModel() {
 
     init {
         loadProjects()
+        startBarcodeListener()
     }
 
     private fun loadProjects() {
@@ -217,6 +219,18 @@ class PackingListViewModel : ViewModel() {
                 _uiState.value = _uiState.value.copy(
                     errorMessage = e.message ?: "Fehler"
                 )
+            }
+        }
+    }
+
+    /**
+     * Start listening for 2D barcode/QR code scans.
+     * Barcode values are processed the same way as RFID scans.
+     */
+    private fun startBarcodeListener() {
+        viewModelScope.launch {
+            ScanTriggerManager.barcodeEvents.collect { event ->
+                handleRfidScan(event.value)
             }
         }
     }

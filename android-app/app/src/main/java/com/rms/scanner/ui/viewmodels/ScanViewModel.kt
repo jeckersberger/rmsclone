@@ -78,11 +78,13 @@ class ScanViewModel(
     }
 
     /**
-     * Start listening for hardware trigger events.
+     * Start listening for hardware trigger events and barcode scans.
      * Call this when the screen becomes active.
      */
     fun startHardwareTriggerListener(scanAction: String) {
         currentScanAction = scanAction
+
+        // Listen for physical trigger button presses/releases
         viewModelScope.launch {
             ScanTriggerManager.triggerEvents.collect { event ->
                 when (event) {
@@ -97,6 +99,21 @@ class ScanViewModel(
                         }
                     }
                 }
+            }
+        }
+
+        // Listen for 2D barcode/QR code scans
+        startBarcodeListener(scanAction)
+    }
+
+    /**
+     * Start listening for 2D barcode/QR code scans.
+     * Barcode values are sent directly to the same universal_scan endpoint.
+     */
+    private fun startBarcodeListener(scanAction: String) {
+        viewModelScope.launch {
+            ScanTriggerManager.barcodeEvents.collect { event ->
+                handleTagRead(event.value, scanAction)
             }
         }
     }

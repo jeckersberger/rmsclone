@@ -37,10 +37,11 @@ class InventoryViewModel(
     }
 
     /**
-     * Listen for hardware scan trigger events.
+     * Listen for hardware scan trigger events and barcode scans.
      * For Inventory, trigger press starts the inventory session if not already active.
      */
     private fun startHardwareTriggerListener() {
+        // Listen for physical trigger button presses/releases
         viewModelScope.launch {
             ScanTriggerManager.triggerEvents.collect { event ->
                 when (event) {
@@ -52,6 +53,24 @@ class InventoryViewModel(
                     is ScanTriggerManager.TriggerEvent.Released -> {
                         // Inventory runs continuously until explicitly completed
                     }
+                }
+            }
+        }
+
+        // Listen for 2D barcode/QR code scans
+        startBarcodeListener()
+    }
+
+    /**
+     * Start listening for 2D barcode/QR code scans.
+     * Barcode values are processed the same way as RFID tags during inventory.
+     */
+    private fun startBarcodeListener() {
+        viewModelScope.launch {
+            ScanTriggerManager.barcodeEvents.collect { event ->
+                val sessionId = _uiState.value.sessionId
+                if (sessionId != null && _uiState.value.isInventoryActive) {
+                    handleTagRead(sessionId, event.value)
                 }
             }
         }

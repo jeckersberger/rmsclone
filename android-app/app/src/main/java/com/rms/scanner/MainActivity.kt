@@ -53,10 +53,9 @@ class MainActivity : ComponentActivity() {
                 ?: return
 
             Log.d(tag, "2D Barcode received: $barcode")
-            // Barcode scans are treated like a scan trigger press + immediate tag read.
-            // The barcode value will be handled by the active screen's ViewModel
-            // through the same ScanTriggerManager flow.
-            ScanTriggerManager.onTriggerPressed()
+            // Forward the barcode value directly to ScanTriggerManager.
+            // ViewModels listen to barcodeEvents and process the value the same way as RFID tags.
+            ScanTriggerManager.onBarcodeScanned(barcode)
         }
     }
 

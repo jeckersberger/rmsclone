@@ -47,10 +47,11 @@ class BoxScanViewModel(
     }
 
     /**
-     * Listen for hardware scan trigger events.
+     * Listen for hardware scan trigger events and barcode scans.
      * BoxScan uses press-to-start, release-to-stop continuous scanning.
      */
     private fun startHardwareTriggerListener() {
+        // Listen for physical trigger button presses/releases
         viewModelScope.launch {
             ScanTriggerManager.triggerEvents.collect { event ->
                 when (event) {
@@ -65,6 +66,21 @@ class BoxScanViewModel(
                         }
                     }
                 }
+            }
+        }
+
+        // Listen for 2D barcode/QR code scans
+        startBarcodeListener()
+    }
+
+    /**
+     * Start listening for 2D barcode/QR code scans.
+     * Barcode values are added directly to the tag list for evaluation.
+     */
+    private fun startBarcodeListener() {
+        viewModelScope.launch {
+            ScanTriggerManager.barcodeEvents.collect { event ->
+                addTag(event.value)
             }
         }
     }
