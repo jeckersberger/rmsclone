@@ -518,13 +518,15 @@ PROMPT;
     private function toolSearchClients(array $input): array
     {
         $kw = '%' . ($input['keyword'] ?? '') . '%';
-        $this->db->where('instances_id', $this->instanceId);
-        $this->db->where('clients_deleted', 0);
-        $this->db->where("(clients_name LIKE ? OR clients_email LIKE ? OR clients_address1 LIKE ?)", [$kw, $kw, $kw]);
-        $this->db->orderBy('clients_name', 'ASC');
-        $clients = $this->db->get('clients', 20, [
-            'clients_id', 'clients_name', 'clients_email', 'clients_phone', 'clients_address1', 'clients_address2'
-        ]) ?: [];
+        // Use rawQuery for OR conditions since MeekroDB doesn't support complex OR in where()
+        $sql = "SELECT clients_id, clients_name, clients_email, clients_phone, clients_address1, clients_address2
+                FROM clients
+                WHERE instances_id = ?
+                AND clients_deleted = 0
+                AND (clients_name LIKE ? OR clients_email LIKE ? OR clients_address1 LIKE ?)
+                ORDER BY clients_name ASC
+                LIMIT 20";
+        $clients = $this->db->rawQuery($sql, [$this->instanceId, $kw, $kw, $kw]) ?: [];
 
         return ['clients' => $clients, 'count' => count($clients)];
     }
@@ -564,7 +566,7 @@ PROMPT;
         $this->db->where('p.instances_id', $this->instanceId);
         $this->db->join('clients c', 'p.clients_id=c.clients_id', 'LEFT');
         $this->db->join('projectsStatuses ps', 'p.projectsStatuses_id=ps.projectsStatuses_id', 'LEFT');
-        $project = $this->db->getOne('projects p', [
+        $project = $this->db->getOne('projects p', null, [
             'p.*', 'c.clients_name', 'c.clients_email', 'ps.projectsStatuses_name'
         ]);
 

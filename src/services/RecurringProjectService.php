@@ -285,7 +285,7 @@ class RecurringProjectService
     {
         $this->db->where('id', $templateId);
         $this->db->where('instances_id', $instanceId);
-        $t = $this->db->getOne('recurring_project_templates', ['active']);
+        $t = $this->db->getOne('recurring_project_templates', null, ['active']);
         if (!$t) return false;
         $this->db->where('id', $templateId);
         return $this->db->update('recurring_project_templates', ['active' => $t['active'] ? 0 : 1]);

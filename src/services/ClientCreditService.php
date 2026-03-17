@@ -22,7 +22,7 @@ class ClientCreditService
     public function checkCreditLimit(int $clientId, float $newInvoiceAmount = 0): array
     {
         $this->db->where('clients_id', $clientId);
-        $client = $this->db->getOne('clients', ['clients_creditLimit', 'clients_currentBalance', 'clients_name']);
+        $client = $this->db->getOne('clients', null, ['clients_creditLimit', 'clients_currentBalance', 'clients_name']);
 
         if (!$client) {
             return [
@@ -71,14 +71,15 @@ class ClientCreditService
      */
     public function updateCurrentBalance(int $clientId): float
     {
-        // Summe offener Rechnungen berechnen
-        $this->db->join('projects p', 'de.projects_id = p.projects_id', 'INNER');
-        $this->db->where('p.clients_id', $clientId);
-        $this->db->where('de.document_exports_type', 'invoice');
-        $this->db->where('de.document_exports_status', ['sent', 'overdue', 'reminded', 'partial'], 'IN');
-        $result = $this->db->getOne('document_exports de', 'COALESCE(SUM(de.document_exports_total - COALESCE(de.document_exports_paidAmount, 0)), 0) as total_outstanding');
-
-        $balance = (float)($result['total_outstanding'] ?? 0);
+        // Summe offener Rechnungen berechnen aus document_lifecycle
+        $sql = "SELECT COALESCE(SUM(dl.gross_amount - COALESCE(dl.paid_amount, 0)), 0) as total_outstanding
+                FROM document_lifecycle dl
+                INNER JOIN projects p ON dl.projects_id = p.projects_id
+                WHERE p.clients_id = ?
+                AND dl.doc_type = 'invoice'
+                AND dl.status IN ('sent', 'overdue', 'reminded', 'partial')";
+        $result = $this->db->rawQuery($sql, [$clientId]);
+        $balance = (float)($result[0]['total_outstanding'] ?? 0);
 
         // Saldo auf Kundendatensatz speichern
         $this->db->where('clients_id', $clientId);
@@ -104,7 +105,7 @@ class ClientCreditService
     public function getCreditInfo(int $clientId): array
     {
         $this->db->where('clients_id', $clientId);
-        $client = $this->db->getOne('clients', [
+        $client = $this->db->getOne('clients', null, [
             'clients_creditLimit', 'clients_currentBalance'
         ]);
 

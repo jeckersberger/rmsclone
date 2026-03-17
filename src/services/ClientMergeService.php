@@ -42,7 +42,7 @@ class ClientMergeService
         // Alle aktiven Kunden laden
         $this->db->where('instances_id', $instanceId);
         $this->db->where('clients_deleted', 0);
-        $this->db->where('clients_merged', 0, 'IS NULL', 'AND', true); // Nicht bereits zusammengefuehrt
+        $this->db->where('clients_merged IS NULL');
         $this->db->orderBy('clients_name', 'ASC');
         $clients = $this->db->get('clients') ?: [];
 

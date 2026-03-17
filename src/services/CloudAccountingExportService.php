@@ -302,7 +302,7 @@ class CloudAccountingExportService
     private function loadInstance(int $instanceId): array
     {
         $this->db->where('instances_id', $instanceId);
-        return $this->db->getOne('instances') ?: [];
+        return $this->db->getOne('instances', null, []) ?: [];
     }
 
     private function loadDocuments(int $instanceId, string $from, string $to): array
@@ -329,7 +329,7 @@ class CloudAccountingExportService
     {
         if ($clientId <= 0) return [];
         $this->db->where('clients_id', $clientId);
-        return $this->db->getOne('clients') ?: [];
+        return $this->db->getOne('clients', null, []) ?: [];
     }
 
     private function loadClients(int $instanceId): array

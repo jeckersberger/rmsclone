@@ -32,7 +32,7 @@ class MaintenanceScheduleService
                 AND at.assetTypes_deleted = 0
                 AND at.assetTypes_maintenanceInterval IS NOT NULL
                 AND at.assetTypes_maintenanceInterval > 0
-                HAVING days_since_maintenance >= at.assetTypes_maintenanceInterval
+                AND DATEDIFF(CURDATE(), COALESCE(a.assets_lastMaintenanceDate, a.assets_purchaseDate, '2020-01-01')) >= at.assetTypes_maintenanceInterval
                 ORDER BY days_since_maintenance DESC";
         return $this->db->rawQuery($sql, [$instanceId]) ?: [];
     }
@@ -54,7 +54,7 @@ class MaintenanceScheduleService
                 AND at.assetTypes_deleted = 0
                 AND at.assetTypes_maintenanceInterval IS NOT NULL
                 AND at.assetTypes_maintenanceInterval > 0
-                HAVING days_until_due BETWEEN 0 AND ?
+                AND (at.assetTypes_maintenanceInterval - DATEDIFF(CURDATE(), COALESCE(a.assets_lastMaintenanceDate, a.assets_purchaseDate, '2020-01-01'))) BETWEEN 0 AND ?
                 ORDER BY days_until_due ASC";
         return $this->db->rawQuery($sql, [$instanceId, $withinDays]) ?: [];
     }

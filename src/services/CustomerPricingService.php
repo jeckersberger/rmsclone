@@ -24,13 +24,16 @@ class CustomerPricingService
      */
     public function getEffectivePrice(int $clientId, int $assetTypeId, int $days = 1): array
     {
-        // 1) Check specific asset type price for this client
-        $this->db->where('clients_id', $clientId);
-        $this->db->where('assetTypes_id', $assetTypeId);
-        $this->db->where('deleted', 0);
-        $this->db->where('(min_days IS NULL OR min_days <= ?)', [$days]);
-        $this->db->orderBy('min_days', 'DESC'); // Most specific first
-        $specific = $this->db->getOne('client_price_rules');
+        // 1) Check specific asset type price for this client using rawQuery for complex OR
+        $sql = "SELECT * FROM client_price_rules
+                WHERE clients_id = ?
+                AND assetTypes_id = ?
+                AND deleted = 0
+                AND (min_days IS NULL OR min_days <= ?)
+                ORDER BY min_days DESC
+                LIMIT 1";
+        $result = $this->db->rawQuery($sql, [$clientId, $assetTypeId, $days]);
+        $specific = $result ? $result[0] : null;
 
         if ($specific) {
             return [

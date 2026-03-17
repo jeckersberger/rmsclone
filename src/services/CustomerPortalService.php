@@ -53,7 +53,7 @@ class CustomerPortalService
         $this->db->where('token', $hashedToken);
         $this->db->where('active', 1);
         $this->db->where('expires_at', date('Y-m-d H:i:s'), '>=');
-        $result = $this->db->getOne('customer_portal_tokens', ['client_id']);
+        $result = $this->db->getOne('customer_portal_tokens', null, ['client_id']);
         return $result ? (int) $result['client_id'] : null;
     }
 
@@ -77,17 +77,16 @@ class CustomerPortalService
      */
     public function getClientInvoices(int $clientId, int $limit = 20): array
     {
-        $sql = "SELECT de.document_exports_id, de.document_number, de.document_type,
-                       de.total_gross, de.created_at, de.status,
-                       p.projects_name
-                FROM document_exports de
-                JOIN projects p ON de.projects_id = p.projects_id
-                WHERE p.clients_id = ?
-                AND de.document_type IN ('invoice', 'credit_note')
-                AND de.deleted = 0
-                ORDER BY de.created_at DESC
-                LIMIT ?";
-        return $this->db->rawQuery($sql, [$clientId, $limit]) ?: [];
+        $this->db->where('p.clients_id', $clientId);
+        $this->db->where('de.type', ['invoice', 'credit_note'], 'IN');
+        $this->db->join('projects p', 'de.projects_id = p.projects_id', 'INNER');
+        $this->db->orderBy('de.generated_at', 'DESC');
+        $this->db->limit($limit);
+        return $this->db->get('document_exports de', null, [
+            'de.id', 'de.doc_number', 'de.type',
+            'de.totals_json', 'de.generated_at', 'de.status',
+            'p.projects_name'
+        ]) ?: [];
     }
 
     /**
@@ -142,7 +141,7 @@ class CustomerPortalService
         $this->db->where('projects_id', $projectId);
         $this->db->where('clients_id', $clientId);
         $this->db->where('projects_deleted', 0);
-        if (!$this->db->getOne('projects', ['projects_id'])) {
+        if (!$this->db->getOne('projects', null, ['projects_id'])) {
             return ['success' => false, 'error' => 'Projekt nicht gefunden'];
         }
 

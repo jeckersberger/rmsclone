@@ -269,17 +269,19 @@ class WisoExportService
         // Get payments CSV
         $paymentsCsv = $this->exportPayments($instanceId, $from, $to, $kontenrahmen);
 
-        // Calculate summary
-        $this->db->where('instances_id', $instanceId);
-        $this->db->where('document_exports_type', 'invoice');
-        $this->db->where('YEAR(document_exports_date)', $year);
-        $this->db->where('document_exports_deleted', 0);
-        $summaryInvoices = $this->db->getOne('document_exports', [
-            'COUNT(*) as count',
-            'SUM(document_exports_gross) as total_gross',
-            'SUM(document_exports_net) as total_net',
-            'SUM(document_exports_tax) as total_tax',
-        ]);
+        // Calculate summary using date range instead of YEAR()
+        $yearStart = $year . '-01-01';
+        $yearEnd = $year . '-12-31';
+        $sql = "SELECT COUNT(*) as count,
+                       SUM(de.totals_json->'$.gross_total') as total_gross,
+                       SUM(de.totals_json->'$.net_total') as total_net,
+                       SUM(de.totals_json->'$.tax_total') as total_tax
+                FROM document_exports de
+                WHERE de.instances_id = ?
+                AND de.type = 'invoice'
+                AND DATE(de.generated_at) BETWEEN ? AND ?";
+        $summaryInvoices = $this->db->rawQuery($sql, [$instanceId, $yearStart, $yearEnd]);
+        $summaryInvoices = $summaryInvoices ? $summaryInvoices[0] : ['count' => 0, 'total_gross' => 0, 'total_net' => 0, 'total_tax' => 0];
 
         $summary = [
             'year' => $year,
