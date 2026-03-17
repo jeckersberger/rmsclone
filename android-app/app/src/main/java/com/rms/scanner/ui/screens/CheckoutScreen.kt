@@ -15,6 +15,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +41,11 @@ fun CheckoutScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showProjectMenu by remember { mutableStateOf(false) }
+
+    // Activate hardware trigger listener for checkout mode
+    LaunchedEffect(Unit) {
+        viewModel.startHardwareTriggerListener("checkout")
+    }
 
     Column(
         modifier = Modifier

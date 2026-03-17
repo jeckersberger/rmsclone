@@ -45,7 +45,8 @@ class ScannerService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         Log.d(tag, "ScannerService destroyed")
-        stopForeground(STOP_FOREGROUND_REMOVE)
+        @Suppress("DEPRECATION")
+        stopForeground(true)
     }
 
     private fun createNotificationChannel() {

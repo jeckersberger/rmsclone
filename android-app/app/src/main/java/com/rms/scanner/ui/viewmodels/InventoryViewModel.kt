@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.rms.scanner.data.repository.RmsRepository
 import com.rms.scanner.rfid.RfidEvent
 import com.rms.scanner.rfid.RfidManager
+import com.rms.scanner.rfid.ScanTriggerManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -30,6 +31,31 @@ class InventoryViewModel(
 
     private val _uiState = MutableStateFlow(InventoryUiState())
     val uiState: StateFlow<InventoryUiState> = _uiState
+
+    init {
+        startHardwareTriggerListener()
+    }
+
+    /**
+     * Listen for hardware scan trigger events.
+     * For Inventory, trigger press starts the inventory session if not already active.
+     */
+    private fun startHardwareTriggerListener() {
+        viewModelScope.launch {
+            ScanTriggerManager.triggerEvents.collect { event ->
+                when (event) {
+                    is ScanTriggerManager.TriggerEvent.Pressed -> {
+                        if (!_uiState.value.isInventoryActive) {
+                            startInventory()
+                        }
+                    }
+                    is ScanTriggerManager.TriggerEvent.Released -> {
+                        // Inventory runs continuously until explicitly completed
+                    }
+                }
+            }
+        }
+    }
 
     fun startInventory() {
         viewModelScope.launch {

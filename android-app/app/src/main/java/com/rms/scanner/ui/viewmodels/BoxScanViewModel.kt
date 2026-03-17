@@ -10,6 +10,7 @@ import com.rms.scanner.data.preferences.AppPreferences
 import com.rms.scanner.data.repository.RmsRepository
 import com.rms.scanner.rfid.RfidEvent
 import com.rms.scanner.rfid.RfidManager
+import com.rms.scanner.rfid.ScanTriggerManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -41,6 +42,30 @@ class BoxScanViewModel(
 
     init {
         loadProjects()
+        startHardwareTriggerListener()
+    }
+
+    /**
+     * Listen for hardware scan trigger events.
+     * BoxScan uses press-to-start, release-to-stop continuous scanning.
+     */
+    private fun startHardwareTriggerListener() {
+        viewModelScope.launch {
+            ScanTriggerManager.triggerEvents.collect { event ->
+                when (event) {
+                    is ScanTriggerManager.TriggerEvent.Pressed -> {
+                        if (!_uiState.value.isScanning) {
+                            startScanning()
+                        }
+                    }
+                    is ScanTriggerManager.TriggerEvent.Released -> {
+                        if (_uiState.value.isScanning) {
+                            stopScanning()
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private fun loadProjects() {

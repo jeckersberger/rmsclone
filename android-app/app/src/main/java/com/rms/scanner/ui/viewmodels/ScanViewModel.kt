@@ -10,6 +10,7 @@ import com.rms.scanner.data.preferences.AppPreferences
 import com.rms.scanner.data.repository.RmsRepository
 import com.rms.scanner.rfid.RfidEvent
 import com.rms.scanner.rfid.RfidManager
+import com.rms.scanner.rfid.ScanTriggerManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -44,6 +45,9 @@ class ScanViewModel(
     private val _uiState = MutableStateFlow(ScanUiState())
     val uiState: StateFlow<ScanUiState> = _uiState
 
+    // The current scan action (checkout/checkin) — set when the screen activates
+    private var currentScanAction: String = "checkout"
+
     init {
         loadProjects()
     }
@@ -69,13 +73,38 @@ class ScanViewModel(
         _uiState.value = _uiState.value.copy(selectedProjectId = projectId)
     }
 
+    /**
+     * Start listening for hardware trigger events.
+     * Call this when the screen becomes active.
+     */
+    fun startHardwareTriggerListener(scanAction: String) {
+        currentScanAction = scanAction
+        viewModelScope.launch {
+            ScanTriggerManager.triggerEvents.collect { event ->
+                when (event) {
+                    is ScanTriggerManager.TriggerEvent.Pressed -> {
+                        if (!_uiState.value.isScanning) {
+                            startScanning(currentScanAction)
+                        }
+                    }
+                    is ScanTriggerManager.TriggerEvent.Released -> {
+                        if (_uiState.value.isScanning) {
+                            stopScanning()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     fun startScanning(scanAction: String) {
         if (_uiState.value.isScanning) return
+        currentScanAction = scanAction
 
         _uiState.value = _uiState.value.copy(isScanning = true)
         rfidManager.startInventory { event ->
             when (event) {
-                is RfidEvent.TagRead -> handleTagRead(event.epc, scanAction)
+                is RfidEvent.TagRead -> handleTagRead(event.epc, currentScanAction)
                 is RfidEvent.Error -> _uiState.value = _uiState.value.copy(
                     errorMessage = event.message
                 )

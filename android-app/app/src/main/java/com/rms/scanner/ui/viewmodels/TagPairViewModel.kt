@@ -8,6 +8,7 @@ import com.rms.scanner.data.api.models.StockInstance
 import com.rms.scanner.data.repository.RmsRepository
 import com.rms.scanner.rfid.RfidEvent
 import com.rms.scanner.rfid.RfidManager
+import com.rms.scanner.rfid.ScanTriggerManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -39,6 +40,28 @@ class TagPairViewModel(
 
     init {
         loadAssets()
+        startHardwareTriggerListener()
+    }
+
+    /**
+     * Listen for hardware scan trigger events.
+     * On the TagPair screen, pressing the trigger starts a single-tag TID scan.
+     */
+    private fun startHardwareTriggerListener() {
+        viewModelScope.launch {
+            ScanTriggerManager.triggerEvents.collect { event ->
+                when (event) {
+                    is ScanTriggerManager.TriggerEvent.Pressed -> {
+                        if (!_uiState.value.isScanning) {
+                            startTidScan()
+                        }
+                    }
+                    is ScanTriggerManager.TriggerEvent.Released -> {
+                        // TagPair uses single-shot scan, release is a no-op
+                    }
+                }
+            }
+        }
     }
 
     fun selectEntityType(type: String) {

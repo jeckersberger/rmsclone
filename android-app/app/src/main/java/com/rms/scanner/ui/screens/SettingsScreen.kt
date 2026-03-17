@@ -2,6 +2,7 @@ package com.rms.scanner.ui.screens
 
 import android.content.Context
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,13 +14,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -39,7 +38,6 @@ fun SettingsScreen(
 ) {
     val prefs = remember { AppPreferences(context) }
     var serverUrl by remember { mutableStateOf(prefs.getServerUrl()) }
-    var scannerPower by remember { mutableIntStateOf(prefs.getScannerPower()) }
     var soundEnabled by remember { mutableStateOf(prefs.isSoundEnabled()) }
     var vibrationEnabled by remember { mutableStateOf(prefs.isVibrationEnabled()) }
     var useMockScanner by remember { mutableStateOf(prefs.isUseMockScanner()) }
@@ -113,46 +111,27 @@ fun SettingsScreen(
                 Text("Speichern", style = MaterialTheme.typography.labelLarge)
             }
 
-            // Scanner Power
-            Text(
-                text = "Scanner Leistung",
-                style = MaterialTheme.typography.titleMedium,
-                color = TextSecondary,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
+            // Scanner Power (fixed at max)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp),
+                    .background(com.rms.scanner.ui.theme.SurfaceDark, RoundedCornerShape(8.dp))
+                    .padding(16.dp)
+                    .padding(bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Slider(
-                    value = scannerPower.toFloat(),
-                    onValueChange = { scannerPower = it.toInt() },
-                    valueRange = 5f..30f,
-                    modifier = Modifier.weight(1f),
-                    steps = 24
-                )
                 Text(
-                    text = "$scannerPower dBm",
+                    text = "Scanner Leistung",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextPrimary,
-                    modifier = Modifier.padding(start = 12.dp)
+                    modifier = Modifier.weight(1f)
                 )
-            }
-
-            Button(
-                onClick = { prefs.setScannerPower(scannerPower) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 24.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = com.rms.scanner.ui.theme.Primary,
-                    contentColor = TextPrimary
+                Text(
+                    text = "30 dBm (Max)",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = com.rms.scanner.ui.theme.Success,
+                    fontWeight = FontWeight.Bold
                 )
-            ) {
-                Text("Speichern", style = MaterialTheme.typography.labelLarge)
             }
 
             // Sound Toggle
@@ -234,5 +213,3 @@ fun SettingToggle(
         )
     }
 }
-
-import androidx.compose.foundation.shape.RoundedCornerShape

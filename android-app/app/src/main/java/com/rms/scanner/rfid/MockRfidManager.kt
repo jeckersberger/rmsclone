@@ -15,7 +15,7 @@ class MockRfidManager : RfidManager {
     private val tag = "MockRfidManager"
     private var isConnectedState = false
     private val isInventoryActive = AtomicBoolean(false)
-    private var currentPower = 15
+    private var currentPower = 30  // Max power like production
     private var inventoryCallback: ((RfidEvent) -> Unit)? = null
     private val handler = Handler(Looper.getMainLooper())
     private var inventoryRunnable: Runnable? = null
