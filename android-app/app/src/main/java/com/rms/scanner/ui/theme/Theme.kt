@@ -1,27 +1,25 @@
 package com.rms.scanner.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 
-private val DarkColorScheme = darkColorScheme(
+private val RmsColorScheme = darkColorScheme(
     primary = Primary,
-    onPrimary = TextPrimary,
+    onPrimary = TextOnAccent,
     primaryContainer = PrimaryDark,
     onPrimaryContainer = TextPrimary,
-    secondary = Secondary,
-    onSecondary = TextPrimary,
-    secondaryContainer = SecondaryDark,
+    secondary = Accent,
+    onSecondary = TextOnAccent,
+    secondaryContainer = AccentDark,
     onSecondaryContainer = TextPrimary,
     tertiary = Info,
-    onTertiary = TextPrimary,
+    onTertiary = TextOnAccent,
     tertiaryContainer = Info,
     onTertiaryContainer = TextPrimary,
     error = Error,
     errorContainer = Error,
-    onError = TextPrimary,
+    onError = TextOnAccent,
     onErrorContainer = TextPrimary,
     background = SurfaceLight,
     onBackground = TextPrimary,
@@ -29,21 +27,18 @@ private val DarkColorScheme = darkColorScheme(
     onSurface = TextPrimary,
     surfaceVariant = SurfaceVariant,
     onSurfaceVariant = TextSecondary,
-    outline = TextTertiary,
+    outline = SurfaceBorder,
     inverseOnSurface = SurfaceLight,
     inverseSurface = TextPrimary,
-    inversePrimary = PrimaryLight
+    inversePrimary = AccentLight
 )
 
 @Composable
 fun RmsScannerTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val colorScheme = DarkColorScheme
-
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = RmsColorScheme,
         typography = RmsTypography,
         content = content
     )

@@ -1,5 +1,6 @@
 package com.rms.scanner
 
+import android.app.AlertDialog
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -26,7 +27,11 @@ import com.rms.scanner.rfid.ChafonRfidManager
 import com.rms.scanner.rfid.MockRfidManager
 import com.rms.scanner.rfid.RfidManager
 import com.rms.scanner.rfid.ScanTriggerManager
+import com.rms.scanner.update.AppUpdateManager
 import com.rms.scanner.ui.navigation.AppNavigation
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import com.rms.scanner.ui.theme.RmsScannerTheme
 import com.rms.scanner.ui.theme.SurfaceLight
 
@@ -74,6 +79,9 @@ class MainActivity : ComponentActivity() {
 
         // Register 2D barcode scanner broadcast receiver
         registerBarcodeReceiver()
+
+        // Check for app updates via GitHub Releases (non-blocking)
+        checkForAppUpdate()
 
         setContent {
             RmsScannerTheme {
@@ -148,6 +156,31 @@ class MainActivity : ComponentActivity() {
             Log.d(tag, "2D barcode receiver registered")
         } catch (e: Exception) {
             Log.e(tag, "Failed to register barcode receiver", e)
+        }
+    }
+
+    /**
+     * Check GitHub Releases for a newer version.
+     * Shows an AlertDialog if an update is available.
+     */
+    private fun checkForAppUpdate() {
+        val updateManager = AppUpdateManager(this)
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                val update = updateManager.checkForUpdate() ?: return@launch
+
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle("Update verfuegbar: v${update.versionName}")
+                    .setMessage(update.releaseNotes)
+                    .setPositiveButton("Jetzt updaten") { _, _ ->
+                        updateManager.downloadAndInstall(update)
+                    }
+                    .setNegativeButton("Spaeter", null)
+                    .setCancelable(true)
+                    .show()
+            } catch (e: Exception) {
+                Log.e(tag, "Update check failed", e)
+            }
         }
     }
 

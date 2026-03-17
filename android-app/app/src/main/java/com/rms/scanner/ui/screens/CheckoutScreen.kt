@@ -1,17 +1,34 @@
 package com.rms.scanner.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CallMade
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,15 +40,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.rms.scanner.ui.components.ScanHistoryList
 import com.rms.scanner.ui.components.ScanResultCard
 import com.rms.scanner.ui.components.StatusIndicator
-import com.rms.scanner.ui.theme.Checkout
-import com.rms.scanner.ui.theme.SurfaceLight
-import com.rms.scanner.ui.theme.TextPrimary
-import com.rms.scanner.ui.theme.TextSecondary
+import com.rms.scanner.ui.theme.*
 import com.rms.scanner.ui.viewmodels.ScanViewModel
 
 @Composable
@@ -42,7 +57,6 @@ fun CheckoutScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showProjectMenu by remember { mutableStateOf(false) }
 
-    // Activate hardware trigger listener for checkout mode
     LaunchedEffect(Unit) {
         viewModel.startHardwareTriggerListener("checkout")
     }
@@ -51,161 +65,190 @@ fun CheckoutScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(SurfaceLight)
-            .verticalScroll(rememberScrollState())
     ) {
-        // Header
+        // ── Header ──
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .background(SurfaceDark)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.Filled.ArrowBack, "Zurueck", tint = TextSecondary)
+            }
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Checkout.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Filled.CallMade, "Ausleihe", tint = Checkout, modifier = Modifier.size(20.dp))
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Column {
                 Text(
                     text = "Ausleihe",
-                    style = MaterialTheme.typography.displaySmall,
+                    style = MaterialTheme.typography.headlineMedium,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold
                 )
             }
-            Button(
-                onClick = onBack,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = com.rms.scanner.ui.theme.SurfaceDark
-                )
-            ) {
-                Text("Zurück")
-            }
         }
 
-        // Project Selector
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = "Projekt",
-                style = MaterialTheme.typography.labelMedium,
-                color = TextSecondary,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            Button(
-                onClick = { showProjectMenu = true },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = com.rms.scanner.ui.theme.SurfaceDark
-                )
+            // ── Project Selector ──
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+                elevation = CardDefaults.cardElevation(1.dp)
             ) {
-                Text(
-                    text = uiState.projects.find { it.id == uiState.selectedProjectId }?.name
-                        ?: "Projekt wählen",
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Text(
+                        text = "Projekt",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = TextTertiary,
+                        modifier = Modifier.padding(bottom = 6.dp)
+                    )
+                    Button(
+                        onClick = { showProjectMenu = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = SurfaceVariant)
+                    ) {
+                        Text(
+                            text = uiState.projects.find { it.id == uiState.selectedProjectId }?.name
+                                ?: "Projekt waehlen",
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextPrimary
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showProjectMenu,
+                        onDismissRequest = { showProjectMenu = false }
+                    ) {
+                        uiState.projects.forEach { project ->
+                            DropdownMenuItem(
+                                text = { Text(project.name) },
+                                onClick = {
+                                    viewModel.selectProject(project.id)
+                                    showProjectMenu = false
+                                }
+                            )
+                        }
+                    }
+                }
             }
 
-            DropdownMenu(
-                expanded = showProjectMenu,
-                onDismissRequest = { showProjectMenu = false }
+            // ── Control Buttons ──
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                uiState.projects.forEach { project ->
-                    DropdownMenuItem(
-                        text = { Text(project.name) },
-                        onClick = {
-                            viewModel.selectProject(project.id)
-                            showProjectMenu = false
-                        }
+                Button(
+                    onClick = { viewModel.startScanning("checkout") },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp),
+                    enabled = !uiState.isScanning,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Checkout,
+                        contentColor = TextOnAccent
+                    )
+                ) {
+                    Icon(Icons.Filled.PlayArrow, null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Scannen", style = MaterialTheme.typography.labelLarge)
+                }
+
+                Button(
+                    onClick = { viewModel.stopScanning() },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp),
+                    enabled = uiState.isScanning,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Error,
+                        contentColor = TextOnAccent
+                    )
+                ) {
+                    Icon(Icons.Filled.Stop, null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Stoppen", style = MaterialTheme.typography.labelLarge)
+                }
+            }
+
+            // ── Status ──
+            StatusIndicator(
+                isActive = uiState.isScanning,
+                label = "Scanner"
+            )
+
+            // ── Status Messages ──
+            if (uiState.successMessage != null) {
+                Card(
+                    shape = RoundedCornerShape(8.dp),
+                    colors = CardDefaults.cardColors(containerColor = Success.copy(alpha = 0.12f))
+                ) {
+                    Text(
+                        text = uiState.successMessage!!,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Success,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(12.dp)
                     )
                 }
             }
-        }
 
-        // Last Scan Result
-        if (uiState.lastScanResult != null) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
+            if (uiState.errorMessage != null) {
+                Card(
+                    shape = RoundedCornerShape(8.dp),
+                    colors = CardDefaults.cardColors(containerColor = Error.copy(alpha = 0.12f))
+                ) {
+                    Text(
+                        text = uiState.errorMessage!!,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Error,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+            }
+
+            // ── Last Scan Result ──
+            if (uiState.lastScanResult != null) {
                 Text(
-                    text = "Letztes Scan-Ergebnis",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = TextSecondary,
-                    modifier = Modifier.padding(bottom = 12.dp)
+                    text = "Letztes Ergebnis",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = TextTertiary
                 )
                 ScanResultCard(uiState.lastScanResult!!)
             }
-        }
 
-        // Status Messages
-        if (uiState.errorMessage != null) {
-            Text(
-                text = "❌ ${uiState.errorMessage}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = androidx.compose.material3.tokens.ColorSchemeKeyTokens.Error,
-                modifier = Modifier.padding(16.dp)
-            )
-        }
-
-        if (uiState.successMessage != null) {
-            Text(
-                text = "✓ ${uiState.successMessage}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = com.rms.scanner.ui.theme.Success,
-                modifier = Modifier.padding(16.dp)
-            )
-        }
-
-        // Scan History
-        if (uiState.scanHistory.isNotEmpty()) {
-            ScanHistoryList(
-                history = uiState.scanHistory,
-                modifier = Modifier.padding(16.dp)
-            )
-        }
-
-        // Control Buttons
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
-        ) {
-            Button(
-                onClick = { viewModel.startScanning("checkout") },
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(vertical = 12.dp),
-                enabled = !uiState.isScanning,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Checkout,
-                    contentColor = TextPrimary
-                )
-            ) {
-                Text("Starten", style = MaterialTheme.typography.labelLarge)
+            // ── Scan History ──
+            if (uiState.scanHistory.isNotEmpty()) {
+                ScanHistoryList(history = uiState.scanHistory)
             }
 
-            Button(
-                onClick = { viewModel.stopScanning() },
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(vertical = 12.dp),
-                enabled = uiState.isScanning,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = com.rms.scanner.ui.theme.Error,
-                    contentColor = TextPrimary
+            // Hint text
+            if (!uiState.isScanning && uiState.scanHistory.isEmpty()) {
+                Text(
+                    text = "Druecke den Scan-Button oder die seitliche Taste um zu scannen",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextTertiary,
+                    modifier = Modifier.padding(top = 8.dp)
                 )
-            ) {
-                Text("Stoppen", style = MaterialTheme.typography.labelLarge)
             }
         }
-
-        StatusIndicator(
-            isActive = uiState.isScanning,
-            label = "Scanner",
-            modifier = Modifier.padding(16.dp)
-        )
     }
 }

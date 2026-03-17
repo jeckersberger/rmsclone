@@ -4,6 +4,13 @@ plugins {
     kotlin("kapt")
 }
 
+// ── Versioning ──
+// Bump these when releasing a new version.
+// versionCode MUST increase with every release (GitHub auto-update checks this).
+// versionName follows SemVer: MAJOR.MINOR.PATCH
+val appVersionCode = 2
+val appVersionName = "1.1.0"
+
 android {
     namespace = "com.rms.scanner"
     compileSdk = 34
@@ -12,8 +19,12 @@ android {
         applicationId = "com.rms.scanner"
         minSdk = 28
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
+
+        // Make version info available in BuildConfig
+        buildConfigField("String", "GITHUB_REPO", "\"jeckersberger/rmsclone\"")
+        buildConfigField("int", "VERSION_CODE", "$appVersionCode")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -42,6 +53,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     composeOptions {
