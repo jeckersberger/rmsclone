@@ -7,6 +7,14 @@
   - Grund: Sub-Agent hat komplexe SQL-Placeholder-Syntax verwendet die MeekroDB nicht unterstützt.
 - [2026-03-17] Regel: Bei Sub-Agent-Delegierung immer die DB-Library-Konventionen (MeekroDB vs PDO vs Eloquent) explizit im Prompt erwähnen.
   - Grund: Sub-Agent kannte die spezifische API der verwendeten DB-Library nicht.
+- [2026-03-18] Regel: MeekroDB hat kein standalone `groupBy()` — immer `rawQuery()` mit SQL GROUP BY verwenden.
+  - Grund: 8 Services hatten ->groupBy() Aufrufe die bei MeekroDB nicht existieren.
+- [2026-03-18] Regel: MeekroDB `$this->db->count` existiert nicht — `$this->db->affectedRows()` verwenden.
+  - Grund: 2 Services nutzten ->count nach delete() was keine gültige MeekroDB-Property ist.
+- [2026-03-18] Regel: Nach großem Batch-Fix immer einen Verifikations-Scan laufen lassen — erste Runde übersieht oft Dateien.
+  - Grund: Nach dem Fix von 37 Services fand der Verifikations-Scan noch 6 übersehene getOne()-Stellen in 2 weiteren Dateien.
+- [2026-03-18] Regel: Bei systematischen Codebase-Audits grep-basierte Suche statt manuelles Lesen verwenden.
+  - Grund: Manuelle Reviews übersehen wiederkehrende Patterns. Regex-Pattern `getOne\([^,]+,\s*\['\w+'` findet zuverlässig alle Fälle.
 
 ## Session-Log
 ### 2026-03-17 — Federation Tag Scanning in allen Scan-Flows
@@ -54,3 +62,17 @@
 - **external_items:** Leihgeräte von Partnerfirmen. Werden ganz normal verwaltet, gehören aber nicht der eigenen Firma. Frage offen: automatisch anlegen beim ersten Scan oder manuell im Web-UI?
 - **scan vs universal_scan:** universal_scan ist der aktuelle Standard (Assets + Stock + Partner). scan ist Legacy.
 - **Verbrauchsgegenstände (Consumables):** NOCH NICHT GEBAUT. Workflow: Menge raus auf Job, Menge zurück, Differenz = verbraucht. Eigene Tabelle nötig. Nicht für 1.1.
+
+### 2026-03-18 — Phase 9: Finaler Audit aller Services
+- Aufgaben:
+  - 103 Migration-Dateien auf Syntax geprüft → alle sauber
+  - 124 Service-Dateien systematisch auf MeekroDB-Antipatterns gescannt
+  - 99 getOne()-Aufrufe in 39 Services korrigiert (Spalten-Array als 3. statt 2. Parameter)
+  - 9 groupBy()-Aufrufe in 8 Services durch rawQuery() mit SQL GROUP BY ersetzt
+  - 2 count-Properties durch affectedRows() ersetzt
+  - 4 Yellow-flagged Services gefixt: CollectiveInvoiceService (DI), InvoiceMailService ($bCMS-Guard), AiActionQueueService (Constructor), ShippingService (konfigurierbarer DHL-Endpoint)
+- Fehler:
+  - Erster Batch-Fix (37 Services) hat StockWarningService und DocumentRenderer übersehen
+  - Verifikations-Scan nach dem Fix hat die 6 fehlenden Stellen gefunden
+- Ergebnis: 0 verbleibende MeekroDB-Antipatterns in der gesamten Codebase
+- Commit: db986199
