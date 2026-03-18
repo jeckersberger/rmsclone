@@ -68,31 +68,50 @@ class BookingPortalService
      */
     public function getPublicCatalog(int $instanceId, ?int $categoryId = null, ?string $search = null): array
     {
-        $this->db->where('instances_id', $instanceId);
-        $this->db->where('assetTypes_deleted', 0);
-
-        if ($categoryId) {
-            $this->db->where('assetCategories_id', $categoryId);
-        }
-
+        // Build SQL with optional search
         if ($search) {
             $search = "%{$search}%";
-            $this->db->where('(assetTypes_name LIKE ? OR assetTypes_description LIKE ?)', [$search, $search]);
+            $sql = "SELECT assetTypes_id, assetTypes_name, assetTypes_description,
+                           assetTypes_dayRate, assetTypes_weekRate, assetCategories_id
+                    FROM assetTypes
+                    WHERE instances_id = ? AND assetTypes_deleted = 0";
+            $params = [$instanceId];
+
+            if ($categoryId) {
+                $sql .= " AND assetCategories_id = ?";
+                $params[] = $categoryId;
+            }
+
+            $sql .= " AND (assetTypes_name LIKE ? OR assetTypes_description LIKE ?)";
+            $params[] = $search;
+            $params[] = $search;
+
+            $sql .= " ORDER BY assetTypes_name ASC";
+            $assetTypes = $this->db->rawQuery($sql, $params) ?: [];
+        } else {
+            $this->db->where('instances_id', $instanceId);
+            $this->db->where('assetTypes_deleted', 0);
+
+            if ($categoryId) {
+                $this->db->where('assetCategories_id', $categoryId);
+            }
+
+            $this->db->orderBy('assetTypes_name', 'ASC');
+
+            $assetTypes = $this->db->get('assetTypes', null, [
+                'assetTypes_id', 'assetTypes_name', 'assetTypes_description',
+                'assetTypes_dayRate', 'assetTypes_weekRate', 'assetCategories_id'
+            ]) ?: [];
         }
-
-        $this->db->orderBy('assetTypes_name', 'ASC');
-
-        $assetTypes = $this->db->get('assetTypes', null, [
-            'assetTypes_id', 'assetTypes_name', 'assetTypes_description',
-            'assetTypes_dayRate', 'assetTypes_weekRate', 'assetCategories_id'
-        ]) ?: [];
 
         foreach ($assetTypes as &$type) {
             // Count available assets
-            $this->db->where('assetTypes_id', $type['assetTypes_id']);
-            $this->db->where('assets_deleted', 0);
-            $availableCount = $this->db->getValue('assets', 'COUNT(*)') ?: 0;
-            $type['available_count'] = (int) $availableCount;
+            $result = $this->db->rawQuery(
+                "SELECT COUNT(*) as cnt FROM assets WHERE assetTypes_id = ? AND assets_deleted = 0",
+                [$type['assetTypes_id']]
+            );
+            $availableCount = (int)($result[0]['cnt'] ?? 0);
+            $type['available_count'] = $availableCount;
         }
 
         return $assetTypes;
@@ -116,9 +135,11 @@ class BookingPortalService
         }
 
         // Count total assets of this type
-        $this->db->where('assetTypes_id', $assetTypeId);
-        $this->db->where('assets_deleted', 0);
-        $totalCount = (int) ($this->db->getValue('assets', 'COUNT(*)') ?: 0);
+        $result = $this->db->rawQuery(
+            "SELECT COUNT(*) as cnt FROM assets WHERE assetTypes_id = ? AND assets_deleted = 0",
+            [$assetTypeId]
+        );
+        $totalCount = (int)($result[0]['cnt'] ?? 0);
 
         if ($totalCount < $quantity) {
             return [
@@ -231,7 +252,7 @@ class BookingPortalService
 
         $this->db->orderBy('created_at', 'DESC');
 
-        return $this->db->get('portal_inquiries') ?: [];
+        return $this->db->get('portal_inquiries', null, ['*']) ?: [];
     }
 
     /**
@@ -405,7 +426,7 @@ class BookingPortalService
         $this->db->where('client_id', $clientId);
         $this->db->orderBy('created_at', 'DESC');
 
-        return $this->db->get('portal_inquiries') ?: [];
+        return $this->db->get('portal_inquiries', null, ['*']) ?: [];
     }
 
     /**

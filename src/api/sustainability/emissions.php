@@ -13,7 +13,7 @@
 
 require_once __DIR__ . '/../apiHeadSecure.php';
 
-$sustainabilityService = new SustainabilityService($db);
+$sustainabilityService = new SustainabilityService($DBLIB);
 
 header('Content-Type: application/json');
 
@@ -24,7 +24,7 @@ if (!checkAccess('SUSTAINABILITY', 'VIEW')) {
     exit;
 }
 
-$instanceId = $_SESSION['instances_id'] ?? 0;
+$instanceId = (int)($AUTH->data['instance']['instances_id'] ?? 0);
 if ($instanceId <= 0) {
     http_response_code(400);
     echo json_encode(['error' => 'Instance not set']);

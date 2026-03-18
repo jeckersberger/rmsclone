@@ -20,7 +20,7 @@ if (!$user) {
     finish(false, ['message' => 'Nicht angemeldet']);
 }
 
-if (!$AUTH->serverPermissionCheck('WORKFLOWS:EDIT')) {
+if (!$AUTH->instancePermissionCheck('WORKFLOWS:EDIT')) {
     finish(false, ['message' => 'Keine Berechtigung']);
 }
 
@@ -71,7 +71,7 @@ try {
         'created_by' => (int)$user['users_userid'],
     ];
 
-    $workflowService = new WorkflowEngineService($db);
+    $workflowService = new WorkflowEngineService($DBLIB);
     $workflowId = $workflowService->createWorkflow($data, $steps);
 
     if (!$workflowId) {

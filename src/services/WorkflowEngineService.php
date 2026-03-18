@@ -35,7 +35,7 @@ class WorkflowEngineService
             $this->db->where('is_active', (int)$activeOnly);
         }
         $this->db->orderBy('name', 'ASC');
-        return $this->db->get('workflows') ?: [];
+        return $this->db->get('workflows', null, ['*']) ?: [];
     }
 
     /**
@@ -56,7 +56,7 @@ class WorkflowEngineService
         // Get steps
         $this->db->where('workflow_id', $id);
         $this->db->orderBy('step_order', 'ASC');
-        $workflow['steps'] = $this->db->get('workflow_steps') ?: [];
+        $workflow['steps'] = $this->db->get('workflow_steps', null, ['*']) ?: [];
 
         // Parse JSON fields
         if (is_string($workflow['trigger_config'])) {
@@ -337,7 +337,7 @@ class WorkflowEngineService
         $this->db->where('instances_id', $instanceId);
         $this->db->where('is_active', 1);
         $this->db->where('trigger_type', 'event');
-        $workflows = $this->db->get('workflows') ?: [];
+        $workflows = $this->db->get('workflows', null, ['*']) ?: [];
 
         foreach ($workflows as $workflow) {
             $triggerConfig = is_string($workflow['trigger_config'])
@@ -365,7 +365,7 @@ class WorkflowEngineService
         $this->db->where('instances_id', $instanceId);
         $this->db->where('is_active', 1);
         $this->db->where('trigger_type', 'cron');
-        $workflows = $this->db->get('workflows') ?: [];
+        $workflows = $this->db->get('workflows', null, ['*']) ?: [];
 
         foreach ($workflows as $workflow) {
             try {
@@ -391,7 +391,7 @@ class WorkflowEngineService
     {
         $this->db->where('workflow_id', $workflowId);
         $this->db->orderBy('started_at', 'DESC');
-        return $this->db->get('workflow_executions', $limit) ?: [];
+        return $this->db->get('workflow_executions', $limit, ['*']) ?: [];
     }
 
     /**
@@ -417,7 +417,7 @@ class WorkflowEngineService
         // Get execution logs
         $this->db->where('execution_id', $executionId);
         $this->db->orderBy('executed_at', 'ASC');
-        $execution['logs'] = $this->db->get('workflow_execution_logs') ?: [];
+        $execution['logs'] = $this->db->get('workflow_execution_logs', null, ['*']) ?: [];
 
         foreach ($execution['logs'] as &$log) {
             if (is_string($log['input_data'])) {
@@ -441,7 +441,7 @@ class WorkflowEngineService
     {
         $this->db->orderBy('category', 'ASC');
         $this->db->orderBy('name', 'ASC');
-        $templates = $this->db->get('workflow_templates') ?: [];
+        $templates = $this->db->get('workflow_templates', null, ['*']) ?: [];
 
         foreach ($templates as &$template) {
             if (is_string($template['workflow_json'])) {

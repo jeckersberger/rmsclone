@@ -22,7 +22,7 @@ class InsuranceService
         $this->db->where('instances_id', $instanceId);
 
         if ($activeOnly === true) {
-            $this->db->where('is_active', true);
+            $this->db->where('is_active', 1);
         }
 
         $this->db->orderBy('valid_until', 'DESC');
@@ -209,19 +209,19 @@ class InsuranceService
         }
 
         // Find policies covering this asset (directly or by type)
-        $this->db->where('ip.instances_id', $instanceId);
-        $this->db->where('ip.is_active', true);
-        $this->db->where('ip.valid_until', date('Y-m-d'), '>=');
+        $sql = "SELECT DISTINCT ip.* FROM insurance_policies ip
+                LEFT JOIN insurance_asset_coverage iac ON ip.id = iac.policy_id
+                WHERE ip.instances_id = ?
+                AND ip.is_active = 1
+                AND ip.valid_until >= ?
+                AND (iac.asset_id = ? OR iac.asset_type_id = ?)";
 
-        $this->db->where([
-            'iac.asset_id' => $assetId,
-            'iac.asset_type_id' => $asset['assetTypes_id'],
-        ], null, 'OR');
-
-        $this->db->join('insurance_asset_coverage iac', 'ip.id = iac.policy_id', 'LEFT');
-        $this->db->groupBy('ip.id');
-
-        return $this->db->get('insurance_policies ip', null, ['ip.*']) ?: [];
+        return $this->db->rawQuery($sql, [
+            $instanceId,
+            date('Y-m-d'),
+            $assetId,
+            $asset['assetTypes_id']
+        ]) ?: [];
     }
 
     /**
@@ -254,7 +254,7 @@ class InsuranceService
         $today = date('Y-m-d');
 
         $this->db->where('instances_id', $instanceId);
-        $this->db->where('is_active', true);
+        $this->db->where('is_active', 1);
         $this->db->where('valid_until', $today, '>=');
         $this->db->where('valid_until', $cutoffDate, '<=');
         $this->db->orderBy('valid_until', 'ASC');
@@ -278,23 +278,21 @@ class InsuranceService
         $today = date('Y-m-d');
 
         // Check for active coverage
-        $this->db->where('iac.asset_id', $assetId);
-        $this->db->where('ip.is_active', true);
-        $this->db->where('ip.valid_until', $today, '>=');
-        $this->db->join('insurance_policies ip', 'iac.policy_id = ip.id', 'INNER');
-        $activeCoverage = $this->db->getOne('insurance_asset_coverage iac', null, ['iac.id']);
+        $sql = "SELECT iac.id FROM insurance_asset_coverage iac
+                INNER JOIN insurance_policies ip ON iac.policy_id = ip.id
+                WHERE iac.asset_id = ? AND ip.is_active = 1 AND ip.valid_until >= ?";
+        $activeCoverage = $this->db->rawQuery($sql, [$assetId, $today]);
 
-        if ($activeCoverage) {
+        if (!empty($activeCoverage)) {
             // Check if expiring within 30 days
             $cutoff = date('Y-m-d', strtotime('+30 days'));
-            $this->db->where('iac.asset_id', $assetId);
-            $this->db->where('ip.is_active', true);
-            $this->db->where('ip.valid_until', $today, '>=');
-            $this->db->where('ip.valid_until', $cutoff, '<=');
-            $this->db->join('insurance_policies ip', 'iac.policy_id = ip.id', 'INNER');
-            $expiringCoverage = $this->db->getOne('insurance_asset_coverage iac', null, ['iac.id']);
+            $expiringSql = "SELECT iac.id FROM insurance_asset_coverage iac
+                            INNER JOIN insurance_policies ip ON iac.policy_id = ip.id
+                            WHERE iac.asset_id = ? AND ip.is_active = 1
+                            AND ip.valid_until >= ? AND ip.valid_until <= ?";
+            $expiringCoverage = $this->db->rawQuery($expiringSql, [$assetId, $today, $cutoff]);
 
-            return $expiringCoverage ? 'expiring' : 'covered';
+            return !empty($expiringCoverage) ? 'expiring' : 'covered';
         }
 
         return 'uncovered';
@@ -419,12 +417,10 @@ class InsuranceService
     public function getDashboardStats(int $instanceId): array
     {
         // Total coverage amount
-        $this->db->where('instances_id', $instanceId);
-        $this->db->where('is_active', true);
         $result = $this->db->rawQuery(
             "SELECT SUM(coverage_amount) as total_coverage
              FROM insurance_policies
-             WHERE instances_id = ? AND is_active = true",
+             WHERE instances_id = ? AND is_active = 1",
             [$instanceId]
         );
         $totalCoverage = floatval($result[0]['total_coverage'] ?? 0);
@@ -433,9 +429,12 @@ class InsuranceService
         $monthlyPremium = $this->calculateMonthlyPremium($instanceId);
 
         // Open claims count
-        $this->db->where('instances_id', $instanceId);
-        $this->db->where('status', ['submitted', 'under_review', 'approved', 'partially_approved'], 'IN');
-        $openClaimsCount = $this->db->getValue('insurance_claims', 'COUNT(*)');
+        $result = $this->db->rawQuery(
+            "SELECT COUNT(*) as cnt FROM insurance_claims
+             WHERE instances_id = ? AND status IN ('submitted', 'under_review', 'approved', 'partially_approved')",
+            [$instanceId]
+        );
+        $openClaimsCount = (int)($result[0]['cnt'] ?? 0);
 
         // Uncovered assets count
         $uncoveredAssets = $this->getUncoveredAssets($instanceId);
@@ -486,12 +485,10 @@ class InsuranceService
      */
     public function calculateMonthlyPremium(int $instanceId): float
     {
-        $this->db->where('instances_id', $instanceId);
-        $this->db->where('is_active', true);
         $result = $this->db->rawQuery(
             "SELECT SUM(premium_monthly) as total
              FROM insurance_policies
-             WHERE instances_id = ? AND is_active = true",
+             WHERE instances_id = ? AND is_active = 1",
             [$instanceId]
         );
 

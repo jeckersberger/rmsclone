@@ -169,7 +169,7 @@ class SustainabilityService
         foreach ($assets as $asset) {
             $this->db->where('id', $asset['assets_id']);
             $this->db->where('instances_id', $instanceId);
-            $assetDetail = $this->db->getOne('asset');
+            $assetDetail = $this->db->getOne('assets');
 
             if ($assetDetail && !empty($assetDetail['power_rating'])) {
                 // power_rating is in kW
@@ -270,8 +270,8 @@ class SustainabilityService
 
         // Transport emissions
         $this->db->where('instances_id', $instanceId);
-        $this->db->where('created_at', ['>=', $from . ' 00:00:00']);
-        $this->db->where('created_at', ['<=', $to . ' 23:59:59']);
+        $this->db->where('created_at', $from . ' 00:00:00', '>=');
+        $this->db->where('created_at', $to . ' 23:59:59', '<=');
         $transLogs = $this->db->get('sustainability_transport_log');
 
         $transportCo2 = 0;
@@ -281,8 +281,8 @@ class SustainabilityService
 
         // Energy emissions
         $this->db->where('instances_id', $instanceId);
-        $this->db->where('created_at', ['>=', $from . ' 00:00:00']);
-        $this->db->where('created_at', ['<=', $to . ' 23:59:59']);
+        $this->db->where('created_at', $from . ' 00:00:00', '>=');
+        $this->db->where('created_at', $to . ' 23:59:59', '<=');
         $energyLogs = $this->db->get('sustainability_energy_log');
 
         $energyCo2 = 0;
@@ -293,7 +293,7 @@ class SustainabilityService
         $totalCo2 = $transportCo2 + $energyCo2;
 
         // Count projects involved
-        $projectIds = array_unique(array_column($transLogs, 'project_id') + array_column($energyLogs, 'project_id'));
+        $projectIds = array_unique(array_merge(array_column($transLogs, 'project_id'), array_column($energyLogs, 'project_id')));
         $projectIds = array_filter($projectIds);
         $projectCount = count($projectIds);
 
@@ -327,15 +327,15 @@ class SustainabilityService
 
         // Transport emissions by project
         $this->db->where('instances_id', $instanceId);
-        $this->db->where('project_id', ['>', 0], 'AND');
-        $this->db->where('created_at', ['>=', $from . ' 00:00:00']);
-        $this->db->where('created_at', ['<=', $to . ' 23:59:59']);
+        $this->db->where('project_id', 0, '>');
+        $this->db->where('created_at', $from . ' 00:00:00', '>=');
+        $this->db->where('created_at', $to . ' 23:59:59', '<=');
         $transLogs = $this->db->get('sustainability_transport_log');
 
         // Energy emissions by project
         $this->db->where('instances_id', $instanceId);
-        $this->db->where('created_at', ['>=', $from . ' 00:00:00']);
-        $this->db->where('created_at', ['<=', $to . ' 23:59:59']);
+        $this->db->where('created_at', $from . ' 00:00:00', '>=');
+        $this->db->where('created_at', $to . ' 23:59:59', '<=');
         $energyLogs = $this->db->get('sustainability_energy_log');
 
         // Aggregate by project
@@ -459,8 +459,8 @@ class SustainabilityService
 
             // Transport
             $this->db->where('instances_id', $instanceId);
-            $this->db->where('created_at', ['>=', $monthStart . ' 00:00:00']);
-            $this->db->where('created_at', ['<=', $monthEnd . ' 23:59:59']);
+            $this->db->where('created_at', $monthStart . ' 00:00:00', '>=');
+            $this->db->where('created_at', $monthEnd . ' 23:59:59', '<=');
             $transLogs = $this->db->get('sustainability_transport_log');
 
             $transportCo2 = 0;
@@ -470,8 +470,8 @@ class SustainabilityService
 
             // Energy
             $this->db->where('instances_id', $instanceId);
-            $this->db->where('created_at', ['>=', $monthStart . ' 00:00:00']);
-            $this->db->where('created_at', ['<=', $monthEnd . ' 23:59:59']);
+            $this->db->where('created_at', $monthStart . ' 00:00:00', '>=');
+            $this->db->where('created_at', $monthEnd . ' 23:59:59', '<=');
             $energyLogs = $this->db->get('sustainability_energy_log');
 
             $energyCo2 = 0;
@@ -629,8 +629,8 @@ class SustainabilityService
 
         // Total energy this month
         $this->db->where('instances_id', $instanceId);
-        $this->db->where('created_at', ['>=', date('Y-m-01') . ' 00:00:00']);
-        $this->db->where('created_at', ['<=', date('Y-m-t') . ' 23:59:59']);
+        $this->db->where('created_at', date('Y-m-01') . ' 00:00:00', '>=');
+        $this->db->where('created_at', date('Y-m-t') . ' 23:59:59', '<=');
         $energyLogs = $this->db->get('sustainability_energy_log');
         $totalKwh = 0;
         foreach ($energyLogs as $log) {

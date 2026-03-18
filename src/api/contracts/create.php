@@ -20,9 +20,9 @@ try {
         throw new \Exception('Missing required fields: title, content_html, clients_id');
     }
 
-    $service = new ContractService($db);
+    $service = new ContractService($DBLIB);
     $contractId = $service->createContract([
-        'instances_id' => $CurrentInstance['instances_id'],
+        'instances_id' => $AUTH->data['instance']['instances_id'],
         'projects_id' => $data['projects_id'] ?? null,
         'clients_id' => (int)$data['clients_id'],
         'template_id' => isset($data['template_id']) ? (int)$data['template_id'] : null,
@@ -31,7 +31,7 @@ try {
         'status' => $data['status'] ?? 'draft',
         'valid_from' => $data['valid_from'] ?? null,
         'valid_until' => $data['valid_until'] ?? null,
-        'created_by' => $CurrentUser['users_id'],
+        'created_by' => $AUTH->data['users_userid'],
     ]);
 
     echo json_encode([

@@ -441,10 +441,12 @@ class MaintenanceService
         $upcomingCount = count($this->getUpcomingMaintenances($instanceId, 30));
 
         // Offene Jobs
-        $this->db->where('instances_id', $instanceId);
-        $this->db->where('status', self::STATUS_COMPLETED, '!=');
-        $this->db->where('status', self::STATUS_CANCELLED, '!=');
-        $openJobsCount = $this->db->getValue('maintenance_jobs', 'COUNT(*)');
+        $result = $this->db->rawQuery(
+            "SELECT COUNT(*) as cnt FROM maintenance_jobs
+             WHERE instances_id = ? AND status != ? AND status != ?",
+            [$instanceId, self::STATUS_COMPLETED, self::STATUS_CANCELLED]
+        );
+        $openJobsCount = (int)($result[0]['cnt'] ?? 0);
 
         // Kosten diesen Monat
         $thisMonth = date('Y-m-01');

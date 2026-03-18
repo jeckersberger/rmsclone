@@ -36,8 +36,8 @@ class BackupService
      */
     public function getConfigs(int $instanceId): array
     {
-        $configs = $this->db->where('instances_id', $instanceId)
-            ->get('backup_configs');
+        $this->db->where('instances_id', $instanceId);
+        $configs = $this->db->get('backup_configs');
 
         // Decode JSON destination configs
         foreach ($configs as &$config) {
@@ -71,9 +71,9 @@ class BackupService
 
         if (!empty($data['id'])) {
             // Update existing
-            $this->db->where('id', (int)$data['id'])
-                ->where('instances_id', $instanceId)
-                ->update('backup_configs', $configData);
+            $this->db->where('id', (int)$data['id']);
+            $this->db->where('instances_id', $instanceId);
+            $this->db->update('backup_configs', $configData);
             return (int)$data['id'];
         } else {
             // Insert new
@@ -87,7 +87,8 @@ class BackupService
      */
     public function runBackup(int $configId, string $type = 'manual'): int
     {
-        $config = $this->db->where('id', $configId)->getOne('backup_configs');
+        $this->db->where('id', $configId);
+        $config = $this->db->getOne('backup_configs');
         if (!$config) {
             throw new Exception('Backup configuration not found');
         }
@@ -104,16 +105,16 @@ class BackupService
         // Execute backup async (in production, queue this)
         try {
             if ($this->performDatabaseDump((int)$jobId)) {
-                $this->db->where('id', $jobId)
-                    ->update('backup_jobs', ['status' => 'completed', 'completed_at' => date('Y-m-d H:i:s')]);
+                $this->db->where('id', $jobId);
+                $this->db->update('backup_jobs', ['status' => 'completed', 'completed_at' => date('Y-m-d H:i:s')]);
             }
         } catch (Exception $e) {
-            $this->db->where('id', $jobId)
-                ->update('backup_jobs', [
-                    'status' => 'failed',
-                    'error_message' => $e->getMessage(),
-                    'completed_at' => date('Y-m-d H:i:s')
-                ]);
+            $this->db->where('id', $jobId);
+            $this->db->update('backup_jobs', [
+                'status' => 'failed',
+                'error_message' => $e->getMessage(),
+                'completed_at' => date('Y-m-d H:i:s')
+            ]);
         }
 
         return (int)$jobId;
@@ -124,15 +125,17 @@ class BackupService
      */
     public function performDatabaseDump(int $jobId): bool
     {
-        $job = $this->db->where('id', $jobId)->getOne('backup_jobs');
+        $this->db->where('id', $jobId);
+        $job = $this->db->getOne('backup_jobs');
         if (!$job) throw new Exception('Job not found');
 
-        $config = $this->db->where('id', $job['backup_configs_id'])->getOne('backup_configs');
+        $this->db->where('id', $job['backup_configs_id']);
+        $config = $this->db->getOne('backup_configs');
         if (!$config) throw new Exception('Config not found');
 
         // Update job status
-        $this->db->where('id', $jobId)
-            ->update('backup_jobs', ['status' => 'running', 'started_at' => date('Y-m-d H:i:s')]);
+        $this->db->where('id', $jobId);
+        $this->db->update('backup_jobs', ['status' => 'running', 'started_at' => date('Y-m-d H:i:s')]);
 
         // Get database credentials from config (assumes .env or similar)
         $dbHost = getenv('DB_HOST') ?: 'localhost';
@@ -182,12 +185,12 @@ class BackupService
         $finalPath = $this->uploadToDestination($backupFile, $destConfig, $config['destination_type']);
 
         // Update job with success details
-        $this->db->where('id', $jobId)
-            ->update('backup_jobs', [
-                'file_path' => $finalPath,
-                'file_size_bytes' => filesize($backupFile),
-                'tables_count' => $this->countTables($dbName),
-            ]);
+        $this->db->where('id', $jobId);
+        $this->db->update('backup_jobs', [
+            'file_path' => $finalPath,
+            'file_size_bytes' => filesize($backupFile),
+            'tables_count' => $this->countTables($dbName),
+        ]);
 
         // Clean up temp file
         @unlink($backupFile);
@@ -308,9 +311,8 @@ class BackupService
             $this->db->where('status', $status);
         }
         $this->db->orderBy('id', 'DESC');
-        $this->db->pageLimit = $limit;
 
-        return $this->db->get('backup_jobs');
+        return $this->db->get('backup_jobs', $limit);
     }
 
     /**
@@ -318,7 +320,8 @@ class BackupService
      */
     public function getJob(int $jobId): array
     {
-        $job = $this->db->where('id', $jobId)->getOne('backup_jobs');
+        $this->db->where('id', $jobId);
+        $job = $this->db->getOne('backup_jobs');
         if (!$job) {
             throw new Exception('Backup job not found');
         }
@@ -330,12 +333,11 @@ class BackupService
      */
     public function getLastSuccessfulBackup(int $instanceId): ?array
     {
-        $this->db->where('instances_id', $instanceId)
-            ->where('status', 'completed')
-            ->orderBy('completed_at', 'DESC')
-            ->pageLimit = 1;
+        $this->db->where('instances_id', $instanceId);
+        $this->db->where('status', 'completed');
+        $this->db->orderBy('completed_at', 'DESC');
 
-        $result = $this->db->get('backup_jobs');
+        $result = $this->db->get('backup_jobs', 1);
         return !empty($result) ? $result[0] : null;
     }
 
@@ -344,7 +346,8 @@ class BackupService
      */
     public function applyRetentionPolicy(int $configId): int
     {
-        $config = $this->db->where('id', $configId)->getOne('backup_configs');
+        $this->db->where('id', $configId);
+        $config = $this->db->getOne('backup_configs');
         if (!$config) {
             return 0;
         }
@@ -352,12 +355,11 @@ class BackupService
         $deleteCount = 0;
 
         // Get all completed backups, ordered by date
-        $this->db->where('backup_configs_id', $configId)
-            ->where('status', 'completed')
-            ->orderBy('completed_at', 'DESC')
-            ->pageLimit = 1000;
+        $this->db->where('backup_configs_id', $configId);
+        $this->db->where('status', 'completed');
+        $this->db->orderBy('completed_at', 'DESC');
 
-        $backups = $this->db->get('backup_jobs');
+        $backups = $this->db->get('backup_jobs', 1000);
 
         $now = new DateTime();
         $dailyCount = 0;
@@ -399,12 +401,14 @@ class BackupService
      */
     private function deleteBackup(int $jobId): void
     {
-        $job = $this->db->where('id', $jobId)->getOne('backup_jobs');
+        $this->db->where('id', $jobId);
+        $job = $this->db->getOne('backup_jobs');
         if ($job && $job['file_path']) {
             @unlink($job['file_path']);
         }
 
-        $this->db->where('id', $jobId)->delete('backup_jobs');
+        $this->db->where('id', $jobId);
+        $this->db->delete('backup_jobs');
     }
 
     /**
@@ -412,12 +416,11 @@ class BackupService
      */
     public function listAvailableBackups(int $instanceId): array
     {
-        $this->db->where('instances_id', $instanceId)
-            ->where('status', 'completed')
-            ->orderBy('completed_at', 'DESC')
-            ->pageLimit = 100;
+        $this->db->where('instances_id', $instanceId);
+        $this->db->where('status', 'completed');
+        $this->db->orderBy('completed_at', 'DESC');
 
-        return $this->db->get('backup_jobs');
+        return $this->db->get('backup_jobs', 100);
     }
 
     /**
@@ -425,7 +428,8 @@ class BackupService
      */
     public function restoreBackup(int $jobId, int $userId): int
     {
-        $job = $this->db->where('id', $jobId)->getOne('backup_jobs');
+        $this->db->where('id', $jobId);
+        $job = $this->db->getOne('backup_jobs');
         if (!$job || $job['status'] !== 'completed') {
             throw new Exception('Invalid or incomplete backup job');
         }
@@ -481,20 +485,20 @@ class BackupService
             }
 
             // Update restore log
-            $this->db->where('id', $restoreLogId)
-                ->update('backup_restore_log', [
-                    'status' => 'completed',
-                    'completed_at' => date('Y-m-d H:i:s'),
-                ]);
+            $this->db->where('id', $restoreLogId);
+            $this->db->update('backup_restore_log', [
+                'status' => 'completed',
+                'completed_at' => date('Y-m-d H:i:s'),
+            ]);
 
             return (int)$restoreLogId;
         } catch (Exception $e) {
-            $this->db->where('id', $restoreLogId)
-                ->update('backup_restore_log', [
-                    'status' => 'failed',
-                    'notes' => $e->getMessage(),
-                    'completed_at' => date('Y-m-d H:i:s'),
-                ]);
+            $this->db->where('id', $restoreLogId);
+            $this->db->update('backup_restore_log', [
+                'status' => 'failed',
+                'notes' => $e->getMessage(),
+                'completed_at' => date('Y-m-d H:i:s'),
+            ]);
 
             throw $e;
         }
@@ -526,7 +530,8 @@ class BackupService
      */
     public function testRestore(int $jobId): bool
     {
-        $job = $this->db->where('id', $jobId)->getOne('backup_jobs');
+        $this->db->where('id', $jobId);
+        $job = $this->db->getOne('backup_jobs');
         if (!$job || !file_exists($job['file_path'])) {
             throw new Exception('Backup job or file not found');
         }
@@ -571,12 +576,11 @@ class BackupService
 
         $recentFails = 0;
         if (!empty($configs)) {
-            $this->db->where('backup_configs_id', $configs[0]['id'])
-                ->where('status', 'failed')
-                ->where('created_at', '>', date('Y-m-d H:i:s', strtotime('-7 days')))
-                ->pageLimit = 100;
+            $this->db->where('backup_configs_id', $configs[0]['id']);
+            $this->db->where('status', 'failed');
+            $this->db->where('created_at', date('Y-m-d H:i:s', strtotime('-7 days')), '>');
 
-            $fails = $this->db->get('backup_jobs');
+            $fails = $this->db->get('backup_jobs', 100);
             $recentFails = count($fails);
         }
 
@@ -596,11 +600,10 @@ class BackupService
     public function processCronBackups(): void
     {
         // Get all active configs with cron schedules
-        $this->db->where('is_active', true)
-            ->where('schedule_cron', '!=', null)
-            ->pageLimit = 1000;
+        $this->db->where('is_active', true);
+        $this->db->where('schedule_cron', null, '!=');
 
-        $configs = $this->db->get('backup_configs');
+        $configs = $this->db->get('backup_configs', 1000);
 
         foreach ($configs as $config) {
             // Simple cron check (in production, use proper cron parser)
@@ -621,9 +624,9 @@ class BackupService
     private function shouldRunBackup(array $config): bool
     {
         // Simplified: check if config has been run in last 24 hours
-        $lastRun = $this->db->where('backup_configs_id', $config['id'])
-            ->where('created_at', '>', date('Y-m-d H:i:s', strtotime('-24 hours')))
-            ->getOne('backup_jobs');
+        $this->db->where('backup_configs_id', $config['id']);
+        $this->db->where('created_at', date('Y-m-d H:i:s', strtotime('-24 hours')), '>');
+        $lastRun = $this->db->getOne('backup_jobs');
 
         return !$lastRun;
     }
@@ -633,11 +636,10 @@ class BackupService
      */
     public function calculateStorageUsed(int $instanceId): array
     {
-        $this->db->where('instances_id', $instanceId)
-            ->where('status', 'completed')
-            ->pageLimit = 10000;
+        $this->db->where('instances_id', $instanceId);
+        $this->db->where('status', 'completed');
 
-        $backups = $this->db->get('backup_jobs');
+        $backups = $this->db->get('backup_jobs', 10000);
 
         $totalBytes = 0;
         $count = count($backups);
