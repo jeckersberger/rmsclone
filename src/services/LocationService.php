@@ -371,6 +371,297 @@ class LocationService
     }
 
     /**
+     * Get location summary with asset and stock counts per location
+     *
+     * @param int $instanceId Instance ID for multi-tenancy filtering
+     * @return array List of locations with asset_count and instance_count
+     */
+    public function getLocationSummary(int $instanceId): array
+    {
+        $locations = $this->listLocations(true);
+
+        $summary = [];
+        foreach ($locations as $location) {
+            $assetCount = 0;
+            $instanceCount = 0;
+
+            // Count assets at this location
+            $this->db->where('current_location_id', $location['id']);
+            $assets = $this->db->get('assets', null, ['assets_id']);
+            $assetCount = count($assets ?? []);
+
+            // Count stock instances at this location
+            $this->db->where('current_location_id', $location['id']);
+            $stocks = $this->db->get('stock_instances', null, ['id']);
+            $instanceCount = count($stocks ?? []);
+
+            $summary[] = array_merge($location, [
+                'asset_count' => $assetCount,
+                'instance_count' => $instanceCount,
+            ]);
+        }
+
+        return $summary;
+    }
+
+    /**
+     * Bulk move multiple assets to a target location
+     *
+     * @param array $assetIds Array of asset IDs to move
+     * @param int $targetLocationId Target location ID
+     * @param int $userId User ID for audit trail
+     * @param string|null $notes Optional notes
+     * @return array Summary with total, success, errors
+     */
+    public function bulkMoveAssets(array $assetIds, int $targetLocationId, int $userId, ?string $notes = null): array
+    {
+        $batchId = bin2hex(random_bytes(18)); // Generate unique batch ID
+        $successCount = 0;
+        $errorCount = 0;
+        $results = [];
+
+        foreach ($assetIds as $assetId) {
+            $assetId = intval($assetId);
+
+            try {
+                // Get current location
+                $this->db->where('assets_id', $assetId);
+                $asset = $this->db->getOne('assets', null, [
+                    'assets_id',
+                    'current_location_id',
+                    'current_location_custom',
+                ]);
+
+                if (!$asset) {
+                    $errorCount++;
+                    $results[] = ['asset_id' => $assetId, 'success' => false, 'message' => 'Asset not found'];
+                    continue;
+                }
+
+                // Update asset location
+                $this->db->where('assets_id', $assetId);
+                $updated = $this->db->update('assets', [
+                    'current_location_id' => $targetLocationId,
+                    'current_location_custom' => null,
+                    'location_updated_at' => date('Y-m-d H:i:s'),
+                ]);
+
+                if (!$updated) {
+                    $errorCount++;
+                    $results[] = ['asset_id' => $assetId, 'success' => false, 'message' => 'Update failed'];
+                    continue;
+                }
+
+                // Log in bulk_move_log
+                $this->db->insert('bulk_move_log', [
+                    'entity_type' => 'asset',
+                    'entity_id' => $assetId,
+                    'source_location_id' => $asset['current_location_id'],
+                    'source_location_custom' => $asset['current_location_custom'],
+                    'target_location_id' => $targetLocationId,
+                    'target_location_custom' => null,
+                    'moved_by' => $userId,
+                    'notes' => $notes,
+                    'batch_id' => $batchId,
+                    'created_at' => date('Y-m-d H:i:s'),
+                ]);
+
+                // Also log in location_log for historical tracking
+                $this->db->insert('location_log', [
+                    'entity_type' => 'asset',
+                    'entity_id' => $assetId,
+                    'previous_location_id' => $asset['current_location_id'],
+                    'previous_location_custom' => $asset['current_location_custom'],
+                    'new_location_id' => $targetLocationId,
+                    'new_location_custom' => null,
+                    'changed_by' => $userId,
+                    'notes' => 'Bulk move batch: ' . $batchId . ($notes ? ' - ' . $notes : ''),
+                    'created_at' => date('Y-m-d H:i:s'),
+                ]);
+
+                $successCount++;
+                $results[] = ['asset_id' => $assetId, 'success' => true, 'message' => 'Moved successfully'];
+            } catch (Exception $e) {
+                $errorCount++;
+                $results[] = ['asset_id' => $assetId, 'success' => false, 'message' => $e->getMessage()];
+            }
+        }
+
+        return [
+            'total' => count($assetIds),
+            'success' => $successCount,
+            'errors' => $errorCount,
+            'batch_id' => $batchId,
+            'details' => $results,
+        ];
+    }
+
+    /**
+     * Bulk move multiple stock instances to a target location
+     *
+     * @param array $stockInstanceIds Array of stock instance IDs to move
+     * @param int $targetLocationId Target location ID
+     * @param int $userId User ID for audit trail
+     * @param string|null $notes Optional notes
+     * @return array Summary with total, success, errors
+     */
+    public function bulkMoveStockInstances(array $stockInstanceIds, int $targetLocationId, int $userId, ?string $notes = null): array
+    {
+        $batchId = bin2hex(random_bytes(18));
+        $successCount = 0;
+        $errorCount = 0;
+        $results = [];
+
+        foreach ($stockInstanceIds as $instanceId) {
+            $instanceId = intval($instanceId);
+
+            try {
+                // Get current location
+                $this->db->where('id', $instanceId);
+                $stock = $this->db->getOne('stock_instances', null, [
+                    'id',
+                    'current_location_id',
+                    'current_location_custom',
+                ]);
+
+                if (!$stock) {
+                    $errorCount++;
+                    $results[] = ['stock_instance_id' => $instanceId, 'success' => false, 'message' => 'Stock instance not found'];
+                    continue;
+                }
+
+                // Update stock instance location
+                $this->db->where('id', $instanceId);
+                $updated = $this->db->update('stock_instances', [
+                    'current_location_id' => $targetLocationId,
+                    'current_location_custom' => null,
+                    'location_updated_at' => date('Y-m-d H:i:s'),
+                ]);
+
+                if (!$updated) {
+                    $errorCount++;
+                    $results[] = ['stock_instance_id' => $instanceId, 'success' => false, 'message' => 'Update failed'];
+                    continue;
+                }
+
+                // Log in bulk_move_log
+                $this->db->insert('bulk_move_log', [
+                    'entity_type' => 'stock_instance',
+                    'entity_id' => $instanceId,
+                    'source_location_id' => $stock['current_location_id'],
+                    'source_location_custom' => $stock['current_location_custom'],
+                    'target_location_id' => $targetLocationId,
+                    'target_location_custom' => null,
+                    'moved_by' => $userId,
+                    'notes' => $notes,
+                    'batch_id' => $batchId,
+                    'created_at' => date('Y-m-d H:i:s'),
+                ]);
+
+                // Also log in location_log
+                $this->db->insert('location_log', [
+                    'entity_type' => 'stock_instance',
+                    'entity_id' => $instanceId,
+                    'previous_location_id' => $stock['current_location_id'],
+                    'previous_location_custom' => $stock['current_location_custom'],
+                    'new_location_id' => $targetLocationId,
+                    'new_location_custom' => null,
+                    'changed_by' => $userId,
+                    'notes' => 'Bulk move batch: ' . $batchId . ($notes ? ' - ' . $notes : ''),
+                    'created_at' => date('Y-m-d H:i:s'),
+                ]);
+
+                $successCount++;
+                $results[] = ['stock_instance_id' => $instanceId, 'success' => true, 'message' => 'Moved successfully'];
+            } catch (Exception $e) {
+                $errorCount++;
+                $results[] = ['stock_instance_id' => $instanceId, 'success' => false, 'message' => $e->getMessage()];
+            }
+        }
+
+        return [
+            'total' => count($stockInstanceIds),
+            'success' => $successCount,
+            'errors' => $errorCount,
+            'batch_id' => $batchId,
+            'details' => $results,
+        ];
+    }
+
+    /**
+     * Get assets at a specific location
+     *
+     * @param int $locationId Location ID
+     * @param int $instanceId Instance ID for multi-tenancy
+     * @return array List of assets at the location
+     */
+    public function getAssetsAtLocation(int $locationId, int $instanceId): array
+    {
+        $this->db->where('current_location_id', $locationId);
+        $assets = $this->db->get('assets', null, [
+            'assets_id',
+            'assets_name',
+            'assets_tag',
+            'current_location_id',
+            'location_updated_at',
+        ]);
+
+        return $assets ?: [];
+    }
+
+    /**
+     * Get stock items at a specific location
+     *
+     * @param int $locationId Location ID
+     * @param int $instanceId Instance ID for multi-tenancy
+     * @return array List of stock instances at the location
+     */
+    public function getStockAtLocation(int $locationId, int $instanceId): array
+    {
+        $this->db->where('current_location_id', $locationId);
+        $stocks = $this->db->get('stock_instances', null, [
+            'id',
+            'item_name',
+            'instance_number',
+            'quantity',
+            'current_location_id',
+            'location_updated_at',
+        ]);
+
+        return $stocks ?: [];
+    }
+
+    /**
+     * Quick-create a location inline
+     *
+     * @param string $name Location name
+     * @param int $instanceId Instance ID for multi-tenancy
+     * @param string|null $icon Icon emoji or FontAwesome class
+     * @param string|null $description Location description
+     * @return int New location ID
+     */
+    public function createLocationInline(string $name, int $instanceId, ?string $icon = '📦', ?string $description = null): int
+    {
+        if (empty($name)) {
+            throw new Exception('Location name is required');
+        }
+
+        $insertData = [
+            'name' => $name,
+            'description' => $description,
+            'color' => '#6c757d',
+            'icon' => $icon ?? '📦',
+            'emoji_icon' => $icon,
+            'instances_id' => $instanceId,
+            'is_active' => 1,
+            'sort_order' => 0,
+            'created_at' => date('Y-m-d H:i:s'),
+        ];
+
+        return $this->db->insert('locations', $insertData);
+    }
+
+    /**
      * Internal helper: Find entity by RFID tag
      *
      * @param string $rfidTag RFID tag

@@ -383,6 +383,189 @@ switch ($action) {
         break;
 
     /**
+     * LOCATION_SUMMARY
+     * Get location summary with asset and stock counts
+     */
+    case 'location_summary':
+        try {
+            $instanceId = $user['instance']['instances_id'] ?? 0;
+            if (!$instanceId) {
+                finish(false, ['message' => 'Keine Instanz-ID']);
+            }
+
+            $summary = $locationService->getLocationSummary($instanceId);
+            finish(true, null, ['locations' => $summary, 'count' => count($summary)]);
+        } catch (Exception $e) {
+            finish(false, ['message' => $e->getMessage() ?: 'Fehler beim Abrufen der Zusammenfassung']);
+        }
+        break;
+
+    /**
+     * BULK_MOVE_ASSETS
+     * Move multiple assets to target location
+     * params: asset_ids (JSON array), target_location_id, notes?
+     */
+    case 'bulk_move_assets':
+        try {
+            if (!$AUTH->serverPermissionCheck("ASSETS:EDIT")) {
+                finish(false, ['message' => 'Keine Berechtigung']);
+            }
+
+            $assetIdsJson = $_POST['asset_ids'] ?? '[]';
+            $assetIds = json_decode($assetIdsJson, true);
+            $targetLocationId = intval($_POST['target_location_id'] ?? 0);
+            $notes = $_POST['notes'] ?? null;
+
+            if (!is_array($assetIds) || empty($assetIds)) {
+                finish(false, ['message' => 'Array von Asset-IDs erforderlich']);
+            }
+
+            if (!$targetLocationId) {
+                finish(false, ['message' => 'Ziel-Standort-ID erforderlich']);
+            }
+
+            $result = $locationService->bulkMoveAssets(
+                $assetIds,
+                $targetLocationId,
+                $user['users_userid'],
+                $notes
+            );
+
+            $bCMS->auditLog('BULK_MOVE', 'assets', json_encode([
+                'batch_id' => $result['batch_id'],
+                'count' => $result['total'],
+                'success' => $result['success'],
+                'target_location' => $targetLocationId,
+            ]), $user['users_userid']);
+
+            finish(true, null, array_merge($result, ['message' => 'Massen-Verschiebung abgeschlossen']));
+        } catch (Exception $e) {
+            finish(false, ['message' => $e->getMessage() ?: 'Fehler beim Verschieben der Assets']);
+        }
+        break;
+
+    /**
+     * BULK_MOVE_STOCK
+     * Move multiple stock instances to target location
+     * params: stock_instance_ids (JSON array), target_location_id, notes?
+     */
+    case 'bulk_move_stock':
+        try {
+            if (!$AUTH->serverPermissionCheck("STOCK:EDIT")) {
+                finish(false, ['message' => 'Keine Berechtigung']);
+            }
+
+            $stockIdsJson = $_POST['stock_instance_ids'] ?? '[]';
+            $stockIds = json_decode($stockIdsJson, true);
+            $targetLocationId = intval($_POST['target_location_id'] ?? 0);
+            $notes = $_POST['notes'] ?? null;
+
+            if (!is_array($stockIds) || empty($stockIds)) {
+                finish(false, ['message' => 'Array von Stock-Instance-IDs erforderlich']);
+            }
+
+            if (!$targetLocationId) {
+                finish(false, ['message' => 'Ziel-Standort-ID erforderlich']);
+            }
+
+            $result = $locationService->bulkMoveStockInstances(
+                $stockIds,
+                $targetLocationId,
+                $user['users_userid'],
+                $notes
+            );
+
+            $bCMS->auditLog('BULK_MOVE', 'stock_instances', json_encode([
+                'batch_id' => $result['batch_id'],
+                'count' => $result['total'],
+                'success' => $result['success'],
+                'target_location' => $targetLocationId,
+            ]), $user['users_userid']);
+
+            finish(true, null, array_merge($result, ['message' => 'Massen-Verschiebung abgeschlossen']));
+        } catch (Exception $e) {
+            finish(false, ['message' => $e->getMessage() ?: 'Fehler beim Verschieben der Bestände']);
+        }
+        break;
+
+    /**
+     * ASSETS_AT_LOCATION
+     * Get all assets at a specific location
+     * params: location_id
+     */
+    case 'assets_at_location':
+        try {
+            $locationId = intval($_POST['location_id'] ?? $_GET['location_id'] ?? 0);
+            $instanceId = $user['instance']['instances_id'] ?? 0;
+
+            if (!$locationId) {
+                finish(false, ['message' => 'Standort-ID erforderlich']);
+            }
+
+            $assets = $locationService->getAssetsAtLocation($locationId, $instanceId);
+            finish(true, null, ['assets' => $assets, 'count' => count($assets)]);
+        } catch (Exception $e) {
+            finish(false, ['message' => $e->getMessage() ?: 'Fehler beim Abrufen der Assets']);
+        }
+        break;
+
+    /**
+     * STOCK_AT_LOCATION
+     * Get all stock items at a specific location
+     * params: location_id
+     */
+    case 'stock_at_location':
+        try {
+            $locationId = intval($_POST['location_id'] ?? $_GET['location_id'] ?? 0);
+            $instanceId = $user['instance']['instances_id'] ?? 0;
+
+            if (!$locationId) {
+                finish(false, ['message' => 'Standort-ID erforderlich']);
+            }
+
+            $stocks = $locationService->getStockAtLocation($locationId, $instanceId);
+            finish(true, null, ['stocks' => $stocks, 'count' => count($stocks)]);
+        } catch (Exception $e) {
+            finish(false, ['message' => $e->getMessage() ?: 'Fehler beim Abrufen der Bestände']);
+        }
+        break;
+
+    /**
+     * CREATE_LOCATION_INLINE
+     * Quick-create a new location
+     * params: name (required), icon?, description?, instances_id?
+     */
+    case 'create_location_inline':
+        try {
+            if (!$AUTH->serverPermissionCheck("ASSETS:ASSET_TYPES:CREATE") && !$AUTH->serverPermissionCheck("SETTINGS")) {
+                finish(false, ['message' => 'Keine Berechtigung']);
+            }
+
+            $name = $_POST['name'] ?? '';
+            $icon = $_POST['icon'] ?? '📦';
+            $description = $_POST['description'] ?? null;
+            $instanceId = intval($_POST['instances_id'] ?? $user['instance']['instances_id'] ?? 0);
+
+            if (empty($name)) {
+                finish(false, ['message' => 'Standortname erforderlich']);
+            }
+
+            $id = $locationService->createLocationInline($name, $instanceId, $icon, $description);
+            $location = $locationService->getLocation($id);
+
+            $bCMS->auditLog('INSERT', 'locations', json_encode([
+                'name' => $name,
+                'icon' => $icon,
+                'description' => $description,
+            ]), $user['users_userid']);
+
+            finish(true, null, ['location' => $location, 'message' => 'Standort erstellt']);
+        } catch (Exception $e) {
+            finish(false, ['message' => $e->getMessage() ?: 'Fehler beim Erstellen des Standorts']);
+        }
+        break;
+
+    /**
      * Default / unknown action
      */
     default:

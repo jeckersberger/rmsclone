@@ -1,0 +1,512 @@
+{% extends 'layouts/base.twig' %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3">
+                <i class="fas fa-calculator mr-2"></i>Flexible Preiskalkulations-Engine
+            </h1>
+            <p class="text-muted">Verwalte Staffelpreise, Mengenrabatte, Saisonzuschläge, Pakete und Kundenpreise</p>
+        </div>
+    </div>
+
+    <!-- Price Calculator Widget -->
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-calculator mr-2"></i>Preisrechner</h5>
+                </div>
+                <div class="card-body">
+                    <form id="priceCalculatorForm">
+                        <div class="form-group">
+                            <label for="calc_asset_type">Artikel</label>
+                            <select id="calc_asset_type" class="form-control" required>
+                                <option value="">-- Artikel auswählen --</option>
+                                {% for asset in assetTypes %}
+                                    <option value="{{ asset.assetTypes_id }}">
+                                        {{ asset.assetTypes_name }} ({{ asset.assetTypes_dayRate|round(2) }} EUR/Tag)
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="calc_days">Tage</label>
+                                <input type="number" id="calc_days" class="form-control" value="1" min="1" required>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="calc_quantity">Menge</label>
+                                <input type="number" id="calc_quantity" class="form-control" value="1" min="1" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="calc_client">Kunde (optional)</label>
+                                <select id="calc_client" class="form-control">
+                                    <option value="">-- Standardpreise --</option>
+                                    {% for client in clients %}
+                                        <option value="{{ client.clients_id }}">{{ client.clients_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="calc_date">Startdatum (optional)</label>
+                                <input type="date" id="calc_date" class="form-control">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-block">
+                            <i class="fas fa-calculator mr-2"></i>Berechnen
+                        </button>
+                    </form>
+
+                    <div id="calculatorResult" class="mt-4" style="display: none;">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6>Ergebnis</h6>
+                                <table class="table table-sm table-borderless mb-0">
+                                    <tr>
+                                        <td>Basispreis:</td>
+                                        <td class="text-right"><strong id="result_base" class="text-dark">0,00 EUR</strong></td>
+                                    </tr>
+                                    <tr class="text-success" id="result_tier_row" style="display: none;">
+                                        <td>- Staffelrabatt:</td>
+                                        <td class="text-right"><strong id="result_tier">0,00 EUR</strong></td>
+                                    </tr>
+                                    <tr class="text-success" id="result_volume_row" style="display: none;">
+                                        <td>- Mengenrabatt:</td>
+                                        <td class="text-right"><strong id="result_volume">0,00 EUR</strong></td>
+                                    </tr>
+                                    <tr class="text-danger" id="result_seasonal_row" style="display: none;">
+                                        <td>+ Saisonzuschlag:</td>
+                                        <td class="text-right"><strong id="result_seasonal">0,00 EUR</strong></td>
+                                    </tr>
+                                    <tr class="text-success" id="result_customer_row" style="display: none;">
+                                        <td>- Kundenrabatt:</td>
+                                        <td class="text-right"><strong id="result_customer">0,00 EUR</strong></td>
+                                    </tr>
+                                    <tr class="border-top pt-2">
+                                        <td><strong>Endsumme:</strong></td>
+                                        <td class="text-right"><strong id="result_final" class="text-primary h5 mb-0">0,00 EUR</strong></td>
+                                    </tr>
+                                </table>
+                                <div id="result_breakdown" class="mt-3 small text-muted"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" id="tab-tiers" data-toggle="tab" href="#panel-tiers" role="tab">
+                        <i class="fas fa-layer-group mr-2"></i>Staffelpreise
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="tab-volume" data-toggle="tab" href="#panel-volume" role="tab">
+                        <i class="fas fa-boxes mr-2"></i>Mengenrabatte
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="tab-seasonal" data-toggle="tab" href="#panel-seasonal" role="tab">
+                        <i class="fas fa-calendar mr-2"></i>Saisonzuschläge
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="tab-bundles" data-toggle="tab" href="#panel-bundles" role="tab">
+                        <i class="fas fa-cube mr-2"></i>Pakete
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="tab-customer" data-toggle="tab" href="#panel-customer" role="tab">
+                        <i class="fas fa-user-tie mr-2"></i>Kundenpreise
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="card-body">
+            <div class="tab-content">
+
+                <!-- Tier Pricing Tab -->
+                <div id="panel-tiers" class="tab-pane fade show active" role="tabpanel">
+                    <h5 class="mb-3">Staffelpreise nach Mietdauer</h5>
+
+                    <div class="mb-3">
+                        <label for="tier_asset_type">Artikel auswählen</label>
+                        <select id="tier_asset_type" class="form-control">
+                            <option value="">-- Alle Artikel --</option>
+                            {% for asset in assetTypes %}
+                                <option value="{{ asset.assetTypes_id }}">{{ asset.assetTypes_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table id="tiersTable" class="table table-hover table-sm">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Artikel</th>
+                                    <th>Von Tagen</th>
+                                    <th>Bis Tagen</th>
+                                    <th>Preis/Tag</th>
+                                    <th>Aktionen</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <button class="btn btn-sm btn-success" id="btn_add_tier">
+                        <i class="fas fa-plus mr-1"></i>Neue Staffel
+                    </button>
+                </div>
+
+                <!-- Volume Discounts Tab -->
+                <div id="panel-volume" class="tab-pane fade" role="tabpanel">
+                    <h5 class="mb-3">Mengenrabatte</h5>
+
+                    <div class="table-responsive">
+                        <table id="volumeTable" class="table table-hover table-sm">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Min. Menge</th>
+                                    <th>Max. Menge</th>
+                                    <th>Rabatt %</th>
+                                    <th>Aktionen</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <button class="btn btn-sm btn-success" id="btn_add_volume">
+                        <i class="fas fa-plus mr-1"></i>Neuer Rabatt
+                    </button>
+                </div>
+
+                <!-- Seasonal Surcharges Tab -->
+                <div id="panel-seasonal" class="tab-pane fade" role="tabpanel">
+                    <h5 class="mb-3">Saisonzuschläge</h5>
+
+                    <div class="table-responsive">
+                        <table id="surchargesTable" class="table table-hover table-sm">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Von</th>
+                                    <th>Bis</th>
+                                    <th>Zuschlag %</th>
+                                    <th>Aktionen</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <button class="btn btn-sm btn-success" id="btn_add_surcharge">
+                        <i class="fas fa-plus mr-1"></i>Neuer Zuschlag
+                    </button>
+                </div>
+
+                <!-- Bundles Tab -->
+                <div id="panel-bundles" class="tab-pane fade" role="tabpanel">
+                    <h5 class="mb-3">Paketpreise</h5>
+
+                    <div class="table-responsive">
+                        <table id="bundlesTable" class="table table-hover table-sm">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Beschreibung</th>
+                                    <th>Paketpreis/Tag</th>
+                                    <th>Positionen</th>
+                                    <th>Status</th>
+                                    <th>Aktionen</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <button class="btn btn-sm btn-success" id="btn_add_bundle">
+                        <i class="fas fa-plus mr-1"></i>Neues Paket
+                    </button>
+                </div>
+
+                <!-- Customer Pricing Tab -->
+                <div id="panel-customer" class="tab-pane fade" role="tabpanel">
+                    <h5 class="mb-3">Kundenspezifische Preislisten</h5>
+
+                    <div class="mb-3">
+                        <label for="customer_client">Kunde auswählen</label>
+                        <select id="customer_client" class="form-control">
+                            <option value="">-- Kunde auswählen --</option>
+                            {% for client in clients %}
+                                <option value="{{ client.clients_id }}">{{ client.clients_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div id="customerPricingContent" style="display: none;">
+                        <div class="alert alert-info mb-3">
+                            <small>Definiere einen globalen Rabatt in % und/oder individueller Preise für spezifische Artikel</small>
+                        </div>
+
+                        <div class="form-group col-md-6 pl-0">
+                            <label for="customer_global_discount">Globaler Rabatt (%)</label>
+                            <input type="number" id="customer_global_discount" class="form-control" step="0.01" min="0" max="100">
+                        </div>
+
+                        <div class="table-responsive">
+                            <table id="customerItemsTable" class="table table-hover table-sm">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th>Artikel</th>
+                                        <th>Kundenpreis/Tag</th>
+                                        <th>Aktionen</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+
+                        <button class="btn btn-sm btn-success mb-3" id="btn_add_customer_item">
+                            <i class="fas fa-plus mr-1"></i>Artikel hinzufügen
+                        </button>
+
+                        <button class="btn btn-primary" id="btn_save_customer">
+                            <i class="fas fa-save mr-1"></i>Speichern
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+
+<!-- Tier Modal -->
+<div class="modal fade" id="tierModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Staffelpreis bearbeiten</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <form id="tierForm" class="form-horizontal">
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="tier_id">
+
+                    <div class="form-group">
+                        <label for="tier_asset">Artikel</label>
+                        <select name="asset_type_id" id="tier_asset" class="form-control" required>
+                            <option value="">-- Artikel auswählen --</option>
+                            {% for asset in assetTypes %}
+                                <option value="{{ asset.assetTypes_id }}">{{ asset.assetTypes_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label for="tier_min">Min. Tage</label>
+                            <input type="number" name="min_days" id="tier_min" class="form-control" value="1" min="1" required>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label for="tier_max">Max. Tage (leer = unbegrenzt)</label>
+                            <input type="number" name="max_days" id="tier_max" class="form-control" min="1">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tier_price">Preis pro Tag (EUR)</label>
+                        <input type="number" name="price_per_day" id="tier_price" class="form-control" step="0.01" min="0" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Volume Discount Modal -->
+<div class="modal fade" id="volumeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Mengenrabatt bearbeiten</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <form id="volumeForm">
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="volume_id">
+
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label for="volume_min">Min. Menge</label>
+                            <input type="number" name="min_quantity" id="volume_min" class="form-control" value="1" min="1" required>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label for="volume_max">Max. Menge (leer = unbegrenzt)</label>
+                            <input type="number" name="max_quantity" id="volume_max" class="form-control" min="1">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="volume_discount">Rabatt (%)</label>
+                        <input type="number" name="discount_percent" id="volume_discount" class="form-control" step="0.01" min="0" max="100" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Seasonal Surcharge Modal -->
+<div class="modal fade" id="surchargeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Saisonzuschlag bearbeiten</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <form id="surchargeForm">
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="surcharge_id">
+
+                    <div class="form-group">
+                        <label for="surcharge_name">Name</label>
+                        <input type="text" name="name" id="surcharge_name" class="form-control" placeholder="z.B. Hochsaison Sommer" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label>Von</label>
+                            <div class="form-row">
+                                <div class="form-group col-md-6">
+                                    <input type="number" name="start_month" id="surcharge_start_month" class="form-control" min="1" max="12" value="6" required>
+                                    <small class="form-text text-muted">Monat</small>
+                                </div>
+                                <div class="form-group col-md-6">
+                                    <input type="number" name="start_day" id="surcharge_start_day" class="form-control" min="1" max="31" value="1" required>
+                                    <small class="form-text text-muted">Tag</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label>Bis</label>
+                            <div class="form-row">
+                                <div class="form-group col-md-6">
+                                    <input type="number" name="end_month" id="surcharge_end_month" class="form-control" min="1" max="12" value="8" required>
+                                    <small class="form-text text-muted">Monat</small>
+                                </div>
+                                <div class="form-group col-md-6">
+                                    <input type="number" name="end_day" id="surcharge_end_day" class="form-control" min="1" max="31" value="31" required>
+                                    <small class="form-text text-muted">Tag</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="surcharge_percent">Zuschlag (%)</label>
+                        <input type="number" name="surcharge_percent" id="surcharge_percent" class="form-control" step="0.01" min="0" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Bundle Modal -->
+<div class="modal fade" id="bundleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Paket bearbeiten</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <form id="bundleForm">
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="bundle_id">
+
+                    <div class="form-group">
+                        <label for="bundle_name">Name</label>
+                        <input type="text" name="name" id="bundle_name" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="bundle_desc">Beschreibung</label>
+                        <textarea name="description" id="bundle_desc" class="form-control" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="bundle_price">Paketpreis pro Tag (EUR)</label>
+                        <input type="number" name="bundle_price_per_day" id="bundle_price" class="form-control" step="0.01" min="0" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" name="is_active" id="bundle_active" checked>
+                            Aktiv
+                        </label>
+                    </div>
+
+                    <hr>
+                    <h6>Positionen im Paket</h6>
+                    <div class="table-responsive">
+                        <table id="bundleItemsTable" class="table table-sm">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Artikel</th>
+                                    <th>Menge</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <button type="button" class="btn btn-sm btn-success" id="btn_bundle_add_item">
+                        <i class="fas fa-plus mr-1"></i>Artikel hinzufügen
+                    </button>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ asset('js/pricing_engine.js') }}"></script>
+{% endblock %}

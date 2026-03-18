@@ -1,0 +1,418 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+
+<style>
+    .maintenance-status-badge {
+        font-size: 12px;
+        padding: 5px 10px;
+        border-radius: 3px;
+    }
+    .status-overdue {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    .status-due-soon {
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+    }
+    .status-ok {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    .dashboard-card {
+        border-left: 4px solid #007bff;
+    }
+    .dashboard-card.overdue {
+        border-left-color: #dc3545;
+    }
+    .dashboard-card.due-soon {
+        border-left-color: #ffc107;
+    }
+    .dashboard-card.scheduled {
+        border-left-color: #17a2b8;
+    }
+    .dashboard-card.completed {
+        border-left-color: #28a745;
+    }
+</style>
+
+<div class="row">
+    <!-- Dashboard Statistics Cards -->
+    <div class="col-lg-3 col-md-6">
+        <div class="card dashboard-card overdue">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-3 text-right">
+                        <i class="fas fa-exclamation-circle fa-2x text-danger"></i>
+                    </div>
+                    <div class="col-9">
+                        <div class="huge" id="overdue-count">-</div>
+                        <div>Überfällige Wartungen</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6">
+        <div class="card dashboard-card due-soon">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-3 text-right">
+                        <i class="fas fa-hourglass-half fa-2x text-warning"></i>
+                    </div>
+                    <div class="col-9">
+                        <div class="huge" id="upcoming-count">-</div>
+                        <div>Bevorstehend (30 Tage)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6">
+        <div class="card dashboard-card scheduled">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-3 text-right">
+                        <i class="fas fa-tasks fa-2x text-info"></i>
+                    </div>
+                    <div class="col-9">
+                        <div class="huge" id="open-jobs-count">-</div>
+                        <div>Offene Aufträge</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6">
+        <div class="card dashboard-card completed">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-3 text-right">
+                        <i class="fas fa-euro-sign fa-2x text-success"></i>
+                    </div>
+                    <div class="col-9">
+                        <div class="huge" id="cost-this-month">-</div>
+                        <div>Kosten diesen Monat</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs for different views -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h3 class="card-title">Wartungsverwaltung</h3>
+        <div class="card-tools btn-group pull-right">
+            <a href="{{ CONFIG.LINKS_USERGUIDEURL }}assets/maintenance" target="_blank" class="btn btn-info btn-sm">Hilfe</a>
+            {% if "MAINTENANCE:CREATE"|instancePermissions %}
+                <button type="button" class="btn btn-sm btn-success" id="createJobBtn">Neuer Auftrag</button>
+                <button type="button" class="btn btn-sm btn-primary" id="createScheduleBtn">Neuer Plan</button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Nav tabs -->
+    <ul class="nav nav-tabs card-header-tabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" id="jobs-tab" data-toggle="tab" href="#jobs-content" role="tab">
+                Offene Aufträge
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="schedules-tab" data-toggle="tab" href="#schedules-content" role="tab">
+                Wartungspläne
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="checklists-tab" data-toggle="tab" href="#checklists-content" role="tab">
+                Checklisten
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="costs-tab" data-toggle="tab" href="#costs-content" role="tab">
+                Kostenübersicht
+            </a>
+        </li>
+    </ul>
+
+    <!-- Tab content -->
+    <div class="tab-content card-body">
+        <!-- Jobs Tab -->
+        <div id="jobs-content" class="tab-pane fade show active" role="tabpanel">
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-default" onclick="filterJobs('all')">Alle</button>
+                        <button type="button" class="btn btn-default" onclick="filterJobs('scheduled')">Geplant</button>
+                        <button type="button" class="btn btn-default" onclick="filterJobs('in_progress')">In Bearbeitung</button>
+                        <button type="button" class="btn btn-default" onclick="filterJobs('completed')">Abgeschlossen</button>
+                    </div>
+                </div>
+            </div>
+            <table class="table table-striped table-hover" id="jobs-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Titel</th>
+                        <th>Asset</th>
+                        <th>Priorität</th>
+                        <th>Status</th>
+                        <th>Zugewiesen</th>
+                        <th>Erstellt</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody id="jobs-tbody">
+                    <tr><td colspan="8" class="text-center"><i class="fas fa-spinner fa-spin"></i> Laden...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Schedules Tab -->
+        <div id="schedules-content" class="tab-pane fade" role="tabpanel">
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <button type="button" class="btn btn-sm btn-primary" id="addScheduleBtn">Neuer Plan</button>
+                </div>
+            </div>
+            <table class="table table-striped table-hover" id="schedules-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Asset/Typ</th>
+                        <th>Intervall</th>
+                        <th>Letzter Termin</th>
+                        <th>Nächster Termin</th>
+                        <th>Status</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody id="schedules-tbody">
+                    <tr><td colspan="7" class="text-center"><i class="fas fa-spinner fa-spin"></i> Laden...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Checklists Tab -->
+        <div id="checklists-content" class="tab-pane fade" role="tabpanel">
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <button type="button" class="btn btn-sm btn-primary" id="addChecklistBtn">Neue Checkliste</button>
+                </div>
+            </div>
+            <table class="table table-striped table-hover" id="checklists-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Asset-Typ</th>
+                        <th>Elemente</th>
+                        <th>Erstellt</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody id="checklists-tbody">
+                    <tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin"></i> Laden...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Costs Tab -->
+        <div id="costs-content" class="tab-pane fade" role="tabpanel">
+            <div class="alert alert-info">
+                <strong>Wartungskosten</strong> - Gesamtbudget und tatsächliche Kosten
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Kosten nach Status</h5>
+                    <div id="costs-by-status"></div>
+                </div>
+                <div class="col-md-6">
+                    <h5>Kostentrends</h5>
+                    <canvas id="costChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    loadDashboardStats();
+    loadJobs();
+    loadSchedules();
+    loadChecklists();
+
+    // Event listeners
+    $('#createJobBtn').on('click', function() {
+        // TODO: Open modal to create job
+        bootbox.alert('Job-Erstellung wird in Modal implementiert');
+    });
+
+    $('#createScheduleBtn').on('click', function() {
+        // TODO: Open modal to create schedule
+        bootbox.alert('Plan-Erstellung wird in Modal implementiert');
+    });
+
+    $('#addScheduleBtn').on('click', function() {
+        $(this).trigger('click');
+    });
+
+    $('#addChecklistBtn').on('click', function() {
+        // TODO: Open modal
+        bootbox.alert('Checklisten-Erstellung wird implementiert');
+    });
+});
+
+function loadDashboardStats() {
+    $.ajax({
+        url: '{{ CONFIG.ROOTURL }}/api/maintenance/dashboard.php',
+        type: 'GET',
+        dataType: 'json',
+        success: function(data) {
+            if (data.success) {
+                $('#overdue-count').text(data.stats.overdue_count);
+                $('#upcoming-count').text(data.stats.upcoming_count);
+                $('#open-jobs-count').text(data.stats.open_jobs_count);
+                $('#cost-this-month').text('€ ' + data.stats.cost_this_month.toFixed(2));
+            }
+        }
+    });
+}
+
+function loadJobs() {
+    $.ajax({
+        url: '{{ CONFIG.ROOTURL }}/api/maintenance/jobs.php',
+        type: 'GET',
+        dataType: 'json',
+        success: function(data) {
+            if (data.success) {
+                renderJobs(data.jobs);
+            }
+        }
+    });
+}
+
+function renderJobs(jobs) {
+    let tbody = $('#jobs-tbody');
+    tbody.empty();
+
+    if (jobs.length === 0) {
+        tbody.html('<tr><td colspan="8" class="text-center">Keine Aufträge</td></tr>');
+        return;
+    }
+
+    jobs.forEach(function(job) {
+        let statusBadge = '<span class="badge badge-secondary">' + job.status + '</span>';
+        let priorityColor = job.priority === 'critical' ? 'danger' :
+                           job.priority === 'high' ? 'warning' :
+                           job.priority === 'medium' ? 'info' : 'success';
+        let priorityBadge = '<span class="badge badge-' + priorityColor + '">' + job.priority + '</span>';
+
+        let row = '<tr>' +
+            '<td><a href="#">#' + job.id + '</a></td>' +
+            '<td>' + job.title + '</td>' +
+            '<td>' + (job.assets_tag || '-') + '</td>' +
+            '<td>' + priorityBadge + '</td>' +
+            '<td>' + statusBadge + '</td>' +
+            '<td>' + (job.assigned_to || '-') + '</td>' +
+            '<td>' + job.created_at + '</td>' +
+            '<td><button class="btn btn-sm btn-default">Detail</button></td>' +
+            '</tr>';
+
+        tbody.append(row);
+    });
+}
+
+function loadSchedules() {
+    $.ajax({
+        url: '{{ CONFIG.ROOTURL }}/api/maintenance/schedules.php',
+        type: 'GET',
+        dataType: 'json',
+        success: function(data) {
+            if (data.success) {
+                renderSchedules(data.schedules);
+            }
+        }
+    });
+}
+
+function renderSchedules(schedules) {
+    let tbody = $('#schedules-tbody');
+    tbody.empty();
+
+    if (schedules.length === 0) {
+        tbody.html('<tr><td colspan="7" class="text-center">Keine Wartungspläne</td></tr>');
+        return;
+    }
+
+    schedules.forEach(function(schedule) {
+        let status = '<span class="badge badge-success">Aktiv</span>';
+        if (!schedule.is_active) {
+            status = '<span class="badge badge-secondary">Inaktiv</span>';
+        }
+
+        let row = '<tr>' +
+            '<td>' + schedule.name + '</td>' +
+            '<td>' + (schedule.asset_id ? 'Asset #' + schedule.asset_id : 'Typ #' + schedule.asset_type_id) + '</td>' +
+            '<td>' + schedule.interval_value + ' ' + schedule.interval_type + '</td>' +
+            '<td>' + (schedule.last_performed_at ? schedule.last_performed_at : '-') + '</td>' +
+            '<td>' + (schedule.next_due_at ? schedule.next_due_at : '-') + '</td>' +
+            '<td>' + status + '</td>' +
+            '<td><button class="btn btn-sm btn-default">Bearbeiten</button></td>' +
+            '</tr>';
+
+        tbody.append(row);
+    });
+}
+
+function loadChecklists() {
+    $.ajax({
+        url: '{{ CONFIG.ROOTURL }}/api/maintenance/checklists.php',
+        type: 'GET',
+        dataType: 'json',
+        success: function(data) {
+            if (data.success) {
+                renderChecklists(data.checklists);
+            }
+        }
+    });
+}
+
+function renderChecklists(checklists) {
+    let tbody = $('#checklists-tbody');
+    tbody.empty();
+
+    if (checklists.length === 0) {
+        tbody.html('<tr><td colspan="5" class="text-center">Keine Checklisten</td></tr>');
+        return;
+    }
+
+    checklists.forEach(function(checklist) {
+        let items = checklist.items ? JSON.parse(checklist.items) : [];
+        let row = '<tr>' +
+            '<td>' + checklist.name + '</td>' +
+            '<td>' + (checklist.asset_type_id ? 'Typ #' + checklist.asset_type_id : 'Global') + '</td>' +
+            '<td>' + items.length + '</td>' +
+            '<td>' + checklist.created_at + '</td>' +
+            '<td><button class="btn btn-sm btn-default">Bearbeiten</button></td>' +
+            '</tr>';
+
+        tbody.append(row);
+    });
+}
+
+function filterJobs(status) {
+    // TODO: Implement filtering
+    console.log('Filter by status: ' + status);
+}
+</script>
+
+{% endblock %}
