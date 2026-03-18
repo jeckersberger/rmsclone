@@ -7,8 +7,17 @@
  * - Error handling
  * - Sentry error reporting
  * - Global functions ("bCMS" class)
- * - Config Variables 
+ * - Config Variables
  */
+
+// Setup detection — redirect to wizard if not yet configured
+$setupMarker = '/var/www/html/.setup_complete';
+$requestUri = $_SERVER['REQUEST_URI'] ?? '';
+if (!file_exists($setupMarker) && strpos($requestUri, '/setup/') === false && strpos($requestUri, '/static-assets/') === false) {
+    header('Location: /setup/');
+    exit;
+}
+
 require_once(__DIR__ . '/../../vendor/autoload.php'); //Composer
 require_once __DIR__ . '/libs/Config/Config.php';
 
