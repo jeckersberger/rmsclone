@@ -7,15 +7,20 @@
  * - Provider selection and task routing
  * - Fallback chain execution
  * - Usage logging and cost tracking
+ * - Anonymization of PII before cloud provider requests
  * - Error handling and retries
  */
 class AiRequestHandler
 {
+    private AnonymizationService $anonymizer;
+
     public function __construct(
         private $db,
         private AiProviderRegistry $registry,
         private AiUsageTracker $tracker,
-    ) {}
+    ) {
+        $this->anonymizer = new AnonymizationService($db);
+    }
 
     /**
      * Process an AI request with automatic fallback and logging
@@ -49,12 +54,28 @@ class AiRequestHandler
 
         // Get provider info from database for logging
         $this->db->where('instances_id', $instanceId);
-        $this->db->where('provider_type', 'openai');
-        $providerRecord = $this->db->getOne('ai_providers') ?: ['id' => 0];
+        $providerRecord = $this->db->getOne('ai_providers') ?: ['id' => 0, 'provider_type' => 'unknown'];
+
+        // Determine anonymization mode
+        $mode = $this->getAnonymizationMode($instanceId, $providerRecord['provider_type'] ?? 'unknown');
+        $requestId = bin2hex(random_bytes(16));
 
         try {
+            // Apply anonymization before sending to provider
+            // For local providers (ollama), skip if mode is 'off'
+            // For cloud providers, enforce minimum 'standard' mode
+            if ($mode !== 'off' || !in_array($providerRecord['provider_type'] ?? '', ['ollama', 'openai_compatible'])) {
+                $this->anonymizeMessages($messages, $mode, $instanceId);
+            }
+
             // Execute the request
             $response = $provider->chatCompletion($messages, $options);
+
+            // De-anonymize the response before returning
+            $response->content = $this->anonymizer->deAnonymize($response->content);
+
+            // Log anonymization stats
+            $this->logAnonymization($requestId, $instanceId, $providerRecord['provider_type'] ?? 'unknown', $mode);
 
             // Log usage
             $this->tracker->logUsage(
@@ -104,6 +125,86 @@ class AiRequestHandler
         }
 
         throw new Exception("Request failed after {$maxRetries} attempts: {$lastException->getMessage()}");
+    }
+
+    /**
+     * Get anonymization mode for this instance
+     *
+     * - Local providers (Ollama): use 'off' (configurable)
+     * - Cloud providers: enforce minimum 'standard' even if config says 'off'
+     *
+     * @param int $instanceId
+     * @param string $providerType
+     * @return string Mode (strict|standard|minimal|off)
+     */
+    private function getAnonymizationMode(int $instanceId, string $providerType): string
+    {
+        $this->db->where('instances_id', $instanceId);
+        $config = $this->db->getOne('ai_anonymization_config');
+
+        $mode = $config['mode'] ?? 'strict';
+
+        // Cloud providers must have at least 'standard' mode
+        if (!in_array($providerType, ['ollama', 'openai_compatible'])) {
+            if ($mode === 'off' || $mode === 'minimal') {
+                $mode = 'standard';
+            }
+        }
+
+        return $mode;
+    }
+
+    /**
+     * Apply anonymization to all message contents
+     *
+     * @param array $messages Message array passed by reference
+     * @param string $mode Anonymization mode
+     * @param int $instanceId Instance ID
+     */
+    private function anonymizeMessages(array &$messages, string $mode, int $instanceId): void
+    {
+        foreach ($messages as &$message) {
+            if (isset($message['content']) && is_string($message['content'])) {
+                $message['content'] = $this->anonymizer->anonymize(
+                    $message['content'],
+                    $mode,
+                    $instanceId
+                );
+            }
+        }
+    }
+
+    /**
+     * Log anonymization stats to audit log
+     *
+     * CRITICAL: Never logs actual PII values, only counts and types
+     *
+     * @param string $requestId Unique request ID
+     * @param int $instanceId Instance ID
+     * @param string $provider Provider type
+     * @param string $mode Anonymization mode
+     */
+    private function logAnonymization(string $requestId, int $instanceId, string $provider, string $mode): void
+    {
+        try {
+            $auditLog = $this->anonymizer->getRedactedAuditLog();
+
+            $this->db->insert('ai_anonymization_log', [
+                'instances_id' => $instanceId,
+                'request_id' => $requestId,
+                'replacements_count' => $auditLog['replacements_count'],
+                'replacement_types' => json_encode($auditLog['replacement_types']),
+                'provider' => substr($provider, 0, 50),
+                'mode' => $mode,
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
+        } catch (Exception $e) {
+            // Log failure but don't fail the request
+            error_log("Failed to log anonymization: " . $e->getMessage());
+        }
+
+        // Clear anonymizer state for next request
+        $this->anonymizer->clear();
     }
 
     /**
