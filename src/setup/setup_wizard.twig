@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyRMS - Setup Wizard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .wizard-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 600px;
+            overflow: hidden;
+        }
+
+        .wizard-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .wizard-logo {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            letter-spacing: -1px;
+        }
+
+        .wizard-title {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+
+        .wizard-subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .step-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .step-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .step-dot.active {
+            background: white;
+            width: 24px;
+            border-radius: 4px;
+        }
+
+        .step-dot.completed {
+            background: rgba(255, 255, 255, 0.6);
+        }
+
+        .wizard-content {
+            padding: 40px 30px;
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .step {
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        .step.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .step-number {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .step-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .step-description {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group input::placeholder {
+            color: #999;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .form-row.full {
+            grid-template-columns: 1fr;
+        }
+
+        .password-strength {
+            margin-top: 8px;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .password-strength-bar {
+            height: 100%;
+            width: 0%;
+            background: #ef5350;
+            border-radius: 2px;
+            transition: width 0.3s ease, background-color 0.3s ease;
+        }
+
+        .password-strength-bar.fair {
+            width: 33%;
+            background: #ffa726;
+        }
+
+        .password-strength-bar.good {
+            width: 66%;
+            background: #fdd835;
+        }
+
+        .password-strength-bar.strong {
+            width: 100%;
+            background: #66bb6a;
+        }
+
+        .password-strength-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        .checkbox-group label {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 400;
+            text-transform: none;
+            letter-spacing: normal;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .status-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .status-icon.success {
+            color: #66bb6a;
+        }
+
+        .status-icon.error {
+            color: #ef5350;
+        }
+
+        .status-icon.loading {
+            animation: spin 1s linear infinite;
+            color: #667eea;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .status-text {
+            flex: 1;
+        }
+
+        .status-text strong {
+            display: block;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 2px;
+        }
+
+        .status-text small {
+            display: block;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .success-animation {
+            text-align: center;
+            padding: 40px 0;
+        }
+
+        .success-checkmark {
+            font-size: 64px;
+            margin-bottom: 20px;
+            animation: bounceIn 0.6s ease;
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .success-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .success-message {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .summary-item {
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+
+        .summary-label {
+            color: #999;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .summary-value {
+            color: #333;
+            font-weight: 500;
+            margin-top: 3px;
+        }
+
+        .wizard-footer {
+            padding: 30px;
+            background: #f8f9fa;
+            display: flex;
+            gap: 12px;
+            justify-content: space-between;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            flex: 1;
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+
+        .btn-secondary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .error-message {
+            background: #ffebee;
+            border-left: 4px solid #ef5350;
+            color: #c62828;
+            padding: 12px 15px;
+            border-radius: 4px;
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+
+        .success-message-box {
+            background: #e8f5e9;
+            border-left: 4px solid #66bb6a;
+            color: #2e7d32;
+            padding: 12px 15px;
+            border-radius: 4px;
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .upload-zone {
+            border: 2px dashed #e0e0e0;
+            border-radius: 6px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #fafafa;
+        }
+
+        .upload-zone:hover {
+            border-color: #667eea;
+            background: #f5f7ff;
+        }
+
+        .upload-zone.dragging {
+            border-color: #667eea;
+            background: #f5f7ff;
+        }
+
+        .upload-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .upload-text {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .upload-hint {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 15px 0;
+        }
+
+        .toggle-checkbox {
+            width: 44px;
+            height: 24px;
+            cursor: pointer;
+            appearance: none;
+            background: #ccc;
+            border-radius: 12px;
+            position: relative;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-checkbox::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: left 0.3s ease;
+        }
+
+        .toggle-checkbox:checked {
+            background: #667eea;
+        }
+
+        .toggle-checkbox:checked::after {
+            left: 22px;
+        }
+
+        .smtp-settings {
+            display: none;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .smtp-settings.active {
+            display: block;
+        }
+
+        @media (max-width: 600px) {
+            .wizard-container {
+                border-radius: 0;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .step-title {
+                font-size: 20px;
+            }
+
+            .btn {
+                font-size: 13px;
+                padding: 10px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="wizard-container">
+        <div class="wizard-header">
+            <div class="wizard-logo">MyRMS</div>
+            <div class="wizard-title">Dein Rental Management System</div>
+            <div class="wizard-subtitle">Willkommen und viel Erfolg!</div>
+            <div class="step-indicator" id="stepIndicator">
+                <div class="step-dot active" data-step="1"></div>
+                <div class="step-dot" data-step="2"></div>
+                <div class="step-dot" data-step="3"></div>
+                <div class="step-dot" data-step="4"></div>
+                <div class="step-dot" data-step="5"></div>
+                <div class="step-dot" data-step="6"></div>
+            </div>
+        </div>
+
+        <div class="wizard-content" id="wizardContent">
+            <!-- Step 1: Welcome -->
+            <div class="step active" data-step="1">
+                <div class="step-number">Schritt 1 von 6</div>
+                <div class="step-title">Willkommen bei MyRMS</div>
+                <div class="step-description">Dein professionelles Rental Management System ist bereit zur Einrichtung. Starten wir mit den Grundeinstellungen.</div>
+
+                <div class="form-group">
+                    <label>Sprache / Language</label>
+                    <select id="language" style="margin-bottom: 20px;">
+                        <option value="de" selected>Deutsch</option>
+                        <option value="en">English</option>
+                    </select>
+                </div>
+
+                <div style="flex: 1;"></div>
+            </div>
+
+            <!-- Step 2: Database Check -->
+            <div class="step" data-step="2">
+                <div class="step-number">Schritt 2 von 6</div>
+                <div class="step-title">Datenbankverbindung</div>
+                <div class="step-description">Wir prüfen die Verbindung und richten die Datenbanktabellen ein.</div>
+
+                <div id="dbStatus">
+                    <div class="status-item">
+                        <div class="status-icon loading">⚙</div>
+                        <div class="status-text">
+                            <strong>Verbindung wird geprüft...</strong>
+                            <small>Dies kann eine Minute dauern</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="flex: 1;"></div>
+            </div>
+
+            <!-- Step 3: Admin Account -->
+            <div class="step" data-step="3">
+                <div class="step-number">Schritt 3 von 6</div>
+                <div class="step-title">Administrator-Konto erstellen</div>
+                <div class="step-description">Dies ist dein Hauptbenutzerkonto zum Verwalten von MyRMS.</div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Vorname</label>
+                        <input type="text" id="admin_firstname" placeholder="z.B. Max" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Nachname</label>
+                        <input type="text" id="admin_lastname" placeholder="z.B. Mustermann" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>E-Mail (Login-Name)</label>
+                    <input type="email" id="admin_email" placeholder="deine.email@example.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Passwort</label>
+                    <input type="password" id="admin_password" placeholder="Mindestens 8 Zeichen" required>
+                    <div class="password-strength">
+                        <div class="password-strength-bar" id="passwordStrengthBar"></div>
+                    </div>
+                    <div class="password-strength-text" id="passwordStrengthText">Zu schwach</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Passwort bestätigen</label>
+                    <input type="password" id="admin_password_confirm" placeholder="Passwort wiederholen" required>
+                </div>
+
+                <div style="flex: 1;"></div>
+            </div>
+
+            <!-- Step 4: Company Setup -->
+            <div class="step" data-step="4">
+                <div class="step-number">Schritt 4 von 6</div>
+                <div class="step-title">Firma einrichten</div>
+                <div class="step-description">Gib deine Firmendaten ein.</div>
+
+                <div class="form-group">
+                    <label>Firmenname</label>
+                    <input type="text" id="company_name" placeholder="z.B. JE Sound & Light" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Straße und Hausnummer</label>
+                        <input type="text" id="company_address" placeholder="Beispielstraße 123">
+                    </div>
+                    <div class="form-group">
+                        <label>Postleitzahl</label>
+                        <input type="text" id="company_postcode" placeholder="12345">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Ort</label>
+                    <input type="text" id="company_city" placeholder="Berlin">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Telefon</label>
+                        <input type="tel" id="company_phone" placeholder="+49 30 12345678">
+                    </div>
+                    <div class="form-group">
+                        <label>E-Mail</label>
+                        <input type="email" id="company_email" placeholder="info@example.com">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>USt-IdNr (optional)</label>
+                    <input type="text" id="company_vat" placeholder="DE 123 456 789">
+                </div>
+
+                <div class="form-group">
+                    <label>Standard-Währung</label>
+                    <select id="company_currency">
+                        <option value="EUR" selected>Euro (€ EUR)</option>
+                        <option value="GBP">Britisches Pfund (£ GBP)</option>
+                        <option value="USD">US-Dollar ($ USD)</option>
+                        <option value="CHF">Schweizer Franken (CHF)</option>
+                    </select>
+                </div>
+
+                <div style="flex: 1;"></div>
+            </div>
+
+            <!-- Step 5: Settings -->
+            <div class="step" data-step="5">
+                <div class="step-number">Schritt 5 von 6</div>
+                <div class="step-title">Grundeinstellungen</div>
+                <div class="step-description">Konfiguriere die Systemeinstellungen.</div>
+
+                <div class="form-group">
+                    <label>Zeitzone</label>
+                    <select id="settings_timezone">
+                        <option value="Europe/Berlin" selected>Europe/Berlin (Mitteleuropäische Zeit)</option>
+                        <option value="Europe/London">Europe/London</option>
+                        <option value="Europe/Paris">Europe/Paris</option>
+                        <option value="Europe/Amsterdam">Europe/Amsterdam</option>
+                        <option value="Europe/Vienna">Europe/Vienna</option>
+                        <option value="UTC">UTC</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Rechnungsnummer-Format</label>
+                    <input type="text" id="settings_invoice_format" value="RE-{JAHR}-{NR}" placeholder="RE-{JAHR}-{NR}">
+                    <small style="font-size: 12px; color: #999; margin-top: 4px;">Verfügbar: {JAHR}, {NR}</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Standard-MwSt-Satz (%)</label>
+                    <input type="number" id="settings_tax_rate" value="19" min="0" max="100" step="0.01" placeholder="19">
+                </div>
+
+                <div class="form-group">
+                    <label>E-Mail-Versand</label>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="settings_email_enabled" class="toggle-checkbox">
+                        <span id="emailToggleLabel">Deaktiviert</span>
+                    </div>
+                </div>
+
+                <div class="smtp-settings" id="smtpSettings">
+                    <div class="form-group">
+                        <label>SMTP-Host</label>
+                        <input type="text" id="smtp_host" placeholder="smtp.gmail.com">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>SMTP-Port</label>
+                            <input type="number" id="smtp_port" value="587" placeholder="587">
+                        </div>
+                        <div class="form-group">
+                            <label>Sicherheit</label>
+                            <select id="smtp_security">
+                                <option value="tls">TLS</option>
+                                <option value="ssl">SSL</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Benutzername</label>
+                        <input type="text" id="smtp_username" placeholder="deine.email@gmail.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Passwort</label>
+                        <input type="password" id="smtp_password" placeholder="Passwort">
+                    </div>
+                </div>
+
+                <div style="flex: 1;"></div>
+            </div>
+
+            <!-- Step 6: Complete -->
+            <div class="step" data-step="6">
+                <div class="success-animation">
+                    <div class="success-checkmark">✓</div>
+                    <div class="success-title">MyRMS ist bereit!</div>
+                    <div class="success-message">Dein System wurde erfolgreich eingerichtet und konfiguriert.</div>
+
+                    <div style="text-align: left; background: #f8f9fa; padding: 20px; border-radius: 6px; margin: 20px 0; font-size: 13px;">
+                        <div style="margin-bottom: 15px;">
+                            <div class="summary-label">Administrator-Konto</div>
+                            <div class="summary-value" id="summary_admin">Max Mustermann (mustermann@example.com)</div>
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <div class="summary-label">Firmennamen</div>
+                            <div class="summary-value" id="summary_company">JE Sound & Light</div>
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <div class="summary-label">Zeitzone</div>
+                            <div class="summary-value" id="summary_timezone">Europe/Berlin</div>
+                        </div>
+                        <div>
+                            <div class="summary-label">Währung</div>
+                            <div class="summary-value" id="summary_currency">EUR (€)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="flex: 1;"></div>
+            </div>
+        </div>
+
+        <div class="wizard-footer">
+            <button class="btn btn-secondary" id="btnPrev" onclick="previousStep()">← Zurück</button>
+            <button class="btn btn-primary" id="btnNext" onclick="nextStep()">Weiter →</button>
+        </div>
+    </div>
+
+    <script>
+        const TOTAL_STEPS = 6;
+        let currentStep = 1;
+        let wizardData = {
+            language: 'de',
+            admin: {},
+            company: {},
+            settings: {}
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStepDisplay();
+            checkDatabase();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            // Password strength checker
+            document.getElementById('admin_password').addEventListener('input', checkPasswordStrength);
+
+            // Email toggle
+            document.getElementById('settings_email_enabled').addEventListener('change', function() {
+                const smtpSettings = document.getElementById('smtpSettings');
+                const label = document.getElementById('emailToggleLabel');
+                if (this.checked) {
+                    smtpSettings.classList.add('active');
+                    label.textContent = 'Aktiviert';
+                } else {
+                    smtpSettings.classList.remove('active');
+                    label.textContent = 'Deaktiviert';
+                }
+            });
+
+            // Language change
+            document.getElementById('language').addEventListener('change', function(e) {
+                wizardData.language = e.target.value;
+            });
+        }
+
+        function checkPasswordStrength() {
+            const password = document.getElementById('admin_password').value;
+            const bar = document.getElementById('passwordStrengthBar');
+            const text = document.getElementById('passwordStrengthText');
+
+            let strength = 0;
+
+            if (password.length >= 8) strength++;
+            if (password.length >= 12) strength++;
+            if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
+            if (/\d/.test(password)) strength++;
+            if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) strength++;
+
+            bar.className = 'password-strength-bar';
+            if (strength === 0) {
+                text.textContent = 'Zu schwach';
+            } else if (strength <= 2) {
+                bar.classList.add('fair');
+                text.textContent = 'Schwach';
+            } else if (strength <= 3) {
+                bar.classList.add('good');
+                text.textContent = 'Mittel';
+            } else {
+                bar.classList.add('strong');
+                text.textContent = 'Stark';
+            }
+        }
+
+        function checkDatabase() {
+            fetch('/setup/process.php?step=check_db', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    const dbStatus = document.getElementById('dbStatus');
+                    if (data.success) {
+                        dbStatus.innerHTML = `
+                            <div class="status-item">
+                                <div class="status-icon success">✓</div>
+                                <div class="status-text">
+                                    <strong>Datenbankverbindung erfolgreich</strong>
+                                    <small>${data.data.database_name} – ${data.data.table_count} Tabellen</small>
+                                </div>
+                            </div>
+                            <div class="status-item">
+                                <div class="status-icon success">✓</div>
+                                <div class="status-text">
+                                    <strong>Migrationen abgeschlossen</strong>
+                                    <small>Alle Tabellen sind erstellt</small>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        dbStatus.innerHTML = `
+                            <div class="error-message">
+                                <strong>Fehler:</strong> ${data.message}
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('dbStatus').innerHTML = `
+                        <div class="error-message">
+                            <strong>Fehler:</strong> Verbindung konnte nicht hergestellt werden
+                        </div>
+                    `;
+                });
+        }
+
+        function validateStep() {
+            if (currentStep === 1) {
+                return true;
+            }
+
+            if (currentStep === 2) {
+                return true;
+            }
+
+            if (currentStep === 3) {
+                const firstName = document.getElementById('admin_firstname').value.trim();
+                const lastName = document.getElementById('admin_lastname').value.trim();
+                const email = document.getElementById('admin_email').value.trim();
+                const password = document.getElementById('admin_password').value;
+                const passwordConfirm = document.getElementById('admin_password_confirm').value;
+
+                if (!firstName || !lastName) {
+                    alert('Bitte gib deinen Namen ein');
+                    return false;
+                }
+
+                if (!email || !email.includes('@')) {
+                    alert('Bitte gib eine gültige E-Mail-Adresse ein');
+                    return false;
+                }
+
+                if (password.length < 8) {
+                    alert('Passwort muss mindestens 8 Zeichen lang sein');
+                    return false;
+                }
+
+                if (password !== passwordConfirm) {
+                    alert('Passwörter stimmen nicht überein');
+                    return false;
+                }
+
+                wizardData.admin = {
+                    firstname: firstName,
+                    lastname: lastName,
+                    email: email,
+                    password: password
+                };
+
+                return true;
+            }
+
+            if (currentStep === 4) {
+                const company = document.getElementById('company_name').value.trim();
+                if (!company) {
+                    alert('Bitte gib einen Firmennamen ein');
+                    return false;
+                }
+
+                wizardData.company = {
+                    name: company,
+                    address: document.getElementById('company_address').value.trim(),
+                    postcode: document.getElementById('company_postcode').value.trim(),
+                    city: document.getElementById('company_city').value.trim(),
+                    phone: document.getElementById('company_phone').value.trim(),
+                    email: document.getElementById('company_email').value.trim(),
+                    vat: document.getElementById('company_vat').value.trim(),
+                    currency: document.getElementById('company_currency').value
+                };
+
+                return true;
+            }
+
+            if (currentStep === 5) {
+                wizardData.settings = {
+                    timezone: document.getElementById('settings_timezone').value,
+                    invoice_format: document.getElementById('settings_invoice_format').value,
+                    tax_rate: document.getElementById('settings_tax_rate').value,
+                    email_enabled: document.getElementById('settings_email_enabled').checked,
+                    smtp: {
+                        host: document.getElementById('smtp_host').value.trim(),
+                        port: document.getElementById('smtp_port').value,
+                        security: document.getElementById('smtp_security').value,
+                        username: document.getElementById('smtp_username').value.trim(),
+                        password: document.getElementById('smtp_password').value
+                    }
+                };
+
+                return true;
+            }
+
+            return true;
+        }
+
+        function nextStep() {
+            if (!validateStep()) {
+                return;
+            }
+
+            if (currentStep < TOTAL_STEPS) {
+                if (currentStep === 3) {
+                    createAdminAndCompany();
+                } else if (currentStep === 4) {
+                    createCompanySettings();
+                } else if (currentStep === 5) {
+                    completeSetup();
+                } else {
+                    currentStep++;
+                    updateStepDisplay();
+                }
+            } else if (currentStep === TOTAL_STEPS) {
+                // Go to login
+                window.location.href = '/login/';
+            }
+        }
+
+        function createAdminAndCompany() {
+            const btnNext = document.getElementById('btnNext');
+            btnNext.disabled = true;
+            btnNext.innerHTML = '<span class="spinner"></span> Wird erstellt...';
+
+            fetch('/setup/process.php?step=create_admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(wizardData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentStep++;
+                    updateStepDisplay();
+                    btnNext.disabled = false;
+                    btnNext.innerHTML = 'Weiter →';
+                } else {
+                    alert('Fehler: ' + data.message);
+                    btnNext.disabled = false;
+                    btnNext.innerHTML = 'Weiter →';
+                }
+            })
+            .catch(error => {
+                alert('Ein Fehler ist aufgetreten: ' + error.message);
+                btnNext.disabled = false;
+                btnNext.innerHTML = 'Weiter →';
+            });
+        }
+
+        function createCompanySettings() {
+            const btnNext = document.getElementById('btnNext');
+            btnNext.disabled = true;
+            btnNext.innerHTML = '<span class="spinner"></span> Wird gespeichert...';
+
+            fetch('/setup/process.php?step=create_company', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(wizardData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentStep++;
+                    updateStepDisplay();
+                    btnNext.disabled = false;
+                    btnNext.innerHTML = 'Weiter →';
+                } else {
+                    alert('Fehler: ' + data.message);
+                    btnNext.disabled = false;
+                    btnNext.innerHTML = 'Weiter →';
+                }
+            })
+            .catch(error => {
+                alert('Ein Fehler ist aufgetreten: ' + error.message);
+                btnNext.disabled = false;
+                btnNext.innerHTML = 'Weiter →';
+            });
+        }
+
+        function completeSetup() {
+            const btnNext = document.getElementById('btnNext');
+            btnNext.disabled = true;
+            btnNext.innerHTML = '<span class="spinner"></span> Finalisierung...';
+
+            // Update summary
+            const admin = wizardData.admin;
+            const company = wizardData.company;
+            const settings = wizardData.settings;
+
+            document.getElementById('summary_admin').textContent = admin.firstname + ' ' + admin.lastname + ' (' + admin.email + ')';
+            document.getElementById('summary_company').textContent = company.name;
+            document.getElementById('summary_timezone').textContent = settings.timezone;
+            document.getElementById('summary_currency').textContent = company.currency === 'EUR' ? 'EUR (€)' : company.currency;
+
+            fetch('/setup/process.php?step=complete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(wizardData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentStep++;
+                    updateStepDisplay();
+                    btnNext.disabled = false;
+                    btnNext.textContent = 'Zum Dashboard →';
+                } else {
+                    alert('Fehler: ' + data.message);
+                    btnNext.disabled = false;
+                    btnNext.innerHTML = 'Weiter →';
+                }
+            })
+            .catch(error => {
+                alert('Ein Fehler ist aufgetreten: ' + error.message);
+                btnNext.disabled = false;
+                btnNext.innerHTML = 'Weiter →';
+            });
+        }
+
+        function previousStep() {
+            if (currentStep > 1) {
+                currentStep--;
+                updateStepDisplay();
+            }
+        }
+
+        function updateStepDisplay() {
+            // Hide all steps
+            document.querySelectorAll('.step').forEach(step => {
+                step.classList.remove('active');
+            });
+
+            // Show current step
+            document.querySelector(`.step[data-step="${currentStep}"]`).classList.add('active');
+
+            // Update indicator dots
+            document.querySelectorAll('.step-dot').forEach(dot => {
+                const stepNum = parseInt(dot.dataset.step);
+                dot.classList.remove('active', 'completed');
+
+                if (stepNum === currentStep) {
+                    dot.classList.add('active');
+                } else if (stepNum < currentStep) {
+                    dot.classList.add('completed');
+                }
+            });
+
+            // Update buttons
+            const btnPrev = document.getElementById('btnPrev');
+            const btnNext = document.getElementById('btnNext');
+
+            btnPrev.style.display = currentStep > 1 ? 'block' : 'none';
+
+            if (currentStep === TOTAL_STEPS) {
+                btnNext.textContent = 'Zum Dashboard →';
+                btnNext.onclick = () => window.location.href = '/login/';
+            } else {
+                btnNext.textContent = 'Weiter →';
+                btnNext.onclick = nextStep;
+            }
+        }
+    </script>
+</body>
+</html>
