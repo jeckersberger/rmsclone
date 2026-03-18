@@ -1,0 +1,535 @@
+{# Contract Management Template (J1) #}
+
+{% extends "layouts/app.html.twig" %}
+
+{% block title %}Vertragsmanagement{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="mb-0">
+                <i class="fas fa-file-contract"></i> Digitales Vertragsmanagement
+            </h1>
+            <small class="text-muted">Verwaltung von Verträgen, Vorlagen und Unterschriften</small>
+        </div>
+    </div>
+
+    <!-- Nav Tabs -->
+    <div class="card">
+        <div class="card-header">
+            <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" id="contracts-tab" data-bs-toggle="tab" href="#contracts" role="tab">
+                        <i class="fas fa-file"></i> Verträge
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="templates-tab" data-bs-toggle="tab" href="#templates" role="tab">
+                        <i class="fas fa-file-alt"></i> Vorlagen
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="agb-tab" data-bs-toggle="tab" href="#agb" role="tab">
+                        <i class="fas fa-scroll"></i> AGB-Sets
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="card-body">
+            <div class="tab-content">
+
+                {# ════════════════════════════════════════════════════════════ #}
+                {# TAB 1: Verträge #}
+                {# ════════════════════════════════════════════════════════════ #}
+
+                <div class="tab-pane fade show active" id="contracts" role="tabpanel">
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="btn-group mb-3" role="group">
+                                <button class="btn btn-primary" id="newContractBtn">
+                                    <i class="fas fa-plus"></i> Neuer Vertrag
+                                </button>
+                                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#generateFromProjectModal">
+                                    <i class="fas fa-magic"></i> Aus Projekt generieren
+                                </button>
+                            </div>
+
+                            {# Status Filter #}
+                            <div class="btn-group ms-2" role="group">
+                                <button type="radio" class="btn btn-outline-secondary status-filter" data-status="">
+                                    Alle
+                                </button>
+                                <button type="radio" class="btn btn-outline-secondary status-filter" data-status="draft">
+                                    <span class="badge bg-secondary">Entwurf</span>
+                                </button>
+                                <button type="radio" class="btn btn-outline-secondary status-filter" data-status="sent">
+                                    <span class="badge bg-info">Gesendet</span>
+                                </button>
+                                <button type="radio" class="btn btn-outline-secondary status-filter" data-status="signed">
+                                    <span class="badge bg-success">Unterschrieben</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# Contracts Table #}
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="contractsTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Titel</th>
+                                    <th>Kunde</th>
+                                    <th>Status</th>
+                                    <th>Version</th>
+                                    <th>Gültig bis</th>
+                                    <th>Erstellt am</th>
+                                    <th>Aktionen</th>
+                                </tr>
+                            </thead>
+                            <tbody id="contractsBody">
+                                {# Populated by JavaScript #}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {# ════════════════════════════════════════════════════════════ #}
+                {# TAB 2: Vorlagen #}
+                {# ════════════════════════════════════════════════════════════ #}
+
+                <div class="tab-pane fade" id="templates" role="tabpanel">
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <button class="btn btn-primary" id="newTemplateBtn">
+                                <i class="fas fa-plus"></i> Neue Vorlage
+                            </button>
+                        </div>
+                    </div>
+
+                    {# Templates List #}
+                    <div id="templatesList" class="row">
+                        {# Populated by JavaScript #}
+                    </div>
+                </div>
+
+                {# ════════════════════════════════════════════════════════════ #}
+                {# TAB 3: AGB-Sets #}
+                {# ════════════════════════════════════════════════════════════ #}
+
+                <div class="tab-pane fade" id="agb" role="tabpanel">
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <button class="btn btn-primary" id="newAgbBtn">
+                                <i class="fas fa-plus"></i> Neues AGB-Set
+                            </button>
+                        </div>
+                    </div>
+
+                    {# AGB Sets List #}
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="agbTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Version</th>
+                                    <th>Status</th>
+                                    <th>Standard</th>
+                                    <th>Erstellt am</th>
+                                    <th>Aktionen</th>
+                                </tr>
+                            </thead>
+                            <tbody id="agbBody">
+                                {# Populated by JavaScript #}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ═══════════════════════════════════════════════════════════════════ #}
+{# MODAL: New Contract #}
+{# ═══════════════════════════════════════════════════════════════════ #}
+
+<div class="modal fade" id="newContractModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Neuer Vertrag</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="newContractForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="contractTitle" class="form-label">Titel *</label>
+                        <input type="text" class="form-control" id="contractTitle" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="contractClient" class="form-label">Kunde *</label>
+                        <select class="form-select" id="contractClient" required>
+                            <option value="">-- Bitte wählen --</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="contractTemplate" class="form-label">Vorlage</label>
+                        <select class="form-select" id="contractTemplate">
+                            <option value="">-- Leer --</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="contractContent" class="form-label">Inhalt *</label>
+                        <textarea class="form-control" id="contractContent" rows="8" required></textarea>
+                        <small class="text-muted d-block mt-2">Verfügbare Platzhalter:
+                            <code>{kunde.name}</code>, <code>{kunde.firma}</code>, <code>{projekt.name}</code>, etc.
+                        </small>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="contractValidFrom" class="form-label">Gültig ab</label>
+                            <input type="date" class="form-control" id="contractValidFrom">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="contractValidUntil" class="form-label">Gültig bis</label>
+                            <input type="date" class="form-control" id="contractValidUntil">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Erstellen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# ═══════════════════════════════════════════════════════════════════ #}
+{# MODAL: Generate from Project #}
+{# ═══════════════════════════════════════════════════════════════════ #}
+
+<div class="modal fade" id="generateFromProjectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Vertrag aus Projekt generieren</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="generateFromProjectForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="genProjectId" class="form-label">Projekt *</label>
+                        <select class="form-select" id="genProjectId" required>
+                            <option value="">-- Bitte wählen --</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="genTemplateId" class="form-label">Vorlage *</label>
+                        <select class="form-select" id="genTemplateId" required>
+                            <option value="">-- Bitte wählen --</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Generieren</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# ═══════════════════════════════════════════════════════════════════ #}
+{# MODAL: New Template #}
+{# ═══════════════════════════════════════════════════════════════════ #}
+
+<div class="modal fade" id="newTemplateModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Neue Vorlage</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="newTemplateForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="templateName" class="form-label">Name *</label>
+                        <input type="text" class="form-control" id="templateName" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="templateCategory" class="form-label">Kategorie</label>
+                        <select class="form-select" id="templateCategory">
+                            <option value="general">Allgemein</option>
+                            <option value="rental">Mietvertrag</option>
+                            <option value="service">Servicevertrag</option>
+                            <option value="nda">NDA</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="templateContent" class="form-label">Inhalt *</label>
+                        <textarea class="form-control" id="templateContent" rows="10" required></textarea>
+                        <div class="mt-2">
+                            <small class="text-muted">Verfügbare Platzhalter:</small>
+                            <div id="placeholderList" class="mt-2"></div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="templateAgbSet" class="form-label">AGB-Set</label>
+                        <select class="form-select" id="templateAgbSet">
+                            <option value="">-- Keine --</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Erstellen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# ═══════════════════════════════════════════════════════════════════ #}
+{# MODAL: New AGB Set #}
+{# ═══════════════════════════════════════════════════════════════════ #}
+
+<div class="modal fade" id="newAgbModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Neues AGB-Set</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="newAgbForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="agbName" class="form-label">Name *</label>
+                        <input type="text" class="form-control" id="agbName" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="agbContent" class="form-label">Inhalt *</label>
+                        <textarea class="form-control" id="agbContent" rows="12" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Erstellen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Status badge helper
+function getStatusBadge(status) {
+    const badges = {
+        draft: '<span class="badge bg-secondary">Entwurf</span>',
+        sent: '<span class="badge bg-info">Gesendet</span>',
+        viewed: '<span class="badge bg-warning">Angesehen</span>',
+        signed: '<span class="badge bg-success">Unterschrieben</span>',
+        active: '<span class="badge bg-success">Aktiv</span>',
+        expired: '<span class="badge bg-danger">Abgelaufen</span>',
+        cancelled: '<span class="badge bg-dark">Storniert</span>'
+    };
+    return badges[status] || status;
+}
+
+// Format date helper
+function formatDate(dateStr) {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('de-DE');
+}
+
+// Load contracts
+async function loadContracts(status = '') {
+    try {
+        const url = '/api/contracts/list.php' + (status ? '?status=' + status : '');
+        const response = await fetch(url);
+        const data = await response.json();
+
+        const tbody = document.getElementById('contractsBody');
+        tbody.innerHTML = '';
+
+        if (data.data && data.data.length > 0) {
+            data.data.forEach(contract => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${contract.title}</strong></td>
+                    <td>${contract.clients_id}</td>
+                    <td>${getStatusBadge(contract.status)}</td>
+                    <td>${contract.version}</td>
+                    <td>${formatDate(contract.valid_until)}</td>
+                    <td>${formatDate(contract.created_at)}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <a href="javascript:viewContract(${contract.id})" class="btn btn-info" title="Anzeigen">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="javascript:editContract(${contract.id})" class="btn btn-warning" title="Bearbeiten">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="/api/contracts/pdf.php?id=${contract.id}" class="btn btn-success" title="PDF" target="_blank">
+                                <i class="fas fa-file-pdf"></i>
+                            </a>
+                            <button class="btn btn-danger" onclick="deleteContract(${contract.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        } else {
+            const row = document.createElement('tr');
+            row.innerHTML = '<td colspan="7" class="text-center text-muted">Keine Verträge vorhanden</td>';
+            tbody.appendChild(row);
+        }
+    } catch (error) {
+        console.error('Error loading contracts:', error);
+    }
+}
+
+// Load templates
+async function loadTemplates() {
+    try {
+        const response = await fetch('/api/contracts/templates.php');
+        const data = await response.json();
+
+        const list = document.getElementById('templatesList');
+        list.innerHTML = '';
+
+        if (data.data && data.data.length > 0) {
+            data.data.forEach(template => {
+                const card = document.createElement('div');
+                card.className = 'col-md-6 mb-3';
+                card.innerHTML = `
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-title">${template.name}</h6>
+                            <p class="card-text small text-muted">${template.description || '-'}</p>
+                            <span class="badge bg-light text-dark">${template.category}</span>
+                        </div>
+                        <div class="card-footer bg-light d-flex gap-2">
+                            <button class="btn btn-sm btn-info" onclick="editTemplate(${template.id})">
+                                <i class="fas fa-edit"></i> Bearbeiten
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteTemplate(${template.id})">
+                                <i class="fas fa-trash"></i> Löschen
+                            </button>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading templates:', error);
+    }
+}
+
+// Load AGB sets
+async function loadAgbSets() {
+    try {
+        const response = await fetch('/api/contracts/agb.php');
+        const data = await response.json();
+
+        const tbody = document.getElementById('agbBody');
+        tbody.innerHTML = '';
+
+        if (data.data && data.data.length > 0) {
+            data.data.forEach(agb => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${agb.name}</td>
+                    <td>${agb.version}</td>
+                    <td>${agb.is_active ? '<span class="badge bg-success">Aktiv</span>' : '<span class="badge bg-secondary">Inaktiv</span>'}</td>
+                    <td>${agb.is_default ? '<i class="fas fa-check text-success"></i>' : '-'}</td>
+                    <td>${formatDate(agb.created_at)}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm" role="group">
+                            ${!agb.is_default ? `<button class="btn btn-info" onclick="setDefaultAgb(${agb.id})"><i class="fas fa-star"></i></button>` : ''}
+                            <button class="btn btn-danger" onclick="deleteAgb(${agb.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading AGB sets:', error);
+    }
+}
+
+// Event listeners
+document.getElementById('newContractBtn').addEventListener('click', () => {
+    new bootstrap.Modal(document.getElementById('newContractModal')).show();
+});
+
+document.getElementById('newTemplateBtn').addEventListener('click', () => {
+    new bootstrap.Modal(document.getElementById('newTemplateModal')).show();
+});
+
+document.getElementById('newAgbBtn').addEventListener('click', () => {
+    new bootstrap.Modal(document.getElementById('newAgbModal')).show();
+});
+
+// Status filter
+document.querySelectorAll('.status-filter').forEach(btn => {
+    btn.addEventListener('click', function() {
+        loadContracts(this.dataset.status);
+    });
+});
+
+// Form submission
+document.getElementById('newContractForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    // TODO: Implement form submission
+    console.log('New contract form submitted');
+});
+
+document.getElementById('newTemplateForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    // TODO: Implement form submission
+    console.log('New template form submitted');
+});
+
+document.getElementById('newAgbForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    // TODO: Implement form submission
+    console.log('New AGB form submitted');
+});
+
+// Placeholder function stubs (implement as needed)
+function viewContract(id) { console.log('View contract:', id); }
+function editContract(id) { console.log('Edit contract:', id); }
+function deleteContract(id) { console.log('Delete contract:', id); }
+function editTemplate(id) { console.log('Edit template:', id); }
+function deleteTemplate(id) { console.log('Delete template:', id); }
+function deleteAgb(id) { console.log('Delete AGB:', id); }
+function setDefaultAgb(id) { console.log('Set default AGB:', id); }
+
+// Initial load
+document.addEventListener('DOMContentLoaded', function() {
+    loadContracts();
+    loadTemplates();
+    loadAgbSets();
+});
+</script>
+
+{% endblock %}
