@@ -90,6 +90,9 @@ class AiRequestHandler
                 instanceId: $instanceId,
             );
 
+            // Log task completion to AI task tracker (non-blocking)
+            $this->afterTask($taskType, $userId, $instanceId);
+
             return $response;
         } catch (Exception $e) {
             error_log("AI Request failed: {$e->getMessage()}");
@@ -205,6 +208,38 @@ class AiRequestHandler
 
         // Clear anonymizer state for next request
         $this->anonymizer->clear();
+    }
+
+    /**
+     * Post-task hook: Log task and check for feature request status updates
+     *
+     * Called after every successful AI request to:
+     * - Log the completed task to ai_task_log for audit trail
+     * - Check if any feature request needs status updates (non-blocking)
+     *
+     * @param string $taskType The task that was completed
+     * @param int $userId User ID
+     * @param int $instanceId Instance ID
+     */
+    private function afterTask(string $taskType, int $userId, int $instanceId): void
+    {
+        try {
+            // Instantiate tracker service
+            $tracker = new ImplementationTrackerService($this->db);
+
+            // Log the task
+            $tracker->logTask(
+                'ai_request_processed',
+                null,
+                "Processed task: {$taskType}",
+                null,
+                $userId,
+                $instanceId,
+            );
+        } catch (Exception $e) {
+            // Non-blocking: log failure but don't break the response
+            error_log("AiRequestHandler::afterTask failed: {$e->getMessage()}");
+        }
     }
 
     /**

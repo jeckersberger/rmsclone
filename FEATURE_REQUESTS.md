@@ -1,73 +1,50 @@
 # MyRMS – Feature Requests
 
-**Zweck:** Lebendes Dokument für neue Feature-Ideen. Der Nutzer schreibt seine Idee rein (auch ganz kurz und formlos), die KI formuliert sie dann vollständig als Entwicklungsauftrag aus.
+**Zweck:** Hier schreibt der Nutzer neue Feature-Ideen rein. Die MyRMS-KI (AiRequestHandler + FeedbackLearningService) liest diese Datei automatisch, formuliert Ideen aus und aktualisiert den Status.
 
-**Workflow:**
-1. **Nutzer:** Schreibt eine neue Idee rein – reicht ein Satz, z.B. "Kunden sollen Rechnungen online bezahlen können"
-2. **KI:** Liest diese Datei am Anfang jeder Session, formuliert offene Ideen vollständig aus (Was/Warum/Wie/DB/API/UI) und setzt Status auf `AUSFORMULIERT`
-3. **Nutzer:** Prüft und gibt frei → Status `FREIGEGEBEN`
-4. **KI:** Implementiert das Feature, aktualisiert Status auf `IN ARBEIT`, dann `ERLEDIGT` mit Commit-Hash
-5. **KI:** Verschiebt erledigte Features nach unten in den "Abgeschlossen"-Bereich
-6. **KI:** Aktualisiert gleichzeitig die IMPLEMENTATION_CHECKLIST.md mit den neuen Bausteinen
+## Wie es funktioniert
 
-**Regeln für die KI:**
-- Am Anfang jeder Coding-Session: Diese Datei UND IMPLEMENTATION_CHECKLIST.md lesen
-- Neue Nutzer-Ideen (Status: IDEE) vollständig ausformulieren
-- Nach jedem implementierten Feature: Status hier UND in der Checklist aktualisieren
-- Erledigte Features nach unten verschieben, nicht löschen
-- FR-Nummern fortlaufend vergeben (FR-001, FR-002, ...)
+1. **Nutzer** schreibt eine Idee rein – reicht ein Satz, z.B. "Kunden sollen Rechnungen online bezahlen können"
+2. **MyRMS-KI** liest diese Datei im Rahmen des Lernsystems (I10), erkennt neue IDEE-Einträge und formuliert sie vollständig aus (Was/Warum/Wie/DB/API/UI)
+3. **MyRMS-KI** setzt Status auf `AUSFORMULIERT` und schreibt die Ausformulierung in die Datei zurück
+4. **Nutzer** prüft und gibt frei → setzt Status auf `FREIGEGEBEN`
+5. **Entwicklung** findet statt (manuell oder per Coding-Agent) → Status `IN ARBEIT` → `ERLEDIGT`
+6. Erledigte Features werden nach unten verschoben
+
+## Technische Integration in MyRMS
+
+Die KI greift auf diese Datei über den `FeatureRequestService` zu:
+- **Lesen:** `FeatureRequestService::getPendingRequests()` – parst die MD-Datei und gibt offene Requests zurück
+- **Schreiben:** `FeatureRequestService::updateRequest($id, $data)` – aktualisiert Status und Ausformulierung
+- **Trigger:** Nach jedem KI-Task prüft das System ob neue IDEEs vorhanden sind (Hintergrund, nicht blockierend)
+- **Speicherort:** Diese Datei liegt im Projekt-Root und wird von der KI gelesen/geschrieben. Alternativ können Feature Requests auch über die Settings-UI (Einstellungen → KI → Feature Requests) eingegeben werden, dann werden sie in der DB gespeichert (`ai_feature_requests`-Tabelle) und diese Datei wird automatisch synchronisiert.
 
 ---
 
-## Template (KI füllt das aus, Nutzer muss nur die Idee beschreiben)
+## Format
 
 ```
-### FR-XXX: [Kurzer Feature-Name]
-
+### FR-XXX: [Kurzer Name]
 **Status:** IDEE | AUSFORMULIERT | FREIGEGEBEN | IN ARBEIT | ERLEDIGT
-**Priorität:** HOCH | MITTEL | NIEDRIG
-**Geschätzte Größe:** S (1-2h) | M (halber Tag) | L (1-2 Tage) | XL (3+ Tage)
 **Erstellt:** [Datum]
-**Erledigt:** [Datum] (wird von KI ausgefüllt)
 
-**Nutzer-Idee (Original):**
-[Hier steht was der Nutzer gesagt/geschrieben hat, unverändert]
+**Nutzer-Idee:** [Was der Nutzer geschrieben hat – unverändert]
 
-**Ausformulierung (von KI):**
+**KI-Ausformulierung:** (wird automatisch von der MyRMS-KI ausgefüllt)
+- Was: [2-3 Sätze]
+- Ablauf: [Schritt für Schritt]
+- DB: [Tabellen/Spalten]
+- Service: [Methoden]
+- API: [Endpunkte]
+- UI: [Oberfläche]
+- Erledigt wenn: [Kriterien]
 
-Was soll es tun?
-[2-3 Sätze]
-
-Wie soll es funktionieren?
-[Schritt-für-Schritt Ablauf]
-
-Datenbank:
-[Neue Tabellen/Spalten, oder "keine Änderung"]
-
-Service:
-[Neuer oder erweiterter Service, wichtige Methoden]
-
-API-Endpunkte:
-[Neue Endpunkte mit HTTP-Methode und Pfad]
-
-UI/Oberfläche:
-[Wo in der Navigation, welche Elemente, wie sieht es aus]
-
-Abhängigkeiten:
-[Andere Module die betroffen sind]
-
-Erledigt-Kriterien:
-[Wann ist es fertig? Was muss funktionieren?]
-
-**Commit/Dateien:** (von KI nach Implementierung)
-[Commit-Hash, neue/geänderte Dateien]
+**Commit:** [wird nach Implementierung eingetragen]
 ```
 
 ---
 
 ## Offene Feature Requests
-
-*(Einfach eine neue Idee reinschreiben – die KI formuliert sie aus)*
 
 
 
@@ -75,4 +52,3 @@ Erledigt-Kriterien:
 
 ## Abgeschlossene Feature Requests
 
-*(Erledigte Features werden automatisch hierher verschoben)*

@@ -5,12 +5,14 @@
 
 Diese Datei dokumentiert den Implementierungsstatus aller Features. Jedes Feature hat eine Checkliste mit den einzelnen Bausteinen (Migration, Service, API, UI). So ist jederzeit nachvollziehbar, was fertig ist, was noch getestet werden muss und was fehlt.
 
-**Regeln für die KI:**
-- Am Anfang jeder Coding-Session: Diese Datei lesen (zusammen mit FEATURE_REQUESTS.md und lessons_learned.md)
-- Nach jedem implementierten Feature/Baustein: Status hier aktualisieren
-- Neue Features aus FEATURE_REQUESTS.md hier als neuen Abschnitt anlegen
-- Stand-Datum oben aktualisieren
-- Zusammenfassung am Ende aktuell halten
+## Technische Integration in MyRMS
+
+Die MyRMS-KI (AiRequestHandler + FeedbackLearningService) liest und schreibt diese Datei automatisch:
+- **Lesen:** `ImplementationTrackerService::getChecklist()` – parst diese MD-Datei und gibt den Status aller Bausteine zurück
+- **Schreiben:** `ImplementationTrackerService::updateStatus($module, $baustein, $status)` – aktualisiert den Status eines Bausteins
+- **Trigger:** Nach jedem abgeschlossenen KI-Task (z.B. Wartungsplan erstellt, Vertrag generiert, Schaden bewertet) prüft das System ob ein 🔧-Baustein in ✅ umgewandelt werden kann
+- **Dashboard-Widget:** Das Admin-Dashboard zeigt ein "Implementierungsstatus"-Widget das aus dieser Datei gespeist wird (Fortschrittsbalken pro Modul)
+- **Sync:** Die Datei wird bidirektional mit der `ai_implementation_status`-Tabelle synchronisiert. Änderungen in der Datei werden beim nächsten Service-Aufruf in die DB geschrieben und umgekehrt.
 
 **Legende:**
 - ✅ = Implementiert und committed
