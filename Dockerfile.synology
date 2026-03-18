@@ -34,7 +34,7 @@ RUN sed -ri -e 's!/var/www/html!/var/www/html/src!g' /etc/apache2/sites-availabl
 # Apache mod_rewrite aktivieren
 RUN a2enmod rewrite
 
-# Composer Dependencies kopieren
+# Composer Dependencies kopieren (aus Stage 1)
 COPY --from=deps /app/vendor/ /var/www/html/vendor
 
 # App-Dateien kopieren
@@ -45,11 +45,12 @@ COPY ./migrate.sh /var/www/html/
 COPY ./scripts /var/www/html/scripts
 RUN chmod +x /var/www/html/migrate.sh
 
-# Storage-Verzeichnis erstellen
-RUN mkdir -p /var/www/html/storage && chown www-data:www-data /var/www/html/storage
+# Storage-Verzeichnis erstellen + Berechtigungen
+RUN mkdir -p /var/www/html/storage \
+    && chown -R www-data:www-data /var/www/html/storage \
+    && chown -R www-data:www-data /var/www/html/src
 
-# Berechtigungen
-RUN chown -R www-data:www-data /var/www/html/src
+# KEIN "USER www-data" — Apache braucht root um Port 80 zu binden
+# Apache wechselt selbst zu www-data nach dem Start (via envvars)
 
-USER www-data
 ENTRYPOINT ["/var/www/html/migrate.sh"]
