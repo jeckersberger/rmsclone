@@ -24,20 +24,57 @@ if (!$step) {
     exit;
 }
 
+// Helper: Get environment variable from multiple sources (Docker passes vars differently)
+function env($key, $default = null) {
+    return $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key) ?: $default;
+}
+
 // Include database connection without full head.php
-require_once(__DIR__ . '/../../vendor/autoload.php');
+$autoloadPath = __DIR__ . '/../../vendor/autoload.php';
+if (!file_exists($autoloadPath)) {
+    // vendor might not be mounted — try alternative path inside Docker
+    $autoloadPath = '/var/www/html/vendor/autoload.php';
+}
+if (file_exists($autoloadPath)) {
+    require_once($autoloadPath);
+}
 
 // Database connection
+$dbHost = env('DB_HOSTNAME', 'db');
+$dbUser = env('DB_USERNAME', 'myrms');
+$dbPass = env('DB_PASSWORD', '');
+$dbName = env('DB_DATABASE', 'myrms');
+$dbPort = env('DB_PORT', 3306);
+
 try {
-    $DBLIB = new MysqliDb([
-        'host' => getenv('DB_HOSTNAME'),
-        'username' => getenv('DB_USERNAME'),
-        'password' => getenv('DB_PASSWORD'),
-        'db' => getenv('DB_DATABASE'),
-        'port' => getenv('DB_PORT') ?: 3306,
-        'charset' => 'utf8'
-    ]);
+    // Try MysqliDb if autoloaded
+    if (class_exists('MysqliDb')) {
+        $DBLIB = new MysqliDb([
+            'host' => $dbHost,
+            'username' => $dbUser,
+            'password' => $dbPass,
+            'db' => $dbName,
+            'port' => (int)$dbPort,
+            'charset' => 'utf8'
+        ]);
+    } else {
+        // Fallback: plain mysqli if vendor not available
+        $DBLIB = null;
+        $mysqli = new mysqli($dbHost, $dbUser, $dbPass, $dbName, (int)$dbPort);
+        if ($mysqli->connect_error) {
+            throw new Exception($mysqli->connect_error);
+        }
+    }
 } catch (Exception $e) {
+    // For check_db step, return the error gracefully instead of dying
+    if ($step === 'check_db') {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Verbindung konnte nicht hergestellt werden: ' . $e->getMessage(),
+            'debug' => ['host' => $dbHost, 'user' => $dbUser, 'db' => $dbName, 'port' => $dbPort]
+        ]);
+        exit;
+    }
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Database connection failed: ' . $e->getMessage()]);
     exit;
@@ -71,35 +108,39 @@ switch ($step) {
  * Check database connection and table count
  */
 function handleCheckDatabase() {
-    global $DBLIB;
+    global $DBLIB, $mysqli;
 
     try {
-        // Get database name
-        $dbName = getenv('DB_DATABASE');
+        $dbName = env('DB_DATABASE', 'myrms');
+        $tableCount = 0;
 
-        // Count tables
-        $result = $DBLIB->query("SELECT COUNT(*) as count FROM information_schema.TABLES WHERE TABLE_SCHEMA = ?", [$dbName]);
-
-        if ($result && count($result) > 0) {
-            $tableCount = $result[0]['count'] ?? 0;
-
-            echo json_encode([
-                'success' => true,
-                'message' => 'Database connection successful',
-                'data' => [
-                    'database_name' => $dbName,
-                    'table_count' => (int)$tableCount
-                ]
-            ]);
+        if ($DBLIB && class_exists('MysqliDb')) {
+            // MysqliDb available
+            $result = $DBLIB->rawQuery("SELECT COUNT(*) as cnt FROM information_schema.TABLES WHERE TABLE_SCHEMA = ?", [$dbName]);
+            $tableCount = $result[0]['cnt'] ?? 0;
+        } elseif (isset($mysqli)) {
+            // Plain mysqli fallback
+            $stmt = $mysqli->prepare("SELECT COUNT(*) as cnt FROM information_schema.TABLES WHERE TABLE_SCHEMA = ?");
+            $stmt->bind_param('s', $dbName);
+            $stmt->execute();
+            $row = $stmt->get_result()->fetch_assoc();
+            $tableCount = $row['cnt'] ?? 0;
+            $stmt->close();
         } else {
-            echo json_encode([
-                'success' => false,
-                'message' => 'Could not retrieve table information'
-            ]);
+            throw new Exception('Keine Datenbankverbindung verfügbar');
         }
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Datenbankverbindung erfolgreich',
+            'data' => [
+                'database_name' => $dbName,
+                'table_count' => (int)$tableCount
+            ]
+        ]);
     } catch (Exception $e) {
         http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Database check failed: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => 'Datenbankprüfung fehlgeschlagen: ' . $e->getMessage()]);
     }
 }
 
