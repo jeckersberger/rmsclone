@@ -6,7 +6,10 @@
  * manage tag assignments, and handle inventory operations.
  */
 require_once __DIR__ . '/../apiHeadSecure.php';
+require_once __DIR__ . '/../../services/RfidService.php';
 require_once __DIR__ . '/../../services/StockItemService.php';
+require_once __DIR__ . '/../../services/CrossInstanceLookupService.php';
+require_once __DIR__ . '/../../services/TagFormatService.php';
 
 // Check permissions
 if (!$AUTH->instancePermissionCheck("ASSETS:ASSET_BARCODES:SCAN")) {
@@ -18,7 +21,11 @@ $userId = $AUTH->data['users_userid'];
 
 $rfidService = new RfidService($DBLIB);
 $stockService = new StockItemService($DBLIB);
+$crossLookup = new CrossInstanceLookupService($DBLIB, $instanceId);
+$tagFormat = new TagFormatService($DBLIB, $instanceId);
 $rfidService->setStockService($stockService);
+$rfidService->setCrossLookupService($crossLookup);
+$stockService->setCrossLookupService($crossLookup);
 
 // Get the action parameter
 $action = $_POST['action'] ?? null;
@@ -82,12 +89,122 @@ switch ($action) {
         handleBoxScanAction($stockService, $rfidService, $instanceId, $userId);
         break;
 
+    // ── TID-basiertes RFID Pairing ──
+    case 'pair_tid':
+        handlePairTid($tagFormat, $instanceId);
+        break;
+
+    case 'unpair_tid':
+        handleUnpairTid($tagFormat, $instanceId);
+        break;
+
+    case 'lookup_tid':
+        handleLookupTid($tagFormat, $crossLookup);
+        break;
+
     default:
         finish(false, ["code" => "INVALID", "message" => "Unknown action"]);
 }
 
 /**
- * Process a single scan
+ * Pair a TID (from RFID reader) with an entity (asset, stock instance, or external item).
+ * POST: entity_type (asset|stock_instance|external), entity_id, tid (hex string from reader)
+ */
+function handlePairTid($tagFormat, $instanceId) {
+    $entityType = $_POST['entity_type'] ?? '';
+    $entityId = (int)($_POST['entity_id'] ?? 0);
+    $tid = trim($_POST['tid'] ?? '');
+
+    if (empty($entityType) || $entityId <= 0 || empty($tid)) {
+        finish(false, ["message" => "entity_type, entity_id and tid required"]);
+    }
+
+    try {
+        $success = match ($entityType) {
+            'asset' => $tagFormat->pairAssetTid($entityId, $tid),
+            'stock_instance' => $tagFormat->pairStockTid($entityId, $tid),
+            'external' => $tagFormat->pairExternalTid($entityId, $tid),
+            default => throw new Exception("Unbekannter Entity-Typ: {$entityType}"),
+        };
+
+        finish(true, null, [
+            'message' => 'TID erfolgreich zugeordnet',
+            'entity_type' => $entityType,
+            'entity_id' => $entityId,
+            'tid' => strtoupper($tid),
+        ]);
+    } catch (\Exception $e) {
+        finish(false, ["message" => $e->getMessage()]);
+    }
+}
+
+/**
+ * Remove TID pairing from an entity.
+ * POST: entity_type (asset|stock_instance|external), entity_id
+ */
+function handleUnpairTid($tagFormat, $instanceId) {
+    $entityType = $_POST['entity_type'] ?? '';
+    $entityId = (int)($_POST['entity_id'] ?? 0);
+
+    if (empty($entityType) || $entityId <= 0) {
+        finish(false, ["message" => "entity_type and entity_id required"]);
+    }
+
+    try {
+        if ($entityType === 'asset') {
+            $tagFormat->unpairAssetTid($entityId);
+        } elseif ($entityType === 'stock_instance') {
+            global $DBLIB;
+            $DBLIB->where('id', $entityId);
+            $DBLIB->update('stock_instances', ['rfid_tid' => null]);
+        } elseif ($entityType === 'external') {
+            global $DBLIB;
+            $DBLIB->where('id', $entityId);
+            $DBLIB->update('external_items', ['rfid_tid' => null]);
+        } else {
+            finish(false, ["message" => "Unbekannter Entity-Typ"]);
+        }
+
+        finish(true, null, ['message' => 'TID-Zuordnung entfernt']);
+    } catch (\Exception $e) {
+        finish(false, ["message" => $e->getMessage()]);
+    }
+}
+
+/**
+ * Look up entity by TID — checks local instance first, then partners/federation.
+ * POST: tid (hex string from RFID reader)
+ */
+function handleLookupTid($tagFormat, $crossLookup) {
+    $tid = trim($_POST['tid'] ?? '');
+
+    if (empty($tid)) {
+        finish(false, ["message" => "tid required"]);
+    }
+
+    // Try local first
+    $result = $tagFormat->lookupTid($tid);
+    if ($result) {
+        finish(true, null, [
+            'found' => true,
+            'source' => $result['is_local'] ? 'local' : 'local_partner',
+            'entity_type' => $result['entity_type'],
+            'entity' => $result,
+        ]);
+    }
+
+    // Try cross-instance lookup (partners + federation)
+    $crossResult = $crossLookup->lookupTag($tid);
+    if ($crossResult) {
+        finish(true, null, $crossResult);
+    }
+
+    finish(true, null, ['found' => false, 'message' => 'TID nicht gefunden']);
+}
+
+/**
+ * Process a single scan.
+ * With TID-based system: the rfid_tag can be a TID, barcode, or RMS tag format.
  */
 function handleScan($rfidService, $instanceId, $userId)
 {
@@ -102,11 +219,18 @@ function handleScan($rfidService, $instanceId, $userId)
     $result = $rfidService->processScan($instanceId, $rfidTag, $scanAction, $userId, $projectId);
 
     if ($result['success']) {
-        finish(true, null, [
+        $response = [
             'asset' => $result['asset'],
             'message' => $result['message'],
             'action_taken' => $result['action_taken'],
-        ]);
+        ];
+        // Pass through partner/foreign fields
+        if (!empty($result['is_foreign'])) {
+            $response['is_foreign']      = true;
+            $response['owner_name']      = $result['owner_name'] ?? null;
+            $response['entity_details']  = $result['entity_details'] ?? [];
+        }
+        finish(true, null, $response);
     } else {
         finish(false, [
             "code" => "SCAN_FAILED",
@@ -310,12 +434,19 @@ function handleUniversalScan($rfidService, $instanceId, $userId)
     $result = $rfidService->processUniversalScan($instanceId, $rfidTag, $scanAction, $userId, $projectId);
 
     if ($result['success']) {
-        finish(true, null, [
-            'entity_type'  => $result['entity_type'],
-            'entity'       => $result['entity'] ?? $result['asset'] ?? null,
-            'message'      => $result['message'],
-            'action_taken' => $result['action_taken'],
-        ]);
+        $response = [
+            'entity_type'    => $result['entity_type'],
+            'entity'         => $result['entity'] ?? $result['asset'] ?? null,
+            'message'        => $result['message'],
+            'action_taken'   => $result['action_taken'],
+        ];
+        // Pass through partner/foreign fields
+        if (!empty($result['is_foreign'])) {
+            $response['is_foreign']      = true;
+            $response['owner_name']      = $result['owner_name'] ?? null;
+            $response['entity_details']  = $result['entity_details'] ?? [];
+        }
+        finish(true, null, $response);
     } else {
         finish(false, [
             "code"        => "SCAN_FAILED",

@@ -76,7 +76,7 @@ class DunningQueueService
             $this->db->where('document_lifecycle_id', $docLifecycleId);
             $this->db->where('dunning_level', $levelNum);
             $this->db->where('status', 'pending');
-            $existing = $this->db->getOne('dunning_queue');
+            $existing = $this->db->getOne('dunning_queue', null);
 
             if ($existing) {
                 $skipped++;
@@ -180,7 +180,7 @@ class DunningQueueService
     public function approve(int $queueId, int $userId, ?string $notes = null): bool
     {
         $this->db->where('id', $queueId);
-        $queue = $this->db->getOne('dunning_queue');
+        $queue = $this->db->getOne('dunning_queue', null);
 
         if (!$queue) return false;
 
@@ -206,7 +206,7 @@ class DunningQueueService
     public function reject(int $queueId, int $userId, ?string $notes = null): bool
     {
         $this->db->where('id', $queueId);
-        $queue = $this->db->getOne('dunning_queue');
+        $queue = $this->db->getOne('dunning_queue', null);
 
         if (!$queue) return false;
 
@@ -228,7 +228,7 @@ class DunningQueueService
     public function markSent(int $queueId): bool
     {
         $this->db->where('id', $queueId);
-        $queue = $this->db->getOne('dunning_queue');
+        $queue = $this->db->getOne('dunning_queue', null);
 
         if (!$queue) return false;
 
@@ -261,7 +261,7 @@ class DunningQueueService
 
         // Get queue entry
         $this->db->where('id', $queueId);
-        $queue = $this->db->getOne('dunning_queue');
+        $queue = $this->db->getOne('dunning_queue', null);
         if (!$queue) {
             $result['message'] = 'Queue entry not found';
             return $result;
@@ -292,7 +292,7 @@ class DunningQueueService
         $this->db->where('instances_id', $instanceId);
         $this->db->join('projects p', 'document_lifecycle.projects_id=p.projects_id', 'LEFT');
         $this->db->join('clients c', 'p.clients_id=c.clients_id', 'LEFT');
-        $invoice = $this->db->getOne('document_lifecycle', [
+        $invoice = $this->db->getOne('document_lifecycle', null, [
             'document_lifecycle.*',
             'c.clients_name',
             'c.clients_email',

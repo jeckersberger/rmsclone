@@ -29,7 +29,7 @@ class DeliveryNoteService
         $this->db->where('projects_id', $projectId);
         $this->db->where('instances_id', $instanceId);
         $this->db->join('clients', 'projects.clients_id = clients.clients_id', 'LEFT');
-        $project = $this->db->getOne('projects', ['projects.*', 'clients.*']);
+        $project = $this->db->getOne('projects', null, ['projects.*', 'clients.*']);
         if (!$project) return [];
 
         // Instance/business details
@@ -97,7 +97,7 @@ class DeliveryNoteService
         $this->db->where('instances_id', $instanceId);
         $this->db->where('projects_id', $projectId);
         $this->db->orderBy('created_at', 'DESC');
-        $packingList = $this->db->getOne('packing_lists', ['id']);
+        $packingList = $this->db->getOne('packing_lists', null, ['id']);
 
         if (!$packingList) {
             return null;

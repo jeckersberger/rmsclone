@@ -1,0 +1,175 @@
+{% extends "layout.twig" %}
+
+{% block title %}{% if action == 'register' %}Register{% else %}Login{% endif %} - {{ config.portal_title|default('Booking Portal') }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 400px; margin: 3rem auto;">
+    {% if message %}
+        <div class="alert alert-{{ message.type }}">
+            {{ message.text }}
+        </div>
+    {% endif %}
+
+    {% if action == 'register' %}
+        <div style="background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 2rem;">
+            <h1 style="margin-bottom: 0.5rem;">Create Account</h1>
+            <p style="color: #6b7280; margin-bottom: 2rem;">Join us to manage your bookings and access exclusive features</p>
+
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="name">Full Name *</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email *</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password *</label>
+                    <input type="password" id="password" name="password" required minlength="8">
+                    <p style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">At least 8 characters</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">Phone (optional)</label>
+                    <input type="tel" id="phone" name="phone">
+                </div>
+
+                <div class="form-group">
+                    <label for="company">Company (optional)</label>
+                    <input type="text" id="company" name="company">
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem;">
+                    Register
+                </button>
+
+                <p style="text-align: center; margin-top: 1rem;">
+                    Already have an account? <a href="/portal/?action=login" style="color: var(--primary-color, #2563eb);">Login here</a>
+                </p>
+            </form>
+        </div>
+    {% else %}
+        <div style="background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 2rem;">
+            <h1 style="margin-bottom: 0.5rem;">Login</h1>
+            <p style="color: #6b7280; margin-bottom: 2rem;">Access your account to view and manage bookings</p>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email">Email *</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password *</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem;">
+                    Login
+                </button>
+
+                <p style="text-align: center; margin-top: 1rem;">
+                    Don't have an account? <a href="/portal/?action=register" style="color: var(--primary-color, #2563eb);">Register here</a>
+                </p>
+
+                {% if not config.require_registration %}
+                    <p style="text-align: center; margin-top: 1rem; font-size: 0.875rem;">
+                        <a href="/portal/" style="color: var(--primary-color, #2563eb);">Continue as guest</a>
+                    </p>
+                {% endif %}
+            </form>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+const instanceId = {{ instance_id }};
+const isRegister = {{ action == 'register' ? 'true' : 'false' }};
+
+{% if action == 'register' %}
+document.getElementById('registerForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const payload = {
+        instances_id: instanceId,
+        name: document.getElementById('name').value,
+        email: document.getElementById('email').value,
+        password: document.getElementById('password').value,
+        phone: document.getElementById('phone').value,
+        company: document.getElementById('company').value
+    };
+
+    const btn = document.querySelector('[type="submit"]');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Registering...';
+
+    try {
+        const response = await fetch('/api/portal/register.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams(payload)
+        });
+
+        const data = await response.json();
+
+        if (data.result) {
+            localStorage.setItem('portalToken', data.response.token);
+            localStorage.setItem('clientId', data.response.client_id);
+            alert('Registration successful!');
+            window.location.href = '/portal/';
+        } else {
+            alert('Error: ' + (data.error?.message || 'Registration failed'));
+            btn.disabled = false;
+            btn.innerHTML = 'Register';
+        }
+    } catch (e) {
+        alert('Error: ' + e.message);
+        btn.disabled = false;
+        btn.innerHTML = 'Register';
+    }
+});
+{% else %}
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const payload = {
+        instances_id: instanceId,
+        email: document.getElementById('email').value,
+        password: document.getElementById('password').value
+    };
+
+    const btn = document.querySelector('[type="submit"]');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Logging in...';
+
+    try {
+        const response = await fetch('/api/portal/login.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams(payload)
+        });
+
+        const data = await response.json();
+
+        if (data.result) {
+            localStorage.setItem('portalToken', data.response.token);
+            localStorage.setItem('clientId', data.response.client_id);
+            alert('Login successful!');
+            window.location.href = '/portal/';
+        } else {
+            alert('Error: ' + (data.error?.message || 'Login failed'));
+            btn.disabled = false;
+            btn.innerHTML = 'Login';
+        }
+    } catch (e) {
+        alert('Error: ' + e.message);
+        btn.disabled = false;
+        btn.innerHTML = 'Login';
+    }
+});
+{% endif %}
+</script>
+{% endblock %}

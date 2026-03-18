@@ -113,7 +113,7 @@ class NotificationService
         $cutoff = date('Y-m-d H:i:s', strtotime("-{$daysOld} days"));
         $this->db->where('created_at', $cutoff, '<');
         $this->db->where('read_at IS NOT NULL');
-        return $this->db->delete('notifications') ? $this->db->count : 0;
+        return $this->db->delete('notifications') ? $this->db->affectedRows() : 0;
     }
 
     /**

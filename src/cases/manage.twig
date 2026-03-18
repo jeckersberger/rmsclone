@@ -1,0 +1,1056 @@
+{% extends "base.twig" %}
+
+{% block title %}Cases / Kisten verwalten{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row mb-3">
+    <div class="col-md-12">
+      <h1 class="mb-0">Cases / Kisten verwalten</h1>
+      <p class="text-muted">Verwalten Sie den Inhalt Ihrer Cases und Kisten</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Case List Panel -->
+    <div class="col-md-4">
+      <div class="card card-primary card-outline">
+        <div class="card-header">
+          <h3 class="card-title">Cases / Kisten</h3>
+        </div>
+        <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+          <div id="caseList" class="list-group">
+            <!-- Cases will be loaded here -->
+          </div>
+          <div id="noCasesMessage" class="alert alert-info mt-3">
+            <i class="fas fa-info-circle"></i> Noch keine Cases definiert.
+          </div>
+        </div>
+        <div class="card-footer">
+          <button type="button" class="btn btn-primary btn-block" id="btnNewCase">
+            <i class="fas fa-plus"></i> Neues Case markieren
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Case Contents Panel -->
+    <div class="col-md-8">
+      <div id="contentsPanel" class="card card-success card-outline" style="display: none;">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h3 class="card-title">
+            <span id="selectedCaseName"></span>
+            <small id="selectedCaseTag" class="text-muted"></small>
+          </h3>
+          <div class="btn-group btn-group-sm" role="group">
+            <button type="button" class="btn btn-info" id="btnAddContent">
+              <i class="fas fa-plus"></i> Typ hinzufügen
+            </button>
+            <button type="button" class="btn btn-warning" id="btnCopyContent">
+              <i class="fas fa-copy"></i> Inhalt kopieren
+            </button>
+            <button type="button" class="btn btn-danger" id="btnUnmarkCase">
+              <i class="fas fa-trash"></i> Case entfernen
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="contentsTableContainer">
+            <table id="contentsTable" class="table table-sm table-bordered table-hover">
+              <thead>
+                <tr>
+                  <th style="width: 30px;"><i class="fas fa-grip-vertical"></i></th>
+                  <th>Gerätetyp / Artikel</th>
+                  <th style="width: 100px;">Hersteller</th>
+                  <th style="width: 100px;">Anzahl</th>
+                  <th>Notizen</th>
+                  <th style="width: 100px;">Aktionen</th>
+                </tr>
+              </thead>
+              <tbody id="contentsTableBody">
+                <!-- Contents will be loaded here -->
+              </tbody>
+            </table>
+          </div>
+          <div id="noContentsMessage" class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i> Keine Typen definiert. Fügen Sie Gerätetypen und Artikel hinzu.
+          </div>
+        </div>
+      </div>
+
+      <div id="noCaseSelectedPanel" class="card card-secondary">
+        <div class="card-body text-center py-5">
+          <i class="fas fa-inbox text-muted" style="font-size: 3rem;"></i>
+          <p class="mt-3 text-muted">Wählen Sie ein Case aus der Liste aus, um dessen Inhalt zu verwalten.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Verification Panel -->
+  <div class="row mt-4">
+    <div class="col-md-12">
+      <div class="card card-info card-outline">
+        <div class="card-header">
+          <h3 class="card-title">Letzte Prüfungen</h3>
+        </div>
+        <div class="card-body">
+          <table id="checkHistoryTable" class="table table-sm table-bordered table-hover">
+            <thead>
+              <tr>
+                <th>Datum</th>
+                <th>Case</th>
+                <th style="width: 100px;">Typ</th>
+                <th style="width: 100px;">Status</th>
+                <th>Fehlende Teile</th>
+                <th style="width: 100px;">Bestätigt</th>
+              </tr>
+            </thead>
+            <tbody id="checkHistoryBody">
+              <!-- Check history will be loaded here -->
+            </tbody>
+          </table>
+          <div id="noCheckHistoryMessage" class="alert alert-info">
+            <i class="fas fa-info-circle"></i> Noch keine Prüfungen durchgeführt.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Content Modal (Type-based) -->
+<div class="modal fade" id="addContentModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Inhalt hinzufügen</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="nav nav-tabs" id="addContentTabs" role="tablist">
+        <a class="nav-item nav-link active" id="tab-asset-type" data-toggle="tab" href="#pane-asset-type" role="tab">
+          <i class="fas fa-wrench"></i> Gerätetyp
+        </a>
+        <a class="nav-item nav-link" id="tab-stock-item" data-toggle="tab" href="#pane-stock-item" role="tab">
+          <i class="fas fa-box"></i> Artikel
+        </a>
+      </div>
+      <form id="addContentForm">
+        <div class="modal-body">
+          <div class="tab-content">
+            <!-- Asset Type Tab -->
+            <div class="tab-pane fade show active" id="pane-asset-type" role="tabpanel">
+              <div class="form-group">
+                <label for="assetTypeSelect">Gerätetyp *</label>
+                <select class="form-control" id="assetTypeSelect" required>
+                  <option value="">-- Bitte wählen --</option>
+                </select>
+                <small class="form-text text-muted">Wird nach Kategorie und Hersteller sortiert</small>
+              </div>
+              <div class="form-group">
+                <label for="assetTypeQuantity">Anzahl *</label>
+                <input type="number" class="form-control" id="assetTypeQuantity" value="1" min="1" required>
+              </div>
+              <div class="form-group">
+                <label for="assetTypeNotes">Notizen</label>
+                <textarea class="form-control" id="assetTypeNotes" rows="2"></textarea>
+              </div>
+            </div>
+
+            <!-- Stock Item Tab -->
+            <div class="tab-pane fade" id="pane-stock-item" role="tabpanel">
+              <div class="form-group">
+                <label for="stockItemSelect">Artikel *</label>
+                <select class="form-control" id="stockItemSelect" required>
+                  <option value="">-- Bitte wählen --</option>
+                </select>
+                <small class="form-text text-muted">Verfügbare Artikel in Ihrem System</small>
+              </div>
+              <div class="form-group">
+                <label for="stockItemQuantity">Anzahl *</label>
+                <input type="number" class="form-control" id="stockItemQuantity" value="1" min="1" required>
+              </div>
+              <div class="form-group">
+                <label for="stockItemNotes">Notizen</label>
+                <textarea class="form-control" id="stockItemNotes" rows="2"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+          <button type="submit" class="btn btn-primary">Speichern</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Copy Content Modal -->
+<div class="modal fade" id="copyContentModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Inhalt kopieren</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="sourceCase">Von Case kopieren *</label>
+          <select class="form-control" id="sourceCase" required>
+            <option value="">-- Bitte wählen --</option>
+          </select>
+        </div>
+        <div id="sourceContentsPreview" class="alert alert-info" style="display: none; max-height: 300px; overflow-y: auto;">
+          <strong>Inhalte:</strong>
+          <ul id="previewList" class="mt-2 mb-0"></ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+        <button type="button" class="btn btn-primary" id="btnConfirmCopy">Kopieren</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mark Case Modal -->
+<div class="modal fade" id="markCaseModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Neues Case markieren</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="assetToMark">Gerät wählen *</label>
+          <div class="input-group">
+            <input type="text" class="form-control" id="assetSearch" placeholder="Suchen...">
+            <input type="hidden" id="assetToMark" required>
+            <div class="input-group-append">
+              <button class="btn btn-outline-secondary" type="button" id="btnSearchAsset">
+                <i class="fas fa-search"></i>
+              </button>
+            </div>
+          </div>
+          <div id="assetSearchResults" class="list-group mt-2" style="display: none; max-height: 300px; overflow-y: auto;">
+            <!-- Search results will be shown here -->
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+        <button type="button" class="btn btn-primary" id="btnConfirmMarkCase">Markieren</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+<script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.10.24/js/dataTables.bootstrap4.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+// Global state
+let selectedCaseAssetId = null;
+let allCases = [];
+let allContents = {};
+let allAssetTypes = [];
+let allStockItems = [];
+let contentsDataTable = null;
+let checkHistoryDataTable = null;
+
+// Initialize on page load
+$(document).ready(function() {
+  initializeDataTables();
+  loadAssetTypesAndStockItems();
+  loadCases();
+  attachEventHandlers();
+});
+
+/**
+ * Initialize DataTables
+ */
+function initializeDataTables() {
+  contentsDataTable = $('#contentsTable').DataTable({
+    paging: false,
+    searching: false,
+    info: false,
+    ordering: false,
+    autoWidth: false,
+    columnDefs: [
+      { orderable: false, targets: 0 },
+      { orderable: false, targets: -1 }
+    ]
+  });
+
+  checkHistoryDataTable = $('#checkHistoryTable').DataTable({
+    order: [[0, 'desc']],
+    pageLength: 10,
+    columnDefs: [
+      { orderable: false, targets: -1 }
+    ]
+  });
+
+  // Initialize sortable for contents table
+  initializeSortable();
+}
+
+/**
+ * Initialize drag-and-drop sorting for contents
+ */
+function initializeSortable() {
+  const tbody = document.getElementById('contentsTableBody');
+  if (tbody && tbody.children.length > 0) {
+    Sortable.create(tbody, {
+      handle: '.drag-handle',
+      ghostClass: 'sortable-ghost',
+      onEnd: function(evt) {
+        updateSortOrder();
+      }
+    });
+  }
+}
+
+/**
+ * Load asset types and stock items
+ */
+function loadAssetTypesAndStockItems() {
+  // Load asset types
+  fetch('/api/cases/contents.php', {
+    method: 'POST',
+    body: new URLSearchParams({ action: 'available_asset_types' })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      allAssetTypes = data.data || [];
+      populateAssetTypeSelect();
+    }
+  })
+  .catch(error => console.error('Error loading asset types:', error));
+
+  // Load stock items
+  fetch('/api/cases/contents.php', {
+    method: 'POST',
+    body: new URLSearchParams({ action: 'available_stock_items' })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      allStockItems = data.data || [];
+      populateStockItemSelect();
+    }
+  })
+  .catch(error => console.error('Error loading stock items:', error));
+}
+
+/**
+ * Populate asset type select
+ */
+function populateAssetTypeSelect() {
+  const select = $('#assetTypeSelect');
+  select.empty();
+  select.append('<option value="">-- Bitte wählen --</option>');
+
+  // Group by category
+  let lastCategory = '';
+  allAssetTypes.forEach(type => {
+    const category = type.assetCategories_name || 'Sonstige';
+    if (category !== lastCategory) {
+      select.append(`<optgroup label="${escapeHtml(category)}">`);
+      lastCategory = category;
+    }
+    const label = type.manufacturers_name
+      ? `${type.assetTypes_name} (${type.manufacturers_name})`
+      : type.assetTypes_name;
+    select.append(`<option value="${type.assetTypes_id}">${escapeHtml(label)}</option>`);
+  });
+}
+
+/**
+ * Populate stock item select
+ */
+function populateStockItemSelect() {
+  const select = $('#stockItemSelect');
+  select.empty();
+  select.append('<option value="">-- Bitte wählen --</option>');
+
+  allStockItems.forEach(item => {
+    const label = item.sku ? `${item.name} (${item.sku})` : item.name;
+    select.append(`<option value="${item.id}">${escapeHtml(label)}</option>`);
+  });
+}
+
+/**
+ * Load all cases
+ */
+function loadCases() {
+  const formData = new FormData();
+  formData.append('action', 'list_cases');
+
+  fetch('/api/cases/contents.php', {
+    method: 'POST',
+    body: formData
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      allCases = data.data || [];
+      renderCaseList();
+      loadCheckHistory();
+    }
+  })
+  .catch(error => console.error('Error loading cases:', error));
+}
+
+/**
+ * Render the case list
+ */
+function renderCaseList() {
+  const caseList = $('#caseList');
+  const noCasesMsg = $('#noCasesMessage');
+
+  caseList.empty();
+
+  if (allCases.length === 0) {
+    noCasesMsg.show();
+    return;
+  }
+
+  noCasesMsg.hide();
+
+  allCases.forEach(caseItem => {
+    const contentCount = (allContents[caseItem.assets_id] || []).length;
+    const isSelected = selectedCaseAssetId === caseItem.assets_id ? 'active' : '';
+
+    const html = `
+      <a href="#" class="list-group-item list-group-item-action ${isSelected}" data-case-id="${caseItem.assets_id}" onclick="selectCase(${caseItem.assets_id}); return false;">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <h6 class="mb-1">${escapeHtml(caseItem.type_name || ('Asset #' + caseItem.assets_tag))}</h6>
+            <small class="text-muted">${escapeHtml(caseItem.assets_tag || '—')}</small>
+          </div>
+          <span class="badge badge-info">${contentCount}</span>
+        </div>
+      </a>
+    `;
+    caseList.append(html);
+  });
+
+  // Populate copy modal with cases
+  populateCopyModal();
+}
+
+/**
+ * Select a case and display its contents
+ */
+function selectCase(caseAssetId) {
+  selectedCaseAssetId = caseAssetId;
+
+  // Update UI
+  $('#caseList .list-group-item').removeClass('active');
+  $(`[data-case-id="${caseAssetId}"]`).addClass('active');
+
+  // Find the case
+  const caseItem = allCases.find(c => c.assets_id === caseAssetId);
+  if (!caseItem) return;
+
+  // Update panel header
+  $('#selectedCaseName').text(escapeHtml(caseItem.type_name || ('Asset #' + caseItem.assets_tag)));
+  $('#selectedCaseTag').text(`(${escapeHtml(caseItem.assets_tag || '—')})`);
+
+  // Show/hide panels
+  $('#noCaseSelectedPanel').hide();
+  $('#contentsPanel').show();
+
+  // Load contents
+  loadContents(caseAssetId);
+}
+
+/**
+ * Load contents for a specific case
+ */
+function loadContents(caseAssetId) {
+  const formData = new FormData();
+  formData.append('action', 'get_contents');
+  formData.append('case_asset_id', caseAssetId);
+
+  fetch('/api/cases/contents.php', {
+    method: 'POST',
+    body: formData
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      allContents[caseAssetId] = data.data || [];
+      renderContentsTable(caseAssetId);
+      renderCaseList(); // Update case list with new count
+    }
+  })
+  .catch(error => console.error('Error loading contents:', error));
+}
+
+/**
+ * Render the contents table
+ */
+function renderContentsTable(caseAssetId) {
+  const contents = allContents[caseAssetId] || [];
+  const tbody = $('#contentsTableBody');
+  const noContentsMsg = $('#noContentsMessage');
+
+  if (contentsDataTable) {
+    contentsDataTable.clear();
+  }
+
+  if (contents.length === 0) {
+    noContentsMsg.show();
+    if (contentsDataTable) {
+      contentsDataTable.draw();
+    }
+    return;
+  }
+
+  noContentsMsg.hide();
+
+  const rows = contents.map(content => {
+    const typeIcon = content.content_type === 'asset_type'
+      ? '<i class="fas fa-wrench text-primary"></i>'
+      : '<i class="fas fa-box text-success"></i>';
+
+    const manufacturer = content.manufacturer ? ` (${escapeHtml(content.manufacturer)})` : '';
+    const typeName = escapeHtml(content.type_name) + manufacturer;
+
+    const row = [
+      `<span class="drag-handle cursor-move"><i class="fas fa-grip-vertical"></i></span>`,
+      `${typeIcon} ${typeName}`,
+      escapeHtml(content.manufacturer || '—'),
+      content.quantity,
+      escapeHtml(content.notes || ''),
+      `
+        <button class="btn btn-sm btn-primary" onclick="editContent(${content.id});" title="Bearbeiten">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button class="btn btn-sm btn-danger" onclick="removeContent(${content.id});" title="Löschen">
+          <i class="fas fa-trash"></i>
+        </button>
+      `
+    ];
+
+    return row;
+  });
+
+  if (contentsDataTable) {
+    contentsDataTable.rows.add(rows).draw();
+    initializeSortable();
+  }
+}
+
+/**
+ * Attach event handlers
+ */
+function attachEventHandlers() {
+  // Add content
+  $('#btnAddContent').click(function() {
+    $('#addContentForm')[0].reset();
+    $('#addContentModal').modal('show');
+  });
+
+  $('#addContentForm').submit(function(e) {
+    e.preventDefault();
+    addContent();
+  });
+
+  // Copy content
+  $('#btnCopyContent').click(function() {
+    if (!selectedCaseAssetId) return;
+    $('#sourceCase').val('');
+    $('#sourceContentsPreview').hide();
+    $('#copyContentModal').modal('show');
+  });
+
+  $('#sourceCase').change(function() {
+    const sourceCaseId = parseInt($(this).val());
+    if (sourceCaseId) {
+      loadSourceCasePreview(sourceCaseId);
+    } else {
+      $('#sourceContentsPreview').hide();
+    }
+  });
+
+  $('#btnConfirmCopy').click(function() {
+    const sourceCaseId = parseInt($('#sourceCase').val());
+    if (sourceCaseId && selectedCaseAssetId) {
+      copyContents(sourceCaseId, selectedCaseAssetId);
+      $('#copyContentModal').modal('hide');
+    }
+  });
+
+  // Unmark case
+  $('#btnUnmarkCase').click(function() {
+    if (!selectedCaseAssetId) return;
+
+    Swal.fire({
+      title: 'Case entfernen?',
+      text: 'Dieses Gerät wird nicht mehr als Case markiert. Der Inhalt bleibt erhalten.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Ja, entfernen',
+      cancelButtonText: 'Abbrechen'
+    }).then(result => {
+      if (result.isConfirmed) {
+        unmarkCase(selectedCaseAssetId);
+      }
+    });
+  });
+
+  // New case
+  $('#btnNewCase').click(function() {
+    $('#assetToMark').val('');
+    $('#assetSearch').val('');
+    $('#assetSearchResults').hide();
+    $('#markCaseModal').modal('show');
+  });
+
+  $('#assetSearch').on('input', function() {
+    const query = $(this).val().trim();
+    if (query.length >= 2) {
+      searchAssetsForMarking(query);
+    } else {
+      $('#assetSearchResults').hide();
+    }
+  });
+
+  $('#btnConfirmMarkCase').click(function() {
+    const assetId = parseInt($('#assetToMark').val());
+    if (assetId) {
+      markAsCase(assetId);
+      $('#markCaseModal').modal('hide');
+    }
+  });
+}
+
+/**
+ * Add content to case (type-based)
+ */
+function addContent() {
+  // Determine which tab is active
+  const activeTab = $('#addContentTabs .nav-link.active').attr('id');
+  let contentType, contentTypeId, quantity, notes;
+
+  if (activeTab === 'tab-asset-type') {
+    contentType = 'asset_type';
+    contentTypeId = parseInt($('#assetTypeSelect').val());
+    quantity = parseInt($('#assetTypeQuantity').val());
+    notes = $('#assetTypeNotes').val();
+  } else {
+    contentType = 'stock_item';
+    contentTypeId = parseInt($('#stockItemSelect').val());
+    quantity = parseInt($('#stockItemQuantity').val());
+    notes = $('#stockItemNotes').val();
+  }
+
+  if (!contentTypeId || !quantity) {
+    Swal.fire('Fehler', 'Bitte füllen Sie alle erforderlichen Felder aus.', 'error');
+    return;
+  }
+
+  if (!selectedCaseAssetId) {
+    Swal.fire('Fehler', 'Kein Case ausgewählt.', 'error');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('action', 'add_content');
+  formData.append('case_asset_id', selectedCaseAssetId);
+  formData.append('content_type', contentType);
+  formData.append('content_type_id', contentTypeId);
+  formData.append('quantity', quantity);
+  formData.append('notes', notes);
+
+  fetch('/api/cases/contents.php', {
+    method: 'POST',
+    body: formData
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      $('#addContentModal').modal('hide');
+      loadContents(selectedCaseAssetId);
+      Swal.fire('Erfolg', 'Inhalt hinzugefügt.', 'success');
+    } else {
+      Swal.fire('Fehler', data.message || 'Fehler beim Hinzufügen.', 'error');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    Swal.fire('Fehler', 'Ein Fehler ist aufgetreten.', 'error');
+  });
+}
+
+/**
+ * Remove content from case
+ */
+function removeContent(contentId) {
+  Swal.fire({
+    title: 'Inhalt entfernen?',
+    text: 'Dieser Inhalt wird aus dem Case entfernt.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Ja, entfernen',
+    cancelButtonText: 'Abbrechen'
+  }).then(result => {
+    if (result.isConfirmed) {
+      const formData = new FormData();
+      formData.append('action', 'remove_content');
+      formData.append('content_id', contentId);
+
+      fetch('/api/cases/contents.php', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          if (selectedCaseAssetId) {
+            loadContents(selectedCaseAssetId);
+          }
+          Swal.fire('Erfolg', 'Inhalt entfernt.', 'success');
+        } else {
+          Swal.fire('Fehler', data.message || 'Fehler beim Entfernen.', 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        Swal.fire('Fehler', 'Ein Fehler ist aufgetreten.', 'error');
+      });
+    }
+  });
+}
+
+/**
+ * Edit content (placeholder)
+ */
+function editContent(contentId) {
+  Swal.fire('Info', 'Bearbeitungsfunktion wird noch implementiert.', 'info');
+}
+
+/**
+ * Search assets for marking as case
+ */
+function searchAssetsForMarking(query) {
+  const formData = new FormData();
+  formData.append('action', 'search_assets');
+  formData.append('query', query);
+  formData.append('exclude_cases', '1');
+
+  fetch('/api/cases/contents.php', {
+    method: 'POST',
+    body: formData
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      renderAssetSearchResults(data.data || []);
+    }
+  })
+  .catch(error => console.error('Error:', error));
+}
+
+/**
+ * Render asset search results
+ */
+function renderAssetSearchResults(assets) {
+  const results = $('#assetSearchResults');
+  results.empty();
+
+  if (assets.length === 0) {
+    results.append('<div class="list-group-item text-muted">Keine Ergebnisse gefunden.</div>');
+    results.show();
+    return;
+  }
+
+  assets.forEach(asset => {
+    const item = $(`
+      <a href="#" class="list-group-item list-group-item-action" data-asset-id="${asset.assets_id}">
+        ${escapeHtml(asset.type_name || ('Asset #' + asset.assets_tag))}
+        <small class="text-muted d-block">${escapeHtml(asset.assets_tag)}</small>
+      </a>
+    `);
+
+    item.click(function(e) {
+      e.preventDefault();
+      $('#assetToMark').val(asset.assets_id);
+      $('#assetSearch').val(escapeHtml(asset.type_name || ('Asset #' + asset.assets_tag)));
+      results.hide();
+    });
+
+    results.append(item);
+  });
+
+  results.show();
+}
+
+/**
+ * Populate copy modal with cases
+ */
+function populateCopyModal() {
+  const select = $('#sourceCase');
+  const currentValue = select.val();
+  select.empty();
+  select.append('<option value="">-- Bitte wählen --</option>');
+
+  allCases.forEach(caseItem => {
+    // Don't show the currently selected case
+    if (caseItem.assets_id !== selectedCaseAssetId) {
+      select.append(`<option value="${caseItem.assets_id}">${escapeHtml(caseItem.type_name || ('Asset #' + caseItem.assets_tag))}</option>`);
+    }
+  });
+
+  if (currentValue) select.val(currentValue);
+}
+
+/**
+ * Load preview of source case contents
+ */
+function loadSourceCasePreview(sourceCaseId) {
+  const contents = allContents[sourceCaseId] || [];
+  const preview = $('#sourceContentsPreview');
+  const list = $('#previewList');
+
+  list.empty();
+
+  if (contents.length === 0) {
+    preview.hide();
+    return;
+  }
+
+  contents.forEach(content => {
+    list.append(`
+      <li>
+        ${escapeHtml(content.type_name)} (${content.quantity}x)
+      </li>
+    `);
+  });
+
+  preview.show();
+}
+
+/**
+ * Copy contents from one case to another
+ */
+function copyContents(sourceCaseId, targetCaseId) {
+  const formData = new FormData();
+  formData.append('action', 'copy_contents');
+  formData.append('from_case_id', sourceCaseId);
+  formData.append('to_case_id', targetCaseId);
+
+  fetch('/api/cases/contents.php', {
+    method: 'POST',
+    body: formData
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      loadContents(targetCaseId);
+      Swal.fire('Erfolg', 'Inhalte kopiert.', 'success');
+    } else {
+      Swal.fire('Fehler', data.message || 'Fehler beim Kopieren.', 'error');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    Swal.fire('Fehler', 'Ein Fehler ist aufgetreten.', 'error');
+  });
+}
+
+/**
+ * Mark asset as case
+ */
+function markAsCase(assetId) {
+  const formData = new FormData();
+  formData.append('action', 'mark_as_case');
+  formData.append('asset_id', assetId);
+
+  fetch('/api/cases/contents.php', {
+    method: 'POST',
+    body: formData
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      loadCases();
+      Swal.fire('Erfolg', 'Case erstellt.', 'success');
+    } else {
+      Swal.fire('Fehler', data.message || 'Fehler beim Erstellen.', 'error');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    Swal.fire('Fehler', 'Ein Fehler ist aufgetreten.', 'error');
+  });
+}
+
+/**
+ * Unmark case
+ */
+function unmarkCase(caseAssetId) {
+  const formData = new FormData();
+  formData.append('action', 'unmark_case');
+  formData.append('asset_id', caseAssetId);
+
+  fetch('/api/cases/contents.php', {
+    method: 'POST',
+    body: formData
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      selectedCaseAssetId = null;
+      $('#noCaseSelectedPanel').show();
+      $('#contentsPanel').hide();
+      loadCases();
+      Swal.fire('Erfolg', 'Case entfernt.', 'success');
+    } else {
+      Swal.fire('Fehler', data.message || 'Fehler beim Entfernen.', 'error');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    Swal.fire('Fehler', 'Ein Fehler ist aufgetreten.', 'error');
+  });
+}
+
+/**
+ * Update sort order
+ */
+function updateSortOrder() {
+  const rows = $('#contentsTableBody tr');
+  const sortData = [];
+
+  rows.each(function(index) {
+    const buttons = $(this).find('button');
+    if (buttons.length > 0) {
+      const onclick = buttons.first().attr('onclick');
+      const match = onclick.match(/\d+/);
+      if (match) {
+        sortData.push({
+          id: match[0],
+          sort_order: index + 1
+        });
+      }
+    }
+  });
+
+  const formData = new FormData();
+  formData.append('action', 'update_sort_order');
+  formData.append('sort_data', JSON.stringify(sortData));
+
+  fetch('/api/cases/contents.php', {
+    method: 'POST',
+    body: formData
+  })
+  .catch(error => console.error('Error updating sort order:', error));
+}
+
+/**
+ * Load check history
+ */
+function loadCheckHistory(caseAssetId = null) {
+  const formData = new FormData();
+  formData.append('action', 'check_history');
+  if (caseAssetId) {
+    formData.append('case_asset_id', caseAssetId);
+  }
+
+  fetch('/api/cases/contents.php', {
+    method: 'POST',
+    body: formData
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      renderCheckHistory(data.data || []);
+    }
+  })
+  .catch(error => console.error('Error loading check history:', error));
+}
+
+/**
+ * Render check history
+ */
+function renderCheckHistory(checks) {
+  const tbody = $('#checkHistoryBody');
+  const noMsg = $('#noCheckHistoryMessage');
+
+  if (checkHistoryDataTable) {
+    checkHistoryDataTable.clear();
+  }
+
+  if (checks.length === 0) {
+    noMsg.show();
+    if (checkHistoryDataTable) {
+      checkHistoryDataTable.draw();
+    }
+    return;
+  }
+
+  noMsg.hide();
+
+  const rows = checks.map(check => {
+    const dateStr = new Date(check.created_at).toLocaleDateString('de-DE');
+    const typeStr = check.check_type === 'checkout' ? 'Checkout' : 'Checkin';
+    const completeStr = check.all_complete === 1 ? '<span class="badge badge-success">Vollständig</span>' : '<span class="badge badge-danger">Unvollständig</span>';
+    const confirmedStr = check.acknowledged === 1 ? '<span class="badge badge-success">Ja</span>' : '<span class="badge badge-warning">Nein</span>';
+
+    const missingStr = (check.missing_items && check.missing_items.length > 0)
+      ? check.missing_items.map(m => `${m.type_name} (${m.short} fehlen)`).join(', ')
+      : '—';
+
+    return [
+      dateStr,
+      '—',
+      typeStr,
+      completeStr,
+      missingStr,
+      confirmedStr
+    ];
+  });
+
+  if (checkHistoryDataTable) {
+    checkHistoryDataTable.rows.add(rows).draw();
+  }
+}
+
+/**
+ * Utility: Escape HTML
+ */
+function escapeHtml(text) {
+  if (!text) return '';
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+// Add custom style for drag handle cursor
+$('<style>')
+  .text('.cursor-move { cursor: move; }')
+  .appendTo('head');
+</script>
+{% endblock %}

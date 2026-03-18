@@ -1,0 +1,281 @@
+{% extends "assets/template.twig" %}
+
+{% block content %}
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0">
+                    <i class="fas fa-shield-alt"></i> Versicherungsmanagement (K2)
+                </h1>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="content">
+    <div class="container-fluid">
+        <!-- Dashboard Stats -->
+        <div class="row" id="dashboardStats">
+            <div class="col-md-3">
+                <div class="info-box bg-info">
+                    <span class="info-box-icon"><i class="fas fa-coins"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Gesamtdeckung</span>
+                        <span class="info-box-number" id="totalCoverage">€ 0,00</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="info-box bg-success">
+                    <span class="info-box-icon"><i class="fas fa-euro-sign"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Monatliche Prämie</span>
+                        <span class="info-box-number" id="monthlyPremium">€ 0,00</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="info-box bg-warning">
+                    <span class="info-box-icon"><i class="fas fa-exclamation-triangle"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Offene Ansprüche</span>
+                        <span class="info-box-number" id="openClaims">0</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="info-box bg-danger">
+                    <span class="info-box-icon"><i class="fas fa-exclamation-circle"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Unversicherte Assets</span>
+                        <span class="info-box-number" id="uncoveredAssets">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="card card-outline card-primary">
+            <div class="card-header p-0 border-bottom-0">
+                <ul class="nav nav-tabs" id="insuranceTabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="policies-tab" data-toggle="pill" href="#policiesContent" role="tab">
+                            <i class="fas fa-file-contract"></i> Policen
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="uncovered-tab" data-toggle="pill" href="#uncoveredContent" role="tab">
+                            <i class="fas fa-exclamation"></i> Deckungslücken
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="certificates-tab" data-toggle="pill" href="#certificatesContent" role="tab">
+                            <i class="fas fa-certificate"></i> Kundennachweise
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="claims-tab" data-toggle="pill" href="#claimsContent" role="tab">
+                            <i class="fas fa-file-alt"></i> Schadensmeldungen
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="card-body">
+                <div class="tab-content">
+                    <!-- Policies Tab -->
+                    <div class="tab-pane fade show active" id="policiesContent" role="tabpanel">
+                        <div class="mb-3">
+                            {% if "INSURANCE:EDIT"|instancePermissions %}
+                                <button type="button" class="btn btn-primary btn-sm" id="newPolicyBtn">
+                                    <i class="fas fa-plus"></i> Neue Police
+                                </button>
+                            {% endif %}
+                        </div>
+                        <div id="policiesList" class="row">
+                            <!-- Loaded via AJAX -->
+                        </div>
+                    </div>
+
+                    <!-- Uncovered Assets Tab -->
+                    <div class="tab-pane fade" id="uncoveredContent" role="tabpanel">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Asset-Tag</th>
+                                        <th>Typ</th>
+                                        <th>Aktion</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="uncoveredAssetsList">
+                                    <!-- Loaded via AJAX -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Client Certificates Tab -->
+                    <div class="tab-pane fade" id="certificatesContent" role="tabpanel">
+                        <div id="certificatesList">
+                            <!-- Loaded via AJAX -->
+                        </div>
+                    </div>
+
+                    <!-- Claims Tab -->
+                    <div class="tab-pane fade" id="claimsContent" role="tabpanel">
+                        <div class="mb-3">
+                            {% if "INSURANCE:EDIT"|instancePermissions %}
+                                <button type="button" class="btn btn-primary btn-sm" id="newClaimBtn">
+                                    <i class="fas fa-plus"></i> Neue Schadensanspruch
+                                </button>
+                            {% endif %}
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Anspruchsnummer</th>
+                                        <th>Police</th>
+                                        <th>Betrag</th>
+                                        <th>Status</th>
+                                        <th>Erstellt</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="claimsList">
+                                    <!-- Loaded via AJAX -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    loadDashboardStats();
+    loadPolicies();
+    loadUncoveredAssets();
+    loadClaims();
+
+    $('#newPolicyBtn').click(function() {
+        // Open modal for new policy
+        bootbox.prompt("Police-Name:", function(result) {
+            if (result) {
+                // Implement policy creation modal
+                alert("Policy creation not yet implemented in detail");
+            }
+        });
+    });
+
+    $('#newClaimBtn').click(function() {
+        alert("Claim creation not yet implemented in detail");
+    });
+});
+
+function loadDashboardStats() {
+    ajaxcall("insurance/dashboard.php", {}, function(data) {
+        if (data.success) {
+            $('#totalCoverage').text('€ ' + formatCurrency(data.total_coverage_amount));
+            $('#monthlyPremium').text('€ ' + formatCurrency(data.monthly_premium));
+            $('#openClaims').text(data.open_claims_count);
+            $('#uncoveredAssets').text(data.uncovered_assets_count);
+        }
+    });
+}
+
+function loadPolicies() {
+    ajaxcall("insurance/policies.php", {}, function(data) {
+        if (data.success && data.policies) {
+            let html = '';
+            data.policies.forEach(function(policy) {
+                const status = isExpiring(policy.valid_until) ? 'warning' : 'success';
+                html += `
+                    <div class="col-md-6">
+                        <div class="card card-${status}">
+                            <div class="card-header">
+                                <h5 class="card-title">${policy.name}</h5>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Versicherer:</strong> ${policy.provider}</p>
+                                <p><strong>Policennummer:</strong> ${policy.policy_number}</p>
+                                <p><strong>Deckung:</strong> ${policy.coverage_type}</p>
+                                <p><strong>Deckungsbetrag:</strong> € ${formatCurrency(policy.coverage_amount)}</p>
+                                <p><strong>Prämie/Monat:</strong> € ${formatCurrency(policy.premium_monthly)}</p>
+                                <p><strong>Gültig bis:</strong> <span class="badge badge-${status}">${policy.valid_until}</span></p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            $('#policiesList').html(html || '<p class="text-muted">Keine Policen vorhanden</p>');
+        }
+    });
+}
+
+function loadUncoveredAssets() {
+    ajaxcall("insurance/uncovered.php", {}, function(data) {
+        if (data.success && data.uncovered_assets) {
+            let html = '';
+            data.uncovered_assets.forEach(function(asset) {
+                html += `
+                    <tr>
+                        <td>${asset.assets_tag}</td>
+                        <td>${asset.assetTypes_id}</td>
+                        <td>
+                            <button class="btn btn-sm btn-info" onclick="assignCoverage(${asset.assets_id})">
+                                <i class="fas fa-link"></i> Zuordnen
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            $('#uncoveredAssetsList').html(html || '<tr><td colspan="3" class="text-muted">Alle Assets sind versichert</td></tr>');
+        }
+    });
+}
+
+function loadClaims() {
+    ajaxcall("insurance/claims.php", {}, function(data) {
+        if (data.success && data.claims) {
+            let html = '';
+            data.claims.forEach(function(claim) {
+                html += `
+                    <tr>
+                        <td>${claim.claim_number}</td>
+                        <td>${claim.policy_name}</td>
+                        <td>€ ${formatCurrency(claim.claimed_amount)}</td>
+                        <td><span class="badge badge-info">${claim.status}</span></td>
+                        <td>${formatDate(claim.created_at)}</td>
+                    </tr>
+                `;
+            });
+            $('#claimsList').html(html || '<tr><td colspan="5" class="text-muted">Keine Ansprüche vorhanden</td></tr>');
+        }
+    });
+}
+
+function formatCurrency(amount) {
+    return parseFloat(amount).toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+function formatDate(dateString) {
+    return new Date(dateString).toLocaleDateString('de-DE');
+}
+
+function isExpiring(validUntil) {
+    const today = new Date();
+    const expiryDate = new Date(validUntil);
+    const daysUntilExpiry = Math.floor((expiryDate - today) / (1000 * 60 * 60 * 24));
+    return daysUntilExpiry <= 30;
+}
+
+function assignCoverage(assetId) {
+    alert("Asset coverage assignment UI not yet implemented in detail");
+}
+</script>
+{% endblock %}

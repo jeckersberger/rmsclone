@@ -1,0 +1,479 @@
+{% extends "layout.twig" %}
+
+{% block title %}Lagerorte verwalten{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6"><h1><i class="fas fa-map-marker-alt"></i> Lagerorte verwalten</h1></div>
+        </div>
+    </div>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        {# Statistics Cards #}
+        <div class="row" id="locationStats">
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-info">
+                    <div class="inner"><h3 id="statTotal">0</h3><p>Lagerorte gesamt</p></div>
+                    <div class="icon"><i class="fas fa-map-marker-alt"></i></div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-success">
+                    <div class="inner"><h3 id="statActive">0</h3><p>Aktiv</p></div>
+                    <div class="icon"><i class="fas fa-check"></i></div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-warning">
+                    <div class="inner"><h3 id="statTotalAssets">0</h3><p>Geräte gesamt</p></div>
+                    <div class="icon"><i class="fas fa-box"></i></div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-secondary">
+                    <div class="inner"><h3 id="statTotalStock">0</h3><p>Artikel gesamt</p></div>
+                    <div class="icon"><i class="fas fa-cubes"></i></div>
+                </div>
+            </div>
+        </div>
+
+        {# Location Cards Grid #}
+        <div class="row" id="locationCardsContainer">
+            <div class="col-12"><p class="text-center text-muted">Lade Lagerorte...</p></div>
+        </div>
+
+        {# Locations Table #}
+        <div class="card mt-3">
+            <div class="card-header">
+                <h3 class="card-title">Lagerorte</h3>
+                <div class="card-tools">
+                    <button onclick="showCreateModal()" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus"></i> Neuer Lagerort
+                    </button>
+                    <button onclick="showBulkMoveModal()" class="btn btn-info btn-sm">
+                        <i class="fas fa-arrows-alt"></i> Massen-Verschiebung
+                    </button>
+                </div>
+            </div>
+            <div class="card-body table-responsive p-0">
+                <table class="table table-hover table-striped">
+                    <thead>
+                        <tr>
+                            <th>Icon</th>
+                            <th>Name</th>
+                            <th>Beschreibung</th>
+                            <th>Geraete</th>
+                            <th>Artikel</th>
+                            <th>Status</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="locationsTableBody">
+                        <tr><td colspan="7" class="text-center">Lade...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+{# Create/Edit Modal #}
+<div class="modal fade" id="locationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="locationModalTitle">Neuer Lagerort</h5>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editLocationId" value="">
+                <div class="form-group">
+                    <label>Name *</label>
+                    <input type="text" id="locName" class="form-control" placeholder="z.B. Hauptlager" required>
+                </div>
+                <div class="form-group">
+                    <label>Beschreibung</label>
+                    <input type="text" id="locDescription" class="form-control" placeholder="z.B. Zentrales Lager Halle A">
+                </div>
+                <div class="form-group">
+                    <label>Icon (Emoji oder FontAwesome)</label>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <input type="text" id="locIcon" class="form-control" value="📦" placeholder="📦 oder fas fa-warehouse">
+                        <span id="locIconPreview" style="font-size:24px;">📦</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Sortierung</label>
+                    <input type="number" id="locSortOrder" class="form-control" value="0" min="0">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-primary" onclick="saveLocation()">Speichern</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Bulk Move Modal #}
+<div class="modal fade" id="bulkMoveModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Massen-Verschiebung</h5>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Quellstandort</label>
+                    <select id="bmSourceLocation" class="form-control" onchange="loadBulkMoveItems()">
+                        <option value="">Wählen...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Elemente an diesem Standort</label>
+                    <div id="bulkMoveItemsList" class="border rounded p-3" style="max-height:300px; overflow-y:auto;">
+                        <p class="text-muted">Wählen Sie einen Standort</p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Zielstandort *</label>
+                    <select id="bmTargetLocation" class="form-control" required>
+                        <option value="">Wählen...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Notizen</label>
+                    <textarea id="bmNotes" class="form-control" rows="2" placeholder="z.B. Lagerverwaltung Reorganisation"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-primary" onclick="executeBulkMove()">Verschieben</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+var allLocations = [];
+
+// Load locations on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadLocations();
+});
+
+// Icon preview
+document.getElementById('locIcon').addEventListener('input', function() {
+    var icon = this.value;
+    var preview = document.getElementById('locIconPreview');
+
+    // Check if it's an emoji or FontAwesome
+    if (icon.match(/[\u{1F300}-\u{1F9FF}]/u)) {
+        preview.textContent = icon;
+        preview.className = '';
+    } else {
+        preview.textContent = '';
+        preview.className = icon;
+    }
+});
+
+function loadLocations() {
+    ajaxcall('locations.php', { action: 'location_summary' }, function(response) {
+        if (response.result && response.response && response.response.locations) {
+            var locations = response.response.locations;
+            allLocations = locations;
+            renderCards(locations);
+            renderTable(locations);
+            updateStats(locations);
+            populateBulkMoveDropdowns(locations);
+        }
+    }, true);
+}
+
+function renderCards(locations) {
+    var container = document.getElementById('locationCardsContainer');
+    if (!locations || locations.length === 0) {
+        container.innerHTML = '<div class="col-12"><p class="text-center text-muted">Keine Lagerorte vorhanden</p></div>';
+        return;
+    }
+
+    var html = '';
+    locations.forEach(function(loc) {
+        var icon = loc.emoji_icon || loc.icon || '📦';
+        var isEmoji = icon.match(/[\u{1F300}-\u{1F9FF}]/u);
+        var iconHtml = isEmoji ? '<span style="font-size:32px;">' + icon + '</span>' : '<i class="' + icon + '" style="font-size:32px;"></i>';
+
+        html += `
+            <div class="col-lg-4 col-md-6 mb-3">
+                <div class="card card-outline" style="border-color:${loc.color || '#6c757d'}; border-width:2px;">
+                    <div class="card-body text-center">
+                        ${iconHtml}
+                        <h5 class="mt-2">${loc.name}</h5>
+                        <p class="text-muted small">${loc.description || '-'}</p>
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="text-primary font-weight-bold">${loc.asset_count || 0}</div>
+                                <small>Geräte</small>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-success font-weight-bold">${loc.instance_count || 0}</div>
+                                <small>Artikel</small>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            ${parseInt(loc.is_active) ? '<span class="badge badge-success">Aktiv</span>' : '<span class="badge badge-secondary">Inaktiv</span>'}
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <button onclick="editLocation(${loc.id})" class="btn btn-xs btn-info" title="Bearbeiten"><i class="fas fa-edit"></i></button>
+                        ${parseInt(loc.is_active) ? `<button onclick="deleteLocation(${loc.id})" class="btn btn-xs btn-danger" title="Deaktivieren"><i class="fas fa-trash"></i></button>` : `<button onclick="reactivateLocation(${loc.id})" class="btn btn-xs btn-success" title="Reaktivieren"><i class="fas fa-undo"></i></button>`}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+}
+
+function renderTable(locations) {
+    var tbody = document.getElementById('locationsTableBody');
+    tbody.innerHTML = '';
+
+    if (!locations || locations.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Keine Lagerorte vorhanden</td></tr>';
+        return;
+    }
+
+    locations.forEach(function(loc) {
+        var tr = document.createElement('tr');
+        if (!parseInt(loc.is_active)) tr.style.opacity = '0.5';
+
+        var icon = loc.emoji_icon || loc.icon || '📦';
+        var isEmoji = icon.match(/[\u{1F300}-\u{1F9FF}]/u);
+        var iconHtml = isEmoji ? icon : '<i class="' + icon + '"></i>';
+
+        tr.innerHTML =
+            '<td>' + iconHtml + '</td>' +
+            '<td><strong>' + loc.name + '</strong></td>' +
+            '<td>' + (loc.description || '-') + '</td>' +
+            '<td><span class="badge badge-primary">' + (loc.asset_count || 0) + '</span></td>' +
+            '<td><span class="badge badge-success">' + (loc.instance_count || 0) + '</span></td>' +
+            '<td>' + (parseInt(loc.is_active) ? '<span class="badge badge-success">Aktiv</span>' : '<span class="badge badge-secondary">Inaktiv</span>') + '</td>' +
+            '<td>' +
+                '<button onclick="editLocation(' + loc.id + ')" class="btn btn-xs btn-info" title="Bearbeiten"><i class="fas fa-edit"></i></button> ' +
+                (parseInt(loc.is_active)
+                    ? '<button onclick="deleteLocation(' + loc.id + ')" class="btn btn-xs btn-danger" title="Deaktivieren"><i class="fas fa-trash"></i></button>'
+                    : '<button onclick="reactivateLocation(' + loc.id + ')" class="btn btn-xs btn-success" title="Reaktivieren"><i class="fas fa-undo"></i></button>') +
+            '</td>';
+        tbody.appendChild(tr);
+    });
+}
+
+function updateStats(locations) {
+    var totalAssets = 0;
+    var totalStock = 0;
+
+    locations.forEach(function(loc) {
+        totalAssets += (loc.asset_count || 0);
+        totalStock += (loc.instance_count || 0);
+    });
+
+    document.getElementById('statTotal').textContent = locations.length;
+    document.getElementById('statActive').textContent = locations.filter(function(l) { return parseInt(l.is_active); }).length;
+    document.getElementById('statTotalAssets').textContent = totalAssets;
+    document.getElementById('statTotalStock').textContent = totalStock;
+}
+
+function populateBulkMoveDropdowns(locations) {
+    var sourceSelect = document.getElementById('bmSourceLocation');
+    var targetSelect = document.getElementById('bmTargetLocation');
+
+    sourceSelect.innerHTML = '<option value="">Wählen...</option>';
+    targetSelect.innerHTML = '<option value="">Wählen...</option>';
+
+    locations.forEach(function(loc) {
+        if (parseInt(loc.is_active)) {
+            sourceSelect.innerHTML += '<option value="' + loc.id + '">' + loc.name + '</option>';
+            targetSelect.innerHTML += '<option value="' + loc.id + '">' + loc.name + '</option>';
+        }
+    });
+}
+
+function showCreateModal() {
+    document.getElementById('editLocationId').value = '';
+    document.getElementById('locationModalTitle').textContent = 'Neuer Lagerort';
+    document.getElementById('locName').value = '';
+    document.getElementById('locDescription').value = '';
+    document.getElementById('locColor').value = '#6c757d';
+    document.getElementById('locIcon').value = 'fas fa-warehouse';
+    document.getElementById('locIconPreview').className = 'fas fa-warehouse';
+    document.getElementById('locSortOrder').value = '0';
+    $('#locationModal').modal('show');
+}
+
+function editLocation(id) {
+    ajaxcall('locations.php', { action: 'get_location', id: id }, function(response) {
+        if (response.result && response.response && response.response.location) {
+            var loc = response.response.location;
+            var icon = loc.emoji_icon || loc.icon || '📦';
+
+            document.getElementById('editLocationId').value = loc.id;
+            document.getElementById('locationModalTitle').textContent = 'Lagerort bearbeiten';
+            document.getElementById('locName').value = loc.name;
+            document.getElementById('locDescription').value = loc.description || '';
+            document.getElementById('locIcon').value = icon;
+
+            var preview = document.getElementById('locIconPreview');
+            if (icon.match(/[\u{1F300}-\u{1F9FF}]/u)) {
+                preview.textContent = icon;
+                preview.className = '';
+            } else {
+                preview.textContent = '';
+                preview.className = icon;
+            }
+
+            document.getElementById('locSortOrder').value = loc.sort_order || 0;
+            $('#locationModal').modal('show');
+        }
+    }, true);
+}
+
+function saveLocation() {
+    var id = document.getElementById('editLocationId').value;
+    var params = {
+        action: id ? 'update_location' : 'create_location',
+        name: document.getElementById('locName').value,
+        description: document.getElementById('locDescription').value,
+        icon: document.getElementById('locIcon').value,
+        sort_order: document.getElementById('locSortOrder').value
+    };
+    if (id) params.id = id;
+
+    ajaxcall('locations.php', params, function(response) {
+        if (response.result) {
+            $('#locationModal').modal('hide');
+            loadLocations();
+        } else {
+            alert('Fehler: ' + (response.response ? response.response.message : 'Unbekannter Fehler'));
+        }
+    }, true);
+}
+
+function deleteLocation(id) {
+    if (!confirm('Lagerort wirklich deaktivieren?')) return;
+    ajaxcall('locations.php', { action: 'delete_location', id: id }, function(response) {
+        if (response.result) loadLocations();
+    }, true);
+}
+
+function reactivateLocation(id) {
+    ajaxcall('locations.php', { action: 'update_location', id: id, is_active: 1 }, function(response) {
+        if (response.result) loadLocations();
+    }, true);
+}
+
+function showBulkMoveModal() {
+    $('#bulkMoveModal').modal('show');
+}
+
+function loadBulkMoveItems() {
+    var sourceLocationId = parseInt(document.getElementById('bmSourceLocation').value);
+    if (!sourceLocationId) {
+        document.getElementById('bulkMoveItemsList').innerHTML = '<p class="text-muted">Wählen Sie einen Standort</p>';
+        return;
+    }
+
+    var assetsHtml = '';
+    var stocksHtml = '';
+
+    // Load assets at location
+    ajaxcall('locations.php', { action: 'assets_at_location', location_id: sourceLocationId }, function(response) {
+        if (response.result && response.response.assets) {
+            response.response.assets.forEach(function(asset) {
+                assetsHtml += '<div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input bulk-asset" id="asset_' + asset.assets_id + '" value="' + asset.assets_id + '"><label class="custom-control-label" for="asset_' + asset.assets_id + '"><strong>' + asset.assets_name + '</strong> (#' + asset.assets_id + ')</label></div>';
+            });
+        }
+
+        // Load stocks at location
+        ajaxcall('locations.php', { action: 'stock_at_location', location_id: sourceLocationId }, function(response) {
+            if (response.result && response.response.stocks) {
+                response.response.stocks.forEach(function(stock) {
+                    stocksHtml += '<div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input bulk-stock" id="stock_' + stock.id + '" value="' + stock.id + '"><label class="custom-control-label" for="stock_' + stock.id + '"><strong>' + stock.item_name + '</strong> (#' + stock.instance_number + ', ' + stock.quantity + 'x)</label></div>';
+                });
+            }
+
+            var html = '';
+            if (assetsHtml) html += '<h6>Geräte</h6>' + assetsHtml;
+            if (stocksHtml) html += '<h6>Artikel</h6>' + stocksHtml;
+            if (!assetsHtml && !stocksHtml) html = '<p class="text-muted">Keine Elemente an diesem Standort</p>';
+
+            document.getElementById('bulkMoveItemsList').innerHTML = html;
+        }, true);
+    }, true);
+}
+
+function executeBulkMove() {
+    var targetLocationId = parseInt(document.getElementById('bmTargetLocation').value);
+    var notes = document.getElementById('bmNotes').value;
+
+    if (!targetLocationId) {
+        alert('Bitte wählen Sie einen Zielstandort');
+        return;
+    }
+
+    var assetIds = [];
+    var stockIds = [];
+
+    document.querySelectorAll('.bulk-asset:checked').forEach(function(cb) {
+        assetIds.push(parseInt(cb.value));
+    });
+
+    document.querySelectorAll('.bulk-stock:checked').forEach(function(cb) {
+        stockIds.push(parseInt(cb.value));
+    });
+
+    if (assetIds.length === 0 && stockIds.length === 0) {
+        alert('Bitte wählen Sie mindestens ein Element');
+        return;
+    }
+
+    // Move assets
+    if (assetIds.length > 0) {
+        ajaxcall('locations.php', {
+            action: 'bulk_move_assets',
+            asset_ids: JSON.stringify(assetIds),
+            target_location_id: targetLocationId,
+            notes: notes
+        }, function(response) {
+            if (response.result) {
+                console.log('Assets moved:', response.response);
+            }
+        }, true);
+    }
+
+    // Move stocks
+    if (stockIds.length > 0) {
+        ajaxcall('locations.php', {
+            action: 'bulk_move_stock',
+            stock_instance_ids: JSON.stringify(stockIds),
+            target_location_id: targetLocationId,
+            notes: notes
+        }, function(response) {
+            if (response.result) {
+                console.log('Stocks moved:', response.response);
+                $('#bulkMoveModal').modal('hide');
+                loadLocations();
+            }
+        }, true);
+    }
+}
+</script>
+{% endblock %}

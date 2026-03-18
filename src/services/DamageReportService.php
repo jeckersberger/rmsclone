@@ -51,14 +51,15 @@ class DamageReportService
     private function createMaintenanceJob(int $instanceId, int $assetId, int $reportId, array $data, int $userId): int
     {
         // Get asset info for the title
-        $this->db->where('assets_id', $assetId);
-        $this->db->join('assetTypes', 'assets.assetTypes_id = assetTypes.assetTypes_id', 'LEFT');
-        $asset = $this->db->getOne('assets', ['assets.assets_tag', 'assetTypes.assetTypes_name']);
+        $this->db->where('a.assets_id', $assetId);
+        $this->db->join('assetTypes at', 'a.assetTypes_id = at.assetTypes_id', 'LEFT');
+        $asset = $this->db->getOne('assets a', null, ['a.assets_tag', 'at.assetTypes_name']);
 
         $title = 'Schaden: ' . ($asset['assetTypes_name'] ?? 'Asset') .
                  ($asset['assets_tag'] ? ' #' . $asset['assets_tag'] : '');
 
-        $priority = match($data['severity'] ?? 'minor') {
+        $severity = $data['severity'] ?? 'minor';
+        $priority = match($severity) {
             'total_loss' => 1,
             'major' => 2,
             'moderate' => 3,

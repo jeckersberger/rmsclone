@@ -48,21 +48,23 @@ class FederationService
         // Unseren API-Key generieren (den der Partner nutzen wird um bei uns anzufragen)
         $ourApiKey = $this->generateApiKey();
 
-        // Unseren Firmennamen holen
+        // Unseren Firmennamen und Company Code holen
         $this->db->where('instances_id', $instanceId);
-        $instance = $this->db->getOne('instances', ['instances_name']);
+        $instance = $this->db->getOne('instances', null, ['instances_name', 'instances_companyCode']);
         $ourName = $instance ? $instance['instances_name'] : 'Unbekannt';
+        $ourCompanyCode = $instance['instances_companyCode'] ?? null;
 
         // Eigene Server-URL ermitteln
         $ourUrl = $this->getOwnServerUrl();
 
-        // Handshake an Remote-Server senden
+        // Handshake an Remote-Server senden (inkl. Company Code für Kollisionserkennung)
         $response = $this->sendRequest($remoteUrl . '/api/federation/handshake.php', [
             'partner_code' => $partnerCode,
             'requesting_server_url' => $ourUrl,
             'requesting_server_name' => $ourName,
             'requesting_server_instance_id' => $instanceId,
             'requesting_api_key' => $ourApiKey,
+            'requesting_company_code' => $ourCompanyCode,
             'api_version' => self::API_VERSION,
         ]);
 
@@ -74,6 +76,8 @@ class FederationService
 
         $data = $response['response'];
 
+        $remoteCompanyCode = $data['company_code'] ?? null;
+
         // Verbindung lokal speichern
         $this->db->insert('partner_servers', [
             'instances_id' => $instanceId,
@@ -82,6 +86,7 @@ class FederationService
             'partner_servers_apiKey' => $ourApiKey,
             'partner_servers_remoteApiKey' => $data['api_key'],
             'partner_servers_remoteInstanceId' => $data['instance_id'] ?? null,
+            'partner_servers_remoteCompanyCode' => $remoteCompanyCode,
             'partner_servers_status' => 'active',
             'partner_servers_lastSeen' => date('Y-m-d H:i:s'),
         ]);
@@ -89,10 +94,20 @@ class FederationService
         $serverId = $this->db->getInsertId();
         $this->logFederation($serverId, 'outgoing', 'handshake', 'success', 'Connected to ' . $remoteUrl);
 
+        // Check for company code collision
+        $hasCollision = false;
+        if ($ourCompanyCode && $remoteCompanyCode && strtolower($ourCompanyCode) === strtolower($remoteCompanyCode)) {
+            $hasCollision = true;
+            $this->logFederation($serverId, 'outgoing', 'handshake', 'warning',
+                'Company code collision detected: both use ' . $ourCompanyCode);
+        }
+
         return [
             'success' => true,
             'partner_name' => $data['server_name'] ?? 'Partner',
             'server_id' => $serverId,
+            'company_code_collision' => $hasCollision,
+            'remote_company_code' => $remoteCompanyCode,
         ];
     }
 
@@ -104,12 +119,13 @@ class FederationService
         string $requestingServerUrl,
         string $requestingServerName,
         int $requestingInstanceId,
-        string $requestingApiKey
+        string $requestingApiKey,
+        ?string $requestingCompanyCode = null
     ): array {
         // Partner-Code pruefen
         $this->db->where('instances_partnerCode', $partnerCode);
         $this->db->where('instances_deleted', 0);
-        $instance = $this->db->getOne('instances', ['instances_id', 'instances_name']);
+        $instance = $this->db->getOne('instances', null, ['instances_id', 'instances_name']);
 
         if (!$instance) {
             return ['success' => false, 'error' => 'invalid_code'];
@@ -130,6 +146,11 @@ class FederationService
         // Unseren API-Key generieren (den der anfragende Server nutzen wird)
         $ourApiKey = $this->generateApiKey();
 
+        // Unseren Company Code holen
+        $this->db->where('instances_id', $instanceId);
+        $instData = $this->db->getOne('instances', null, ['instances_companyCode']);
+        $ourCompanyCode = $instData['instances_companyCode'] ?? null;
+
         // Verbindung speichern
         $this->db->insert('partner_servers', [
             'instances_id' => $instanceId,
@@ -138,6 +159,7 @@ class FederationService
             'partner_servers_apiKey' => $requestingApiKey,
             'partner_servers_remoteApiKey' => $ourApiKey,
             'partner_servers_remoteInstanceId' => $requestingInstanceId,
+            'partner_servers_remoteCompanyCode' => $requestingCompanyCode,
             'partner_servers_status' => 'active',
             'partner_servers_lastSeen' => date('Y-m-d H:i:s'),
         ]);
@@ -145,11 +167,18 @@ class FederationService
         $serverId = $this->db->getInsertId();
         $this->logFederation($serverId, 'incoming', 'handshake', 'success', 'Accepted from ' . $requestingServerUrl);
 
+        // Check for company code collision
+        if ($ourCompanyCode && $requestingCompanyCode && strtolower($ourCompanyCode) === strtolower($requestingCompanyCode)) {
+            $this->logFederation($serverId, 'incoming', 'handshake', 'warning',
+                'Company code collision detected: both use ' . $ourCompanyCode);
+        }
+
         return [
             'success' => true,
             'api_key' => $ourApiKey,
             'server_name' => $instance['instances_name'],
             'instance_id' => $instanceId,
+            'company_code' => $ourCompanyCode,
         ];
     }
 

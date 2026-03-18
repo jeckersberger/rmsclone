@@ -13,10 +13,22 @@
 class StockItemService
 {
     private $db;
+    private ?TagFormatService $tagFormatService = null;
+    private ?CrossInstanceLookupService $crossLookup = null;
 
     public function __construct($db)
     {
         $this->db = $db;
+    }
+
+    public function setTagFormatService(TagFormatService $svc): void
+    {
+        $this->tagFormatService = $svc;
+    }
+
+    public function setCrossLookupService(CrossInstanceLookupService $service): void
+    {
+        $this->crossLookup = $service;
     }
 
     // ═══════════════════════════════════════════
@@ -133,11 +145,12 @@ class StockItemService
      */
     public function getCategories(int $instanceId): array
     {
-        $this->db->where('instances_id', $instanceId);
-        $this->db->where('deleted', 0);
-        $this->db->groupBy('category');
-        $this->db->orderBy('category', 'ASC');
-        $rows = $this->db->get('stock_items', null, ['category']) ?: [];
+        $sql = "SELECT DISTINCT category
+                FROM stock_items
+                WHERE instances_id = ? AND deleted = 0
+                ORDER BY category ASC";
+
+        $rows = $this->db->rawQuery($sql, [$instanceId]) ?: [];
         return array_column($rows, 'category');
     }
 
@@ -183,10 +196,9 @@ class StockItemService
      * @param int $itemId Stock item type ID
      * @param int $instanceId Tenant instance ID
      * @param int $quantity How many instances to create
-     * @param bool $autoRfid Auto-generate RFID EPCs
      * @return array Created instance IDs
      */
-    public function createInstances(int $itemId, int $instanceId, int $quantity, bool $autoRfid = true): array
+    public function createInstances(int $itemId, int $instanceId, int $quantity): array
     {
         $now = date('Y-m-d H:i:s');
         $createdIds = [];
@@ -197,21 +209,15 @@ class StockItemService
         $last = $this->db->getOne('stock_instances', null, ['instance_number']);
         $nextNumber = $last ? $last['instance_number'] + 1 : 1;
 
-        // Get next global EPC number
-        $nextEpc = $this->getNextEpcNumber($instanceId);
-
         for ($i = 0; $i < $quantity; $i++) {
-            $rfidTag = null;
-            if ($autoRfid) {
-                $rfidTag = sprintf('RMS-I-%06d', $nextEpc);
-                $nextEpc++;
-            }
-
+            // rfid_tag kept for backward compat (old barcode labels).
+            // rfid_tid is set later via TID pairing (scan tag → assign to instance).
             $id = $this->db->insert('stock_instances', [
                 'stock_item_id'   => $itemId,
                 'instances_id'    => $instanceId,
                 'instance_number' => $nextNumber + $i,
-                'rfid_tag'        => $rfidTag,
+                'rfid_tag'        => null,
+                'rfid_tid'        => null,
                 'status'          => 'available',
                 'condition'       => 'good',
                 'location'        => '',
@@ -231,22 +237,41 @@ class StockItemService
     }
 
     /**
-     * Get the next available EPC number for stock instances
-     * Ensures no collision with asset EPCs (RMS-A-xxxxxx) or existing stock EPCs (RMS-I-xxxxxx)
+     * Get the next available EPC number for stock instances.
+     * Supports both old format (RMS-I-000001) and new format (RMS-a3f7b2c1-I-000001).
      */
     private function getNextEpcNumber(int $instanceId): int
     {
-        // Find highest existing stock instance EPC
+        $maxNumber = 0;
+
+        // Search old format: RMS-I-000001
         $this->db->where('instances_id', $instanceId);
         $this->db->where('rfid_tag', 'RMS-I-%', 'LIKE');
         $this->db->orderBy('rfid_tag', 'DESC');
-        $last = $this->db->getOne('stock_instances', null, ['rfid_tag']);
+        $lastOld = $this->db->getOne('stock_instances', null, ['rfid_tag']);
 
-        if ($last && preg_match('/RMS-I-(\d+)/', $last['rfid_tag'], $m)) {
-            return (int) $m[1] + 1;
+        if ($lastOld && preg_match('/RMS-I-(\d+)/', $lastOld['rfid_tag'], $m)) {
+            $maxNumber = max($maxNumber, (int)$m[1]);
         }
 
-        return 1;
+        // Search new format: RMS-{8hex}-I-000001 (e.g. RMS-a3f7b2c1-I-000042)
+        $this->db->where('instances_id', $instanceId);
+        $this->db->where('rfid_tag', 'RMS-________-I-%', 'LIKE');
+        $this->db->orderBy('rfid_tag', 'DESC');
+        $lastNew = $this->db->getOne('stock_instances', null, ['rfid_tag']);
+
+        if ($lastNew && preg_match('/RMS-[a-f0-9]{8}-I-(\d+)/i', $lastNew['rfid_tag'], $m)) {
+            $maxNumber = max($maxNumber, (int)$m[1]);
+        }
+
+        // Also check the simple instance_number max as ultimate fallback
+        $this->db->where('instances_id', $instanceId);
+        $highestNumber = $this->db->getValue('stock_instances', 'MAX(instance_number)');
+        if ($highestNumber) {
+            $maxNumber = max($maxNumber, (int)$highestNumber);
+        }
+
+        return $maxNumber + 1;
     }
 
     /**
@@ -467,6 +492,7 @@ class StockItemService
         $assets = [];
         $stockGroups = [];  // Grouped by stock_item_id
         $unknown = [];
+        $partner_items = [];
         $seen = [];  // Deduplicate
 
         foreach ($rfidTags as $tag) {
@@ -530,6 +556,21 @@ class StockItemService
                 continue;
             }
 
+            // Try cross-instance lookup
+            if ($this->crossLookup) {
+                $crossResult = $this->crossLookup->lookupTag($tag);
+                if ($crossResult) {
+                    $partner_items[] = [
+                        'rfid_tag' => $tag,
+                        'entity_type' => $crossResult['entity_type'],
+                        'display_name' => $crossResult['entity']['display_name'] ?? 'Unbekannt',
+                        'owner_name' => $crossResult['owner_instance_name'],
+                        'source' => $crossResult['source'],
+                    ];
+                    continue;
+                }
+            }
+
             // Unknown tag
             $unknown[] = $tag;
         }
@@ -541,13 +582,15 @@ class StockItemService
         });
 
         return [
-            'assets'      => $assets,
-            'stock'       => array_values($stockGroups),
-            'unknown'     => $unknown,
-            'summary'     => [
+            'assets'        => $assets,
+            'stock'         => array_values($stockGroups),
+            'partner_items' => $partner_items,
+            'unknown'       => $unknown,
+            'summary'       => [
                 'total_scanned'   => count($seen),
                 'total_assets'    => count($assets),
                 'total_stock'     => array_sum(array_column(array_values($stockGroups), 'count')),
+                'total_partner'   => count($partner_items),
                 'total_unknown'   => count($unknown),
                 'stock_types'     => count($stockGroups),
             ],

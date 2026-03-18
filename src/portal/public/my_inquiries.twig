@@ -1,0 +1,73 @@
+{% extends "layout.twig" %}
+
+{% block title %}My Inquiries - {{ config.portal_title|default('Booking Portal') }}{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 2rem;">My Booking Inquiries</h1>
+
+{% if message %}
+    <div class="alert alert-{{ message.type }}">
+        {{ message.text }}
+    </div>
+{% endif %}
+
+{% if inquiries is empty %}
+    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 3rem; text-align: center;">
+        <p class="text-muted" style="margin-bottom: 1rem;">You haven't submitted any booking inquiries yet.</p>
+        <a href="/portal/" class="btn btn-primary">Browse Equipment</a>
+    </div>
+{% else %}
+    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; overflow: hidden;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead style="background-color: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                <tr>
+                    <th style="padding: 1rem; text-align: left;">Inquiry #</th>
+                    <th style="padding: 1rem; text-align: left;">Status</th>
+                    <th style="padding: 1rem; text-align: left;">Check-in</th>
+                    <th style="padding: 1rem; text-align: left;">Check-out</th>
+                    <th style="padding: 1rem; text-align: left;">Items</th>
+                    <th style="padding: 1rem; text-align: left;">Submitted</th>
+                    <th style="padding: 1rem; text-align: center;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inquiry in inquiries %}
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 1rem;">
+                            <code style="background: #f9fafb; padding: 0.25rem 0.5rem; border-radius: 0.25rem;">
+                                #{{ inquiry.id }}
+                            </code>
+                        </td>
+                        <td style="padding: 1rem;">
+                            <span style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 0.25rem; font-size: 0.875rem; font-weight: 500; {% if inquiry.status == 'new' %}background: #fef3c7; color: #92400e;{% elseif inquiry.status == 'reviewed' %}background: #dbeafe; color: #0c4a6e;{% elseif inquiry.status == 'quoted' %}background: #d1fae5; color: #065f46;{% elseif inquiry.status == 'accepted' %}background: #dcfce7; color: #166534;{% elseif inquiry.status == 'rejected' or inquiry.status == 'cancelled' %}background: #fee2e2; color: #991b1b;{% endif %}">
+                                {{ inquiry.status|capitalize }}
+                            </span>
+                        </td>
+                        <td style="padding: 1rem;">{{ inquiry.rental_start }}</td>
+                        <td style="padding: 1rem;">{{ inquiry.rental_end }}</td>
+                        <td style="padding: 1rem;">
+                            {% set items_count = inquiry.items|json_decode|length %}
+                            {{ items_count }} item{{ items_count != 1 ? 's' : '' }}
+                        </td>
+                        <td style="padding: 1rem; font-size: 0.875rem; color: #6b7280;">
+                            {{ inquiry.created_at|date('Y-m-d H:i') }}
+                        </td>
+                        <td style="padding: 1rem; text-align: center;">
+                            <button onclick="viewInquiry({{ inquiry.id }})" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+                                Details
+                            </button>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endif %}
+
+<script>
+function viewInquiry(inquiryId) {
+    // Could expand to show inquiry details in a modal or new page
+    alert('Inquiry #' + inquiryId + ' details view coming soon');
+}
+</script>
+{% endblock %}

@@ -286,7 +286,7 @@ class ClientImportService
             $this->db->where('instances_id', $instanceId);
             $this->db->where('clients_customerNumber', $data['clients_customerNumber']);
             $this->db->where('clients_deleted', 0);
-            if ($this->db->getOne('clients')) {
+            if ($this->db->getOne('clients', null)) {
                 return true;
             }
         }
@@ -297,7 +297,7 @@ class ClientImportService
             $this->db->where('clients_name', $data['clients_name']);
             $this->db->where('clients_email', $data['clients_email']);
             $this->db->where('clients_deleted', 0);
-            if ($this->db->getOne('clients')) {
+            if ($this->db->getOne('clients', null)) {
                 return true;
             }
         }
@@ -313,7 +313,7 @@ class ClientImportService
         $this->db->where('instances_id', $instanceId);
         $this->db->where('clients_customerNumber IS NOT NULL');
         $this->db->orderBy('clients_customerNumber', 'DESC');
-        $lastClient = $this->db->getOne('clients', ['clients_customerNumber']);
+        $lastClient = $this->db->getOne('clients', null, ['clients_customerNumber']);
 
         $nextNumber = 1;
         if ($lastClient && $lastClient['clients_customerNumber']) {

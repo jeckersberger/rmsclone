@@ -102,7 +102,7 @@ class CalendarSyncService
         $hashedToken = hash('sha256', $token);
         $this->db->where('token', $hashedToken);
         $this->db->where('active', 1);
-        $result = $this->db->getOne('calendar_feeds', ['user_id', 'instances_id']);
+        $result = $this->db->getOne('calendar_feeds', null, ['user_id', 'instances_id']);
         return $result ?: null;
     }
 

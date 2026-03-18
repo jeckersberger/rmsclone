@@ -1,0 +1,178 @@
+{% extends "layout.twig" %}
+
+{% block title %}{{ item.assetTypes_name }} - {{ config.portal_title|default('Booking Portal') }}{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <a href="/portal/" style="color: var(--primary-color, #2563eb); text-decoration: none;">← Back to Catalog</a>
+</div>
+
+{% if message %}
+    <div class="alert alert-{{ message.type }}">
+        {{ message.text }}
+    </div>
+{% endif %}
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 3rem;">
+    <!-- Item Details -->
+    <div>
+        <div style="background-color: #f3f4f6; border-radius: 0.75rem; padding: 3rem; text-align: center; font-size: 5rem; margin-bottom: 1.5rem;">
+            📦
+        </div>
+        <div style="background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1.5rem;">
+            <h1 style="margin-bottom: 1rem;">{{ item.assetTypes_name }}</h1>
+            <p style="color: #6b7280; margin-bottom: 1.5rem;">{{ item.assetTypes_description|default('High-quality equipment') }}</p>
+
+            {% if config.show_prices %}
+                <div style="background: #f9fafb; padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+                    <p style="color: #6b7280; margin-bottom: 0.5rem;">Pricing:</p>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary-color, #2563eb);">
+                        {% if item.assetTypes_dayRate %}
+                            €{{ "%.2f"|format(item.assetTypes_dayRate) }} per day
+                        {% endif %}
+                        {% if item.assetTypes_weekRate %}
+                            <br>€{{ "%.2f"|format(item.assetTypes_weekRate) }} per week
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <div style="background: #e0f2fe; padding: 1rem; border-radius: 0.5rem; border-left: 4px solid var(--primary-color, #2563eb);">
+                <strong>{{ item.available_count }}</strong> units available
+            </div>
+        </div>
+    </div>
+
+    <!-- Booking Form -->
+    <div>
+        <div style="background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 2rem;">
+            <h2 style="margin-bottom: 1.5rem;">Book This Equipment</h2>
+            <form id="bookingForm">
+                <div class="form-group">
+                    <label for="rentalStart">Start Date</label>
+                    <input type="date" id="rentalStart" name="rental_start" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="rentalEnd">End Date</label>
+                    <input type="date" id="rentalEnd" name="rental_end" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="quantity">Quantity</label>
+                    <input type="number" id="quantity" name="quantity" value="1" min="1" max="{{ item.available_count }}" required>
+                </div>
+
+                <div id="availabilityInfo" style="background: #f9fafb; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; display: none;">
+                    <p style="margin: 0.5rem 0;"><strong>Rental Days:</strong> <span id="rentalDays">-</span></p>
+                    <p style="margin: 0.5rem 0;"><strong>Estimated Price:</strong> €<span id="estPrice">0.00</span></p>
+                </div>
+
+                <div class="form-group">
+                    <label for="message">Message (optional)</label>
+                    <textarea id="message" name="message" placeholder="Any special requirements?"></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem;">
+                    Add to Cart
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+const instanceId = {{ instance_id }};
+const assetTypeId = {{ item.assetTypes_id }};
+const dayRate = {{ item.assetTypes_dayRate|default(0) }};
+const weekRate = {{ item.assetTypes_weekRate|default(0) }};
+
+document.getElementById('rentalStart').addEventListener('change', checkAvailability);
+document.getElementById('rentalEnd').addEventListener('change', checkAvailability);
+document.getElementById('quantity').addEventListener('change', checkAvailability);
+
+document.getElementById('bookingForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const startDate = document.getElementById('rentalStart').value;
+    const endDate = document.getElementById('rentalEnd').value;
+    const quantity = parseInt(document.getElementById('quantity').value);
+    const message = document.getElementById('message').value;
+
+    if (!startDate || !endDate || quantity < 1) {
+        alert('Please fill in all required fields');
+        return;
+    }
+
+    // Store in session and redirect to cart
+    const items = [{
+        asset_type_id: assetTypeId,
+        asset_type_name: '{{ item.assetTypes_name }}',
+        quantity: quantity,
+        price: calculatePrice(startDate, endDate)
+    }];
+
+    sessionStorage.setItem('portalCart', JSON.stringify({
+        items: items,
+        rental_start: startDate,
+        rental_end: endDate,
+        message: message
+    }));
+
+    window.location.href = '/portal/?action=cart';
+});
+
+function calculatePrice(startDate, endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    const weeks = Math.floor(days / 7);
+    const remainingDays = days % 7;
+
+    let price = 0;
+    if (weeks > 0 && weekRate > 0) {
+        price += weeks * weekRate;
+    } else {
+        price += weeks * 7 * dayRate;
+    }
+    if (remainingDays > 0) {
+        price += remainingDays * dayRate;
+    }
+
+    return price;
+}
+
+function checkAvailability() {
+    const startDate = document.getElementById('rentalStart').value;
+    const endDate = document.getElementById('rentalEnd').value;
+    const quantity = parseInt(document.getElementById('quantity').value);
+
+    if (!startDate || !endDate || quantity < 1) return;
+
+    fetch('/api/portal/availability.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+            instances_id: instanceId,
+            asset_type_id: assetTypeId,
+            start_date: startDate,
+            end_date: endDate,
+            quantity: quantity
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        const info = document.getElementById('availabilityInfo');
+        if (data.result && data.response) {
+            const res = data.response;
+            info.style.display = 'block';
+            document.getElementById('rentalDays').textContent = res.rental_days;
+            document.getElementById('estPrice').textContent = (res.total_price * quantity).toFixed(2);
+        } else {
+            info.style.display = 'none';
+        }
+    })
+    .catch(e => console.error('Error checking availability:', e));
+}
+</script>
+{% endblock %}

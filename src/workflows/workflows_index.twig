@@ -1,0 +1,658 @@
+{% extends "adminlte.twig" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="h3 mb-0">Automatisierte Workflows</h1>
+            <p class="text-muted mt-1">Verwalten und überwachen Sie automatisierte Workflow-Prozesse</p>
+        </div>
+        <div class="col-md-4 text-right">
+            <button class="btn btn-primary" data-toggle="modal" data-target="#createWorkflowModal">
+                <i class="fas fa-plus"></i> Neuer Workflow
+            </button>
+            <button class="btn btn-info ml-2" data-toggle="modal" data-target="#templatesModal">
+                <i class="fas fa-cube"></i> Aus Vorlage erstellen
+            </button>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Aktive Workflows</h6>
+                    <h3 id="activeCount">0</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Inaktive Workflows</h6>
+                    <h3 id="inactiveCount">0</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Heute Ausgeführt</h6>
+                    <h3 id="todayCount">0</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Fehlerhafte Ausführungen</h6>
+                    <h3 id="failedCount">0</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Workflows List -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Workflows</h5>
+        </div>
+        <div class="card-body" id="workflowsContainer">
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                <p>Workflows werden geladen...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Workflow Modal -->
+<div class="modal fade" id="createWorkflowModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Neuer Workflow</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="createWorkflowForm">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Workflow-Name</label>
+                        <input type="text" class="form-control" id="workflowName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Beschreibung</label>
+                        <textarea class="form-control" id="workflowDescription" rows="2"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Trigger-Typ</label>
+                        <select class="form-control" id="triggerType" required>
+                            <option value="manual">Manuell</option>
+                            <option value="event">Event-basiert</option>
+                            <option value="cron">Zeitplan (Cron)</option>
+                        </select>
+                    </div>
+                    <div id="triggerConfigContainer"></div>
+                    <div class="form-group">
+                        <label>Aktivieren</label>
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" id="isActive">
+                            <label class="custom-control-label" for="isActive">
+                                Diesen Workflow sofort aktivieren
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Erstellen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Templates Modal -->
+<div class="modal fade" id="templatesModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Vordefinierte Workflow-Vorlagen</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="templatesContainer">
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                    <p>Vorlagen werden geladen...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Execution Log Modal -->
+<div class="modal fade" id="executionLogModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ausführungs-Details</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="executionLogContent">
+                <!-- Loaded via JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Workflow Edit Modal -->
+<div class="modal fade" id="editWorkflowModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Workflow bearbeiten</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="editWorkflowForm">
+                <input type="hidden" id="editWorkflowId">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Workflow-Name</label>
+                        <input type="text" class="form-control" id="editWorkflowName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Beschreibung</label>
+                        <textarea class="form-control" id="editWorkflowDescription" rows="2"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Trigger-Typ</label>
+                        <select class="form-control" id="editTriggerType">
+                            <option value="manual">Manuell</option>
+                            <option value="event">Event-basiert</option>
+                            <option value="cron">Zeitplan (Cron)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.workflow-card {
+    transition: all 0.3s ease;
+    border-left: 4px solid #007bff;
+}
+
+.workflow-card.inactive {
+    opacity: 0.7;
+    border-left-color: #6c757d;
+}
+
+.workflow-card.active {
+    border-left-color: #28a745;
+}
+
+.trigger-badge {
+    display: inline-block;
+    font-size: 0.85em;
+    font-weight: 500;
+}
+
+.workflow-actions {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.workflow-card:hover .workflow-actions {
+    opacity: 1;
+}
+
+.status-running {
+    color: #007bff;
+}
+
+.status-completed {
+    color: #28a745;
+}
+
+.status-failed {
+    color: #dc3545;
+}
+
+.status-cancelled {
+    color: #6c757d;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadWorkflows();
+    loadTemplates();
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    // Create workflow form
+    document.getElementById('createWorkflowForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        // Form submission handler
+    });
+
+    // Edit workflow form
+    document.getElementById('editWorkflowForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        // Edit form submission handler
+    });
+
+    // Trigger type change
+    document.getElementById('triggerType').addEventListener('change', updateTriggerConfig);
+    document.getElementById('editTriggerType').addEventListener('change', updateEditTriggerConfig);
+}
+
+function loadWorkflows() {
+    fetch('/api/workflows/list.php')
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) {
+                showError(data.message);
+                return;
+            }
+
+            renderWorkflows(data.data.workflows);
+            updateStats(data.data.workflows);
+        })
+        .catch(err => showError('Fehler beim Laden der Workflows'));
+}
+
+function renderWorkflows(workflows) {
+    const container = document.getElementById('workflowsContainer');
+
+    if (workflows.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-inbox fa-3x mb-3"></i>
+                <p>Keine Workflows vorhanden</p>
+            </div>
+        `;
+        return;
+    }
+
+    const html = workflows.map(w => `
+        <div class="card workflow-card ${w.is_active ? 'active' : 'inactive'} mb-3">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5 class="card-title">${escapeHtml(w.name)}</h5>
+                        <p class="card-text text-muted text-sm">${escapeHtml(w.description || '')}</p>
+                        <div class="mt-2">
+                            <span class="badge badge-${getTriggerTypeBadgeClass(w.trigger_type)} trigger-badge">
+                                ${getTriggerTypeLabel(w.trigger_type)}
+                            </span>
+                            ${w.is_active ? '<span class="badge badge-success ml-1">Aktiv</span>' : '<span class="badge badge-secondary ml-1">Inaktiv</span>'}
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-right">
+                        <div class="mb-2">
+                            <small class="text-muted">
+                                <i class="fas fa-history"></i> Ausführungen: <strong>${w.execution_count || 0}</strong>
+                            </small>
+                        </div>
+                        ${w.last_execution ? `
+                            <small class="text-muted d-block">
+                                Letzte Ausführung: ${formatDate(w.last_execution.started_at)}
+                                <span class="badge badge-${getStatusBadgeClass(w.last_execution.status)} status-${w.last_execution.status}">
+                                    ${w.last_execution.status}
+                                </span>
+                            </small>
+                        ` : '<small class="text-muted d-block">Noch nicht ausgeführt</small>'}
+                        <div class="workflow-actions mt-3">
+                            <button class="btn btn-sm btn-info" onclick="executeWorkflow(${w.id})">
+                                <i class="fas fa-play"></i> Ausführen
+                            </button>
+                            <button class="btn btn-sm btn-warning" onclick="editWorkflow(${w.id})">
+                                <i class="fas fa-edit"></i> Bearbeiten
+                            </button>
+                            <button class="btn btn-sm btn-${w.is_active ? 'danger' : 'success'}"
+                                    onclick="toggleWorkflow(${w.id}, ${!w.is_active})">
+                                <i class="fas fa-${w.is_active ? 'pause' : 'play'}"></i>
+                            </button>
+                            <button class="btn btn-sm btn-secondary" onclick="viewExecutions(${w.id})">
+                                <i class="fas fa-list"></i> Log
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteWorkflow(${w.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    container.innerHTML = html;
+}
+
+function updateStats(workflows) {
+    const active = workflows.filter(w => w.is_active).length;
+    const inactive = workflows.length - active;
+
+    document.getElementById('activeCount').textContent = active;
+    document.getElementById('inactiveCount').textContent = inactive;
+
+    // Count today's executions and failures
+    let todayCount = 0;
+    let failedCount = 0;
+
+    workflows.forEach(w => {
+        if (w.last_execution) {
+            if (isToday(w.last_execution.started_at)) {
+                todayCount++;
+            }
+            if (w.last_execution.status === 'failed') {
+                failedCount++;
+            }
+        }
+    });
+
+    document.getElementById('todayCount').textContent = todayCount;
+    document.getElementById('failedCount').textContent = failedCount;
+}
+
+function loadTemplates() {
+    fetch('/api/workflows/templates.php')
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) return;
+            renderTemplates(data.data.templates);
+        })
+        .catch(err => console.error(err));
+}
+
+function renderTemplates(templates) {
+    const container = document.getElementById('templatesContainer');
+
+    const html = templates.map(t => `
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-9">
+                        <h6 class="card-title">${escapeHtml(t.name)}</h6>
+                        <p class="card-text text-sm text-muted">${escapeHtml(t.description || '')}</p>
+                        <small class="text-muted">
+                            <span class="badge badge-secondary">${t.category || 'Sonstige'}</span>
+                        </small>
+                    </div>
+                    <div class="col-md-3 text-right">
+                        <button class="btn btn-sm btn-primary" onclick="createFromTemplate(${t.id})">
+                            <i class="fas fa-plus"></i> Verwenden
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    container.innerHTML = html || '<p class="text-muted">Keine Vorlagen verfügbar</p>';
+}
+
+function executeWorkflow(workflowId) {
+    if (!confirm('Möchten Sie diesen Workflow jetzt ausführen?')) return;
+
+    fetch('/api/workflows/execute.php', {
+        method: 'POST',
+        body: new URLSearchParams({ id: workflowId })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showSuccess('Workflow-Ausführung gestartet');
+            loadWorkflows();
+        } else {
+            showError(data.message);
+        }
+    })
+    .catch(err => showError('Fehler bei der Workflow-Ausführung'));
+}
+
+function toggleWorkflow(workflowId, active) {
+    fetch('/api/workflows/toggle.php', {
+        method: 'POST',
+        body: new URLSearchParams({ id: workflowId, active: active ? 1 : 0 })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showSuccess('Workflow ' + (active ? 'aktiviert' : 'deaktiviert'));
+            loadWorkflows();
+        } else {
+            showError(data.message);
+        }
+    })
+    .catch(err => showError('Fehler beim Aktualisieren des Workflows'));
+}
+
+function deleteWorkflow(workflowId) {
+    if (!confirm('Möchten Sie diesen Workflow wirklich löschen?')) return;
+
+    fetch('/api/workflows/delete.php', {
+        method: 'POST',
+        body: new URLSearchParams({ id: workflowId })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showSuccess('Workflow gelöscht');
+            loadWorkflows();
+        } else {
+            showError(data.message);
+        }
+    })
+    .catch(err => showError('Fehler beim Löschen des Workflows'));
+}
+
+function viewExecutions(workflowId) {
+    fetch(`/api/workflows/executions.php?workflow_id=${workflowId}&limit=10`)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) {
+                showError(data.message);
+                return;
+            }
+
+            const executions = data.data.executions;
+            const html = executions.length > 0 ? executions.map(e => `
+                <div class="card mb-2">
+                    <div class="card-body py-2">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <small>
+                                    <strong>${formatDate(e.started_at)}</strong>
+                                    <span class="badge badge-${getStatusBadgeClass(e.status)} ml-2">${e.status}</span>
+                                </small>
+                            </div>
+                            <div class="col-md-4 text-right">
+                                <button class="btn btn-xs btn-info" onclick="viewExecutionDetail(${e.id})">
+                                    <i class="fas fa-eye"></i> Details
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('') : '<p class="text-muted">Keine Ausführungen vorhanden</p>';
+
+            document.getElementById('executionLogContent').innerHTML = html;
+            $('#executionLogModal').modal('show');
+        })
+        .catch(err => showError('Fehler beim Laden der Ausführungen'));
+}
+
+function viewExecutionDetail(executionId) {
+    fetch(`/api/workflows/execution_detail.php?id=${executionId}`)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) {
+                showError(data.message);
+                return;
+            }
+
+            const execution = data.data.execution;
+            const logs = execution.logs || [];
+
+            const html = `
+                <div class="alert alert-${getStatusAlertClass(execution.status)}">
+                    <strong>Status:</strong> ${execution.status}
+                    <br>
+                    <strong>Gestartet:</strong> ${formatDate(execution.started_at)}
+                    <br>
+                    ${execution.completed_at ? `<strong>Abgeschlossen:</strong> ${formatDate(execution.completed_at)}<br>` : ''}
+                    ${execution.error_message ? `<strong>Fehler:</strong> ${escapeHtml(execution.error_message)}<br>` : ''}
+                </div>
+                <div class="mt-3">
+                    <h6>Schritt-Logs:</h6>
+                    ${logs.map(log => `
+                        <div class="card card-sm mb-2">
+                            <div class="card-body py-2">
+                                <small>
+                                    <strong>Schritt ${log.step_id}</strong>
+                                    <span class="badge badge-${getStatusBadgeClass(log.status)}">${log.status}</span>
+                                    <br>
+                                    ${log.error_message ? `<span class="text-danger">${escapeHtml(log.error_message)}</span>` : ''}
+                                </small>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            document.getElementById('executionLogContent').innerHTML = html;
+        })
+        .catch(err => showError('Fehler beim Laden der Details'));
+}
+
+function createFromTemplate(templateId) {
+    fetch('/api/workflows/create_from_template.php', {
+        method: 'POST',
+        body: new URLSearchParams({ template_id: templateId })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showSuccess('Workflow aus Vorlage erstellt');
+            $('#templatesModal').modal('hide');
+            loadWorkflows();
+        } else {
+            showError(data.message);
+        }
+    })
+    .catch(err => showError('Fehler beim Erstellen des Workflows'));
+}
+
+function editWorkflow(workflowId) {
+    fetch(`/api/workflows/get.php?id=${workflowId}`)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) {
+                showError(data.message);
+                return;
+            }
+
+            const workflow = data.data.workflow;
+            document.getElementById('editWorkflowId').value = workflow.id;
+            document.getElementById('editWorkflowName').value = workflow.name;
+            document.getElementById('editWorkflowDescription').value = workflow.description || '';
+            document.getElementById('editTriggerType').value = workflow.trigger_type;
+
+            $('#editWorkflowModal').modal('show');
+        })
+        .catch(err => showError('Fehler beim Laden des Workflows'));
+}
+
+// Helper functions
+function getTriggerTypeLabel(type) {
+    const labels = {
+        'manual': 'Manuell',
+        'event': 'Event',
+        'cron': 'Zeitplan'
+    };
+    return labels[type] || type;
+}
+
+function getTriggerTypeBadgeClass(type) {
+    const classes = {
+        'manual': 'secondary',
+        'event': 'primary',
+        'cron': 'info'
+    };
+    return classes[type] || 'secondary';
+}
+
+function getStatusBadgeClass(status) {
+    const classes = {
+        'running': 'info',
+        'completed': 'success',
+        'failed': 'danger',
+        'cancelled': 'secondary'
+    };
+    return classes[status] || 'secondary';
+}
+
+function getStatusAlertClass(status) {
+    const classes = {
+        'running': 'info',
+        'completed': 'success',
+        'failed': 'danger',
+        'cancelled': 'warning'
+    };
+    return classes[status] || 'secondary';
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleString('de-DE');
+}
+
+function isToday(dateString) {
+    if (!dateString) return false;
+    const date = new Date(dateString);
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function updateTriggerConfig() {
+    // Dynamic trigger config UI based on selected type
+}
+
+function updateEditTriggerConfig() {
+    // Dynamic edit trigger config UI
+}
+
+function showSuccess(message) {
+    alert(message);
+}
+
+function showError(message) {
+    alert('Fehler: ' + message);
+}
+</script>
+{% endblock %}

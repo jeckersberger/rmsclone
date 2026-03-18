@@ -1,0 +1,527 @@
+{% extends "layout.twig" %}
+
+{% block title %}Fremdmaterial verwalten{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1><i class="fas fa-handshake"></i> Fremdmaterial</h1>
+                <p class="text-muted">Verwaltung von geliehenen Gegenständen</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        {# Statistics Cards #}
+        <div class="row" id="externalStats">
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-info">
+                    <div class="inner">
+                        <h3 id="statTotal">0</h3>
+                        <p>Total items bei uns</p>
+                    </div>
+                    <div class="icon"><i class="fas fa-box"></i></div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-success">
+                    <div class="inner">
+                        <h3 id="statReturned">0</h3>
+                        <p>Items zurückgegeben</p>
+                    </div>
+                    <div class="icon"><i class="fas fa-check-circle"></i></div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-warning">
+                    <div class="inner">
+                        <h3 id="statOverdue">0</h3>
+                        <p>Überfällig</p>
+                    </div>
+                    <div class="icon"><i class="fas fa-clock"></i></div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-danger">
+                    <div class="inner">
+                        <h3 id="statLost">0</h3>
+                        <p>Items verloren</p>
+                    </div>
+                    <div class="icon"><i class="fas fa-exclamation-triangle"></i></div>
+                </div>
+            </div>
+        </div>
+
+        {# Quick Scan Section #}
+        <div class="card collapsed-card">
+            <div class="card-header with-border bg-light">
+                <h3 class="card-title"><i class="fas fa-barcode"></i> Schnellerfassung</h3>
+                <div class="card-tools pull-right">
+                    <button type="button" class="btn btn-box-tool" data-card-widget="collapse">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body" style="display: none;">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="form-group">
+                            <label>Barcode / RFID scannen</label>
+                            <input type="text" id="scanInput" class="form-control" placeholder="Barcode oder RFID-Tag eingeben..." autofocus>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <button onclick="scanLookup()" class="btn btn-primary btn-block" style="margin-top: 32px;">
+                            <i class="fas fa-search"></i> Suchen
+                        </button>
+                    </div>
+                </div>
+                <div id="scanResultsDiv" style="margin-top: 20px; display: none;">
+                    <div class="alert alert-info" id="scanResultsContent"></div>
+                    <div style="margin-top: 15px; display: flex; gap: 10px;">
+                        <button onclick="markReturned(currentScanId)" class="btn btn-success btn-sm">
+                            <i class="fas fa-undo"></i> Zurückgegeben
+                        </button>
+                        <button onclick="printLabel(currentScanId)" class="btn btn-info btn-sm">
+                            <i class="fas fa-print"></i> Label drucken
+                        </button>
+                        <button onclick="clearScanResults()" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-times"></i> Schließen
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Items Table #}
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Geliehene Gegenstände</h3>
+                <div class="card-tools">
+                    <button onclick="showAddModal()" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus"></i> Neuer Gegenstand
+                    </button>
+                </div>
+            </div>
+            <div class="card-body table-responsive p-0">
+                <table class="table table-hover table-striped">
+                    <thead>
+                        <tr>
+                            <th>Beschreibung</th>
+                            <th>Eigentümer</th>
+                            <th>Menge</th>
+                            <th>Barcode</th>
+                            <th>Status</th>
+                            <th>Rückgabedatum</th>
+                            <th>Projekt</th>
+                            <th style="width: 180px;">Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="itemsTableBody">
+                        <tr><td colspan="8" class="text-center text-muted">Lade...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+{# Add/Edit Modal #}
+<div class="modal fade" id="itemModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="itemModalTitle">Neuer Gegenstand</h5>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editItemId" value="">
+
+                <div class="form-group">
+                    <label>Beschreibung *</label>
+                    <input type="text" id="itemDescription" class="form-control" placeholder="z.B. Beamer Sony VPL-FHZ70" required>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Eigentümer Name *</label>
+                            <input type="text" id="itemOwnerName" class="form-control" placeholder="z.B. Verleihfirma GmbH" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Eigentümer Kontakt</label>
+                            <input type="text" id="itemOwnerContact" class="form-control" placeholder="E-Mail oder Telefon">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Menge</label>
+                            <input type="number" id="itemQuantity" class="form-control" value="1" min="1">
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="form-group">
+                            <label>Projekt</label>
+                            <select id="itemProject" class="form-control">
+                                <option value="">-- Kein Projekt --</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Rückgabedatum</label>
+                    <input type="date" id="itemDueDate" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label>Notizen</label>
+                    <textarea id="itemNotes" class="form-control" rows="3" placeholder="Zusätzliche Informationen..."></textarea>
+                </div>
+
+                <hr>
+
+                <div class="form-group">
+                    <label><input type="checkbox" id="itemAssignRfid"> RFID Tag zuweisen</label>
+                </div>
+
+                <div id="rfidInputDiv" style="display: none;">
+                    <div class="form-group">
+                        <label>RFID-Tag</label>
+                        <input type="text" id="itemRfidTag" class="form-control" placeholder="z.B. EPC000123456789">
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-primary" onclick="saveItem()">
+                    <i class="fas fa-save"></i> Speichern
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+var currentScanId = null;
+
+// Load on page initialization
+document.addEventListener('DOMContentLoaded', function() {
+    loadStats();
+    loadItems();
+    loadProjects();
+
+    // Enter key on scan input
+    document.getElementById('scanInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            scanLookup();
+        }
+    });
+
+    // RFID checkbox toggle
+    document.getElementById('itemAssignRfid').addEventListener('change', function() {
+        document.getElementById('rfidInputDiv').style.display = this.checked ? 'block' : 'none';
+    });
+});
+
+/**
+ * Load statistics from API
+ */
+function loadStats() {
+    ajaxcall('external/items.php', { action: 'stats' }, function(response) {
+        if (response.result && response.response) {
+            var stats = response.response;
+            document.getElementById('statTotal').textContent = stats.total || 0;
+            document.getElementById('statReturned').textContent = stats.returned || 0;
+            document.getElementById('statOverdue').textContent = stats.overdue || 0;
+            document.getElementById('statLost').textContent = stats.lost || 0;
+        }
+    }, true);
+}
+
+/**
+ * Load items table from API
+ */
+function loadItems() {
+    ajaxcall('external/items.php', { action: 'list' }, function(response) {
+        if (response.result && response.response && response.response.items) {
+            renderItemsTable(response.response.items);
+        }
+    }, true);
+}
+
+/**
+ * Render items in table
+ */
+function renderItemsTable(items) {
+    var tbody = document.getElementById('itemsTableBody');
+    tbody.innerHTML = '';
+
+    if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Keine geliehenen Gegenstände vorhanden</td></tr>';
+        return;
+    }
+
+    items.forEach(function(item) {
+        var tr = document.createElement('tr');
+
+        // Highlight overdue items
+        var isOverdue = item.status === 'Bei uns' && item.due_date && new Date(item.due_date) < new Date();
+        if (isOverdue) {
+            tr.style.backgroundColor = '#ffe6e6';
+        }
+
+        // Status badge
+        var statusBadge = '';
+        if (item.status === 'Bei uns') {
+            statusBadge = '<span class="badge badge-primary">Bei uns</span>';
+        } else if (item.status === 'Zurückgegeben') {
+            statusBadge = '<span class="badge badge-success">Zurückgegeben</span>';
+        } else if (item.status === 'Verloren') {
+            statusBadge = '<span class="badge badge-danger">Verloren</span>';
+        }
+
+        // Format due date
+        var dueDateStr = item.due_date ? new Date(item.due_date).toLocaleDateString('de-DE') : '-';
+
+        // Action buttons
+        var actions =
+            '<button onclick="showEditModal(' + item.id + ')" class="btn btn-xs btn-info" title="Bearbeiten"><i class="fas fa-edit"></i></button> ' +
+            '<button onclick="printLabel(' + item.id + ')" class="btn btn-xs btn-warning" title="Label drucken"><i class="fas fa-print"></i></button> ';
+
+        if (item.status === 'Bei uns') {
+            actions += '<button onclick="markReturned(' + item.id + ')" class="btn btn-xs btn-success" title="Zurückgegeben"><i class="fas fa-undo"></i></button> ';
+            actions += '<button onclick="markLost(' + item.id + ')" class="btn btn-xs btn-danger" title="Verloren"><i class="fas fa-exclamation"></i></button> ';
+        }
+        actions += '<button onclick="deleteItem(' + item.id + ')" class="btn btn-xs btn-danger" title="Löschen"><i class="fas fa-trash"></i></button>';
+
+        tr.innerHTML =
+            '<td>' + (item.description || '-') + '</td>' +
+            '<td>' + (item.owner_name || '-') + '</td>' +
+            '<td>' + (item.quantity || 1) + '</td>' +
+            '<td><code>' + (item.barcode || '-') + '</code></td>' +
+            '<td>' + statusBadge + '</td>' +
+            '<td>' + dueDateStr + '</td>' +
+            '<td>' + (item.project_name || '-') + '</td>' +
+            '<td>' + actions + '</td>';
+
+        tbody.appendChild(tr);
+    });
+}
+
+/**
+ * Load project options for dropdown
+ */
+function loadProjects() {
+    ajaxcall('projects/list.php', { action: 'list' }, function(response) {
+        if (response.result && response.response && response.response.projects) {
+            var projects = response.response.projects;
+            var select = document.getElementById('itemProject');
+
+            // Keep the default option
+            while (select.options.length > 1) {
+                select.remove(1);
+            }
+
+            projects.forEach(function(proj) {
+                var option = document.createElement('option');
+                option.value = proj.id;
+                option.textContent = proj.name;
+                select.appendChild(option);
+            });
+        }
+    }, true);
+}
+
+/**
+ * Show add item modal
+ */
+function showAddModal() {
+    document.getElementById('editItemId').value = '';
+    document.getElementById('itemModalTitle').textContent = 'Neuer Gegenstand';
+    document.getElementById('itemDescription').value = '';
+    document.getElementById('itemOwnerName').value = '';
+    document.getElementById('itemOwnerContact').value = '';
+    document.getElementById('itemQuantity').value = '1';
+    document.getElementById('itemProject').value = '';
+    document.getElementById('itemDueDate').value = '';
+    document.getElementById('itemNotes').value = '';
+    document.getElementById('itemAssignRfid').checked = false;
+    document.getElementById('itemRfidTag').value = '';
+    document.getElementById('rfidInputDiv').style.display = 'none';
+    $('#itemModal').modal('show');
+}
+
+/**
+ * Show edit item modal with pre-filled data
+ */
+function showEditModal(id) {
+    ajaxcall('external/items.php', { action: 'get', id: id }, function(response) {
+        if (response.result && response.response && response.response.item) {
+            var item = response.response.item;
+            document.getElementById('editItemId').value = item.id;
+            document.getElementById('itemModalTitle').textContent = 'Gegenstand bearbeiten';
+            document.getElementById('itemDescription').value = item.description || '';
+            document.getElementById('itemOwnerName').value = item.owner_name || '';
+            document.getElementById('itemOwnerContact').value = item.owner_contact || '';
+            document.getElementById('itemQuantity').value = item.quantity || 1;
+            document.getElementById('itemProject').value = item.project_id || '';
+            document.getElementById('itemDueDate').value = item.due_date || '';
+            document.getElementById('itemNotes').value = item.notes || '';
+            document.getElementById('itemAssignRfid').checked = item.rfid_tag ? true : false;
+            document.getElementById('itemRfidTag').value = item.rfid_tag || '';
+            document.getElementById('rfidInputDiv').style.display = item.rfid_tag ? 'block' : 'none';
+            $('#itemModal').modal('show');
+        }
+    }, true);
+}
+
+/**
+ * Save new or updated item
+ */
+function saveItem() {
+    var id = document.getElementById('editItemId').value;
+    var params = {
+        action: id ? 'update' : 'create',
+        description: document.getElementById('itemDescription').value,
+        owner_name: document.getElementById('itemOwnerName').value,
+        owner_contact: document.getElementById('itemOwnerContact').value,
+        quantity: document.getElementById('itemQuantity').value,
+        project_id: document.getElementById('itemProject').value,
+        due_date: document.getElementById('itemDueDate').value,
+        notes: document.getElementById('itemNotes').value
+    };
+
+    if (document.getElementById('itemAssignRfid').checked) {
+        params.rfid_tag = document.getElementById('itemRfidTag').value;
+    }
+
+    if (id) params.id = id;
+
+    ajaxcall('external/items.php', params, function(response) {
+        if (response.result) {
+            $('#itemModal').modal('hide');
+            loadItems();
+            loadStats();
+        } else {
+            alert('Fehler: ' + (response.response ? response.response.message : 'Unbekannter Fehler'));
+        }
+    }, true);
+}
+
+/**
+ * Mark item as returned
+ */
+function markReturned(id) {
+    if (!confirm('Item wirklich als zurückgegeben markieren?')) return;
+    ajaxcall('external/items.php', { action: 'mark_returned', id: id }, function(response) {
+        if (response.result) {
+            loadItems();
+            loadStats();
+        } else {
+            alert('Fehler: ' + (response.response ? response.response.message : 'Unbekannter Fehler'));
+        }
+    }, true);
+}
+
+/**
+ * Mark item as lost
+ */
+function markLost(id) {
+    if (!confirm('Item wirklich als verloren markieren?')) return;
+    ajaxcall('external/items.php', { action: 'mark_lost', id: id }, function(response) {
+        if (response.result) {
+            loadItems();
+            loadStats();
+        } else {
+            alert('Fehler: ' + (response.response ? response.response.message : 'Unbekannter Fehler'));
+        }
+    }, true);
+}
+
+/**
+ * Delete item
+ */
+function deleteItem(id) {
+    if (!confirm('Gegenstand wirklich löschen?')) return;
+    ajaxcall('external/items.php', { action: 'delete', id: id }, function(response) {
+        if (response.result) {
+            loadItems();
+            loadStats();
+        } else {
+            alert('Fehler: ' + (response.response ? response.response.message : 'Unbekannter Fehler'));
+        }
+    }, true);
+}
+
+/**
+ * Print barcode label
+ */
+function printLabel(id) {
+    ajaxcall('external/items.php', { action: 'print_label', id: id }, function(response) {
+        if (response.result) {
+            // Either open print dialog or send to Zebra printer depending on backend implementation
+            if (response.response && response.response.pdf_url) {
+                window.open(response.response.pdf_url, '_blank');
+            } else {
+                alert('Label prepared. Check your printer.');
+            }
+        } else {
+            alert('Fehler: ' + (response.response ? response.response.message : 'Unbekannter Fehler'));
+        }
+    }, true);
+}
+
+/**
+ * Scan lookup - find item by barcode/RFID
+ */
+function scanLookup() {
+    var barcode = document.getElementById('scanInput').value.trim();
+    if (!barcode) {
+        alert('Bitte Barcode oder RFID-Tag eingeben.');
+        return;
+    }
+
+    ajaxcall('external/items.php', { action: 'scan_lookup', barcode: barcode }, function(response) {
+        if (response.result && response.response && response.response.item) {
+            var item = response.response.item;
+            currentScanId = item.id;
+
+            var content = '<strong>' + item.description + '</strong><br>' +
+                'Eigentümer: ' + (item.owner_name || '-') + '<br>' +
+                'Status: ' + item.status + '<br>' +
+                'Menge: ' + (item.quantity || 1) + '<br>' +
+                'Rückgabedatum: ' + (item.due_date ? new Date(item.due_date).toLocaleDateString('de-DE') : '-');
+
+            document.getElementById('scanResultsContent').innerHTML = content;
+            document.getElementById('scanResultsDiv').style.display = 'block';
+        } else {
+            alert('Item nicht gefunden.');
+        }
+    }, true);
+}
+
+/**
+ * Clear scan results
+ */
+function clearScanResults() {
+    document.getElementById('scanInput').value = '';
+    document.getElementById('scanResultsDiv').style.display = 'none';
+    currentScanId = null;
+    document.getElementById('scanInput').focus();
+}
+</script>
+{% endblock %}

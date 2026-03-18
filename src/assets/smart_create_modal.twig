@@ -1,0 +1,428 @@
+{# Smart Asset Creator Modal - Multi-step wizard for AI-powered asset creation #}
+<div id="smartAssetCreatorModal" class="modal fade" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            {# Header #}
+            <div class="modal-header bg-info">
+                <h5 class="modal-title">
+                    <i class="fas fa-wand-magic-sparkles"></i> Smart Asset Creator
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+
+            {# Body - Multi-step wizard #}
+            <div class="modal-body">
+                {# Step 1: Input Form #}
+                <div class="wizard-step" id="step1-input" style="display: none;">
+                    <h6 class="mb-3">Schritt 1 von 3: Gerät identifizieren</h6>
+
+                    {# Photo Upload Option #}
+                    <div class="form-group">
+                        <label>
+                            <i class="fas fa-camera"></i> Oder Foto hochladen (optional)
+                        </label>
+                        <div class="custom-file-upload border-2 p-3 text-center rounded" id="photoUploadZone">
+                            <input type="file" id="photoUploadInput" accept="image/*" style="display: none;">
+                            <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
+                            <p class="mb-0 small text-muted">Foto hier ablegen oder klicken zum Hochladen</p>
+                        </div>
+                        <small class="form-text text-muted">Unterstützte Formate: JPG, PNG, WebP</small>
+                    </div>
+
+                    <hr class="my-3">
+                    <p class="small text-muted text-center">oder</p>
+                    <hr class="my-3">
+
+                    {# Manual Input #}
+                    <div class="form-group">
+                        <label>Hersteller *</label>
+                        <input type="text" class="form-control" id="manufacturerInput" placeholder="z.B. Martin, Chauvet, ETC"
+                               data-toggle="autocomplete" data-source="manufacturer_suggest.php">
+                        <small class="form-text text-muted">Name eingeben für Vorschläge</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Modell *</label>
+                        <input type="text" class="form-control" id="modelInput" placeholder="z.B. MAC 300, Maverick"
+                               data-toggle="autocomplete" data-source="model_suggest.php">
+                        <small class="form-text text-muted">Wird automatisch nach Hersteller gefiltert</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>EAN-Code (optional)</label>
+                        <input type="text" class="form-control" id="eanInput" placeholder="z.B. 5391676003022">
+                    </div>
+
+                    <div class="form-group mt-4">
+                        <button type="button" class="btn btn-primary btn-block" id="step1NextBtn">
+                            Daten abrufen <i class="fas fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+                </div>
+
+                {# Step 2: Loading Animation #}
+                <div class="wizard-step" id="step2-loading" style="display: none;">
+                    <h6 class="mb-4">Schritt 2 von 3: Daten werden abgerufen...</h6>
+
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
+                            <span class="sr-only">Loading...</span>
+                        </div>
+                        <p class="mb-2" id="statusMessage">Kontaktiere den AI-Service...</p>
+                        <small class="text-muted d-block" id="statusDetail"></small>
+                    </div>
+
+                    {# Live status indicators #}
+                    <div class="mt-4 small">
+                        <div class="mb-2">
+                            <i class="fas fa-circle text-muted" id="statusIcon1"></i>
+                            <span id="statusText1">Grunddaten abrufen</span>
+                        </div>
+                        <div class="mb-2">
+                            <i class="fas fa-circle text-muted" id="statusIcon2"></i>
+                            <span id="statusText2">Technische Spezifikationen</span>
+                        </div>
+                        <div class="mb-2">
+                            <i class="fas fa-circle text-muted" id="statusIcon3"></i>
+                            <span id="statusText3">Preis und Kategorie</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-secondary btn-block" data-dismiss="modal">
+                            Abbrechen
+                        </button>
+                    </div>
+                </div>
+
+                {# Step 3: Pre-filled Form #}
+                <div class="wizard-step" id="step3-form" style="display: none;">
+                    <h6 class="mb-3">Schritt 3 von 3: Gerätedaten überprüfen</h6>
+
+                    <div id="lookupResults">
+                        {# Results will be injected here #}
+                    </div>
+                </div>
+            </div>
+
+            {# Footer #}
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Schließen</button>
+                <button type="button" class="btn btn-primary" id="saveAssetBtn" style="display: none;">
+                    <i class="fas fa-check mr-1"></i> Asset speichern
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Template for result field with source badge #}
+<template id="resultFieldTemplate">
+    <div class="form-group">
+        <label class="d-flex justify-content-between align-items-center">
+            <span data-field-label></span>
+            <span class="badge" data-source-badge></span>
+        </label>
+        <input type="text" class="form-control" data-field-input readonly>
+        <small class="form-text" data-confidence-indicator></small>
+    </div>
+</template>
+
+{# Confidence indicator CSS #}
+<style>
+    .confidence-high {
+        color: #28a745;
+        font-weight: 500;
+    }
+    .confidence-medium {
+        color: #ffc107;
+        font-weight: 500;
+    }
+    .confidence-low {
+        color: #dc3545;
+        font-weight: 500;
+    }
+    .badge-ai { background-color: #007bff; }
+    .badge-db { background-color: #6c757d; }
+    .badge-web { background-color: #17a2b8; }
+    .custom-file-upload {
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    .custom-file-upload:hover {
+        background-color: #f8f9fa;
+        border-color: #007bff !important;
+    }
+    .custom-file-upload.dragover {
+        background-color: #e7f3ff;
+        border-color: #007bff !important;
+    }
+</style>
+
+{# JavaScript for wizard logic #}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('smartAssetCreatorModal');
+    let currentLookupData = null;
+
+    // Initialize autocomplete
+    initializeAutocomplete();
+
+    // Photo upload handling
+    document.getElementById('photoUploadZone').addEventListener('click', function() {
+        document.getElementById('photoUploadInput').click();
+    });
+
+    document.getElementById('photoUploadInput').addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+            performPhotoLookup(e.target.files[0]);
+        }
+    });
+
+    // Drag and drop
+    const zone = document.getElementById('photoUploadZone');
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        zone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        zone.addEventListener(eventName, () => zone.classList.add('dragover'), false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        zone.addEventListener(eventName, () => zone.classList.remove('dragover'), false);
+    });
+
+    zone.addEventListener('drop', function(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files.length > 0) {
+            performPhotoLookup(files[0]);
+        }
+    }, false);
+
+    // Step 1: Trigger lookup
+    document.getElementById('step1NextBtn').addEventListener('click', function() {
+        const manufacturer = document.getElementById('manufacturerInput').value.trim();
+        const model = document.getElementById('modelInput').value.trim();
+        const ean = document.getElementById('eanInput').value.trim();
+
+        if (!manufacturer || !model) {
+            alert('Bitte geben Sie Hersteller und Modell ein.');
+            return;
+        }
+
+        showStep(2);
+        performLookup(manufacturer, model, ean);
+    });
+
+    // Save asset button
+    document.getElementById('saveAssetBtn').addEventListener('click', function() {
+        if (!currentLookupData) {
+            alert('Keine Daten verfügbar');
+            return;
+        }
+
+        // Collect form data and submit to asset creation endpoint
+        const formData = collectLookupFormData(currentLookupData);
+        submitAssetCreation(formData);
+    });
+
+    function showStep(step) {
+        document.getElementById('step1-input').style.display = 'none';
+        document.getElementById('step2-loading').style.display = 'none';
+        document.getElementById('step3-form').style.display = 'none';
+        document.getElementById('saveAssetBtn').style.display = 'none';
+
+        if (step === 1) {
+            document.getElementById('step1-input').style.display = 'block';
+        } else if (step === 2) {
+            document.getElementById('step2-loading').style.display = 'block';
+        } else if (step === 3) {
+            document.getElementById('step3-form').style.display = 'block';
+            document.getElementById('saveAssetBtn').style.display = 'block';
+        }
+    }
+
+    function performLookup(manufacturer, model, ean) {
+        const formData = new FormData();
+        formData.append('manufacturer', manufacturer);
+        formData.append('model', model);
+        if (ean) formData.append('ean', ean);
+
+        updateStatus('Rufe Produktdaten ab...');
+        updateStatusIcon(1, 'loading');
+
+        fetch('/src/api/assets/smart_lookup.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(r => r.json())
+        .then(response => {
+            if (!response.success) {
+                throw new Error(response.data?.message || 'Lookup failed');
+            }
+
+            currentLookupData = response.data;
+            updateStatusIcon(1, 'done');
+            updateStatus('Technische Daten werden verarbeitet...');
+            updateStatusIcon(2, 'loading');
+
+            // Simulate processing delay for UX
+            setTimeout(() => {
+                updateStatusIcon(2, 'done');
+                updateStatus('Preis und Kategorie werden vorgeschlagen...');
+                updateStatusIcon(3, 'loading');
+
+                setTimeout(() => {
+                    updateStatusIcon(3, 'done');
+                    renderLookupResults(response.data);
+                    showStep(3);
+                }, 800);
+            }, 800);
+        })
+        .catch(error => {
+            console.error('Lookup error:', error);
+            alert('Fehler beim Abrufen der Daten: ' + error.message);
+            showStep(1);
+        });
+    }
+
+    function performPhotoLookup(file) {
+        const formData = new FormData();
+        formData.append('photo', file);
+
+        showStep(2);
+        updateStatus('Analysiere Foto...');
+        updateStatusIcon(1, 'loading');
+
+        fetch('/src/api/assets/smart_lookup_photo.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(r => r.json())
+        .then(response => {
+            if (!response.success) {
+                throw new Error(response.data?.message || 'Photo lookup failed');
+            }
+
+            currentLookupData = response.data;
+            updateStatusIcon(1, 'done');
+            updateStatus('Daten werden verarbeitet...');
+            updateStatusIcon(2, 'loading');
+
+            setTimeout(() => {
+                updateStatusIcon(2, 'done');
+                updateStatusIcon(3, 'done');
+                renderLookupResults(response.data);
+                showStep(3);
+            }, 800);
+        })
+        .catch(error => {
+            console.error('Photo lookup error:', error);
+            alert('Fehler beim Fotoanalyse: ' + error.message);
+            showStep(1);
+        });
+    }
+
+    function renderLookupResults(data) {
+        const container = document.getElementById('lookupResults');
+        container.innerHTML = '';
+
+        const fields = [
+            { key: 'name', label: 'Produktname', type: 'text' },
+            { key: 'manufacturer', label: 'Hersteller', type: 'text' },
+            { key: 'model', label: 'Modell', type: 'text' },
+            { key: 'category', label: 'Kategorie', type: 'text' },
+            { key: 'weightKg', label: 'Gewicht (kg)', type: 'number' },
+            { key: 'dimensions', label: 'Abmessungen (LxBxH mm)', type: 'text' },
+            { key: 'powerWatts', label: 'Leistung (W)', type: 'number' },
+            { key: 'newPrice', label: 'Neupreis (EUR)', type: 'number' },
+            { key: 'suggestedRentalPrice', label: 'Empf. Mietpreis (EUR)', type: 'number' },
+            { key: 'description', label: 'Beschreibung', type: 'textarea' },
+        ];
+
+        fields.forEach(field => {
+            if (data[field.key] === null || data[field.key] === undefined) return;
+
+            const div = document.createElement('div');
+            div.className = 'form-group';
+
+            const confidence = data.sources?.[field.key]?.confidence ?? 0;
+            const source = data.sources?.[field.key]?.source ?? 'db';
+            const confidenceClass = confidence >= 0.9 ? 'confidence-high' : (confidence >= 0.7 ? 'confidence-medium' : 'confidence-low');
+            const sourceEmoji = source === 'ai' ? '🤖' : (source === 'web' ? '🌐' : '✅');
+
+            const label = document.createElement('label');
+            label.className = 'd-flex justify-content-between align-items-center';
+            label.innerHTML = `
+                <span>${field.label}</span>
+                <span class="badge badge-${source}" title="${source}">${sourceEmoji} ${source}</span>
+            `;
+
+            const input = document.createElement(field.type === 'textarea' ? 'textarea' : 'input');
+            input.className = 'form-control';
+            input.type = field.type;
+            input.value = data[field.key] ?? '';
+            input.name = field.key;
+            if (field.type === 'textarea') input.rows = 3;
+
+            const small = document.createElement('small');
+            small.className = 'form-text ' + confidenceClass;
+            small.textContent = confidence ? `Sicherheit: ${(confidence * 100).toFixed(0)}%` : '';
+
+            div.appendChild(label);
+            div.appendChild(input);
+            if (small.textContent) div.appendChild(small);
+
+            container.appendChild(div);
+        });
+    }
+
+    function updateStatus(message) {
+        document.getElementById('statusMessage').textContent = message;
+    }
+
+    function updateStatusIcon(step, status) {
+        const icon = document.getElementById('statusIcon' + step);
+        if (status === 'loading') {
+            icon.className = 'fas fa-spinner fa-spin text-primary';
+        } else if (status === 'done') {
+            icon.className = 'fas fa-check-circle text-success';
+        }
+    }
+
+    function collectLookupFormData(data) {
+        const inputs = document.querySelectorAll('#lookupResults input, #lookupResults textarea');
+        const formData = new FormData();
+
+        inputs.forEach(input => {
+            formData.append(input.name, input.value);
+        });
+
+        return formData;
+    }
+
+    function submitAssetCreation(formData) {
+        // TODO: Submit to existing asset creation endpoint
+        // formData.append('assetTypes_name', formData.get('name'));
+        // formData.append('assetTypes_description', formData.get('description'));
+        // etc.
+
+        alert('Asset würde jetzt erstellt werden (Feature noch in Entwicklung)');
+        modal.modal('hide');
+    }
+
+    function initializeAutocomplete() {
+        // TODO: Implement autocomplete with jQuery UI or similar
+        // This is a placeholder for autocomplete functionality
+    }
+});
+</script>

@@ -159,15 +159,14 @@ class SteuerExportService
         $einnahmenGesamt = (float)($invoiceTotal['total'] ?? 0);
 
         // Ausgaben nach EÜR-Kategorie
-        $this->db->where('eb.instances_id', $instanceId);
-        $this->db->where('YEAR(eb.booking_date)', $year);
-        $this->db->join('euer_categories ec', 'eb.euer_categories_id=ec.id', 'LEFT');
-        $this->db->groupBy('ec.euer_line');
-        $this->db->orderBy('ec.euer_line', 'ASC');
-        $categories = $this->db->get('euer_bookings eb', null, [
-            'ec.euer_line', 'ec.name AS category_name', 'ec.type',
-            'SUM(eb.amount) AS total'
-        ]) ?: [];
+        $sql = "SELECT ec.euer_line, ec.name AS category_name, ec.type, SUM(eb.amount) AS total
+                FROM euer_bookings eb
+                LEFT JOIN euer_categories ec ON eb.euer_categories_id = ec.id
+                WHERE eb.instances_id = ? AND YEAR(eb.booking_date) = ?
+                GROUP BY ec.euer_line
+                ORDER BY ec.euer_line ASC";
+
+        $categories = $this->db->rawQuery($sql, [$instanceId, $year]) ?: [];
 
         $header = "EÜR-Zeile;Kategorie;Typ;Betrag\r\n";
         $lines = [];

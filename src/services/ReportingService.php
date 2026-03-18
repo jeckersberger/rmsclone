@@ -33,34 +33,32 @@ class ReportingService
      */
     public function profitAndLoss(string $from, string $to): array
     {
-        // Revenue (Invoices)
-        $this->db->where('de.instances_id', $this->instanceId);
-        $this->db->where('de.document_exports_deleted', 0);
-        $this->db->where('de.document_exports_type', 'invoice');
-        $this->db->where('de.document_exports_date', $from, '>=');
-        $this->db->where('de.document_exports_date', $to, '<=');
-        $this->db->groupBy("DATE_FORMAT(de.document_exports_date, '%Y-%m')");
-        $this->db->orderBy("month_key", "ASC");
-        $revenueRows = $this->db->get('document_exports de', null, [
-            "DATE_FORMAT(de.document_exports_date, '%Y-%m') AS month_key",
-            "SUM(de.document_exports_net) AS net_revenue",
-            "SUM(de.document_exports_gross) AS gross_revenue",
-            "SUM(de.document_exports_tax) AS tax_amount",
-            "COUNT(*) AS invoice_count"
-        ]);
+        // Revenue (Invoices) - use rawQuery for aggregation with DATE_FORMAT
+        $sql = "SELECT DATE_FORMAT(de.generated_at, '%Y-%m') AS month_key,
+                       SUM(de.totals_json->'$.net_total') AS net_revenue,
+                       SUM(de.totals_json->'$.gross_total') AS gross_revenue,
+                       SUM(de.totals_json->'$.tax_total') AS tax_amount,
+                       COUNT(*) AS invoice_count
+                FROM document_exports de
+                WHERE de.instances_id = ?
+                AND de.type = 'invoice'
+                AND DATE(de.generated_at) >= ?
+                AND DATE(de.generated_at) <= ?
+                GROUP BY DATE_FORMAT(de.generated_at, '%Y-%m')
+                ORDER BY month_key ASC";
+        $revenueRows = $this->db->rawQuery($sql, [$this->instanceId, $from, $to]) ?: [];
 
         // Credit notes
-        $this->db->where('de.instances_id', $this->instanceId);
-        $this->db->where('de.document_exports_deleted', 0);
-        $this->db->where('de.document_exports_type', 'credit');
-        $this->db->where('de.document_exports_date', $from, '>=');
-        $this->db->where('de.document_exports_date', $to, '<=');
-        $this->db->groupBy("DATE_FORMAT(de.document_exports_date, '%Y-%m')");
-        $creditRows = $this->db->get('document_exports de', null, [
-            "DATE_FORMAT(de.document_exports_date, '%Y-%m') AS month_key",
-            "SUM(de.document_exports_gross) AS credit_total",
-            "COUNT(*) AS credit_count"
-        ]);
+        $sql = "SELECT DATE_FORMAT(de.generated_at, '%Y-%m') AS month_key,
+                       SUM(de.totals_json->'$.gross_total') AS credit_total,
+                       COUNT(*) AS credit_count
+                FROM document_exports de
+                WHERE de.instances_id = ?
+                AND de.type = 'credit'
+                AND DATE(de.generated_at) >= ?
+                AND DATE(de.generated_at) <= ?
+                GROUP BY DATE_FORMAT(de.generated_at, '%Y-%m')";
+        $creditRows = $this->db->rawQuery($sql, [$this->instanceId, $from, $to]) ?: [];
 
         // Index credit notes by month
         $credits = [];
@@ -108,29 +106,29 @@ class ReportingService
     public function assetUtilization(string $from, string $to): array
     {
         // Total assets per type
-        $this->db->where('a.instances_id', $this->instanceId);
-        $this->db->where('a.assets_deleted', 0);
-        $this->db->join('assetTypes at', 'a.assetTypes_id=at.assetTypes_id', 'LEFT');
-        $this->db->groupBy('at.assetTypes_id');
-        $this->db->orderBy('total_assets', 'DESC');
-        $assetCounts = $this->db->get('assets a', null, [
-            'at.assetTypes_id',
-            'at.assetTypes_name',
-            'COUNT(*) AS total_assets'
-        ]);
+        $sql1 = "SELECT at.assetTypes_id, at.assetTypes_name, COUNT(*) AS total_assets
+                 FROM assets a
+                 LEFT JOIN assetTypes at ON a.assetTypes_id = at.assetTypes_id
+                 WHERE a.instances_id = ? AND a.assets_deleted = 0
+                 GROUP BY at.assetTypes_id
+                 ORDER BY total_assets DESC";
+
+        $assetCounts = $this->db->rawQuery($sql1, [$this->instanceId]);
 
         // Assignments in period
-        $this->db->where('aa.instances_id', $this->instanceId);
-        $this->db->join('assets a', 'aa.assets_id=a.assets_id', 'INNER');
-        $this->db->join('assetTypes at', 'a.assetTypes_id=at.assetTypes_id', 'LEFT');
-        $this->db->join('projects p', 'aa.projects_id=p.projects_id', 'LEFT');
-        $this->db->where('(p.projects_dates_use_start <= ? AND p.projects_dates_use_end >= ?)', [$to, $from]);
-        $this->db->groupBy('at.assetTypes_id');
-        $assignmentCounts = $this->db->get('assetsAssignments aa', null, [
-            'at.assetTypes_id',
-            'COUNT(DISTINCT a.assets_id) AS used_assets',
-            'COUNT(*) AS assignment_count'
-        ]);
+        $sql2 = "SELECT at.assetTypes_id,
+                        COUNT(DISTINCT a.assets_id) AS used_assets,
+                        COUNT(*) AS assignment_count
+                 FROM assetsAssignments aa
+                 INNER JOIN assets a ON aa.assets_id = a.assets_id
+                 LEFT JOIN assetTypes at ON a.assetTypes_id = at.assetTypes_id
+                 LEFT JOIN projects p ON aa.projects_id = p.projects_id
+                 WHERE aa.instances_id = ?
+                   AND p.projects_dates_use_start <= ?
+                   AND p.projects_dates_use_end >= ?
+                 GROUP BY at.assetTypes_id";
+
+        $assignmentCounts = $this->db->rawQuery($sql2, [$this->instanceId, $to, $from]);
 
         // Index assignments
         $assignments = [];
@@ -183,18 +181,18 @@ class ReportingService
     {
         $today = date('Y-m-d');
 
-        $this->db->where('de.instances_id', $this->instanceId);
-        $this->db->where('de.document_exports_deleted', 0);
-        $this->db->where('de.document_exports_type', 'invoice');
-        $this->db->where('de.document_exports_status', 'unpaid');
-        $this->db->join('projects p', 'de.projects_id=p.projects_id', 'LEFT');
-        $this->db->join('clients c', 'p.clients_id=c.clients_id', 'LEFT');
-        $this->db->orderBy('de.document_exports_date', 'ASC');
-        $invoices = $this->db->get('document_exports de', null, [
-            'de.document_exports_id', 'de.document_exports_number', 'de.document_exports_date',
-            'de.document_exports_gross', 'de.document_exports_dueDate',
-            'p.projects_id', 'p.projects_name', 'c.clients_name', 'c.clients_id'
-        ]);
+        // Use document_lifecycle table for unpaid invoices with due dates
+        $sql = "SELECT dl.id, dl.doc_number, dl.created_at,
+                       dl.gross_amount, dl.due_date,
+                       p.projects_id, p.projects_name, c.clients_name, c.clients_id
+                FROM document_lifecycle dl
+                LEFT JOIN projects p ON dl.projects_id = p.projects_id
+                LEFT JOIN clients c ON p.clients_id = c.clients_id
+                WHERE dl.instances_id = ?
+                AND dl.doc_type = 'invoice'
+                AND dl.status NOT IN ('paid')
+                ORDER BY dl.created_at ASC";
+        $invoices = $this->db->rawQuery($sql, [$this->instanceId]) ?: [];
 
         $buckets = [
             '0-30' => ['label' => '0-30 Tage', 'invoices' => [], 'total' => 0, 'count' => 0],
@@ -205,9 +203,9 @@ class ReportingService
 
         $grandTotal = 0;
         foreach (($invoices ?: []) as $inv) {
-            $dueDate = $inv['document_exports_dueDate'] ?: $inv['document_exports_date'];
+            $dueDate = $inv['due_date'] ?: $inv['created_at'];
             $daysOld = max(0, (int)((strtotime($today) - strtotime($dueDate)) / 86400));
-            $amount = (float)$inv['document_exports_gross'] / 100;
+            $amount = (float)$inv['gross_amount'] / 100;
 
             if ($daysOld <= 30) $bucket = '0-30';
             elseif ($daysOld <= 60) $bucket = '31-60';
@@ -215,9 +213,9 @@ class ReportingService
             else $bucket = '90+';
 
             $buckets[$bucket]['invoices'][] = [
-                'id' => $inv['document_exports_id'],
-                'number' => $inv['document_exports_number'],
-                'date' => $inv['document_exports_date'],
+                'id' => $inv['id'],
+                'number' => $inv['doc_number'],
+                'date' => $inv['created_at'],
                 'due_date' => $dueDate,
                 'days_overdue' => $daysOld,
                 'amount' => $amount,
@@ -248,21 +246,21 @@ class ReportingService
      */
     public function revenuePerClient(string $from, string $to, int $limit = 20): array
     {
-        $this->db->where('de.instances_id', $this->instanceId);
-        $this->db->where('de.document_exports_deleted', 0);
-        $this->db->where('de.document_exports_type', 'invoice');
-        $this->db->where('de.document_exports_date', $from, '>=');
-        $this->db->where('de.document_exports_date', $to, '<=');
-        $this->db->join('projects p', 'de.projects_id=p.projects_id', 'LEFT');
-        $this->db->join('clients c', 'p.clients_id=c.clients_id', 'LEFT');
-        $this->db->groupBy('c.clients_id');
-        $this->db->orderBy('total_revenue', 'DESC');
-        $rows = $this->db->get('document_exports de', $limit, [
-            'c.clients_id', 'c.clients_name',
-            'SUM(de.document_exports_gross) AS total_revenue',
-            'SUM(de.document_exports_net) AS net_revenue',
-            'COUNT(*) AS invoice_count'
-        ]);
+        $sql = "SELECT c.clients_id, c.clients_name,
+                       SUM(dl.gross_amount) AS total_revenue,
+                       SUM(dl.net_amount) AS net_revenue,
+                       COUNT(*) AS invoice_count
+                FROM document_lifecycle dl
+                LEFT JOIN projects p ON dl.projects_id = p.projects_id
+                LEFT JOIN clients c ON p.clients_id = c.clients_id
+                WHERE dl.instances_id = ?
+                AND dl.doc_type = 'invoice'
+                AND DATE(dl.created_at) >= ?
+                AND DATE(dl.created_at) <= ?
+                GROUP BY c.clients_id
+                ORDER BY total_revenue DESC
+                LIMIT ?";
+        $rows = $this->db->rawQuery($sql, [$this->instanceId, $from, $to, $limit]) ?: [];
 
         $result = [];
         foreach (($rows ?: []) as $row) {
@@ -289,18 +287,17 @@ class ReportingService
         $from = date('Y-m-01', strtotime("-{$months} months"));
         $to = date('Y-m-d');
 
-        $this->db->where('de.instances_id', $this->instanceId);
-        $this->db->where('de.document_exports_deleted', 0);
-        $this->db->where('de.document_exports_type', 'invoice');
-        $this->db->where('de.document_exports_date', $from, '>=');
-        $this->db->where('de.document_exports_date', $to, '<=');
-        $this->db->groupBy("DATE_FORMAT(de.document_exports_date, '%Y-%m')");
-        $this->db->orderBy('month_key', 'ASC');
-        $rows = $this->db->get('document_exports de', null, [
-            "DATE_FORMAT(de.document_exports_date, '%Y-%m') AS month_key",
-            "SUM(de.document_exports_gross) AS revenue",
-            "COUNT(*) AS invoice_count"
-        ]);
+        $sql = "SELECT DATE_FORMAT(dl.created_at, '%Y-%m') AS month_key,
+                       SUM(dl.gross_amount) AS revenue,
+                       COUNT(*) AS invoice_count
+                FROM document_lifecycle dl
+                WHERE dl.instances_id = ?
+                AND dl.doc_type = 'invoice'
+                AND DATE(dl.created_at) >= ?
+                AND DATE(dl.created_at) <= ?
+                GROUP BY DATE_FORMAT(dl.created_at, '%Y-%m')
+                ORDER BY month_key ASC";
+        $rows = $this->db->rawQuery($sql, [$this->instanceId, $from, $to]) ?: [];
 
         $trend = [];
         foreach (($rows ?: []) as $row) {

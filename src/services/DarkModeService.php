@@ -20,7 +20,7 @@ class DarkModeService
     public function isDarkMode(int $userId): bool
     {
         $this->db->where('users_userid', $userId);
-        $result = $this->db->getOne('users', ['users_darkMode']);
+        $result = $this->db->getOne('users', null, ['users_darkMode']);
         return $result ? (bool) ($result['users_darkMode'] ?? false) : false;
     }
 

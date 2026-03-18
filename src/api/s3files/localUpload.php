@@ -94,6 +94,48 @@ $fileData = [
     "instances_id" => $AUTH->data['instance']['instances_id']
 ];
 
+// File encryption support (GoBD compliance)
+$encryptionEnabled = getenv('FILE_ENCRYPTION_ENABLED') === 'true';
+$integrityHash = '';
+if ($encryptionEnabled) {
+    require_once __DIR__ . '/../../services/FileEncryptionService.php';
+    try {
+        $encryptionKey = getenv('FILE_ENCRYPTION_KEY');
+        if (!$encryptionKey) {
+            finish(false, ["code" => null, "message" => "File encryption not properly configured"]);
+        }
+
+        $encryptionService = new FileEncryptionService($encryptionKey);
+
+        // Calculate integrity hash before encryption
+        $integrityHash = $encryptionService->calculateHash($fullPath);
+
+        // Encrypt the file in place
+        $encryptedPath = $fullPath . '.encrypted';
+        if (!$encryptionService->encryptFile($fullPath, $encryptedPath)) {
+            @unlink($fullPath);
+            @unlink($encryptedPath);
+            finish(false, ["code" => null, "message" => "File encryption failed"]);
+        }
+
+        // Replace original with encrypted version
+        if (!unlink($fullPath) || !rename($encryptedPath, $fullPath)) {
+            @unlink($encryptedPath);
+            @unlink($fullPath);
+            finish(false, ["code" => null, "message" => "Failed to finalize encrypted file"]);
+        }
+
+        // Store encryption metadata
+        $fileData['s3files_encrypted'] = 1;
+        $fileData['s3files_integrity_hash'] = $integrityHash;
+
+    } catch (Exception $e) {
+        error_log("Upload encryption error: " . $e->getMessage());
+        @unlink($fullPath);
+        finish(false, ["code" => null, "message" => "File encryption error: " . $e->getMessage()]);
+    }
+}
+
 $id = $DBLIB->insert("s3files", $fileData);
 if (!$id) {
     unlink($fullPath);

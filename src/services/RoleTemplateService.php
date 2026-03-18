@@ -75,7 +75,7 @@ class RoleTemplateService
             $this->db->where('instances_id', $instanceId);
             $this->db->where('instancePositions_displayName', $template['name']);
             $this->db->where('instancePositions_deleted', 0);
-            $existing = $this->db->getOne('instancePositions', ['instancePositions_id']);
+            $existing = $this->db->getOne('instancePositions', null, ['instancePositions_id']);
 
             if ($existing) {
                 $result['skipped']++;

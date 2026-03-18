@@ -69,7 +69,7 @@ class RecurringInvoiceService
     public function updateTemplate(int $templateId, array $data): bool
     {
         $this->db->where('id', $templateId);
-        $template = $this->db->getOne('recurring_invoice_templates');
+        $template = $this->db->getOne('recurring_invoice_templates', null);
         if (!$template) return false;
 
         $updateData = [];
@@ -146,7 +146,7 @@ class RecurringInvoiceService
     {
         $this->db->where('id', $templateId);
         $this->db->join('clients', 'recurring_invoice_templates.clients_id = clients.clients_id', 'LEFT');
-        $template = $this->db->getOne('recurring_invoice_templates', [
+        $template = $this->db->getOne('recurring_invoice_templates', null, [
             'recurring_invoice_templates.*',
             'clients.clients_name',
             'clients.clients_email',
@@ -353,7 +353,7 @@ class RecurringInvoiceService
         $this->db->where('document_exports_number', "{$prefix}%", 'LIKE');
         $this->db->where('document_exports_type', 'invoice');
         $this->db->orderBy('document_exports_number', 'DESC');
-        $lastDoc = $this->db->getOne('document_exports', ['document_exports_number']);
+        $lastDoc = $this->db->getOne('document_exports', null, ['document_exports_number']);
 
         if ($lastDoc && preg_match('/\d+-\d+-(\d+)$/', $lastDoc['document_exports_number'], $matches)) {
             $nextNum = (int)$matches[1] + 1;

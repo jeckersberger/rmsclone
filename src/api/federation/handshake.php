@@ -48,6 +48,7 @@ $requestingUrl = trim($_POST['requesting_server_url'] ?? '');
 $requestingName = trim($_POST['requesting_server_name'] ?? '');
 $requestingInstanceId = (int)($_POST['requesting_server_instance_id'] ?? 0);
 $requestingApiKey = trim($_POST['requesting_api_key'] ?? '');
+$requestingCompanyCode = trim($_POST['requesting_company_code'] ?? '') ?: null;
 
 if (empty($partnerCode) || empty($requestingUrl) || empty($requestingApiKey)) {
     finish(false, ['code' => 'INVALID', 'message' => 'Missing required fields']);
@@ -63,7 +64,8 @@ $result = $FEDERATION->handleIncomingHandshake(
     $requestingUrl,
     $requestingName,
     $requestingInstanceId,
-    $requestingApiKey
+    $requestingApiKey,
+    $requestingCompanyCode
 );
 
 if ($result['success']) {
@@ -71,6 +73,7 @@ if ($result['success']) {
         'api_key' => $result['api_key'],
         'server_name' => $result['server_name'],
         'instance_id' => $result['instance_id'],
+        'company_code' => $result['company_code'] ?? null,
     ]);
 } else {
     // Generische Fehlermeldung um Enumeration zu verhindern

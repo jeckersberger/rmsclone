@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RMS Clone API Documentation</title>
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui.min.css">
+    <style>
+        html {
+            box-sizing: border-box;
+            overflow: -moz-scrollbars-vertical;
+            overflow-y: scroll;
+        }
+        *, *:before, *:after {
+            box-sizing: inherit;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #fafafa;
+        }
+        .topbar {
+            background-color: #1a1a1a;
+            padding: 20px;
+            color: #ffffff;
+            text-align: center;
+            border-bottom: 3px solid #4CAF50;
+        }
+        .topbar h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+        .topbar p {
+            margin: 5px 0 0 0;
+            font-size: 14px;
+            color: #cccccc;
+        }
+        #swagger-ui {
+            max-width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <h1>RMS Clone API Documentation</h1>
+        <p>Complete OpenAPI 3.0 Specification</p>
+    </div>
+    <div id="swagger-ui"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui.min.js"></script>
+    <script>
+        window.onload = function() {
+            const ui = SwaggerUIBundle({
+                url: "./api-spec.yaml",
+                dom_id: '#swagger-ui',
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIBundle.SwaggerUIStandalonePreset
+                ],
+                layout: "BaseLayout",
+                deepLinking: true,
+                tryItOutEnabled: true,
+                persistAuthorization: true,
+            })
+            window.ui = ui
+        }
+    </script>
+</body>
+</html>

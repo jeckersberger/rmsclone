@@ -102,7 +102,7 @@ class ClientCommunicationService
     {
         $this->db->where('cc.id', $entryId);
         $this->db->join('clients c', 'cc.clients_id=c.clients_id', 'LEFT');
-        $entry = $this->db->getOne('client_communications cc', [
+        $entry = $this->db->getOne('client_communications cc', null, [
             'cc.*',
             'c.instances_id',
         ]);

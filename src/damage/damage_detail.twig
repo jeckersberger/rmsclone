@@ -1,0 +1,771 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+
+<style>
+    .workflow-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+    }
+
+    .workflow-status-badge {
+        display: inline-block;
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-weight: 600;
+        margin: 5px 0;
+    }
+
+    .status-reported { background-color: rgba(21, 101, 192, 0.8); }
+    .status-assessed { background-color: rgba(106, 27, 154, 0.8); }
+    .status-quote-requested { background-color: rgba(230, 81, 0, 0.8); }
+    .status-quote-received { background-color: rgba(194, 24, 91, 0.8); }
+    .status-repair-approved { background-color: rgba(46, 125, 50, 0.8); }
+    .status-in-repair { background-color: rgba(245, 127, 23, 0.8); }
+    .status-repaired { background-color: rgba(85, 141, 47, 0.8); }
+    .status-verified { background-color: rgba(0, 105, 92, 0.8); }
+    .status-charged { background-color: rgba(81, 45, 168, 0.8); }
+    .status-insurance-claimed { background-color: rgba(191, 54, 12, 0.8); }
+    .status-closed { background-color: rgba(66, 66, 66, 0.8); }
+
+    .severity-mini {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 3px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .severity-minor { background-color: #c8e6c9; color: #1b5e20; }
+    .severity-moderate { background-color: #fff9c4; color: #f57f17; }
+    .severity-major { background-color: #ffccbc; color: #d84315; }
+    .severity-total-loss { background-color: #ffcdd2; color: #b71c1c; }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 15px;
+        margin: 15px 0;
+    }
+
+    .info-box {
+        background: #f5f5f5;
+        padding: 12px;
+        border-radius: 4px;
+        border-left: 3px solid #667eea;
+    }
+
+    .info-label {
+        font-weight: 600;
+        color: #666;
+        font-size: 12px;
+        text-transform: uppercase;
+    }
+
+    .info-value {
+        font-size: 16px;
+        color: #333;
+        margin-top: 5px;
+    }
+
+    .timeline {
+        position: relative;
+        padding: 20px 0;
+    }
+
+    .timeline-item {
+        padding-left: 40px;
+        margin-bottom: 20px;
+        position: relative;
+    }
+
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: 8px;
+        top: 5px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background-color: #667eea;
+        border: 2px solid white;
+    }
+
+    .timeline-item::after {
+        content: '';
+        position: absolute;
+        left: 13px;
+        top: 20px;
+        width: 2px;
+        height: 20px;
+        background-color: #ddd;
+    }
+
+    .timeline-item:last-child::after {
+        display: none;
+    }
+
+    .timeline-content {
+        background: white;
+        padding: 10px;
+        border-radius: 4px;
+        border: 1px solid #eee;
+    }
+
+    .timeline-date {
+        font-size: 11px;
+        color: #999;
+    }
+
+    .photo-gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 10px;
+        margin-top: 15px;
+    }
+
+    .photo-item {
+        position: relative;
+        cursor: pointer;
+        border-radius: 4px;
+        overflow: hidden;
+        background: #f0f0f0;
+    }
+
+    .photo-item img {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+        display: block;
+    }
+
+    .photo-badge {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        background: rgba(0,0,0,0.7);
+        color: white;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 10px;
+    }
+
+    .estimate-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .estimate-table td {
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .estimate-table tr:hover {
+        background-color: #f9f9f9;
+    }
+
+    .transition-form {
+        background: #f0f7ff;
+        padding: 15px;
+        border-radius: 4px;
+        margin: 15px 0;
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="workflow-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Schadensfall #{{ workflow.id }}
+                </h2>
+                {% if asset %}
+                    <p class="mb-2"><strong>Asset:</strong> {{ asset.assetTypes_name }} #{{ asset.assets_tag }}</p>
+                {% endif %}
+                <div>
+                    <span class="workflow-status-badge status-{{ workflow.status }}">
+                        {{ workflow.status|replace('_', ' ')|upper }}
+                    </span>
+                    <span class="severity-mini severity-{{ workflow.severity }}">
+                        {{ workflow.severity|upper }}
+                    </span>
+                </div>
+            </div>
+            <div class="col-md-4 text-right">
+                <div style="font-size: 24px; font-weight: 600;">
+                    €{{ workflow.estimated_cost|number_format(2, ',', '.') }}
+                </div>
+                <div style="font-size: 12px; margin-top: 5px;">Veranschlagte Kosten</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Info Grid -->
+    <div class="info-grid">
+        <div class="info-box">
+            <div class="info-label">Gemeldet am</div>
+            <div class="info-value">{{ workflow.created_at|date('d.m.Y H:i') }}</div>
+        </div>
+        <div class="info-box">
+            <div class="info-label">Zuletzt aktualisiert</div>
+            <div class="info-value">{{ workflow.updated_at|date('d.m.Y H:i') }}</div>
+        </div>
+        <div class="info-box">
+            <div class="info-label">Zugeordnet an</div>
+            <div class="info-value">
+                {% if workflow.users_name1 %}
+                    {{ workflow.users_name1 }} {{ workflow.users_name2 }}
+                {% else %}
+                    <em>Nicht zugeordnet</em>
+                {% endif %}
+            </div>
+        </div>
+        <div class="info-box">
+            <div class="info-label">Reparaturvendor</div>
+            <div class="info-value">
+                {% if workflow.repair_vendor %}
+                    {{ workflow.repair_vendor }}
+                {% else %}
+                    <em>Nicht angegeben</em>
+                {% endif %}
+            </div>
+        </div>
+        <div class="info-box">
+            <div class="info-label">Tatsächliche Kosten</div>
+            <div class="info-value">
+                {% if workflow.actual_cost %}
+                    €{{ workflow.actual_cost|number_format(2, ',', '.') }}
+                {% else %}
+                    <em>Nicht angegeben</em>
+                {% endif %}
+            </div>
+        </div>
+        <div class="info-box">
+            <div class="info-label">Kundengebühr</div>
+            <div class="info-value">
+                {% if workflow.customer_charged %}
+                    €{{ workflow.customer_charge_amount|number_format(2, ',', '.') }}
+                {% else %}
+                    <em>Nicht verrechnet</em>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <!-- Left Column: Status & Transitions -->
+        <div class="col-md-8">
+            <!-- Status Transitions -->
+            {% if can_edit and valid_transitions|length > 0 %}
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">Status-Übergang</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="transition-form">
+                            <div class="form-group">
+                                <label>Neuer Status:</label>
+                                <select id="new-status" class="form-control">
+                                    <option value="">-- Wählen Sie einen Status --</option>
+                                    {% for status in valid_transitions %}
+                                        <option value="{{ status }}">{{ status|replace('_', ' ')|capitalize }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Notizen:</label>
+                                <textarea id="transition-notes" class="form-control" rows="3" placeholder="Optionale Notizen zum Übergang..."></textarea>
+                            </div>
+                            <button class="btn btn-primary" onclick="transitionStatus()">
+                                <i class="fas fa-arrow-right"></i> Status aktualisieren
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Status History Timeline -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Status-Verlauf</h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        {% for log in status_log %}
+                            <div class="timeline-item">
+                                <div class="timeline-content">
+                                    <strong>{{ log.to_status|replace('_', ' ')|capitalize }}</strong>
+                                    <div class="timeline-date">
+                                        {{ log.created_at|date('d.m.Y H:i') }}
+                                        von {{ log.users_name1 }} {{ log.users_name2 }}
+                                    </div>
+                                    {% if log.notes %}
+                                        <div style="margin-top: 8px; font-size: 12px; color: #666;">
+                                            {{ log.notes }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cost Estimates -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Kostenveranschlagungen</h5>
+                </div>
+                <div class="card-body">
+                    {% if workflow.cost_estimates %}
+                        <table class="estimate-table">
+                            <thead>
+                                <tr style="background-color: #f5f5f5;">
+                                    <th>Vendor</th>
+                                    <th>Betrag</th>
+                                    <th>Status</th>
+                                    <th>Aktion</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for estimate in workflow.cost_estimates %}
+                                    <tr>
+                                        <td>{{ estimate.vendor_name }}</td>
+                                        <td>€{{ estimate.amount|number_format(2, ',', '.') }}</td>
+                                        <td>
+                                            {% if estimate.is_accepted %}
+                                                <span class="badge badge-success">Akzeptiert</span>
+                                            {% else %}
+                                                <span class="badge badge-warning">Ausstehend</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if can_edit and not estimate.is_accepted %}
+                                                <button class="btn btn-sm btn-success" onclick="acceptEstimate({{ estimate.id }})">
+                                                    <i class="fas fa-check"></i> Akzeptieren
+                                                </button>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p class="text-muted">Keine Kostenveranschlagungen vorhanden</p>
+                    {% endif %}
+
+                    {% if can_edit %}
+                        <hr>
+                        <button class="btn btn-sm btn-primary" data-toggle="collapse" data-target="#add-estimate">
+                            <i class="fas fa-plus"></i> Neue Kostenveranschlagung
+                        </button>
+                        <div id="add-estimate" class="collapse mt-3">
+                            <form onsubmit="addEstimate(event);">
+                                <div class="form-group">
+                                    <label>Vendor-Name:</label>
+                                    <input type="text" class="form-control" id="est-vendor" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Betrag (€):</label>
+                                    <input type="number" class="form-control" id="est-amount" step="0.01" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Beschreibung:</label>
+                                    <textarea class="form-control" id="est-description" rows="2"></textarea>
+                                </div>
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="est-accepted">
+                                    <label class="form-check-label" for="est-accepted">
+                                        Sofort akzeptieren
+                                    </label>
+                                </div>
+                                <button type="submit" class="btn btn-primary mt-2">Speichern</button>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Photos -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Fotodokumentation</h5>
+                </div>
+                <div class="card-body">
+                    {% if workflow.photos %}
+                        <div class="photo-gallery">
+                            {% for photo in workflow.photos %}
+                                <div class="photo-item" onclick="viewPhoto('{{ photo.file_path }}', '{{ photo.description }}')">
+                                    <img src="/{{ photo.file_path }}" alt="Damage photo">
+                                    <span class="photo-badge">{{ photo.photo_type|upper }}</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">Keine Fotos vorhanden</p>
+                    {% endif %}
+
+                    {% if can_edit %}
+                        <hr>
+                        <button class="btn btn-sm btn-primary" data-toggle="collapse" data-target="#upload-photo">
+                            <i class="fas fa-camera"></i> Foto hochladen
+                        </button>
+                        <div id="upload-photo" class="collapse mt-3">
+                            <form id="photo-form" onsubmit="uploadPhoto(event);">
+                                <div class="form-group">
+                                    <label>Fototyp:</label>
+                                    <select class="form-control" id="photo-type" required>
+                                        <option value="initial">Initiale Dokumentation</option>
+                                        <option value="during_repair">Während der Reparatur</option>
+                                        <option value="after_repair">Nach der Reparatur</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Foto:</label>
+                                    <input type="file" class="form-control-file" id="photo-file" accept="image/*" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Beschreibung:</label>
+                                    <textarea class="form-control" id="photo-description" rows="2"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Hochladen</button>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Actions & Details -->
+        <div class="col-md-4">
+            <!-- Quick Actions -->
+            {% if can_edit %}
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">Aktionen</h5>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-block btn-outline-primary mb-2" data-toggle="collapse" data-target="#assign-user">
+                            <i class="fas fa-user"></i> Zuordnen
+                        </button>
+                        <button class="btn btn-block btn-outline-primary mb-2" data-toggle="collapse" data-target="#set-vendor">
+                            <i class="fas fa-wrench"></i> Reparaturvendor
+                        </button>
+                        {% if can_charge %}
+                            <button class="btn btn-block btn-outline-primary mb-2" data-toggle="collapse" data-target="#charge-customer">
+                                <i class="fas fa-credit-card"></i> Kundengebühr
+                            </button>
+                        {% endif %}
+                        <button class="btn btn-block btn-outline-primary mb-2" data-toggle="collapse" data-target="#insurance-claim">
+                            <i class="fas fa-file-contract"></i> Versicherung
+                        </button>
+
+                        <!-- Assign User Form -->
+                        <div id="assign-user" class="collapse mt-3">
+                            <form onsubmit="assignUser(event);">
+                                <select class="form-control mb-2" id="assign-select" required>
+                                    <option value="">-- Benutzer auswählen --</option>
+                                    {% for user in users %}
+                                        <option value="{{ user.users_userid }}">
+                                            {{ user.users_name1 }} {{ user.users_name2 }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-primary">Zuordnen</button>
+                            </form>
+                        </div>
+
+                        <!-- Vendor Form -->
+                        <div id="set-vendor" class="collapse mt-3">
+                            <form onsubmit="setVendor(event);">
+                                <input type="text" class="form-control mb-2" id="vendor-name" placeholder="Vendor-Name" required>
+                                <input type="text" class="form-control mb-2" id="vendor-contact" placeholder="Kontakt (optional)">
+                                <button type="submit" class="btn btn-sm btn-primary">Speichern</button>
+                            </form>
+                        </div>
+
+                        <!-- Charge Customer Form -->
+                        {% if can_charge %}
+                            <div id="charge-customer" class="collapse mt-3">
+                                <form onsubmit="chargeCustomer(event);">
+                                    <div class="form-group">
+                                        <label>Gebührentyp:</label>
+                                        <select class="form-control" id="charge-type">
+                                            <option value="customer">Direktgebühr</option>
+                                            <option value="deposit">Aus Kaution abziehen</option>
+                                        </select>
+                                    </div>
+                                    <input type="number" class="form-control mb-2" id="charge-amount" step="0.01" placeholder="Betrag (€)" required>
+                                    <button type="submit" class="btn btn-sm btn-primary">Gebühr verrechnen</button>
+                                </form>
+                            </div>
+                        {% endif %}
+
+                        <!-- Insurance Form -->
+                        <div id="insurance-claim" class="collapse mt-3">
+                            <form onsubmit="submitInsurance(event);">
+                                <input type="text" class="form-control mb-2" id="claim-id" placeholder="Anspruchs-ID" required>
+                                <button type="submit" class="btn btn-sm btn-primary">Anspruch einreichen</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Insurance Status -->
+            {% if workflow.insurance_claim_id %}
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">Versicherungsanspruch</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="info-box">
+                            <div class="info-label">Anspruchs-ID</div>
+                            <div class="info-value">{{ workflow.insurance_claim_id }}</div>
+                        </div>
+                        <div class="info-box" style="margin-top: 10px;">
+                            <div class="info-label">Status</div>
+                            <div class="info-value">
+                                {% if workflow.insurance_claim_status %}
+                                    <span class="badge badge-info">{{ workflow.insurance_claim_status|upper }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if can_edit %}
+                            <div style="margin-top: 10px;">
+                                <select class="form-control form-control-sm" id="insurance-status" onchange="updateInsuranceStatus()">
+                                    <option value="claimed" {% if workflow.insurance_claim_status == 'claimed' %}selected{% endif %}>Anspruch gestellt</option>
+                                    <option value="approved" {% if workflow.insurance_claim_status == 'approved' %}selected{% endif %}>Genehmigt</option>
+                                    <option value="rejected" {% if workflow.insurance_claim_status == 'rejected' %}selected{% endif %}>Abgelehnt</option>
+                                    <option value="paid" {% if workflow.insurance_claim_status == 'paid' %}selected{% endif %}>Gezahlt</option>
+                                </select>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Notes -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Notizen</h5>
+                </div>
+                <div class="card-body">
+                    {% if workflow.notes %}
+                        <div style="background: #f9f9f9; padding: 10px; border-radius: 4px; font-size: 12px; line-height: 1.6; white-space: pre-wrap; max-height: 300px; overflow-y: auto;">
+                            {{ workflow.notes }}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">Keine Notizen</p>
+                    {% endif %}
+                    {% if can_edit %}
+                        <hr>
+                        <form onsubmit="addNotes(event);">
+                            <textarea class="form-control" id="notes-text" rows="3" placeholder="Neue Notiz hinzufügen..." required></textarea>
+                            <button type="submit" class="btn btn-sm btn-primary mt-2">Hinzufügen</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Photo Modal -->
+<div class="modal fade" id="photoModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Foto ansehen</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modal-photo" src="" style="max-width: 100%; max-height: 600px;">
+                <p id="modal-photo-desc" class="mt-3 text-muted"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const workflowId = {{ workflow.id }};
+const damageReportId = {{ report.id }};
+const canEdit = {{ can_edit ? 'true' : 'false' }};
+const canCharge = {{ can_charge ? 'true' : 'false' }};
+
+function transitionStatus() {
+    const newStatus = $('#new-status').val();
+    const notes = $('#transition-notes').val();
+
+    if (!newStatus) {
+        alert('Bitte wählen Sie einen neuen Status');
+        return;
+    }
+
+    $.post('/api/damage/workflow_transition.php', {
+        workflow_id: workflowId,
+        new_status: newStatus,
+        notes: notes
+    }, function(response) {
+        if (response.success) {
+            location.reload();
+        } else {
+            alert('Fehler: ' + (response.data.message || 'Konnte Status nicht aktualisieren'));
+        }
+    }, 'json');
+}
+
+function acceptEstimate(estimateId) {
+    if (!confirm('Kostenveranschlagung akzeptieren?')) return;
+
+    $.post('/api/damage/estimate_accept.php', {
+        estimate_id: estimateId
+    }, function(response) {
+        if (response.success) {
+            location.reload();
+        } else {
+            alert('Fehler: Kostenveranschlagung konnte nicht akzeptiert werden');
+        }
+    }, 'json');
+}
+
+function addEstimate(event) {
+    event.preventDefault();
+
+    $.post('/api/damage/estimate_add.php', {
+        workflow_id: workflowId,
+        vendor_name: $('#est-vendor').val(),
+        amount: $('#est-amount').val(),
+        description: $('#est-description').val(),
+        is_accepted: $('#est-accepted').is(':checked') ? 1 : 0
+    }, function(response) {
+        if (response.success) {
+            location.reload();
+        } else {
+            alert('Fehler: Kostenveranschlagung konnte nicht hinzugefügt werden');
+        }
+    }, 'json');
+}
+
+function uploadPhoto(event) {
+    event.preventDefault();
+
+    const formData = new FormData();
+    formData.append('damage_report_id', damageReportId);
+    formData.append('photo_type', $('#photo-type').val());
+    formData.append('description', $('#photo-description').val());
+    formData.append('photo', document.getElementById('photo-file').files[0]);
+
+    $.ajax({
+        url: '/api/damage/photo_upload.php',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                location.reload();
+            } else {
+                alert('Fehler beim Hochladen des Fotos');
+            }
+        },
+        error: function() {
+            alert('Fehler beim Hochladen des Fotos');
+        }
+    });
+}
+
+function viewPhoto(filePath, description) {
+    $('#modal-photo').attr('src', '/' + filePath);
+    $('#modal-photo-desc').text(description || 'Keine Beschreibung');
+    $('#photoModal').modal('show');
+}
+
+function assignUser(event) {
+    event.preventDefault();
+
+    const userId = $('#assign-select').val();
+    if (!userId) return;
+
+    $.post('/api/damage/workflow_transition.php', {
+        workflow_id: workflowId,
+        new_status: '{{ workflow.status }}',
+        notes: 'Zugeordnet an: ' + $('option:selected').text()
+    }, function(response) {
+        // Also update the assignment directly
+        $.post('/api/damage/assign_user.php', {
+            workflow_id: workflowId,
+            user_id: userId
+        }, function(resp) {
+            if (resp.success) {
+                location.reload();
+            }
+        }, 'json');
+    }, 'json');
+}
+
+function setVendor(event) {
+    event.preventDefault();
+    // This would need an API endpoint to be created
+    alert('Vendor-Update wird in einer zukünftigen Version implementiert');
+}
+
+function chargeCustomer(event) {
+    event.preventDefault();
+
+    $.post('/api/damage/charge_customer.php', {
+        workflow_id: workflowId,
+        amount: $('#charge-amount').val(),
+        charge_type: $('#charge-type').val()
+    }, function(response) {
+        if (response.success) {
+            location.reload();
+        } else {
+            alert('Fehler beim Verrechnen der Gebühr');
+        }
+    }, 'json');
+}
+
+function submitInsurance(event) {
+    event.preventDefault();
+
+    $.post('/api/damage/insurance_claim.php', {
+        workflow_id: workflowId,
+        claim_id: $('#claim-id').val()
+    }, function(response) {
+        if (response.success) {
+            location.reload();
+        } else {
+            alert('Fehler beim Einreichen des Versicherungsanspruchs');
+        }
+    }, 'json');
+}
+
+function updateInsuranceStatus() {
+    const status = $('#insurance-status').val();
+
+    $.post('/api/damage/insurance_claim.php', {
+        workflow_id: workflowId,
+        claim_status: status
+    }, function(response) {
+        if (response.success) {
+            // Just update locally for now
+            alert('Versicherungsstatus aktualisiert');
+        }
+    }, 'json');
+}
+
+function addNotes(event) {
+    event.preventDefault();
+    // This would need an API endpoint
+    alert('Notizen-Update wird in einer zukünftigen Version implementiert');
+}
+</script>
+
+{% endblock %}

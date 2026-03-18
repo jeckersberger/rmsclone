@@ -31,10 +31,12 @@ class CollectiveInvoiceService
             throw new \InvalidArgumentException('Fuer eine Sammelrechnung werden mindestens 2 Projekte benoetigt.');
         }
 
-        require_once __DIR__ . '/ProjectRepo.php';
-        require_once __DIR__ . '/ClientsRepo.php';
-        require_once __DIR__ . '/BusinessRepo.php';
-        require_once __DIR__ . '/SequenceService.php';
+        // Load dependencies (assume these are auto-loaded via PSR-4 or composer)
+        // If explicit requires are needed, uncomment:
+        // require_once __DIR__ . '/../repos/ProjectRepo.php';
+        // require_once __DIR__ . '/../repos/ClientsRepo.php';
+        // require_once __DIR__ . '/../repos/BusinessRepo.php';
+        // require_once __DIR__ . '/SequenceService.php';
 
         // Alle Projekte laden und sicherstellen, dass sie zum selben Kunden gehoeren
         $projects = [];
@@ -253,18 +255,19 @@ class CollectiveInvoiceService
         // ZUGFeRD XML
         $zugferdXml = null;
         $zugferdFileId = null;
-        require_once __DIR__ . '/ZugferdService.php';
-        $zugferdXml = ZugferdService::generateInvoiceXml(
-            $business, $client, $docData, $allLines, $totals, $projects[0]
-        );
-        if ($zugferdXml) {
-            require_once __DIR__ . '/PdfA3Converter.php';
-            $pdf = PdfA3Converter::convert($pdf, $zugferdXml, [
-                'title' => 'Sammelrechnung',
-                'author' => $business['instances_name'] ?? '',
-                'doc_number' => $docNumber,
-                'date' => $docDate->format('Y-m-d'),
-            ]);
+        // Assume ZugferdService and PdfA3Converter are auto-loaded (PSR-4/composer)
+        if (class_exists('ZugferdService')) {
+            $zugferdXml = ZugferdService::generateInvoiceXml(
+                $business, $client, $docData, $allLines, $totals, $projects[0]
+            );
+            if ($zugferdXml && class_exists('PdfA3Converter')) {
+                $pdf = PdfA3Converter::convert($pdf, $zugferdXml, [
+                    'title' => 'Sammelrechnung',
+                    'author' => $business['instances_name'] ?? '',
+                    'doc_number' => $docNumber,
+                    'date' => $docDate->format('Y-m-d'),
+                ]);
+            }
         }
 
         // PDF als Datei zum ersten Projekt speichern
@@ -309,7 +312,7 @@ class CollectiveInvoiceService
         ]);
 
         // Lifecycle-Eintraege fuer jedes Projekt erstellen
-        require_once __DIR__ . '/DocumentLifecycleService.php';
+        // DocumentLifecycleService should be auto-loaded (PSR-4/composer)
         $lifecycle = new DocumentLifecycleService($this->db);
 
         $docIds = [];

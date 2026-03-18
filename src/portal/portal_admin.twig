@@ -1,0 +1,244 @@
+{% extends "layout.twig" %}
+
+{% block title %}Portal Management{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 1fr 300px; gap: 2rem; margin-bottom: 3rem;">
+    <div>
+        <h1 style="margin-bottom: 2rem;">Online Booking Portal</h1>
+
+        {% if message %}
+            <div class="alert alert-{{ message.type }} " style="margin-bottom: 1rem;">
+                {{ message.text }}
+            </div>
+        {% endif %}
+
+        <!-- Portal Settings -->
+        <div style="background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 2rem; margin-bottom: 2rem;">
+            <h2 style="margin-bottom: 1.5rem;">Portal Settings</h2>
+
+            <form method="POST" enctype="multipart/form-data">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" name="is_active" value="1" {{ config.is_active ? 'checked' : '' }}>
+                            <strong>Enable Portal</strong>
+                        </label>
+                        <p style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">
+                            Make the portal publicly accessible
+                        </p>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" name="show_prices" value="1" {{ config.show_prices ? 'checked' : '' }}>
+                            <strong>Show Prices</strong>
+                        </label>
+                        <p style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">
+                            Display pricing to public visitors
+                        </p>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" name="require_registration" value="1" {{ config.require_registration ? 'checked' : '' }}>
+                            <strong>Require Registration</strong>
+                        </label>
+                        <p style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">
+                            Users must register to book
+                        </p>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" name="require_admin_approval" value="1" {{ config.require_admin_approval ? 'checked' : '' }}>
+                            <strong>Admin Approval</strong>
+                        </label>
+                        <p style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">
+                            Review inquiries before confirmation
+                        </p>
+                    </div>
+                </div>
+
+                <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 2rem 0;">
+
+                <div class="form-group">
+                    <label for="portal_title"><strong>Portal Title</strong></label>
+                    <input type="text" id="portal_title" name="portal_title" value="{{ config.portal_title|default('') }}" placeholder="Equipment Rental Portal">
+                </div>
+
+                <div class="form-group">
+                    <label for="portal_description"><strong>Description</strong></label>
+                    <textarea id="portal_description" name="portal_description" placeholder="Brief description of your rental service">{{ config.portal_description|default('') }}</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="logo_path"><strong>Logo URL</strong></label>
+                    <input type="url" id="logo_path" name="logo_path" value="{{ config.logo_path|default('') }}" placeholder="https://example.com/logo.png">
+                    <p style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">
+                        Image will be displayed at max-height: 50px
+                    </p>
+                </div>
+
+                <div class="form-group">
+                    <label for="primary_color"><strong>Primary Color</strong></label>
+                    <div style="display: flex; gap: 1rem;">
+                        <input type="color" id="primary_color" name="primary_color" value="{{ config.primary_color|default('#2563eb') }}" style="width: 60px; height: 40px; border: 1px solid #d1d5db; border-radius: 0.5rem;">
+                        <input type="text" value="{{ config.primary_color|default('#2563eb') }}" readonly style="flex: 1; padding: 0.75rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 0.5rem;" id="colorDisplay">
+                    </div>
+                </div>
+
+                <script>
+                document.getElementById('primary_color').addEventListener('change', function() {
+                    document.getElementById('colorDisplay').value = this.value;
+                    document.getElementById('primary_color').value = this.value;
+                });
+                </script>
+
+                <div class="form-group">
+                    <label for="terms_html"><strong>Terms & Conditions (HTML)</strong></label>
+                    <textarea id="terms_html" name="terms_html" placeholder="<p>Your terms here...</p>" style="font-family: monospace; font-size: 0.875rem;">{{ config.terms_html|default('') }}</textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="padding: 0.75rem 2rem;">
+                    Save Configuration
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sidebar Stats -->
+    <div>
+        <div style="background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1.5rem; margin-bottom: 1.5rem;">
+            <h3 style="margin-bottom: 1rem;">Quick Stats</h3>
+            <div style="background: #f3f4f6; padding: 1rem; border-radius: 0.5rem; margin-bottom: 0.5rem;">
+                <p style="color: #6b7280; margin: 0; font-size: 0.875rem;">Total Inquiries</p>
+                <p style="font-size: 1.5rem; font-weight: 700; margin: 0;">{{ inquiries|length }}</p>
+            </div>
+            <div style="background: #fef3c7; padding: 1rem; border-radius: 0.5rem; margin-bottom: 0.5rem;">
+                <p style="color: #92400e; margin: 0; font-size: 0.875rem;">New</p>
+                <p style="font-size: 1.5rem; font-weight: 700; margin: 0;">{{ statusCounts.new }}</p>
+            </div>
+            <div style="background: #dbeafe; padding: 1rem; border-radius: 0.5rem;">
+                <p style="color: #0c4a6e; margin: 0; font-size: 0.875rem;">Pending Review</p>
+                <p style="font-size: 1.5rem; font-weight: 700; margin: 0;">{{ statusCounts.reviewed + statusCounts.quoted }}</p>
+            </div>
+        </div>
+
+        <div style="background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1.5rem;">
+            <h3 style="margin-bottom: 1rem;">Status Breakdown</h3>
+            <ul style="list-style: none; padding: 0; margin: 0;">
+                <li style="padding: 0.5rem 0; border-bottom: 1px solid #e5e7eb;">
+                    <span style="color: #6b7280;">New:</span> <strong>{{ statusCounts.new }}</strong>
+                </li>
+                <li style="padding: 0.5rem 0; border-bottom: 1px solid #e5e7eb;">
+                    <span style="color: #6b7280;">Reviewed:</span> <strong>{{ statusCounts.reviewed }}</strong>
+                </li>
+                <li style="padding: 0.5rem 0; border-bottom: 1px solid #e5e7eb;">
+                    <span style="color: #6b7280;">Quoted:</span> <strong>{{ statusCounts.quoted }}</strong>
+                </li>
+                <li style="padding: 0.5rem 0; border-bottom: 1px solid #e5e7eb;">
+                    <span style="color: #6b7280;">Accepted:</span> <strong>{{ statusCounts.accepted }}</strong>
+                </li>
+                <li style="padding: 0.5rem 0;">
+                    <span style="color: #6b7280;">Rejected/Cancelled:</span> <strong>{{ statusCounts.rejected + statusCounts.cancelled }}</strong>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Inquiries Management -->
+<div style="background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; overflow: hidden;">
+    <div style="padding: 1.5rem; border-bottom: 1px solid #e5e7eb;">
+        <h2 style="margin: 0;">Booking Inquiries</h2>
+    </div>
+
+    {% if inquiries|length == 0 %}
+        <div style="padding: 2rem; text-align: center;">
+            <p style="color: #6b7280;">No inquiries yet</p>
+        </div>
+    {% else %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead style="background-color: #f9fafb;">
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <th style="padding: 1rem; text-align: left;">ID</th>
+                        <th style="padding: 1rem; text-align: left;">Contact</th>
+                        <th style="padding: 1rem; text-align: left;">Dates</th>
+                        <th style="padding: 1rem; text-align: left;">Status</th>
+                        <th style="padding: 1rem; text-align: left;">Items</th>
+                        <th style="padding: 1rem; text-align: left;">Submitted</th>
+                        <th style="padding: 1rem; text-align: center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for inquiry in inquiries %}
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 1rem;">
+                                <code style="background: #f9fafb; padding: 0.25rem 0.5rem; border-radius: 0.25rem;">#{{ inquiry.id }}</code>
+                            </td>
+                            <td style="padding: 1rem;">
+                                {% if inquiry.client_id %}
+                                    <strong>Client ID:</strong> {{ inquiry.client_id }}<br>
+                                {% else %}
+                                    <strong>{{ inquiry.guest_name|default('Guest') }}</strong><br>
+                                    <span style="color: #6b7280; font-size: 0.875rem;">{{ inquiry.guest_email }}</span>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 1rem;">
+                                {{ inquiry.rental_start }} to {{ inquiry.rental_end }}
+                            </td>
+                            <td style="padding: 1rem;">
+                                <span style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 0.25rem; font-size: 0.875rem; font-weight: 500; {% if inquiry.status == 'new' %}background: #fef3c7; color: #92400e;{% elseif inquiry.status == 'reviewed' %}background: #dbeafe; color: #0c4a6e;{% elseif inquiry.status == 'quoted' %}background: #d1fae5; color: #065f46;{% elseif inquiry.status == 'accepted' %}background: #dcfce7; color: #166534;{% else %}background: #fee2e2; color: #991b1b;{% endif %}">
+                                    {{ inquiry.status|capitalize }}
+                                </span>
+                            </td>
+                            <td style="padding: 1rem;">
+                                {% set items = inquiry.items|json_decode %}
+                                {{ items|length }} item{{ items|length != 1 ? 's' : '' }}
+                            </td>
+                            <td style="padding: 1rem; font-size: 0.875rem; color: #6b7280;">
+                                {{ inquiry.created_at|date('Y-m-d') }}
+                            </td>
+                            <td style="padding: 1rem; text-align: center;">
+                                <button onclick="editInquiry({{ inquiry.id }})" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.875rem; margin-right: 0.5rem;">
+                                    Edit
+                                </button>
+                                <button onclick="convertToProject({{ inquiry.id }})" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+                                    → Project
+                                </button>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+function editInquiry(inquiryId) {
+    alert('Edit inquiry #' + inquiryId + ' - feature coming soon');
+}
+
+function convertToProject(inquiryId) {
+    if (confirm('Convert this inquiry to a project?')) {
+        fetch('/api/portal/admin_convert.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ inquiry_id: inquiryId })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.result) {
+                alert('Project created: #' + data.response.project_id);
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error?.message || 'Conversion failed'));
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

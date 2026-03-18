@@ -83,6 +83,7 @@ class InvoiceEmailService
         }
 
         // Use the existing InvoiceMailService for actual sending
+        require_once __DIR__ . '/InvoiceMailService.php';
         $mailSvc = new InvoiceMailService($this->db);
         $result = $mailSvc->sendDocument(
             $instanceId,
@@ -110,6 +111,7 @@ class InvoiceEmailService
 
         // Update document status to 'sent' if currently draft and email was sent
         if ($sent && $doc['status'] === 'draft') {
+            require_once __DIR__ . '/DocumentLifecycleService.php';
             $lifecycle = new DocumentLifecycleService($this->db);
             $lifecycle->changeStatus(
                 $docLifecycleId,
@@ -166,7 +168,7 @@ class InvoiceEmailService
                     'email' => $result['email'] ?? null,
                     'message' => $result['message'] ?? '',
                 ];
-            } catch (\Exception $e) {
+            } catch (\RuntimeException $e) {
                 $results['failed']++;
                 $results['details'][] = [
                     'doc_id' => $doc['id'],
@@ -174,6 +176,8 @@ class InvoiceEmailService
                     'sent' => false,
                     'error' => $e->getMessage(),
                 ];
+
+                error_log("Auto-send failed for document {$doc['id']}: " . $e->getMessage());
 
                 // Log failure
                 $this->db->insert('document_email_log', [

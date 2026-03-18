@@ -1,0 +1,181 @@
+{# AI Feedback Widget - Reusable partial for collecting feedback on AI outputs #}
+{# Usage: {% include 'ai/feedback_widget.twig' with {'task_type': 'email_draft', 'ai_output': output} %} #}
+
+<div class="ai-feedback-widget card mt-3" data-task-type="{{ task_type }}" data-ai-output="{{ ai_output|md5 }}">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-9">
+                <p class="text-muted small mb-2">Was this helpful?</p>
+            </div>
+            <div class="col-md-3 text-end">
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-success feedback-btn" data-rating="positive" title="Helpful">
+                        <i class="fas fa-thumbs-up"></i>
+                        <span class="feedback-count positive-count">0</span>
+                    </button>
+                    <button type="button" class="btn btn-outline-warning feedback-btn" data-rating="neutral" title="Okay">
+                        <i class="fas fa-hand-paper"></i>
+                        <span class="feedback-count neutral-count">0</span>
+                    </button>
+                    <button type="button" class="btn btn-outline-danger feedback-btn" data-rating="negative" title="Not helpful">
+                        <i class="fas fa-thumbs-down"></i>
+                        <span class="feedback-count negative-count">0</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {# Feedback form (initially hidden) #}
+        <div class="feedback-form mt-3" style="display: none;">
+            <div class="form-group mb-2">
+                <label for="feedback_reason_{{ task_type }}" class="form-label">What could improve?</label>
+                <select class="form-select form-select-sm feedback-reason" id="feedback_reason_{{ task_type }}">
+                    <option value="">Select a reason...</option>
+                    <option value="inaccurate">Inaccurate information</option>
+                    <option value="incomplete">Too short / incomplete</option>
+                    <option value="too_long">Too long / verbose</option>
+                    <option value="wrong_tone">Wrong tone</option>
+                    <option value="wrong_format">Wrong format</option>
+                    <option value="confusing">Confusing or unclear</option>
+                    <option value="not_relevant">Not relevant to request</option>
+                    <option value="other">Other...</option>
+                </select>
+            </div>
+
+            <div class="form-group mb-2">
+                <label for="feedback_text_{{ task_type }}" class="form-label">Additional feedback (optional)</label>
+                <textarea class="form-control form-control-sm feedback-text" id="feedback_text_{{ task_type }}" rows="2" placeholder="Tell us what should be improved..."></textarea>
+            </div>
+
+            <div class="form-check mb-2">
+                <input class="form-check-input feedback-edited-check" type="checkbox" id="feedback_edited_{{ task_type }}">
+                <label class="form-check-label" for="feedback_edited_{{ task_type }}">
+                    I edited it (share your version to improve the AI)
+                </label>
+            </div>
+
+            <div class="edited-version-container" style="display: none;">
+                <textarea class="form-control form-control-sm feedback-edited" rows="3" placeholder="Paste your corrected version here..."></textarea>
+            </div>
+
+            <div class="row mt-2">
+                <div class="col text-end">
+                    <button class="btn btn-sm btn-secondary feedback-cancel">Cancel</button>
+                    <button class="btn btn-sm btn-primary feedback-submit">Send Feedback</button>
+                </div>
+            </div>
+        </div>
+
+        {# Success message (initially hidden) #}
+        <div class="feedback-success alert alert-success alert-sm mt-2" style="display: none; margin-bottom: 0;">
+            <i class="fas fa-check-circle"></i> Thank you for helping us improve!
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const widget = document.querySelector('[data-task-type="{{ task_type }}"]');
+    if (!widget) return;
+
+    const feedbackBtns = widget.querySelectorAll('.feedback-btn');
+    const feedbackForm = widget.querySelector('.feedback-form');
+    const feedbackCancelBtn = widget.querySelector('.feedback-cancel');
+    const feedbackSubmitBtn = widget.querySelector('.feedback-submit');
+    const editedCheckbox = widget.querySelector('.feedback-edited-check');
+    const editedContainer = widget.querySelector('.edited-version-container');
+
+    // Show/hide edited version container
+    editedCheckbox.addEventListener('change', function() {
+        editedContainer.style.display = this.checked ? 'block' : 'none';
+    });
+
+    // Handle rating clicks
+    feedbackBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            feedbackForm.style.display = 'block';
+            feedbackBtns.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+
+    // Cancel button
+    feedbackCancelBtn.addEventListener('click', function() {
+        feedbackForm.style.display = 'none';
+        feedbackBtns.forEach(b => b.classList.remove('active'));
+        resetForm();
+    });
+
+    // Submit feedback
+    feedbackSubmitBtn.addEventListener('click', async function() {
+        const activeBtn = widget.querySelector('.feedback-btn.active');
+        if (!activeBtn) return;
+
+        const rating = activeBtn.dataset.rating;
+        const reason = widget.querySelector('.feedback-reason').value;
+        const feedbackText = widget.querySelector('.feedback-text').value;
+        const userEdited = editedCheckbox.checked ? widget.querySelector('.feedback-edited').value : null;
+
+        const payload = {
+            task_type: '{{ task_type }}',
+            ai_output: '{{ ai_output|escape('js') }}',
+            rating: rating,
+            reason: reason || null,
+            feedback_text: feedbackText || null,
+            user_edited: userEdited,
+            provider: 'openai', // Would be dynamic in production
+            model: 'gpt-4',
+            tokens_input: 0,
+            tokens_output: 0,
+        };
+
+        try {
+            const response = await fetch('/api/ai/feedback', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (response.ok) {
+                feedbackForm.style.display = 'none';
+                widget.querySelector('.feedback-success').style.display = 'block';
+                setTimeout(() => {
+                    widget.querySelector('.feedback-success').style.display = 'none';
+                    resetForm();
+                }, 3000);
+            }
+        } catch (error) {
+            console.error('Error submitting feedback:', error);
+            alert('Failed to submit feedback');
+        }
+    });
+
+    function resetForm() {
+        widget.querySelector('.feedback-reason').value = '';
+        widget.querySelector('.feedback-text').value = '';
+        widget.querySelector('.feedback-edited').value = '';
+        editedCheckbox.checked = false;
+        editedContainer.style.display = 'none';
+    }
+});
+</script>
+
+<style>
+.ai-feedback-widget .feedback-btn.active {
+    background-color: #007bff !important;
+    color: white !important;
+}
+
+.ai-feedback-widget .feedback-count {
+    margin-left: 0.25rem;
+    font-size: 0.75rem;
+}
+
+.ai-feedback-widget .alert-sm {
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0 !important;
+    font-size: 0.875rem;
+}
+</style>

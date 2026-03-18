@@ -22,7 +22,7 @@ class PackingListService
         // Get project info
         $this->db->where('projects_id', $projectId);
         $this->db->where('instances_id', $instanceId);
-        $project = $this->db->getOne('projects', ['projects_name']);
+        $project = $this->db->getOne('projects', null, ['projects_name']);
         if (!$project) return 0;
 
         // Generate list number
@@ -87,7 +87,7 @@ class PackingListService
         $this->db->where('pl.id', $listId);
         $this->db->where('pl.instances_id', $instanceId);
         $this->db->join('projects p', 'pl.projects_id=p.projects_id', 'LEFT');
-        $list = $this->db->getOne('packing_lists pl', ['pl.*', 'p.projects_name']);
+        $list = $this->db->getOne('packing_lists pl', null, ['pl.*', 'p.projects_name']);
         if (!$list) return null;
 
         $this->db->where('packing_lists_id', $listId);
@@ -119,7 +119,7 @@ class PackingListService
     public function togglePacked(int $itemId, int $userId): bool
     {
         $this->db->where('id', $itemId);
-        $item = $this->db->getOne('packing_list_items');
+        $item = $this->db->getOne('packing_list_items', null);
         if (!$item) return false;
 
         $this->db->where('id', $itemId);

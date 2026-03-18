@@ -253,20 +253,25 @@ class AiActionQueueService
     private function executeSendDocument(array $payload): array
     {
         // Dokument per E-Mail versenden
-        if (empty($payload['document_id']) || empty($payload['to'])) {
-            return ['success' => false, 'message' => 'Fehlende Felder'];
+        if (empty($payload['s3files_id']) || empty($payload['to']) || empty($payload['doc_number'])) {
+            return ['success' => false, 'message' => 'Fehlende Felder: s3files_id, to, doc_number'];
         }
 
-        require_once __DIR__ . '/InvoiceMailService.php';
-        $mailService = new InvoiceMailService($this->db, $this->instanceId);
+        // InvoiceMailService should be auto-loaded (PSR-4/composer)
+        // Constructor takes only $db, not instanceId
+        $mailService = new InvoiceMailService($this->db);
         $sent = $mailService->sendDocument(
-            (int)$payload['document_id'],
+            $this->instanceId,
+            $payload['project_id'] ?? 0,
+            (int)$payload['s3files_id'],
+            $payload['doc_number'],
+            $payload['doc_type'] ?? 'invoice',
             $payload['to'],
-            $payload['subject'] ?? null,
-            $payload['body'] ?? null
+            $payload['to_name'] ?? '',
+            $payload['user_id'] ?? 0
         );
 
-        return ['success' => (bool)$sent, 'message' => $sent ? 'Dokument gesendet' : 'Versand fehlgeschlagen'];
+        return ['success' => $sent['success'] ?? false, 'message' => $sent['message'] ?? 'Versand fehlgeschlagen'];
     }
 
     private function executeAssignEmail(array $payload): array

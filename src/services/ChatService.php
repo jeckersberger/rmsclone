@@ -167,12 +167,12 @@ class ChatService
     {
         // Get instance info for context
         $this->db->where('instances_id', $this->instanceId);
-        $inst = $this->db->getOne('instances', ['instances_name']) ?: [];
+        $inst = $this->db->getOne('instances', null, ['instances_name']) ?: [];
         $companyName = $inst['instances_name'] ?? 'Unbekannt';
 
         // Get current user info
         $this->db->where('users_userid', $this->userId);
-        $user = $this->db->getOne('users', ['users_name1', 'users_name2']) ?: [];
+        $user = $this->db->getOne('users', null, ['users_name1', 'users_name2']) ?: [];
         $userName = trim(($user['users_name1'] ?? '') . ' ' . ($user['users_name2'] ?? ''));
 
         $today = date('Y-m-d');
@@ -316,7 +316,7 @@ PROMPT;
     private function callWithTools(array $messages): ?array
     {
         $this->db->where('instances_id', $this->instanceId);
-        $settings = $this->db->getOne('instances', ['instances_aiApiKey', 'instances_aiModel']) ?: [];
+        $settings = $this->db->getOne('instances', null, ['instances_aiApiKey', 'instances_aiModel']) ?: [];
         $apiKey = $settings['instances_aiApiKey'] ?? '';
         $model = $settings['instances_aiModel'] ?? 'claude-haiku-4-5-20251001';
 
@@ -373,7 +373,7 @@ PROMPT;
         $messages[] = ['role' => 'user', 'content' => $toolResults];
 
         $this->db->where('instances_id', $this->instanceId);
-        $settings = $this->db->getOne('instances', ['instances_aiApiKey', 'instances_aiModel']) ?: [];
+        $settings = $this->db->getOne('instances', null, ['instances_aiApiKey', 'instances_aiModel']) ?: [];
         $apiKey = $settings['instances_aiApiKey'] ?? '';
 
         $body = [
@@ -468,7 +468,7 @@ PROMPT;
         if (!empty($input['asset_type_name'])) {
             $this->db->where('instances_id', $this->instanceId);
             $this->db->where('assetTypes_name LIKE ?', ['%' . $input['asset_type_name'] . '%']);
-            $at = $this->db->getOne('assetTypes', ['assetTypes_id', 'assetTypes_name']);
+            $at = $this->db->getOne('assetTypes', null, ['assetTypes_id', 'assetTypes_name']);
             if ($at) $assetTypeId = (int)$at['assetTypes_id'];
         }
 
@@ -518,13 +518,15 @@ PROMPT;
     private function toolSearchClients(array $input): array
     {
         $kw = '%' . ($input['keyword'] ?? '') . '%';
-        $this->db->where('instances_id', $this->instanceId);
-        $this->db->where('clients_deleted', 0);
-        $this->db->where("(clients_name LIKE ? OR clients_email LIKE ? OR clients_address1 LIKE ?)", [$kw, $kw, $kw]);
-        $this->db->orderBy('clients_name', 'ASC');
-        $clients = $this->db->get('clients', 20, [
-            'clients_id', 'clients_name', 'clients_email', 'clients_phone', 'clients_address1', 'clients_address2'
-        ]) ?: [];
+        // Use rawQuery for OR conditions since MeekroDB doesn't support complex OR in where()
+        $sql = "SELECT clients_id, clients_name, clients_email, clients_phone, clients_address1, clients_address2
+                FROM clients
+                WHERE instances_id = ?
+                AND clients_deleted = 0
+                AND (clients_name LIKE ? OR clients_email LIKE ? OR clients_address1 LIKE ?)
+                ORDER BY clients_name ASC
+                LIMIT 20";
+        $clients = $this->db->rawQuery($sql, [$this->instanceId, $kw, $kw, $kw]) ?: [];
 
         return ['clients' => $clients, 'count' => count($clients)];
     }
@@ -564,9 +566,7 @@ PROMPT;
         $this->db->where('p.instances_id', $this->instanceId);
         $this->db->join('clients c', 'p.clients_id=c.clients_id', 'LEFT');
         $this->db->join('projectsStatuses ps', 'p.projectsStatuses_id=ps.projectsStatuses_id', 'LEFT');
-        $project = $this->db->getOne('projects p', [
-            'p.*', 'c.clients_name', 'c.clients_email', 'ps.projectsStatuses_name'
-        ]);
+        $project = $this->db->getOne('projects p', null, ['p.*', 'c.clients_name', 'c.clients_email', 'ps.projectsStatuses_name']);
 
         if (!$project) return ['error' => 'Projekt nicht gefunden'];
 

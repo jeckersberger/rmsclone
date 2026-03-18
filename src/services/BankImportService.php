@@ -849,7 +849,7 @@ class BankImportService
         if (!empty($tx['reference'])) {
             $this->db->where('reference', $tx['reference']);
         }
-        $existing = $this->db->getOne('bank_transactions', ['id']);
+        $existing = $this->db->getOne('bank_transactions', null, ['id']);
         return $existing !== null && $existing !== false;
     }
 

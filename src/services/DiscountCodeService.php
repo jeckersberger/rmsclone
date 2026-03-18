@@ -37,7 +37,7 @@ class DiscountCodeService
         $this->db->where('code', $code);
         $this->db->where('instances_id', $instanceId);
         $this->db->where('deleted', 0);
-        if ($this->db->getOne('discount_codes', ['id'])) {
+        if ($this->db->getOne('discount_codes', null, ['id'])) {
             return ['success' => false, 'error' => 'Code existiert bereits'];
         }
 

@@ -109,7 +109,7 @@ class PaymentTrackingService
     public function deletePayment(int $paymentId): bool
     {
         $this->db->where('id', $paymentId);
-        $payment = $this->db->getOne('invoice_payments');
+        $payment = $this->db->getOne('invoice_payments', null);
         if (!$payment) return false;
 
         $documentId = (int)$payment['document_exports_id'];
@@ -140,7 +140,7 @@ class PaymentTrackingService
 
         $this->db->where('document_lifecycle_id', $docLifecycleId);
         $this->db->orderBy('dunning_date', 'DESC');
-        $lastDunning = $this->db->getOne('dunning_history');
+        $lastDunning = $this->db->getOne('dunning_history', null);
 
         if ($lastDunning) {
             $this->db->where('id', $lastDunning['id']);
@@ -205,7 +205,7 @@ class PaymentTrackingService
         // Letzte Zahlung ermitteln
         $this->db->where('document_exports_id', $documentId);
         $this->db->orderBy('payment_date', 'DESC');
-        $lastPayment = $this->db->getOne('invoice_payments');
+        $lastPayment = $this->db->getOne('invoice_payments', null);
 
         if (!$lastPayment) return false;
 
@@ -250,7 +250,7 @@ class PaymentTrackingService
     private function recalculate(int $documentId): void
     {
         $this->db->where('document_exports_id', $documentId);
-        $result = $this->db->getOne('invoice_payments', ['SUM(amount) as total_paid']);
+        $result = $this->db->getOne('invoice_payments', null, ['SUM(amount) as total_paid']);
         $totalPaid = (float)($result['total_paid'] ?? 0);
 
         $export = $this->getExport($documentId);
@@ -276,7 +276,7 @@ class PaymentTrackingService
     private function getExport(int $documentId): ?array
     {
         $this->db->where('document_exports_id', $documentId);
-        $row = $this->db->getOne('document_exports');
+        $row = $this->db->getOne('document_exports', null);
         return $row ?: null;
     }
 
@@ -311,7 +311,7 @@ class PaymentTrackingService
     private function getDocLifecycleId(int $documentExportsId): ?int
     {
         $this->db->where('document_exports_id', $documentExportsId);
-        $row = $this->db->getOne('document_lifecycle', ['id']);
+        $row = $this->db->getOne('document_lifecycle', null, ['id']);
         return $row ? (int)$row['id'] : null;
     }
 }

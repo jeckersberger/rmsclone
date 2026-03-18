@@ -40,7 +40,7 @@ class ProjectChecklistService
     public function toggleItem(int $itemId, int $userId): bool
     {
         $this->db->where('id', $itemId);
-        $item = $this->db->getOne('project_checklists', ['id', 'is_completed']);
+        $item = $this->db->getOne('project_checklists', null, ['id', 'is_completed']);
         if (!$item) return false;
 
         $newState = $item['is_completed'] ? 0 : 1;

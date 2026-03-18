@@ -50,7 +50,7 @@ class EmailTemplateService
         $this->db->where('instances_id', $instanceId);
         $this->db->where('type', $type);
         $this->db->where('deleted', 0);
-        $existing = $this->db->getOne('email_templates', ['id']);
+        $existing = $this->db->getOne('email_templates', null, ['id']);
 
         $data = [
             'instances_id' => $instanceId,

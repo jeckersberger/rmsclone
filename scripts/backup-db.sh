@@ -16,14 +16,11 @@
 #   DB_PASSWORD          - MySQL password (required)
 #   BACKUP_DIR           - Local backup directory (default: ./backups)
 #   BACKUP_RETENTION_DAYS- Days to keep backups (default: 30)
-#   BACKUP_S3_BUCKET     - S3 bucket for off-site copy (optional)
-#   BACKUP_S3_REGION     - AWS region for S3 (optional)
 #
 # Exit codes:
 #   0 - Success
 #   1 - mysqldump failed
 #   2 - Compression failed
-#   3 - S3 upload failed
 #
 # Recommended crontab entry (daily at 02:00):
 #   0 2 * * * /path/to/scripts/backup-db.sh >> /var/log/adamrms-backup.log 2>&1
@@ -97,25 +94,6 @@ while IFS= read -r -d '' old_backup; do
 done < <(find "$BACKUP_DIR" -name 'backup-*.sql.gz' -mtime +"$RETENTION_DAYS" -print0 2>/dev/null)
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Retention cleanup: $DELETED old backup(s) removed (keeping $RETENTION_DAYS days)"
-
-# ---------------------------------------------------------------------------
-# 3. Optional: Upload to S3
-# ---------------------------------------------------------------------------
-if [[ -n "${BACKUP_S3_BUCKET:-}" ]]; then
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Uploading to S3: s3://$BACKUP_S3_BUCKET/$BACKUP_FILE"
-
-    S3_ARGS=()
-    if [[ -n "${BACKUP_S3_REGION:-}" ]]; then
-        S3_ARGS+=(--region "$BACKUP_S3_REGION")
-    fi
-
-    if aws s3 cp "$BACKUP_DIR/$BACKUP_FILE" "s3://$BACKUP_S3_BUCKET/$BACKUP_FILE" "${S3_ARGS[@]}"; then
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] S3 upload complete"
-    else
-        echo "[ERROR] S3 upload failed" >&2
-        exit 3
-    fi
-fi
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Backup finished successfully"
 exit 0

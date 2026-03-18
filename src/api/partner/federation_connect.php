@@ -40,10 +40,18 @@ $federation = new FederationService($DBLIB);
 $result = $federation->initiateHandshake($instanceId, $serverUrl, $partnerCode);
 
 if ($result['success']) {
-    finish(true, null, [
+    $response = [
         'partner_name' => $result['partner_name'],
         'server_id' => $result['server_id'],
-    ]);
+    ];
+    // Warn about company code collision
+    if (!empty($result['company_code_collision'])) {
+        $response['warning'] = 'ACHTUNG: Firmenkennung-Kollision! Beide Server verwenden den gleichen Company Code. '
+            . 'RFID-Tags können nicht eindeutig zugeordnet werden. Bitte unter Einstellungen > Firmenkennung einen neuen Code generieren.';
+        $response['company_code_collision'] = true;
+        $response['remote_company_code'] = $result['remote_company_code'];
+    }
+    finish(true, null, $response);
 } else {
     $messages = [
         'already_connected' => 'Mit diesem Server besteht bereits eine Verbindung.',

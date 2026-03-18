@@ -1,0 +1,842 @@
+{% extends "layout.twig" %}
+
+{% block title %}AI Provider Settings{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h1 class="mb-4">
+        <i class="fas fa-brain"></i> AI Provider Management
+    </h1>
+
+    <!-- Tab Navigation -->
+    <ul class="nav nav-tabs mb-4" id="aiTabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" id="providers-tab" data-bs-toggle="tab" href="#providers">
+                <i class="fas fa-plug"></i> Providers
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="routing-tab" data-bs-toggle="tab" href="#routing">
+                <i class="fas fa-network-wired"></i> Task Routing
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="costs-tab" data-bs-toggle="tab" href="#costs">
+                <i class="fas fa-euro-sign"></i> Costs & Budget
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="fallback-tab" data-bs-toggle="tab" href="#fallback">
+                <i class="fas fa-shield-alt"></i> Fallback
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="anonymization-tab" data-bs-toggle="tab" href="#anonymization">
+                <i class="fas fa-mask"></i> Anonymization (I6)
+            </a>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="aiTabContent">
+
+        <!-- ========== PROVIDERS TAB ========== -->
+        <div class="tab-pane fade show active" id="providers" role="tabpanel">
+            <div class="row">
+                <div class="col-md-8">
+                    <h3>Configured Providers</h3>
+                    <div id="providersList" class="row gap-3">
+                        <!-- Loaded via JavaScript -->
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <h3>Add Provider</h3>
+                    <form id="addProviderForm">
+                        <div class="mb-3">
+                            <label class="form-label">Provider Name</label>
+                            <input type="text" class="form-control" name="name" placeholder="e.g., Claude Main" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Provider Type</label>
+                            <select class="form-control" name="provider_type" id="providerType" required>
+                                <option value="">Select provider...</option>
+                                <option value="claude">Claude (Anthropic)</option>
+                                <option value="openai">OpenAI (GPT-4, GPT-3.5)</option>
+                                <option value="gemini">Google Gemini</option>
+                                <option value="mistral">Mistral AI</option>
+                                <option value="ollama">Ollama (Local)</option>
+                                <option value="openai_compatible">OpenAI-Compatible API</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3" id="apiKeyField">
+                            <label class="form-label">API Key</label>
+                            <input type="password" class="form-control" name="api_key" placeholder="Your API key">
+                            <small class="form-text text-muted">Keep this secret!</small>
+                        </div>
+
+                        <div class="mb-3" id="baseUrlField" style="display: none;">
+                            <label class="form-label">Base URL</label>
+                            <input type="url" class="form-control" name="base_url" placeholder="http://localhost:11434">
+                            <small class="form-text text-muted">For Ollama or custom APIs</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Default Model</label>
+                            <select class="form-control" name="default_model" id="defaultModel">
+                                <option value="">Select a model...</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" name="is_active" value="1" checked>
+                            <label class="form-check-label">Active</label>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" name="is_default" value="1">
+                            <label class="form-check-label">Set as Default</label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">Add Provider</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== TASK ROUTING TAB ========== -->
+        <div class="tab-pane fade" id="routing" role="tabpanel">
+            <h3>Task-Based Provider Routing</h3>
+            <p class="text-muted">Assign specific AI providers for different task types</p>
+
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Task Type</th>
+                        <th>Provider</th>
+                        <th>Model Override</th>
+                        <th>Priority</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="routingList">
+                    <!-- Loaded via JavaScript -->
+                </tbody>
+            </table>
+
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#routingModal">
+                <i class="fas fa-plus"></i> Add Routing Rule
+            </button>
+        </div>
+
+        <!-- ========== COSTS & BUDGET TAB ========== -->
+        <div class="tab-pane fade" id="costs" role="tabpanel">
+            <div class="row">
+                <div class="col-md-6">
+                    <h3>Monthly Budget Status</h3>
+                    <div id="budgetStatus" class="card p-4">
+                        <!-- Loaded via JavaScript -->
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h3>Usage by Provider</h3>
+                    <div id="usageByProvider" class="card p-4">
+                        <!-- Loaded via JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="mt-4">Usage by Task Type</h3>
+            <table class="table table-sm" id="usageByTask">
+                <thead>
+                    <tr>
+                        <th>Task Type</th>
+                        <th>Calls</th>
+                        <th>Input Tokens</th>
+                        <th>Output Tokens</th>
+                        <th>Cost (EUR)</th>
+                        <th>Avg Latency</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Loaded via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ========== FALLBACK TAB ========== -->
+        <div class="tab-pane fade" id="fallback" role="tabpanel">
+            <h3>Fallback Chains</h3>
+            <p class="text-muted">Automatically try backup providers if primary fails</p>
+
+            <div id="fallbackChains" class="row gap-3">
+                <!-- Loaded via JavaScript -->
+            </div>
+        </div>
+
+        <!-- ========== ANONYMIZATION TAB ========== -->
+        <div class="tab-pane fade" id="anonymization" role="tabpanel">
+            <div class="row">
+                <div class="col-md-6">
+                    <h3>PII Anonymization (I6)</h3>
+                    <p class="text-muted">Protect sensitive data before sending to cloud AI providers</p>
+
+                    <div class="card p-4">
+                        <h5 class="mb-4">Anonymization Mode</h5>
+
+                        <div id="anonWarning" class="alert alert-warning" style="display: none;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Warning:</strong> Mode "Off" with cloud providers may violate data protection regulations.
+                            Minimum "Standard" mode will be enforced.
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="anonMode" id="modeStrict" value="strict">
+                                <label class="form-check-label" for="modeStrict">
+                                    <strong>Strict</strong> (Recommended)
+                                    <br><small class="text-muted">DB entities + all regex patterns + IP addresses + dates</small>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="anonMode" id="modeStandard" value="standard">
+                                <label class="form-check-label" for="modeStandard">
+                                    <strong>Standard</strong>
+                                    <br><small class="text-muted">DB entities + regex patterns (no strict-only patterns)</small>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="anonMode" id="modeMinimal" value="minimal">
+                                <label class="form-check-label" for="modeMinimal">
+                                    <strong>Minimal</strong>
+                                    <br><small class="text-muted">Database entities only (names, emails, companies)</small>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="anonMode" id="modeOff" value="off">
+                                <label class="form-check-label" for="modeOff">
+                                    <strong>Off</strong>
+                                    <br><small class="text-muted">No anonymization (only for local providers)</small>
+                                </label>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary mt-3" onclick="saveAnonMode()">
+                            <i class="fas fa-save"></i> Save Settings
+                        </button>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <h3>Test Anonymization</h3>
+                    <p class="text-muted">Paste text to see what would be anonymized</p>
+
+                    <div class="card p-4">
+                        <textarea id="testInput" class="form-control mb-3" rows="8" placeholder="Paste text to test anonymization here...">
+John Doe from ACME Corp sent an email to john.doe@example.com.
+His phone is +49 123 456789.
+USt-IdNr: DE123456789
+Steuernummer: 12/345/67890
+IBAN: DE89 3704 0044 0532 0130 00
+IP: 192.168.1.1
+Date: 18.03.2026</textarea>
+
+                        <div class="btn-group w-100 mb-3" role="group">
+                            <button class="btn btn-outline-primary" onclick="testAnonymize()">
+                                <i class="fas fa-flask"></i> Test
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="clearTest()">
+                                <i class="fas fa-trash"></i> Clear
+                            </button>
+                        </div>
+
+                        <div id="testResults" style="display: none;">
+                            <h6>Results:</h6>
+                            <div class="alert alert-info">
+                                <strong>Replacements:</strong> <span id="replCount">0</span>
+                            </div>
+                            <div id="replTypes" class="mb-3"></div>
+                            <div id="anonText" class="bg-light p-3 rounded small" style="max-height: 200px; overflow-y: auto; font-family: monospace;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h3>Anonymization Statistics</h3>
+                    <p class="text-muted">Aggregate stats from recent requests (never stores actual PII)</p>
+
+                    <table class="table table-sm" id="anonStats">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Provider</th>
+                                <th>Mode</th>
+                                <th>Replacements</th>
+                                <th>Types</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Loaded via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Provider Card Modal for Testing -->
+<div class="modal fade" id="testProviderModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Test Provider</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="testResult">
+                Testing...
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Routing Modal -->
+<div class="modal fade" id="routingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Routing Rule</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="routingForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Task Type</label>
+                        <input type="text" class="form-control" name="task_type" placeholder="e.g., asset_lookup" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Provider</label>
+                        <select class="form-control" name="provider_id" id="routingProvider" required>
+                            <option value="">Select provider...</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Model Override (optional)</label>
+                        <input type="text" class="form-control" name="model_override" placeholder="Leave empty to use default">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Priority</label>
+                        <input type="number" class="form-control" name="priority" value="0">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .provider-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 1rem;
+        transition: all 0.3s;
+    }
+
+    .provider-card:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .provider-status {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+    }
+
+    .provider-status.green {
+        background-color: #28a745;
+    }
+
+    .provider-status.red {
+        background-color: #dc3545;
+    }
+
+    .budget-bar {
+        background-color: #e9ecef;
+        border-radius: 4px;
+        height: 24px;
+        overflow: hidden;
+    }
+
+    .budget-bar-fill {
+        background-color: #28a745;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+
+    .budget-bar-fill.warning {
+        background-color: #ffc107;
+    }
+
+    .budget-bar-fill.danger {
+        background-color: #dc3545;
+    }
+</style>
+
+<script>
+    const apiBase = '/api/ai';
+    let allProviders = [];
+
+    // Load initial data
+    document.addEventListener('DOMContentLoaded', function () {
+        loadProviders();
+        loadRouting();
+        loadUsageStats();
+        loadAnonConfig();
+        loadAnonStats();
+
+        // Handle provider type change
+        document.getElementById('providerType').addEventListener('change', onProviderTypeChange);
+
+        // Form submissions
+        document.getElementById('addProviderForm').addEventListener('submit', addProvider);
+        document.getElementById('routingForm').addEventListener('submit', addRouting);
+
+        // Anonymization mode selection
+        document.querySelectorAll('input[name="anonMode"]').forEach(radio => {
+            radio.addEventListener('change', onAnonModeChange);
+        });
+    });
+
+    function loadProviders() {
+        fetch(apiBase + '/providers')
+            .then(r => r.json())
+            .then(data => {
+                allProviders = data.data || [];
+                renderProviders();
+            })
+            .catch(err => console.error('Error loading providers:', err));
+    }
+
+    function renderProviders() {
+        const list = document.getElementById('providersList');
+        list.innerHTML = allProviders.map(p => `
+            <div class="col-md-6">
+                <div class="provider-card">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5>
+                            <span class="provider-status ${p.is_active ? 'green' : 'red'}"></span>
+                            ${p.name}
+                        </h5>
+                        <span class="badge ${p.is_default ? 'bg-primary' : 'bg-secondary'}">
+                            ${p.is_default ? 'Default' : p.provider_type}
+                        </span>
+                    </div>
+                    <p class="text-muted mb-2">
+                        <strong>Type:</strong> ${p.provider_type}<br>
+                        <strong>Model:</strong> ${p.default_model}
+                    </p>
+                    <div class="btn-group btn-group-sm w-100" role="group">
+                        <button class="btn btn-outline-primary" onclick="testProvider(${p.id})">
+                            <i class="fas fa-flask"></i> Test
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="editProvider(${p.id})">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="deleteProvider(${p.id})">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        // Update routing select
+        const select = document.getElementById('routingProvider');
+        select.innerHTML = '<option value="">Select provider...</option>' +
+            allProviders.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    }
+
+    function onProviderTypeChange() {
+        const type = document.getElementById('providerType').value;
+        const baseUrlField = document.getElementById('baseUrlField');
+        const apiKeyField = document.getElementById('apiKeyField');
+
+        // Show/hide fields based on provider type
+        baseUrlField.style.display = (type === 'ollama' || type === 'openai_compatible') ? 'block' : 'none';
+        apiKeyField.style.display = (type !== 'ollama') ? 'block' : 'none';
+
+        // Update available models
+        updateModelSelect(type);
+    }
+
+    function updateModelSelect(providerType) {
+        const select = document.getElementById('defaultModel');
+        const models = {
+            'claude': ['claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001'],
+            'openai': ['gpt-4-turbo', 'gpt-4', 'gpt-4o', 'gpt-3.5-turbo'],
+            'gemini': ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro'],
+            'mistral': ['mistral-large', 'mistral-medium', 'mistral-small'],
+            'ollama': ['llama2', 'mistral', 'neural-chat'],
+            'openai_compatible': ['gpt-4', 'gpt-3.5-turbo'],
+        };
+
+        const providerModels = models[providerType] || [];
+        select.innerHTML = providerModels.map(m => `<option value="${m}">${m}</option>`).join('');
+    }
+
+    function addProvider(e) {
+        e.preventDefault();
+        const form = e.target;
+        const data = new FormData(form);
+
+        const payload = {
+            name: data.get('name'),
+            provider_type: data.get('provider_type'),
+            api_key: data.get('api_key'),
+            base_url: data.get('base_url'),
+            default_model: data.get('default_model'),
+            is_active: form.querySelector('[name="is_active"]').checked ? 1 : 0,
+            is_default: form.querySelector('[name="is_default"]').checked ? 1 : 0,
+        };
+
+        fetch(apiBase + '/providers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    form.reset();
+                    loadProviders();
+                    alert('Provider added successfully!');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            });
+    }
+
+    function testProvider(id) {
+        const modal = new bootstrap.Modal(document.getElementById('testProviderModal'));
+        const result = document.getElementById('testResult');
+        result.innerHTML = 'Testing...';
+        modal.show();
+
+        fetch(apiBase + '/provider_test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider_id: id })
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    result.innerHTML = `
+                        <div class="alert alert-success">
+                            <strong>✓ Connection Successful</strong><br>
+                            Model: ${data.model}<br>
+                            Response: ${data.response}
+                        </div>
+                    `;
+                } else {
+                    result.innerHTML = `
+                        <div class="alert alert-danger">
+                            <strong>✗ Connection Failed</strong><br>
+                            ${data.message}
+                        </div>
+                    `;
+                }
+            });
+    }
+
+    function deleteProvider(id) {
+        if (!confirm('Are you sure? This will delete all task routing rules for this provider.')) return;
+
+        fetch(apiBase + '/provider_delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider_id: id })
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    loadProviders();
+                    loadRouting();
+                    alert('Provider deleted');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            });
+    }
+
+    function loadRouting() {
+        fetch(apiBase + '/task_routing')
+            .then(r => r.json())
+            .then(data => {
+                const list = document.getElementById('routingList');
+                list.innerHTML = (data.data || []).map(r => `
+                    <tr>
+                        <td><code>${r.task_type}</code></td>
+                        <td>${r.provider?.name || 'Unknown'}</td>
+                        <td>${r.model_override || '-'}</td>
+                        <td>${r.priority}</td>
+                        <td>
+                            <button class="btn btn-sm btn-danger" onclick="deleteRouting(${r.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            });
+    }
+
+    function addRouting(e) {
+        e.preventDefault();
+        const form = e.target;
+        const data = new FormData(form);
+
+        const payload = {
+            task_type: data.get('task_type'),
+            provider_id: parseInt(data.get('provider_id')),
+            model_override: data.get('model_override') || null,
+            priority: parseInt(data.get('priority')),
+        };
+
+        fetch(apiBase + '/task_routing', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    form.reset();
+                    loadRouting();
+                    bootstrap.Modal.getInstance(document.getElementById('routingModal')).hide();
+                    alert('Routing rule added!');
+                }
+            });
+    }
+
+    function deleteRouting(id) {
+        if (confirm('Delete this routing rule?')) {
+            // TODO: Implement routing deletion API
+            alert('TODO: Implement');
+        }
+    }
+
+    function loadUsageStats() {
+        fetch(apiBase + '/usage?period=month')
+            .then(r => r.json())
+            .then(data => {
+                renderBudgetStatus(data.data.monthly_budget);
+                renderUsageByProvider(data.data.summary);
+                renderUsageByTask(data.data.by_task_type);
+            });
+    }
+
+    function renderBudgetStatus(budget) {
+        const div = document.getElementById('budgetStatus');
+        const percentage = Math.min(budget.percentage_used, 100);
+        const warningClass = percentage > 80 ? 'warning' : (percentage > 50 ? '' : '');
+
+        div.innerHTML = `
+            <h5>${budget.current_month}</h5>
+            <p><strong>Budget:</strong> €${budget.budget_limit_eur.toFixed(2)} / month</p>
+            <p><strong>Used:</strong> €${budget.current_month_cost_eur.toFixed(6)}</p>
+            ${budget.remaining_eur !== null ? '<p><strong>Remaining:</strong> €' + budget.remaining_eur.toFixed(2) + '</p>' : ''}
+            <div class="budget-bar">
+                <div class="budget-bar-fill ${warningClass}" style="width: ${percentage}%">
+                    ${percentage.toFixed(0)}%
+                </div>
+            </div>
+        `;
+    }
+
+    function renderUsageByProvider(summary) {
+        const div = document.getElementById('usageByProvider');
+        div.innerHTML = summary.by_provider.slice(0, 5).map(p => `
+            <div class="mb-2">
+                <strong>${p.model}</strong><br>
+                <small>${p.calls} calls · €${p.total_cost_eur.toFixed(6)}</small>
+            </div>
+        `).join('');
+    }
+
+    function renderUsageByTask(data) {
+        const tbody = document.querySelector('#usageByTask tbody');
+        tbody.innerHTML = (data.by_task || []).map(t => `
+            <tr>
+                <td><code>${t.task_type || 'unknown'}</code></td>
+                <td>${t.calls}</td>
+                <td>${t.total_input_tokens}</td>
+                <td>${t.total_output_tokens}</td>
+                <td>€${t.total_cost_eur?.toFixed(6) || '0'}</td>
+                <td>${t.avg_latency_ms?.toFixed(0) || '0'}ms</td>
+            </tr>
+        `).join('');
+    }
+
+    // ========== ANONYMIZATION FUNCTIONS ==========
+
+    function loadAnonConfig() {
+        fetch(apiBase + '/anonymization_config')
+            .then(r => r.json())
+            .then(data => {
+                if (data.config) {
+                    const radio = document.getElementById('mode' + data.config.mode.charAt(0).toUpperCase() + data.config.mode.slice(1));
+                    if (radio) {
+                        radio.checked = true;
+                    }
+                }
+            })
+            .catch(err => console.error('Error loading anon config:', err));
+    }
+
+    function loadAnonStats() {
+        // Fetch recent anonymization stats from the log
+        const tbody = document.querySelector('#anonStats tbody');
+
+        fetch(apiBase + '/anonymization_stats')
+            .then(r => {
+                // If endpoint doesn't exist yet, show placeholder
+                if (r.status === 404) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No anonymization data yet</td></tr>';
+                    return null;
+                }
+                return r.json();
+            })
+            .then(data => {
+                if (!data || !data.data) return;
+
+                tbody.innerHTML = (data.data || []).map(log => {
+                    const types = JSON.parse(log.replacement_types || '{}');
+                    const typesList = Object.entries(types).map(([k, v]) => `${k}: ${v}`).join(', ') || 'None';
+                    return `
+                        <tr>
+                            <td><small>${new Date(log.created_at).toLocaleString()}</small></td>
+                            <td>${log.provider}</td>
+                            <td><span class="badge bg-info">${log.mode}</span></td>
+                            <td>${log.replacements_count}</td>
+                            <td><small>${typesList}</small></td>
+                        </tr>
+                    `;
+                }).join('');
+            })
+            .catch(err => {
+                // Stats endpoint may not be ready yet
+                console.log('Anon stats not available:', err);
+            });
+    }
+
+    function onAnonModeChange() {
+        const selected = document.querySelector('input[name="anonMode"]:checked').value;
+        const warning = document.getElementById('anonWarning');
+
+        // Show warning for 'off' mode
+        warning.style.display = (selected === 'off') ? 'block' : 'none';
+    }
+
+    function saveAnonMode() {
+        const mode = document.querySelector('input[name="anonMode"]:checked').value;
+
+        const payload = {
+            mode: mode,
+            custom_rules: null,
+            provider_overrides: null
+        };
+
+        fetch(apiBase + '/anonymization_config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Anonymization settings saved!');
+                    onAnonModeChange();
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(err => {
+                alert('Error saving settings: ' + err.message);
+            });
+    }
+
+    function testAnonymize() {
+        const text = document.getElementById('testInput').value;
+        const mode = document.querySelector('input[name="anonMode"]:checked').value;
+
+        if (!text.trim()) {
+            alert('Please enter some text to anonymize');
+            return;
+        }
+
+        fetch(apiBase + '/anonymization_test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: text, mode: mode })
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const results = document.getElementById('testResults');
+                    const replCount = document.getElementById('replCount');
+                    const replTypes = document.getElementById('replTypes');
+                    const anonText = document.getElementById('anonText');
+
+                    replCount.textContent = data.replacements_count;
+
+                    // Build types display
+                    let typesHtml = '';
+                    for (const [type, count] of Object.entries(data.replacement_types)) {
+                        typesHtml += `<span class="badge bg-secondary me-2">${type}: ${count}</span>`;
+                    }
+                    replTypes.innerHTML = typesHtml || '<span class="text-muted">No replacements</span>';
+
+                    anonText.textContent = data.anonymized_text;
+
+                    results.style.display = 'block';
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(err => {
+                alert('Test failed: ' + err.message);
+            });
+    }
+
+    function clearTest() {
+        document.getElementById('testInput').value = '';
+        document.getElementById('testResults').style.display = 'none';
+    }
+</script>
+{% endblock %}

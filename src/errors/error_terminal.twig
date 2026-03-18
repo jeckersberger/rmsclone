@@ -1,0 +1,827 @@
+{# Error Terminal Dashboard #}
+<div class="error-terminal-container">
+    <style>
+        .error-terminal-container {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #0f1419;
+            color: #e0e6ed;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #1e2d3d;
+        }
+
+        .et-header {
+            border-bottom: 2px solid #1e2d3d;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+
+        .et-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .et-title::before {
+            content: "⚙";
+            font-size: 24px;
+        }
+
+        .et-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .et-stat-card {
+            background: #1a2332;
+            border: 1px solid #2a3f5f;
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .et-stat-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .et-stat-count {
+            font-size: 28px;
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+
+        .et-stat-label {
+            font-size: 12px;
+            color: #8b95a5;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .et-critical { border-left: 4px solid #ff4757; }
+        .et-critical .et-stat-icon { color: #ff4757; }
+
+        .et-error { border-left: 4px solid #ff9500; }
+        .et-error .et-stat-icon { color: #ff9500; }
+
+        .et-warning { border-left: 4px solid #ffc107; }
+        .et-warning .et-stat-icon { color: #ffc107; }
+
+        .et-resolved { border-left: 4px solid #2ecc71; }
+        .et-resolved .et-stat-icon { color: #2ecc71; }
+
+        .et-filters {
+            background: #1a2332;
+            border: 1px solid #2a3f5f;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .et-filter-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .et-filter-label {
+            font-size: 12px;
+            color: #8b95a5;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .et-select, .et-input {
+            background: #0f1419;
+            border: 1px solid #2a3f5f;
+            color: #e0e6ed;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: inherit;
+        }
+
+        .et-select:hover, .et-input:hover {
+            border-color: #3a5f8f;
+        }
+
+        .et-select:focus, .et-input:focus {
+            outline: none;
+            border-color: #0099ff;
+            box-shadow: 0 0 0 2px rgba(0, 153, 255, 0.1);
+        }
+
+        .et-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .et-checkbox input[type="checkbox"] {
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+
+        .et-errors {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .et-error-card {
+            background: #1a2332;
+            border: 1px solid #2a3f5f;
+            border-radius: 6px;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .et-error-card:hover {
+            border-color: #3a5f8f;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .et-error-header {
+            padding: 15px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .et-error-checkbox {
+            margin-top: 4px;
+        }
+
+        .et-error-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            min-width: 70px;
+            text-align: center;
+        }
+
+        .et-error-badge.debug { background: #4b5f6f; color: #b0bac7; }
+        .et-error-badge.info { background: #0066cc; color: #fff; }
+        .et-error-badge.warning { background: #ff9500; color: #fff; }
+        .et-error-badge.error { background: #ff6b6b; color: #fff; }
+        .et-error-badge.critical { background: #ff4757; color: #fff; }
+
+        .et-error-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .et-error-message {
+            font-weight: 500;
+            margin-bottom: 5px;
+            word-break: break-word;
+        }
+
+        .et-error-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+            color: #8b95a5;
+            flex-wrap: wrap;
+        }
+
+        .et-error-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .et-error-actions {
+            display: flex;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .et-btn {
+            background: #0066cc;
+            color: #fff;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .et-btn:hover {
+            background: #0052a3;
+        }
+
+        .et-btn.secondary {
+            background: #2a3f5f;
+            color: #8b95a5;
+        }
+
+        .et-btn.secondary:hover {
+            background: #3a5f8f;
+            color: #e0e6ed;
+        }
+
+        .et-btn.copy {
+            background: #2ecc71;
+        }
+
+        .et-btn.copy:hover {
+            background: #27ae60;
+        }
+
+        .et-btn.resolve {
+            background: #ff9500;
+        }
+
+        .et-btn.resolve:hover {
+            background: #e68a00;
+        }
+
+        .et-error-details {
+            display: none;
+            background: #0f1419;
+            border-top: 1px solid #2a3f5f;
+            padding: 15px;
+            color: #b0bac7;
+        }
+
+        .et-error-details.open {
+            display: block;
+        }
+
+        .et-details-section {
+            margin-bottom: 15px;
+        }
+
+        .et-details-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .et-details-title {
+            font-size: 12px;
+            color: #8b95a5;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .et-details-content {
+            background: #1a2332;
+            border: 1px solid #2a3f5f;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 11px;
+            line-height: 1.5;
+            overflow-x: auto;
+            word-break: break-all;
+            white-space: pre-wrap;
+        }
+
+        .et-resolve-modal {
+            display: none;
+            background: #1a2332;
+            border: 1px solid #2a3f5f;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+
+        .et-resolve-modal.open {
+            display: block;
+        }
+
+        .et-resolve-form {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .et-resolve-note {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .et-resolve-note-label {
+            font-size: 11px;
+            color: #8b95a5;
+            text-transform: uppercase;
+        }
+
+        .et-resolve-note input {
+            background: #0f1419;
+            border: 1px solid #2a3f5f;
+            color: #e0e6ed;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: inherit;
+        }
+
+        .et-pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #2a3f5f;
+        }
+
+        .et-page-btn {
+            background: #2a3f5f;
+            color: #8b95a5;
+            border: 1px solid #3a5f8f;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .et-page-btn:hover {
+            background: #3a5f8f;
+            color: #e0e6ed;
+        }
+
+        .et-page-btn.active {
+            background: #0066cc;
+            color: #fff;
+            border-color: #0066cc;
+        }
+
+        .et-page-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .et-empty {
+            text-align: center;
+            padding: 40px;
+            color: #8b95a5;
+        }
+
+        .et-empty-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .et-bulk-actions {
+            background: #1a2332;
+            border: 1px solid #2a3f5f;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: none;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .et-bulk-actions.show {
+            display: flex;
+        }
+
+        .et-selected-count {
+            color: #8b95a5;
+            font-size: 13px;
+        }
+
+        .et-auto-refresh {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .et-refresh-btn {
+            background: #2a3f5f;
+            color: #8b95a5;
+            border: 1px solid #3a5f8f;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .et-refresh-btn:hover {
+            background: #3a5f8f;
+            color: #e0e6ed;
+        }
+
+        .et-refresh-btn.active {
+            background: #2ecc71;
+            color: #fff;
+        }
+
+        @media (max-width: 768px) {
+            .et-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .et-filters {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .et-filter-group {
+                flex-direction: column;
+            }
+
+            .et-error-actions {
+                flex-direction: column;
+                margin-left: 0;
+            }
+
+            .et-btn {
+                width: 100%;
+                text-align: center;
+            }
+        }
+    </style>
+
+    <div class="et-header">
+        <div class="et-title">System-Protokoll</div>
+
+        <div class="et-stats">
+            <div class="et-stat-card et-critical">
+                <div class="et-stat-icon">🔴</div>
+                <div class="et-stat-count" data-level="critical">0</div>
+                <div class="et-stat-label">Kritisch</div>
+            </div>
+            <div class="et-stat-card et-error">
+                <div class="et-stat-icon">🟠</div>
+                <div class="et-stat-count" data-level="error">0</div>
+                <div class="et-stat-label">Fehler</div>
+            </div>
+            <div class="et-stat-card et-warning">
+                <div class="et-stat-icon">🟡</div>
+                <div class="et-stat-count" data-level="warning">0</div>
+                <div class="et-stat-label">Warnungen</div>
+            </div>
+            <div class="et-stat-card et-resolved">
+                <div class="et-stat-icon">✅</div>
+                <div class="et-stat-count" data-level="resolved">0</div>
+                <div class="et-stat-label">Gelöst</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="et-filters">
+        <div class="et-filter-group">
+            <label class="et-filter-label">Level</label>
+            <select class="et-select" id="et-filter-level">
+                <option value="">Alle</option>
+                <option value="critical">Kritisch</option>
+                <option value="error">Fehler</option>
+                <option value="warning">Warnung</option>
+                <option value="info">Info</option>
+                <option value="debug">Debug</option>
+            </select>
+        </div>
+
+        <div class="et-filter-group">
+            <label class="et-filter-label">Zeitraum</label>
+            <select class="et-select" id="et-filter-period">
+                <option value="">Alle</option>
+                <option value="24h">Letzte 24h</option>
+                <option value="7d">Letzte 7 Tage</option>
+                <option value="30d">Letzte 30 Tage</option>
+            </select>
+        </div>
+
+        <div class="et-filter-group">
+            <input type="text" class="et-input" id="et-filter-search" placeholder="Nachricht durchsuchen...">
+        </div>
+
+        <div class="et-filter-group">
+            <label class="et-checkbox">
+                <input type="checkbox" id="et-filter-unresolved">
+                <span class="et-filter-label">Nur offene</span>
+            </label>
+        </div>
+
+        <div class="et-filter-group et-auto-refresh" style="margin-left: auto;">
+            <label class="et-filter-label">Auto-Refresh</label>
+            <button class="et-refresh-btn" id="et-auto-refresh-btn" title="Automatisch alle 30 Sekunden aktualisieren">aus</button>
+        </div>
+    </div>
+
+    <div class="et-bulk-actions" id="et-bulk-actions">
+        <span class="et-selected-count"><span id="et-selected-count">0</span> ausgewählt</span>
+        <button class="et-btn resolve" id="et-bulk-resolve-btn">Als gelöst markieren</button>
+    </div>
+
+    <div id="et-errors-container">
+        <div class="et-empty">
+            <div class="et-empty-icon">📋</div>
+            <div>Keine Fehler gefunden</div>
+        </div>
+    </div>
+
+    <div class="et-pagination" id="et-pagination"></div>
+</div>
+
+<script>
+    const ErrorTerminal = {
+        currentPage: 1,
+        limit: 50,
+        stats: {},
+        errors: [],
+        autoRefreshInterval: null,
+        autoRefreshEnabled: false,
+
+        async init() {
+            this.attachEventListeners();
+            await this.loadStats();
+            await this.loadErrors();
+        },
+
+        attachEventListeners() {
+            document.getElementById('et-filter-level').addEventListener('change', () => {
+                this.currentPage = 1;
+                this.loadErrors();
+            });
+
+            document.getElementById('et-filter-period').addEventListener('change', () => {
+                this.currentPage = 1;
+                this.loadErrors();
+            });
+
+            document.getElementById('et-filter-search').addEventListener('input', () => {
+                this.currentPage = 1;
+                this.loadErrors();
+            });
+
+            document.getElementById('et-filter-unresolved').addEventListener('change', () => {
+                this.currentPage = 1;
+                this.loadErrors();
+            });
+
+            document.getElementById('et-auto-refresh-btn').addEventListener('click', () => {
+                this.toggleAutoRefresh();
+            });
+        },
+
+        toggleAutoRefresh() {
+            const btn = document.getElementById('et-auto-refresh-btn');
+            this.autoRefreshEnabled = !this.autoRefreshEnabled;
+
+            if (this.autoRefreshEnabled) {
+                btn.classList.add('active');
+                btn.textContent = 'an';
+
+                this.autoRefreshInterval = setInterval(() => {
+                    this.loadStats();
+                    this.loadErrors();
+                }, 30000); // 30 seconds
+            } else {
+                btn.classList.remove('active');
+                btn.textContent = 'aus';
+                clearInterval(this.autoRefreshInterval);
+            }
+        },
+
+        async loadStats() {
+            try {
+                const response = await fetch('/api/errors/stats.php');
+                const result = await response.json();
+
+                if (result.success) {
+                    this.stats = result.data;
+                    this.renderStats();
+                }
+            } catch (e) {
+                console.error('Stats load error:', e);
+            }
+        },
+
+        async loadErrors() {
+            try {
+                const params = new URLSearchParams({
+                    level: document.getElementById('et-filter-level').value || '',
+                    unresolved_only: document.getElementById('et-filter-unresolved').checked ? 1 : 0,
+                    search: document.getElementById('et-filter-search').value || '',
+                    limit: this.limit,
+                    offset: (this.currentPage - 1) * this.limit,
+                });
+
+                const response = await fetch(`/api/errors/list.php?${params}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    this.errors = result.data;
+                    this.renderErrors();
+                }
+            } catch (e) {
+                console.error('Errors load error:', e);
+            }
+        },
+
+        renderStats() {
+            const stats = this.stats.by_level || {};
+            document.querySelector('[data-level="critical"]').textContent = stats.critical || 0;
+            document.querySelector('[data-level="error"]').textContent = stats.error || 0;
+            document.querySelector('[data-level="warning"]').textContent = stats.warning || 0;
+            document.querySelector('[data-level="resolved"]').textContent = this.stats.total_resolved || 0;
+        },
+
+        renderErrors() {
+            const container = document.getElementById('et-errors-container');
+
+            if (this.errors.length === 0) {
+                container.innerHTML = `
+                    <div class="et-empty">
+                        <div class="et-empty-icon">✅</div>
+                        <div>Keine Fehler gefunden</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = this.errors.map(error => `
+                <div class="et-error-card" data-error-id="${error.id}">
+                    <div class="et-error-header" onclick="ErrorTerminal.toggleDetails(${error.id})">
+                        <input type="checkbox" class="et-error-checkbox" onclick="event.stopPropagation(); ErrorTerminal.updateBulkActions()">
+                        <div class="et-error-badge ${error.level}">${error.level}</div>
+                        <div class="et-error-content">
+                            <div class="et-error-message">${this.escapeHtml(error.message)}</div>
+                            <div class="et-error-meta">
+                                <div class="et-error-meta-item">⏰ ${this.formatDate(error.created_at)}</div>
+                                <div class="et-error-meta-item">📦 ${error.source}</div>
+                                ${error.url ? `<div class="et-error-meta-item">🔗 ${this.escapeHtml(error.url)}</div>` : ''}
+                            </div>
+                        </div>
+                        <div class="et-error-actions">
+                            <button class="et-btn copy" onclick="event.stopPropagation(); ErrorTerminal.copyForDeveloper(${error.id})">📋 Kopieren</button>
+                            <button class="et-btn resolve" onclick="event.stopPropagation(); ErrorTerminal.showResolveModal(${error.id})">✓ Gelöst</button>
+                        </div>
+                    </div>
+                    <div class="et-error-details" id="details-${error.id}"></div>
+                    <div class="et-resolve-modal" id="modal-${error.id}"></div>
+                </div>
+            `).join('');
+
+            this.updateBulkActions();
+        },
+
+        toggleDetails(errorId) {
+            const details = document.getElementById(`details-${errorId}`);
+            details.classList.toggle('open');
+
+            if (details.classList.contains('open') && !details.innerHTML) {
+                this.loadErrorDetails(errorId);
+            }
+        },
+
+        async loadErrorDetails(errorId) {
+            try {
+                const response = await fetch(`/api/errors/detail.php?id=${errorId}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    const error = result.data;
+                    const details = document.getElementById(`details-${errorId}`);
+
+                    details.innerHTML = `
+                        ${error.stack_trace ? `
+                            <div class="et-details-section">
+                                <div class="et-details-title">Stack Trace</div>
+                                <div class="et-details-content">${this.escapeHtml(error.stack_trace)}</div>
+                            </div>
+                        ` : ''}
+                        ${error.context ? `
+                            <div class="et-details-section">
+                                <div class="et-details-title">Kontext</div>
+                                <div class="et-details-content">${this.escapeHtml(JSON.stringify(error.context, null, 2))}</div>
+                            </div>
+                        ` : ''}
+                    `;
+                }
+            } catch (e) {
+                console.error('Detail load error:', e);
+            }
+        },
+
+        showResolveModal(errorId) {
+            const modal = document.getElementById(`modal-${errorId}`);
+            modal.classList.add('open');
+
+            modal.innerHTML = `
+                <div class="et-resolve-form">
+                    <div class="et-resolve-note">
+                        <label class="et-resolve-note-label">Notiz (optional)</label>
+                        <input type="text" placeholder="Grund für Lösung..." id="resolve-note-${errorId}">
+                    </div>
+                    <button class="et-btn resolve" onclick="ErrorTerminal.resolveError(${errorId})">Bestätigen</button>
+                    <button class="et-btn secondary" onclick="ErrorTerminal.closeResolveModal(${errorId})">Abbrechen</button>
+                </div>
+            `;
+        },
+
+        closeResolveModal(errorId) {
+            document.getElementById(`modal-${errorId}`).classList.remove('open');
+        },
+
+        async resolveError(errorId) {
+            const note = document.getElementById(`resolve-note-${errorId}`).value;
+
+            try {
+                const response = await fetch('/api/errors/resolve.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids: [errorId], note: note || null }),
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    document.querySelector(`[data-error-id="${errorId}"]`).remove();
+                    this.loadStats();
+                }
+            } catch (e) {
+                console.error('Resolve error:', e);
+                alert('Fehler beim Speichern');
+            }
+        },
+
+        async copyForDeveloper(errorId) {
+            try {
+                const response = await fetch(`/api/errors/export.php?id=${errorId}`);
+                const text = await response.text();
+
+                navigator.clipboard.writeText(text).then(() => {
+                    const btn = event.target;
+                    const original = btn.textContent;
+                    btn.textContent = '✓ Kopiert!';
+                    setTimeout(() => { btn.textContent = original; }, 2000);
+                });
+            } catch (e) {
+                console.error('Copy error:', e);
+                alert('Fehler beim Kopieren');
+            }
+        },
+
+        updateBulkActions() {
+            const selected = document.querySelectorAll('.et-error-checkbox:checked');
+            const bulkActions = document.getElementById('et-bulk-actions');
+
+            if (selected.length > 0) {
+                bulkActions.classList.add('show');
+                document.getElementById('et-selected-count').textContent = selected.length;
+            } else {
+                bulkActions.classList.remove('show');
+            }
+        },
+
+        formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString('de-DE', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        },
+
+        escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        },
+    };
+
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => ErrorTerminal.init());
+    } else {
+        ErrorTerminal.init();
+    }
+</script>

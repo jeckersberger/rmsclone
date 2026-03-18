@@ -25,7 +25,7 @@ final class NewProjectFinanceMaths extends AbstractMigration
         $builder = $this->getQueryBuilder();
         $projectsQuery = $builder->select(['projects_id', 'projects_dates_deliver_start', 'projects_dates_deliver_end', 'projects_name'])->from('projects')->execute();
         $projects = $projectsQuery->fetchAll();
-        
+
         foreach ($projects as $project) {
             if ($project[1] == null || $project[2] == null) {
                 continue;
@@ -95,5 +95,11 @@ final class NewProjectFinanceMaths extends AbstractMigration
                 'projects_id' => $project[0],
             ])->saveData();
         }
+    }
+
+    public function down(): void
+    {
+        $this->execute("ALTER TABLE projects DROP COLUMN projects_dates_finances_weeks;
+            ALTER TABLE projects DROP COLUMN projects_dates_finances_days;");
     }
 }

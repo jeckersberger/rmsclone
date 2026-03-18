@@ -1,0 +1,134 @@
+{% extends "layout.twig" %}
+
+{% block title %}Equipment Catalog - {{ config.portal_title|default('Booking Portal') }}{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <h1>Equipment Catalog</h1>
+    <p>Browse and book equipment for your event or project</p>
+</div>
+
+<div style="margin-bottom: 2rem;">
+    <div class="form-group">
+        <input type="text" id="search" placeholder="Search equipment..." style="padding: 1rem;">
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+        <select id="category" style="padding: 0.75rem;">
+            <option value="">All Categories</option>
+            {% for category in categories %}
+                <option value="{{ category.assetCategories_id }}">{{ category.assetCategories_name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+{% if message %}
+    <div class="alert alert-{{ message.type }}">
+        {{ message.text }}
+    </div>
+{% endif %}
+
+<div class="grid" id="catalog">
+    {% if items is empty %}
+        <div class="text-center" style="grid-column: 1 / -1; padding: 3rem;">
+            <p class="text-muted">No equipment available</p>
+        </div>
+    {% else %}
+        {% for item in items %}
+            <div class="card">
+                <div class="card-image">📦</div>
+                <div class="card-body">
+                    <h2 class="card-title">{{ item.assetTypes_name }}</h2>
+                    <p class="card-description">{{ item.assetTypes_description|default('High-quality equipment') }}</p>
+                    {% if config.show_prices %}
+                        <div class="card-price">
+                            {% if item.assetTypes_dayRate %}
+                                €{{ "%.2f"|format(item.assetTypes_dayRate) }}/day
+                                {% if item.assetTypes_weekRate %}
+                                    • €{{ "%.2f"|format(item.assetTypes_weekRate) }}/week
+                                {% endif %}
+                            {% else %}
+                                <span style="color: #6b7280;">Price on request</span>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                    <div class="card-availability">
+                        <span class="{{ item.available_count > 0 ? '' : 'unavailable' }}">
+                            {{ item.available_count > 0 ? item.available_count ~ ' available' : 'Not available' }}
+                        </span>
+                    </div>
+                    <button class="btn btn-primary btn-block" onclick="viewItem({{ item.assetTypes_id }})">
+                        View Details
+                    </button>
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+</div>
+
+<script>
+document.getElementById('search').addEventListener('input', function() {
+    loadCatalog();
+});
+
+document.getElementById('category').addEventListener('change', function() {
+    loadCatalog();
+});
+
+function loadCatalog() {
+    const search = document.getElementById('search').value;
+    const category = document.getElementById('category').value;
+
+    fetch('/api/portal/catalog.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+            instances_id: {{ instance_id }},
+            search: search,
+            category_id: category
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.result && data.response.items) {
+            renderCatalog(data.response.items);
+        }
+    })
+    .catch(e => console.error('Error loading catalog:', e));
+}
+
+function renderCatalog(items) {
+    const catalog = document.getElementById('catalog');
+    if (items.length === 0) {
+        catalog.innerHTML = '<div class="text-center" style="grid-column: 1 / -1; padding: 3rem;"><p class="text-muted">No equipment found</p></div>';
+        return;
+    }
+
+    catalog.innerHTML = items.map(item => `
+        <div class="card">
+            <div class="card-image">📦</div>
+            <div class="card-body">
+                <h2 class="card-title">${item.assetTypes_name}</h2>
+                <p class="card-description">${item.assetTypes_description || 'High-quality equipment'}</p>
+                ${item.assetTypes_dayRate ? `
+                    <div class="card-price">
+                        €${parseFloat(item.assetTypes_dayRate).toFixed(2)}/day
+                        ${item.assetTypes_weekRate ? ` • €${parseFloat(item.assetTypes_weekRate).toFixed(2)}/week` : ''}
+                    </div>
+                ` : ''}
+                <div class="card-availability ${item.available_count > 0 ? '' : 'unavailable'}">
+                    ${item.available_count > 0 ? item.available_count + ' available' : 'Not available'}
+                </div>
+                <button class="btn btn-primary btn-block" onclick="viewItem(${item.assetTypes_id})">
+                    View Details
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function viewItem(assetTypeId) {
+    window.location.href = `/portal/?action=item&id=${assetTypeId}`;
+}
+</script>
+{% endblock %}

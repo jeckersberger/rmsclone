@@ -1,0 +1,493 @@
+{% extends "assets/template.twig" %}
+{% block content %}
+
+<style>
+    .damage-status-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+
+    .status-reported {
+        background-color: #e3f2fd;
+        color: #1565c0;
+    }
+    .status-assessed {
+        background-color: #f3e5f5;
+        color: #6a1b9a;
+    }
+    .status-quote-requested {
+        background-color: #fff3e0;
+        color: #e65100;
+    }
+    .status-quote-received {
+        background-color: #fce4ec;
+        color: #c2185b;
+    }
+    .status-repair-approved {
+        background-color: #e8f5e9;
+        color: #2e7d32;
+    }
+    .status-in-repair {
+        background-color: #fff9c4;
+        color: #f57f17;
+    }
+    .status-repaired {
+        background-color: #f1f8e9;
+        color: #558b2f;
+    }
+    .status-verified {
+        background-color: #e0f2f1;
+        color: #00695c;
+    }
+    .status-charged {
+        background-color: #ede7f6;
+        color: #512da8;
+    }
+    .status-insurance-claimed {
+        background-color: #fbe9e7;
+        color: #bf360c;
+    }
+    .status-closed {
+        background-color: #f5f5f5;
+        color: #424242;
+    }
+
+    .severity-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 3px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .severity-minor {
+        background-color: #c8e6c9;
+        color: #1b5e20;
+    }
+    .severity-moderate {
+        background-color: #fff9c4;
+        color: #f57f17;
+    }
+    .severity-major {
+        background-color: #ffccbc;
+        color: #d84315;
+    }
+    .severity-total-loss {
+        background-color: #ffcdd2;
+        color: #b71c1c;
+    }
+
+    .kanban-container {
+        display: flex;
+        overflow-x: auto;
+        padding: 10px 0;
+        gap: 15px;
+        margin-top: 20px;
+    }
+
+    .kanban-column {
+        flex: 0 0 320px;
+        background-color: #f5f5f5;
+        border-radius: 6px;
+        padding: 12px;
+        min-height: 600px;
+    }
+
+    .kanban-column-header {
+        font-weight: 600;
+        padding: 10px;
+        background-color: #e0e0e0;
+        border-radius: 4px;
+        margin-bottom: 10px;
+        font-size: 13px;
+    }
+
+    .kanban-card {
+        background-color: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 12px;
+        margin-bottom: 10px;
+        cursor: move;
+        transition: box-shadow 0.2s;
+    }
+
+    .kanban-card:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    .kanban-card-title {
+        font-weight: 600;
+        margin-bottom: 8px;
+        font-size: 13px;
+    }
+
+    .kanban-card-meta {
+        font-size: 12px;
+        color: #666;
+        margin: 4px 0;
+    }
+
+    .dashboard-stats-row {
+        margin-bottom: 30px;
+    }
+
+    .stat-card {
+        border-left: 4px solid #007bff;
+        background: white;
+    }
+
+    .stat-card.stat-major {
+        border-left-color: #dc3545;
+    }
+
+    .stat-card.stat-moderate {
+        border-left-color: #ffc107;
+    }
+
+    .stat-card.stat-open {
+        border-left-color: #17a2b8;
+    }
+
+    .stat-card.stat-cost {
+        border-left-color: #28a745;
+    }
+
+    .filter-group {
+        background: white;
+        padding: 15px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+    }
+
+    .filter-label {
+        font-weight: 500;
+        font-size: 13px;
+        margin-bottom: 5px;
+        display: block;
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="fas fa-exclamation-triangle"></i> Schadenmanagement (K3)
+            </h2>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row dashboard-stats-row">
+        <div class="col-lg-3 col-md-6">
+            <div class="card stat-card stat-open">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-3 text-right">
+                            <i class="fas fa-folder-open fa-2x text-info"></i>
+                        </div>
+                        <div class="col-9">
+                            <div class="huge" id="stat-open">0</div>
+                            <div class="text-muted small">Offene Fälle</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="card stat-card stat-moderate">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-3 text-right">
+                            <i class="fas fa-wrench fa-2x text-warning"></i>
+                        </div>
+                        <div class="col-9">
+                            <div class="huge" id="stat-in-repair">0</div>
+                            <div class="text-muted small">In Reparatur</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="card stat-card stat-cost">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-3 text-right">
+                            <i class="fas fa-euro-sign fa-2x text-success"></i>
+                        </div>
+                        <div class="col-9">
+                            <div class="huge" id="stat-cost">€0</div>
+                            <div class="text-muted small">Kosten diesen Monat</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="card stat-card stat-major">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-3 text-right">
+                            <i class="fas fa-hourglass-half fa-2x text-danger"></i>
+                        </div>
+                        <div class="col-9">
+                            <div class="huge" id="stat-avg-days">-</div>
+                            <div class="text-muted small">Ø Lösungstage</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Severity Distribution -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Schadensverteilung nach Schweregrad</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <div style="font-size: 28px; color: #2e7d32;" id="sev-minor">0</div>
+                            <span class="severity-badge severity-minor">Gering</span>
+                        </div>
+                        <div class="col-md-3">
+                            <div style="font-size: 28px; color: #f57f17;" id="sev-moderate">0</div>
+                            <span class="severity-badge severity-moderate">Mittel</span>
+                        </div>
+                        <div class="col-md-3">
+                            <div style="font-size: 28px; color: #d84315;" id="sev-major">0</div>
+                            <span class="severity-badge severity-major">Schwer</span>
+                        </div>
+                        <div class="col-md-3">
+                            <div style="font-size: 28px; color: #b71c1c;" id="sev-total">0</div>
+                            <span class="severity-badge severity-total-loss">Totalschaden</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Controls -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="filter-group">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label class="filter-label">Nach Schweregrad filtern:</label>
+                        <select id="filter-severity" class="form-control form-control-sm">
+                            <option value="">-- Alle --</option>
+                            <option value="minor">Gering</option>
+                            <option value="moderate">Mittel</option>
+                            <option value="major">Schwer</option>
+                            <option value="total_loss">Totalschaden</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="filter-label">Zugeordnet an:</label>
+                        <select id="filter-assigned" class="form-control form-control-sm">
+                            <option value="">-- Alle --</option>
+                            <option value="unassigned">Nicht zugeordnet</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="filter-label">&nbsp;</label>
+                        <button class="btn btn-primary btn-sm btn-block" onclick="loadWorkflows()">
+                            <i class="fas fa-sync-alt"></i> Aktualisieren
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kanban Board -->
+    <div class="row">
+        <div class="col-12">
+            <h4>Workflow-Status (Kanban)</h4>
+            <div class="kanban-container" id="kanban-board">
+                <!-- Kanban columns will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const STATUSES = [
+    'reported', 'assessed', 'quote_requested', 'quote_received',
+    'repair_approved', 'in_repair', 'repaired', 'verified',
+    'charged', 'insurance_claimed', 'closed'
+];
+
+const STATUS_LABELS = {
+    'reported': 'Gemeldet',
+    'assessed': 'Bewertet',
+    'quote_requested': 'Angebot angefordert',
+    'quote_received': 'Angebot erhalten',
+    'repair_approved': 'Reparatur genehmigt',
+    'in_repair': 'In Reparatur',
+    'repaired': 'Repariert',
+    'verified': 'Verifiziert',
+    'charged': 'Dem Kunden verrechnet',
+    'insurance_claimed': 'Versicherung beansprucht',
+    'closed': 'Geschlossen'
+};
+
+const STATUS_COLORS = {
+    'reported': '#1565c0',
+    'assessed': '#6a1b9a',
+    'quote_requested': '#e65100',
+    'quote_received': '#c2185b',
+    'repair_approved': '#2e7d32',
+    'in_repair': '#f57f17',
+    'repaired': '#558b2f',
+    'verified': '#00695c',
+    'charged': '#512da8',
+    'insurance_claimed': '#bf360c',
+    'closed': '#424242'
+};
+
+function formatCurrency(value) {
+    return new Intl.NumberFormat('de-DE', {
+        style: 'currency',
+        currency: 'EUR',
+        minimumFractionDigits: 2
+    }).format(value);
+}
+
+function getSeverityBadge(severity) {
+    const badges = {
+        'minor': '<span class="severity-badge severity-minor">Gering</span>',
+        'moderate': '<span class="severity-badge severity-moderate">Mittel</span>',
+        'major': '<span class="severity-badge severity-major">Schwer</span>',
+        'total_loss': '<span class="severity-badge severity-total-loss">Totalschaden</span>'
+    };
+    return badges[severity] || '';
+}
+
+function loadDashboard() {
+    $.post('/api/damage/dashboard.php', {}, function(response) {
+        if (!response.success) {
+            alert('Error loading dashboard');
+            return;
+        }
+
+        const stats = response.data.stats;
+
+        // Update stat cards
+        $('#stat-open').text(stats.open_count);
+        $('#stat-in-repair').text(stats.status_counts.in_repair);
+        $('#stat-cost').text(formatCurrency(stats.total_estimated_cost_this_month));
+        $('#stat-avg-days').text(stats.avg_resolution_days > 0 ? stats.avg_resolution_days + ' d' : '-');
+
+        // Update severity distribution
+        $('#sev-minor').text(stats.severity_counts.minor);
+        $('#sev-moderate').text(stats.severity_counts.moderate);
+        $('#sev-major').text(stats.severity_counts.major);
+        $('#sev-total').text(stats.severity_counts.total_loss);
+    }, 'json');
+}
+
+function loadWorkflows() {
+    const severity = $('#filter-severity').val();
+    const assignedTo = $('#filter-assigned').val();
+
+    $.post('/api/damage/workflows.php', {
+        severity: severity || null,
+        assigned_to: assignedTo || null
+    }, function(response) {
+        if (!response.success) {
+            alert('Error loading workflows');
+            return;
+        }
+
+        const workflows = response.data.workflows;
+        renderKanban(workflows);
+    }, 'json');
+}
+
+function renderKanban(workflows) {
+    const kanban = $('#kanban-board');
+    kanban.empty();
+
+    // Group workflows by status
+    const grouped = {};
+    STATUSES.forEach(status => {
+        grouped[status] = [];
+    });
+
+    workflows.forEach(workflow => {
+        if (grouped[workflow.status]) {
+            grouped[workflow.status].push(workflow);
+        }
+    });
+
+    // Render columns
+    STATUSES.forEach(status => {
+        const count = grouped[status].length;
+        const column = $('<div class="kanban-column"></div>');
+
+        const header = $(`
+            <div class="kanban-column-header">
+                ${STATUS_LABELS[status]} <span class="badge badge-light">${count}</span>
+            </div>
+        `);
+        column.append(header);
+
+        // Render cards
+        grouped[status].forEach(workflow => {
+            const assetTag = workflow.assets_tag || 'N/A';
+            const daysOld = Math.floor((new Date() - new Date(workflow.created_at)) / (1000 * 60 * 60 * 24));
+
+            const card = $(`
+                <div class="kanban-card" data-workflow-id="${workflow.id}">
+                    <div class="kanban-card-title">${assetTag}</div>
+                    ${getSeverityBadge(workflow.severity)}
+                    <div class="kanban-card-meta mt-2">
+                        <strong>Veranschlagung:</strong> ${formatCurrency(workflow.estimated_cost || 0)}<br>
+                        <strong>Tatsächlich:</strong> ${formatCurrency(workflow.actual_cost || 0)}<br>
+                        <strong>Zugeordnet an:</strong> ${workflow.users_name1 ? workflow.users_name1 + ' ' + (workflow.users_name2 || '') : 'Unzugeordnet'}<br>
+                        <strong>Seit:</strong> ${daysOld} Tage
+                    </div>
+                    <div class="mt-2">
+                        <button class="btn btn-xs btn-info" onclick="viewWorkflow(${workflow.damage_report_id})">
+                            <i class="fas fa-eye"></i> Ansehen
+                        </button>
+                    </div>
+                </div>
+            `);
+            column.append(card);
+        });
+
+        kanban.append(column);
+    });
+}
+
+function viewWorkflow(damageReportId) {
+    // Navigate to workflow detail page (adjust URL as needed)
+    window.location.href = `/src/damage/index.php?damage_report_id=${damageReportId}`;
+}
+
+// Initial load
+$(function() {
+    loadDashboard();
+    loadWorkflows();
+
+    // Reload on filter change
+    $('#filter-severity').change(loadWorkflows);
+    $('#filter-assigned').change(loadWorkflows);
+});
+</script>
+
+{% endblock %}

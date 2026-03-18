@@ -3,26 +3,15 @@
  * Federation Disconnect - Partnerschaft trennen
  *
  * Wird aufgerufen wenn der Partner-Server die Verbindung trennt.
+ * Uses federationHead.php for consistent auth, JSON parsing and rate limiting.
  */
-require_once __DIR__ . '/../apiHead.php';
-require_once __DIR__ . '/../../services/FederationService.php';
+require_once __DIR__ . '/federationHead.php';
 
-$FEDERATION = new FederationService($DBLIB);
+// Authenticate first (validates the API key and updates lastSeen)
+$server = federationAuth();
 
-// Parse JSON body
-$contentType = $_SERVER['CONTENT_TYPE'] ?? '';
-if (stripos($contentType, 'application/json') !== false) {
-    $jsonBody = json_decode(file_get_contents('php://input'), true);
-    if (is_array($jsonBody)) {
-        $_POST = array_merge($_POST, $jsonBody);
-    }
-}
-
+// Process the disconnect using the authenticated API key
 $apiKey = $_SERVER['HTTP_X_FEDERATION_KEY'] ?? '';
-if (empty($apiKey)) {
-    finish(false, ['code' => 'AUTH', 'message' => 'Missing API key']);
-}
-
 $result = $FEDERATION->handleDisconnect($apiKey);
 
-finish($result);
+finish($result, $result ? null : ['code' => 'DISCONNECT_FAILED', 'message' => 'Disconnect failed']);

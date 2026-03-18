@@ -4,53 +4,70 @@
  *
  * Sucht online nach Produktdaten wenn ein neues Asset angelegt wird:
  * - Neupreis / Marktwert
- * - Spezifikationen (Gewicht, Abmessungen)
+ * - Spezifikationen (Gewicht, Abmessungen, Leistung)
  * - Kategorie-Vorschlag
  *
- * Unterstuetzt Claude API oder OpenAI API als Backend.
+ * Nutzt den zentralen ClaudeService fuer alle KI-Aufrufe (Messages API v1).
+ * Feature-Flag: 'asset_lookup'
+ * API-Key, Usage-Logging und Feature-Gating laufen ueber ClaudeService.
  */
 class AiAssetLookupService
 {
     private $db;
-    private $apiKey;
-    private $apiProvider;
+    private $claudeService;
 
-    public function __construct($db)
+    public function __construct($db, ClaudeService $claudeService)
     {
         $this->db = $db;
-        $this->apiKey = getenv('AI_API_KEY') ?: '';
-        $this->apiProvider = getenv('AI_PROVIDER') ?: 'claude'; // 'claude' oder 'openai'
+        $this->claudeService = $claudeService;
     }
 
     /**
      * Produktdaten per KI suchen
+     *
+     * @param string $productName Name des Geraets
+     * @param string $manufacturer Hersteller (optional)
+     * @return array ['success' => bool, 'data' => array|null, 'error' => string|null, 'cached' => bool|null]
      */
     public function lookup(string $productName, string $manufacturer = ''): array
     {
-        if (empty($this->apiKey)) {
-            return ['success' => false, 'error' => 'KI-API-Key nicht konfiguriert (AI_API_KEY)'];
+        // Pruefen ob Asset-Lookup aktiviert ist
+        if (!$this->claudeService->isFeatureEnabled('asset_lookup')) {
+            return ['success' => false, 'error' => 'Asset-Lookup-Feature nicht aktiviert'];
         }
 
-        // Zuerst Cache pruefen
+        // Zuerst Cache pruefen (7 Tage gueltig)
         $cached = $this->getFromCache($productName, $manufacturer);
         if ($cached) return $cached;
 
-        $prompt = $this->buildPrompt($productName, $manufacturer);
+        $systemPrompt = $this->buildSystemPrompt();
+        $userMessage = $this->buildUserMessage($productName, $manufacturer);
 
         try {
-            $result = $this->apiProvider === 'openai'
-                ? $this->callOpenAi($prompt)
-                : $this->callClaude($prompt);
+            // Nutze ClaudeService statt eigenstaendiger cURL-Aufrufe
+            // Usage-Logging und Kostenberechnung laufen automatisch im Service
+            $response = $this->claudeService->ask(
+                'asset_lookup',
+                $systemPrompt,
+                $userMessage,
+                null,
+                1000  // max_tokens fuer JSON-Antwort
+            );
 
-            if ($result['success']) {
-                $parsed = $this->parseResponse($result['response']);
-                $parsed['source'] = 'ai';
-                $parsed['suggested'] = true;
-                $this->saveToCache($productName, $manufacturer, $parsed);
-                return ['success' => true, 'data' => $parsed];
+            if (!$response) {
+                return ['success' => false, 'error' => 'KI-Anfrage fehlgeschlagen'];
             }
 
-            return $result;
+            $text = ClaudeService::extractText($response);
+            if (!$text) {
+                return ['success' => false, 'error' => 'Keine Antwort von Claude erhalten'];
+            }
+
+            $parsed = $this->parseResponse($text);
+            $parsed['source'] = 'ai';
+            $parsed['suggested'] = true;
+            $this->saveToCache($productName, $manufacturer, $parsed);
+            return ['success' => true, 'data' => $parsed];
         } catch (Exception $e) {
             error_log('[AiAssetLookup] Fehler: ' . $e->getMessage());
             return ['success' => false, 'error' => 'KI-Anfrage fehlgeschlagen'];
@@ -68,87 +85,38 @@ class AiAssetLookupService
         return $this->db->get('assetCategories', null, ['assetCategories_id', 'assetCategories_name']) ?: [];
     }
 
-    private function buildPrompt(string $name, string $manufacturer): string
+    // ── Private Methods ──
+
+    private function buildSystemPrompt(): string
     {
-        $query = $manufacturer ? "{$manufacturer} {$name}" : $name;
-        return "Du bist ein Assistent fuer Veranstaltungstechnik-Vermietung. " .
-            "Finde die folgenden Informationen ueber dieses Produkt: \"{$query}\"\n\n" .
-            "Antworte NUR im folgenden JSON-Format (keine weiteren Erklaerungen):\n" .
-            "{\n" .
-            "  \"product_name\": \"Offizieller Produktname\",\n" .
-            "  \"manufacturer\": \"Hersteller\",\n" .
-            "  \"new_price_eur\": 0.00,\n" .
-            "  \"market_value_eur\": 0.00,\n" .
-            "  \"weight_kg\": 0.0,\n" .
-            "  \"dimensions\": \"LxBxH in cm\",\n" .
-            "  \"category\": \"Lichtequipment|Tontechnik|Videotechnik|Buehnenelemente|Traversensysteme|Sonstiges\",\n" .
-            "  \"description\": \"Kurzbeschreibung (1-2 Saetze)\",\n" .
-            "  \"confidence\": \"high|medium|low\"\n" .
-            "}\n\n" .
-            "Falls du das Produkt nicht findest, setze confidence auf 'low' und schaetze die Werte.";
+        return "Du bist ein Assistent fuer Veranstaltungstechnik-Vermietung und Inventarverwaltung. " .
+               "Deine Aufgabe ist es, genaue technische Spezifikationen und Preise fuer Veranstaltungstechnik-Geraete zu recherchieren. " .
+               "Antworte AUSSCHLIESSLICH als valides JSON, ohne zusaetzliche Erklaerungen oder Markdown.";
     }
 
-    private function callClaude(string $prompt): array
+    private function buildUserMessage(string $name, string $manufacturer): string
     {
-        $ch = curl_init('https://api.anthropic.com/v1/messages');
-        curl_setopt_array($ch, [
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => json_encode([
-                'model' => 'claude-haiku-4-5-20251001',
-                'max_tokens' => 500,
-                'messages' => [['role' => 'user', 'content' => $prompt]],
-            ]),
-            CURLOPT_HTTPHEADER => [
-                'Content-Type: application/json',
-                'x-api-key: ' . $this->apiKey,
-                'anthropic-version: 2023-06-01',
-            ],
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 15,
-        ]);
+        $deviceSpec = $manufacturer ? "{$manufacturer} {$name}" : $name;
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode !== 200) {
-            return ['success' => false, 'error' => "API-Fehler: HTTP $httpCode"];
-        }
-
-        $data = json_decode($response, true);
-        $text = $data['content'][0]['text'] ?? '';
-        return ['success' => true, 'response' => $text];
-    }
-
-    private function callOpenAi(string $prompt): array
-    {
-        $ch = curl_init('https://api.openai.com/v1/chat/completions');
-        curl_setopt_array($ch, [
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => json_encode([
-                'model' => 'gpt-4o-mini',
-                'messages' => [['role' => 'user', 'content' => $prompt]],
-                'max_tokens' => 500,
-            ]),
-            CURLOPT_HTTPHEADER => [
-                'Content-Type: application/json',
-                'Authorization: Bearer ' . $this->apiKey,
-            ],
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 15,
-        ]);
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode !== 200) {
-            return ['success' => false, 'error' => "API-Fehler: HTTP $httpCode"];
-        }
-
-        $data = json_decode($response, true);
-        $text = $data['choices'][0]['message']['content'] ?? '';
-        return ['success' => true, 'response' => $text];
+        return "Recherchiere fuer das Veranstaltungstechnik-Geraeт \"{$deviceSpec}\" die folgenden Daten:\n" .
+               "- Gewicht in Kilogramm (weight_kg)\n" .
+               "- UVP/Verkaufspreis in EUR (new_price_eur)\n" .
+               "- Abmessungen (Laenge x Breite x Hoehe in mm, z.B. '1200x300x150')\n" .
+               "- Leistungsaufnahme in Watt (power_consumption_watts)\n" .
+               "- Kurzenbeschreibung (2-3 Saetze)\n" .
+               "- Konfidenzlevel: 'high' wenn du sichere Daten gefunden hast, 'medium' bei Schaetzungen, 'low' wenn Daten unsicher sind\n\n" .
+               "Antworte mit diesem JSON-Struktur:\n" .
+               "{\n" .
+               "  \"product_name\": \"Offizieller Produktname\",\n" .
+               "  \"manufacturer\": \"Hersteller\",\n" .
+               "  \"new_price_eur\": 0.00,\n" .
+               "  \"weight_kg\": 0.0,\n" .
+               "  \"dimensions_mm\": \"LxBxH\",\n" .
+               "  \"power_consumption_watts\": 0,\n" .
+               "  \"description\": \"Kurzbeschreibung\",\n" .
+               "  \"confidence\": \"high|medium|low\"\n" .
+               "}\n\n" .
+               "Falls keine validen Daten vorhanden sind, nutze 'low' als Konfidenzlevel.";
     }
 
     private function parseResponse(string $response): array
@@ -159,14 +127,14 @@ class AiAssetLookupService
             if ($data) return $data;
         }
 
+        // Fallback auf Default-Struktur
         return [
             'product_name' => '',
             'manufacturer' => '',
             'new_price_eur' => 0,
-            'market_value_eur' => 0,
             'weight_kg' => 0,
-            'dimensions' => '',
-            'category' => 'Sonstiges',
+            'dimensions_mm' => '',
+            'power_consumption_watts' => 0,
             'description' => '',
             'confidence' => 'low',
         ];
@@ -177,7 +145,7 @@ class AiAssetLookupService
         $key = md5(strtolower($name . '|' . $manufacturer));
         $this->db->where('cache_key', $key);
         $this->db->where('created_at', date('Y-m-d H:i:s', strtotime('-7 days')), '>=');
-        $cached = $this->db->getOne('ai_lookup_cache', ['response_data']);
+        $cached = $this->db->getOne('ai_lookup_cache', null, ['response_data']);
 
         if (!$cached) return null;
 

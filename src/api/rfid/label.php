@@ -13,6 +13,7 @@
  */
 require_once __DIR__ . '/../apiHeadSecure.php';
 require_once __DIR__ . '/../../services/StockItemService.php';
+require_once __DIR__ . '/../../services/TagFormatService.php';
 
 if (!$AUTH->instancePermissionCheck("ASSETS:ASSET_BARCODES:SCAN")) {
     finish(false, ["message" => "Permission denied"]);
@@ -69,7 +70,7 @@ function handleAssetLabel(string $action, int $instanceId): void
     $asset = $DBLIB->getOne('assets a', [
         'a.assets_id', 'a.assets_tag', 'a.asset_definableFields_1 AS rfid_tag',
         'at.assetTypes_name', 'a.assets_storageLocation', 'a.assets_value',
-        'a.assets_dayRate', 'a.assets_weekRate'
+        'a.assets_dayRate', 'a.assets_weekRate', 'a.assets_serialInternal'
     ]);
 
     if (!$asset) {
@@ -80,31 +81,36 @@ function handleAssetLabel(string $action, int $instanceId): void
     $assetTag = $asset['assets_tag'] ?: 'ID-' . $asset['assets_id'];
     $rfidTag = $asset['rfid_tag'] ?: '';
     $location = $asset['assets_storageLocation'] ?: '';
-    $barcodeData = 'RMS-A-' . str_pad($asset['assets_id'], 6, '0', STR_PAD_LEFT);
+    $serialInternal = $asset['assets_serialInternal'] ?: '';
+
+    // Generate barcode using TagFormatService
+    $tagService = new TagFormatService($DBLIB, $instanceId);
+    $barcodeData = $tagService->generateAssetEpc($asset['assets_id']);
 
     switch ($action) {
         case 'preview':
             finish(true, null, [
-                'asset_id'     => $asset['assets_id'],
-                'type_name'    => $typeName,
-                'asset_tag'    => $assetTag,
-                'rfid_tag'     => $rfidTag,
-                'location'     => $location,
-                'barcode_data' => $barcodeData,
-                'day_rate'     => $asset['assets_dayRate'],
-                'week_rate'    => $asset['assets_weekRate'],
-                'entity_type'  => 'asset',
+                'asset_id'        => $asset['assets_id'],
+                'type_name'       => $typeName,
+                'asset_tag'       => $assetTag,
+                'rfid_tag'        => $rfidTag,
+                'location'        => $location,
+                'serial_internal' => $serialInternal,
+                'barcode_data'    => $barcodeData,
+                'day_rate'        => $asset['assets_dayRate'],
+                'week_rate'       => $asset['assets_weekRate'],
+                'entity_type'     => 'asset',
             ]);
             break;
 
         case 'zpl':
-            $zpl = generateAssetZpl($typeName, $assetTag, $barcodeData, $rfidTag, $location);
+            $zpl = generateAssetZpl($typeName, $assetTag, $barcodeData, $rfidTag, $location, $serialInternal);
             finish(true, null, ['zpl' => $zpl, 'barcode' => $barcodeData]);
             break;
 
         case 'print':
             $printerIp = $_POST['printer_ip'] ?? '';
-            $zpl = generateAssetZpl($typeName, $assetTag, $barcodeData, $rfidTag, $location);
+            $zpl = generateAssetZpl($typeName, $assetTag, $barcodeData, $rfidTag, $location, $serialInternal);
             printZpl($zpl, $printerIp);
             break;
     }
@@ -228,17 +234,18 @@ function handleListAssets(int $instanceId): void
  * Layout (2.2" x 1", 203dpi):
  *   ┌──────────────────────────────┐
  *   │ GERAET  AssetType Name [RF] │
- *   │ #Asset-Tag                    │
+ *   │ S/N: MH-001    #Asset-Tag    │
  *   │ ║║║║║║║║║║║║║║║║║║║║         │
  *   │ RMS-A-000001                  │
  *   │ Lager: XY                     │
  *   └──────────────────────────────┘
  */
-function generateAssetZpl(string $typeName, string $assetTag, string $barcodeData, string $rfidTag, string $location): string
+function generateAssetZpl(string $typeName, string $assetTag, string $barcodeData, string $rfidTag, string $location, string $serialInternal = ''): string
 {
     $typeName = preg_replace('/[^a-zA-Z0-9\s\-\.\/_äöüÄÖÜß]/', '', $typeName);
     $assetTag = preg_replace('/[^a-zA-Z0-9\s\-\.\/_#äöüÄÖÜß]/', '', $assetTag);
     $location = preg_replace('/[^a-zA-Z0-9\s\-\.\/_äöüÄÖÜß]/', '', $location);
+    $serialInternal = preg_replace('/[^a-zA-Z0-9\s\-\.\/_äöüÄÖÜß]/', '', $serialInternal);
 
     $zpl = "^XA\n";
     $zpl .= "^CI28\n";
@@ -253,8 +260,13 @@ function generateAssetZpl(string $typeName, string $assetTag, string $barcodeDat
         $zpl .= "^FO370,10^A0N,20,20^FDRF^FS\n";
     }
 
-    // Row 2: Asset Tag
-    $zpl .= "^FO10,42^A0N,24,24^FD#" . $assetTag . "^FS\n";
+    // Row 2: Internal Serial (if exists) + Asset Tag
+    if (!empty($serialInternal)) {
+        $zpl .= "^FO10,42^A0N,20,20^FDS/N: " . $serialInternal . "^FS\n";
+        $zpl .= "^FO250,42^A0N,20,20^FD#" . $assetTag . "^FS\n";
+    } else {
+        $zpl .= "^FO10,42^A0N,24,24^FD#" . $assetTag . "^FS\n";
+    }
 
     // Row 3: Barcode (Code 128)
     $zpl .= "^FO10,72^BCN,50,N,N,N^FD" . $barcodeData . "^FS\n";
