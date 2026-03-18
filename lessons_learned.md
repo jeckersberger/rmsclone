@@ -76,3 +76,25 @@
   - Verifikations-Scan nach dem Fix hat die 6 fehlenden Stellen gefunden
 - Ergebnis: 0 verbleibende MeekroDB-Antipatterns in der gesamten Codebase
 - Commit: db986199
+
+### 2026-03-18 — Massive Feature-Implementierung: 15 Module in einer Session
+- Aufgaben:
+  - 15 komplett neue Module implementiert, basierend auf der ROADMAP.md (Parts I-L)
+  - Jedes Modul: Phinx-Migration + Service + API-Endpunkte + Twig-Template + Dokumentation
+  - Module: L1 Flexible Lagerorte, L2 Preiskalkulation, J2 Wartung, K1 Workflow-Engine,
+    J1 Vertragsmanagement, K3 Schadenmanagement, K2 Versicherung, J3 Transport,
+    I1-I3 Multi-KI-Provider, I6 KI-Anonymisierung, I9 Smart Asset Creator,
+    I10 KI-Lernsystem, L3 Buchungsportal, L4 Backup, L5 Nachhaltigkeit
+  - Gesamt: ~200 neue Dateien, ~45.000 LOC, 15 Migrationen, 15 Services, 100+ API-Endpunkte
+- Strategie:
+  - 3 Module parallel per Sub-Agent (5 Runden × 3 parallel = 15 Module)
+  - Jeder Agent bekommt: MeekroDB-Regeln, bestehende Code-Patterns, und vollständige Spezifikation
+  - Commit + Push nach jeder 3er-Runde für inkrementelle Sicherheit
+- Neue Regeln:
+  - [2026-03-18] Regel: Bei Massen-Implementierung immer 3 unabhängige Module parallel starten — spart ~60% Zeit
+  - [2026-03-18] Regel: Sub-Agents immer den bestehenden Service-Code zum Lesen geben — nicht nur die Patterns beschreiben
+  - [2026-03-18] Regel: Locations-Modul existierte bereits teilweise — vor der Implementierung IMMER prüfen was schon da ist
+  - [2026-03-18] Regel: Bei Provider-Adapter-Systemen (Multi-KI) den generischen OpenAI-Compatible Adapter als Basis verwenden — 80% aller Provider sind kompatibel
+  - [2026-03-18] Regel: Anonymisierungs-Service Replacement-Map NIE persistieren — nur im RAM halten, nach Request sofort verwerfen
+  - [2026-03-18] Regel: Öffentliche Portale (Buchungsportal) brauchen eigenes CSS — nicht AdminLTE verwenden für public-facing UI
+  - [2026-03-18] Regel: CRON-Scripts in /scripts/ ablegen, nicht in /src/api/ — trennt scheduled tasks von API-Endpunkten
