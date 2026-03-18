@@ -4227,21 +4227,412 @@ Im Admin-Dashboard wird ein KI-Kosten-Widget angezeigt:
 
 ---
 
-## I6. Datenschutz und DSGVO-Konformität
+## I6. Datenschutz, Anonymisierung und DSGVO-Konformität
 
-### I6.1 Datenschutz-Konfiguration in der UI
+### I6.1 Pflicht-Anonymisierung: Kundendaten werden IMMER anonymisiert
 
-Ein eigener Tab in den KI-Settings ermöglicht feingranulare Datenschutz-Kontrolle:
+**Grundprinzip:** Personenbezogene Daten – insbesondere Kundendaten – werden **grundsätzlich anonymisiert**, bevor sie an einen KI-Provider gesendet werden. Das ist keine optionale Einstellung, sondern ein fester Bestandteil der Architektur. Jeder KI-Request durchläuft automatisch die **Anonymisierungs-Pipeline**, die alle personenbezogenen Daten erkennt, durch Platzhalter ersetzt, den anonymisierten Text an die KI sendet, und nach Erhalt der Antwort die Platzhalter wieder durch die echten Daten ersetzt (De-Anonymisierung). Der Benutzer sieht immer die vollständige Ausgabe mit echten Daten – die Anonymisierung geschieht unsichtbar im Hintergrund.
 
-**Daten-Klassifizierung:** Der Administrator definiert, welche Datentypen an Cloud-Provider gesendet werden dürfen und welche nur lokal (Ollama) verarbeitet werden. Beispiel: Kundennamen und E-Mail-Inhalte dürfen an Claude gesendet werden (AVV mit Anthropic liegt vor), aber Bankdaten, IBAN-Nummern und Steuer-IDs werden automatisch vor dem Senden an Cloud-Provider maskiert (Redaktion) oder der Request wird automatisch an Ollama umgeleitet.
+### I6.2 Anonymisierungs-Pipeline: Technischer Ablauf
 
-**Auftragsverarbeitungsvertrag (AVV) Tracking:** Für jeden Cloud-Provider zeigt die UI an, ob ein AVV vorliegt (Pflicht für DSGVO bei Verarbeitung personenbezogener Daten). Links zu den AVV-Dokumenten der Provider werden hinterlegt: Anthropic (Terms of Service mit DPA), OpenAI (Data Processing Addendum), Google (Cloud DPA), Mistral (EU-basiert, standardmäßig DSGVO-konform).
+Die Pipeline arbeitet in drei Phasen, die bei jedem KI-Request automatisch und transparent durchlaufen werden:
 
-**Anonymisierung vor Versand:** Ein Toggle ermöglicht die automatische Anonymisierung: Vor dem Senden an die KI-API werden personenbezogene Daten (Namen, Adressen, Telefonnummern, E-Mail-Adressen) durch Platzhalter ersetzt ([KUNDE_1], [ADRESSE_1], etc.). Nach Erhalt der Antwort werden die Platzhalter wieder durch die echten Daten ersetzt. Dies ist besonders relevant für Unternehmen, die keinen AVV mit dem Provider abschließen können oder wollen.
+**Phase 1: Erkennung und Ersetzung (Pre-Processing)**
 
-### I6.2 Audit-Trail für KI-Entscheidungen
+Bevor der Prompt an die KI-API gesendet wird, scannt der `AnonymizationService` den gesamten Text und ersetzt alle erkannten personenbezogenen Daten durch nummerierte Platzhalter. Die Erkennung nutzt eine Kombination aus Regex-Patterns (für strukturierte Daten wie IBAN, E-Mail, Telefon), Datenbankabgleich (Kundennamen, Firmennamen, Adressen aus der MyRMS-Datenbank) und Named Entity Recognition (NER) als zusätzliche Sicherheitsschicht.
 
-Jede KI-Aktion wird im Audit-Log protokolliert: Welcher Benutzer hat die Anfrage ausgelöst, an welchen Provider/welches Modell wurde sie gesendet, welche Daten wurden gesendet (mit Redaktionsmarkierung), was war die Antwort, und wurde die Antwort vom Benutzer akzeptiert oder abgelehnt. Dies ist essentiell für die DSGVO-Rechenschaftspflicht (Art. 5 Abs. 2 DSGVO) und ermöglicht es, bei Anfragen von Betroffenen oder Behörden nachzuweisen, wie personenbezogene Daten durch KI-Systeme verarbeitet wurden.
+```
+Originaler Prompt (was der Benutzer sieht):
+─────────────────────────────────────────────────────────
+"Erstelle ein Angebot für Hans Müller von der Firma
+EventTech GmbH, Berliner Str. 42, 90513 Zirndorf.
+Kontakt: h.mueller@eventtech.de, Tel: 0911-12345678.
+IBAN: DE89 3704 0044 0532 0130 00.
+Er möchte 12 LED-Scheinwerfer für 3 Tage mieten."
+
+                    │
+                    ▼  AnonymizationService::anonymize()
+
+Anonymisierter Prompt (was an die KI gesendet wird):
+─────────────────────────────────────────────────────────
+"Erstelle ein Angebot für [PERSON_1] von der Firma
+[FIRMA_1], [ADRESSE_1].
+Kontakt: [EMAIL_1], Tel: [TELEFON_1].
+IBAN: [IBAN_1].
+Er möchte 12 LED-Scheinwerfer für 3 Tage mieten."
+```
+
+Dabei wird eine **Ersetzungs-Map** im Speicher gehalten (nie in die Datenbank geschrieben, nie an die KI gesendet):
+
+```
+Ersetzungs-Map (nur im RAM, pro Request):
+┌──────────────┬──────────────────────────────────┐
+│ Platzhalter  │ Originalwert                     │
+├──────────────┼──────────────────────────────────┤
+│ [PERSON_1]   │ Hans Müller                      │
+│ [FIRMA_1]    │ EventTech GmbH                   │
+│ [ADRESSE_1]  │ Berliner Str. 42, 90513 Zirndorf │
+│ [EMAIL_1]    │ h.mueller@eventtech.de           │
+│ [TELEFON_1]  │ 0911-12345678                    │
+│ [IBAN_1]     │ DE89 3704 0044 0532 0130 00      │
+└──────────────┴──────────────────────────────────┘
+```
+
+**Phase 2: KI-Verarbeitung (unveränderter Ablauf)**
+
+Der anonymisierte Prompt wird ganz normal an den konfigurierten KI-Provider gesendet. Die KI sieht nur Platzhalter – sie hat keinerlei Zugang zu den echten personenbezogenen Daten. Die KI-Antwort enthält ebenfalls nur die Platzhalter:
+
+```
+KI-Antwort (anonymisiert):
+"Sehr geehrter [PERSON_1],
+
+im Auftrag von [FIRMA_1] freuen wir uns, Ihnen
+folgendes Angebot zu unterbreiten:
+
+12× ETC Source Four LED S3 – 3 Tage – €45/Tag = €1.620
+zzgl. 19% MwSt: €307,80
+Gesamtbetrag: €1.927,80 brutto
+
+Lieferadresse: [ADRESSE_1]
+Zahlung per SEPA auf [IBAN_1]..."
+```
+
+**Phase 3: De-Anonymisierung (Post-Processing)**
+
+Die KI-Antwort durchläuft die umgekehrte Ersetzung – alle Platzhalter werden durch die echten Daten aus der Ersetzungs-Map zurückersetzt. Das Ergebnis ist eine vollständige, personalisierte Ausgabe, die der Benutzer direkt verwenden kann:
+
+```
+Finale Ausgabe (was der Benutzer sieht):
+"Sehr geehrter Hans Müller,
+
+im Auftrag von EventTech GmbH freuen wir uns, Ihnen
+folgendes Angebot zu unterbreiten:
+
+12× ETC Source Four LED S3 – 3 Tage – €45/Tag = €1.620
+zzgl. 19% MwSt: €307,80
+Gesamtbetrag: €1.927,80 brutto
+
+Lieferadresse: Berliner Str. 42, 90513 Zirndorf
+Zahlung per SEPA auf DE89 3704 0044 0532 0130 00..."
+```
+
+### I6.3 Erkennungsregeln: Was wird anonymisiert?
+
+Der AnonymizationService erkennt und anonymisiert folgende Datentypen automatisch:
+
+```
+┌─────────────────────┬──────────────┬──────────────────────────────────┐
+│ Datentyp            │ Platzhalter  │ Erkennungsmethode                │
+├─────────────────────┼──────────────┼──────────────────────────────────┤
+│ Personennamen       │ [PERSON_N]   │ DB-Abgleich + NER               │
+│ Firmennamen         │ [FIRMA_N]    │ DB-Abgleich (clients.name)      │
+│ Straßenadressen     │ [ADRESSE_N]  │ DB-Abgleich + Regex (Str./Weg)  │
+│ PLZ + Ort           │ [ORT_N]      │ Regex (\d{5}\s+\w+)            │
+│ E-Mail-Adressen     │ [EMAIL_N]    │ Regex (RFC 5322 Pattern)        │
+│ Telefonnummern      │ [TELEFON_N]  │ Regex (DE/AT/CH Formate)        │
+│ IBAN                │ [IBAN_N]     │ Regex (DE\d{2}\s?\d{4}...)      │
+│ BIC/SWIFT           │ [BIC_N]      │ Regex (8-11 alphanumerisch)     │
+│ Steuernummer        │ [STEUER_N]   │ Regex (DE\d{9}, \d{2,3}/\d{3}) │
+│ USt-IdNr.           │ [USTID_N]    │ Regex (DE\d{9})                 │
+│ Geburtsdaten        │ [GEBDAT_N]   │ Regex + Kontextanalyse          │
+│ Personalausweis-Nr. │ [AUSWEIS_N]  │ Regex (DE-Ausweis-Format)       │
+│ KFZ-Kennzeichen     │ [KFZ_N]      │ Regex (DE-Kennzeichen)          │
+│ Kontonummern        │ [KONTO_N]    │ Regex (5-10 Ziffern im Kontext) │
+│ IP-Adressen         │ [IP_N]       │ Regex (IPv4/IPv6)               │
+│ Seriennummern       │ [SERIE_N]    │ Kontextbasiert (nach "SN:", etc)│
+└─────────────────────┴──────────────┴──────────────────────────────────┘
+```
+
+**Datenbankabgleich** ist die zuverlässigste Methode: Der Service gleicht den Prompt-Text gegen die Kundendatenbank (clients, contacts), Mitarbeiterdatenbank (users) und Projektdaten (projects mit Adressen) ab. Jeder gefundene Name, jede Adresse, jede E-Mail wird ersetzt. Das ist besonders effektiv, weil MyRMS alle relevanten Personen und Firmen bereits kennt.
+
+**Regex-Patterns** fangen strukturierte Daten ab, die ein klares Format haben (IBAN, E-Mail, Telefon). Diese funktionieren unabhängig davon, ob die Person in der Datenbank bekannt ist.
+
+**Named Entity Recognition (NER)** als dritte Schicht erkennt Personennamen und Firmennamen auch dann, wenn sie nicht in der Datenbank stehen (z.B. bei neuen Kontakten, die noch nicht erfasst wurden). Dafür wird entweder eine leichtgewichtige PHP-NER-Library genutzt oder – bei aktiviertem Ollama – ein lokales NER-Modell, das die Erkennung komplett offline durchführt.
+
+### I6.4 Anonymisierungs-Stufen (konfigurierbar)
+
+Der Administrator kann in den Settings die Anonymisierungs-Intensität anpassen:
+
+```
+┌─ Einstellungen → KI → Datenschutz & Anonymisierung ─────┐
+│                                                           │
+│  ─── Anonymisierungs-Modus ──────────────────────────    │
+│                                                           │
+│  ◉ Strikt (Empfohlen)                                    │
+│    ALLE personenbezogenen Daten werden anonymisiert.      │
+│    Inklusive: Namen, Adressen, E-Mails, Telefon, IBAN,  │
+│    Steuernummern, IPs, Geburtsdaten.                     │
+│    → Kein AVV mit Provider erforderlich                   │
+│                                                           │
+│  ○ Standard                                               │
+│    Finanzdaten (IBAN, Steuernr., Konten) werden           │
+│    anonymisiert. Namen und Kontaktdaten werden            │
+│    durchgelassen wenn AVV vorliegt.                       │
+│    → AVV mit Provider erforderlich                        │
+│                                                           │
+│  ○ Minimal (nur mit Ollama empfohlen)                     │
+│    Nur IBAN, Kreditkarten und Steuer-IDs werden           │
+│    anonymisiert. Alle anderen Daten werden durchgelassen. │
+│    → Nur für lokale Provider ohne Cloud-Übertragung       │
+│                                                           │
+│  ○ Aus (nur Ollama/lokale Provider)                       │
+│    Keine Anonymisierung. Alle Daten gehen unverändert     │
+│    an den Provider. NUR bei rein lokaler Verarbeitung     │
+│    (Ollama) verfügbar – bei Cloud-Providern gesperrt.    │
+│    ⚠️ Cloud-Provider bei Modus "Aus" automatisch blockiert│
+│                                                           │
+│  ─── Erweiterte Einstellungen ───────────────────────    │
+│                                                           │
+│  ☑ Projektnamen anonymisieren (intern/vertraulich)       │
+│  ☐ Asset-Seriennummern anonymisieren                     │
+│  ☑ Mitarbeiter-Namen anonymisieren                       │
+│  ☑ Vertragsnummern anonymisieren                         │
+│  ☐ Rechnungsnummern anonymisieren                        │
+│                                                           │
+│  ─── Eigene Anonymisierungs-Regeln ──────────────────    │
+│                                                           │
+│  [+ Neue Regel hinzufügen]                               │
+│  ┌────────────────────────┬────────────┬────────────────┐│
+│  │ Pattern/Begriff        │ Platzhalter│ Aktion         ││
+│  ├────────────────────────┼────────────┼────────────────┤│
+│  │ "Projekt Geheim-X"     │ [PROJEKT_1]│ [✏️] [🗑]     ││
+│  │ "intern: *"            │ [INTERN_N] │ [✏️] [🗑]     ││
+│  └────────────────────────┴────────────┴────────────────┘│
+│                                                           │
+│  ─── Provider-spezifische Regeln ────────────────────    │
+│                                                           │
+│  Pro Provider überschreiben:                              │
+│  • OpenAI:    [Strikt ▼]  AVV: [✅ hochgeladen]         │
+│  • Claude:    [Strikt ▼]  AVV: [✅ hochgeladen]         │
+│  • Gemini:    [Strikt ▼]  AVV: [✅ Google Cloud DPA]    │
+│  • Mistral:   [Standard▼] AVV: [✅ EU-Anbieter]         │
+│  • Ollama:    [Aus     ▼] AVV: [─  Lokal, kein AVV nötig]│
+│                                                           │
+│  [Änderungen speichern]                                   │
+│                                                           │
+└───────────────────────────────────────────────────────────┘
+```
+
+### I6.5 Technische Implementierung: AnonymizationService
+
+```php
+<?php
+namespace App\Services\AI;
+
+class AnonymizationService
+{
+    private array $replacementMap = [];
+    private array $counters = [];
+
+    /**
+     * Anonymisiert alle PII im Text und gibt den anonymisierten Text zurück.
+     * Die Ersetzungs-Map wird intern gehalten für spätere De-Anonymisierung.
+     */
+    public function anonymize(string $text, string $mode = 'strict'): string
+    {
+        $this->replacementMap = [];
+        $this->counters = [];
+
+        // 1. DB-Abgleich: Bekannte Kunden, Kontakte, Mitarbeiter
+        $text = $this->replaceKnownEntities($text);
+
+        // 2. Regex: Strukturierte Daten (IBAN, E-Mail, Telefon, etc.)
+        $text = $this->replaceByRegex($text, $mode);
+
+        // 3. NER: Unbekannte Personennamen (Fallback)
+        if ($mode === 'strict') {
+            $text = $this->replaceByNER($text);
+        }
+
+        return $text;
+    }
+
+    /**
+     * Ersetzt Platzhalter durch Originaldaten in der KI-Antwort.
+     */
+    public function deAnonymize(string $text): string
+    {
+        foreach ($this->replacementMap as $placeholder => $original) {
+            $text = str_replace($placeholder, $original, $text);
+        }
+        return $text;
+    }
+
+    /**
+     * Gibt die Ersetzungs-Map zurück (für Audit-Logging).
+     * ACHTUNG: Nur Platzhalter-Keys loggen, nie die Originalwerte!
+     */
+    public function getRedactedAuditLog(): array
+    {
+        return array_map(
+            fn($orig) => '[REDACTED:' . mb_strlen($orig) . ' chars]',
+            $this->replacementMap
+        );
+    }
+
+    private function addReplacement(string $type, string $original): string
+    {
+        $counter = ($this->counters[$type] ?? 0) + 1;
+        $this->counters[$type] = $counter;
+        $placeholder = "[{$type}_{$counter}]";
+        $this->replacementMap[$placeholder] = $original;
+        return $placeholder;
+    }
+
+    private function replaceKnownEntities(string $text): string
+    {
+        // Alle Kundennamen aus DB laden (gecacht)
+        $clients = $this->db->get('clients', null, ['clients_name', 'clients_email']);
+        foreach ($clients as $client) {
+            if (str_contains($text, $client['clients_name'])) {
+                $placeholder = $this->addReplacement('FIRMA', $client['clients_name']);
+                $text = str_replace($client['clients_name'], $placeholder, $text);
+            }
+        }
+
+        // Kontaktpersonen
+        $contacts = $this->db->get('clientContacts', null,
+            ['contacts_firstName', 'contacts_lastName', 'contacts_email', 'contacts_phone']);
+        foreach ($contacts as $contact) {
+            $fullName = $contact['contacts_firstName'] . ' ' . $contact['contacts_lastName'];
+            if (str_contains($text, $fullName)) {
+                $placeholder = $this->addReplacement('PERSON', $fullName);
+                $text = str_replace($fullName, $placeholder, $text);
+            }
+        }
+
+        return $text;
+    }
+
+    private function replaceByRegex(string $text, string $mode): string
+    {
+        $patterns = [
+            // IBAN (immer, in allen Modi)
+            '/\b[A-Z]{2}\d{2}\s?\d{4}\s?\d{4}\s?\d{4}\s?\d{4}\s?\d{0,2}\b/'
+                => 'IBAN',
+            // E-Mail
+            '/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/'
+                => 'EMAIL',
+            // Telefon (DE-Formate)
+            '/\b(?:\+49|0049|0)\s?[\d\s\-\/]{6,14}\b/'
+                => 'TELEFON',
+            // USt-IdNr
+            '/\bDE\s?\d{9}\b/'
+                => 'USTID',
+            // Steuernummer
+            '/\b\d{2,3}\/\d{3}\/\d{4,5}\b/'
+                => 'STEUER',
+        ];
+
+        if ($mode === 'strict') {
+            // Zusätzlich in Strict-Modus
+            $patterns['/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/'] = 'IP';
+            $patterns['/\b\d{2}\.\d{2}\.\d{4}\b/'] = 'DATUM'; // Geburtsdaten
+        }
+
+        foreach ($patterns as $pattern => $type) {
+            $text = preg_replace_callback($pattern, function($match) use ($type) {
+                return $this->addReplacement($type, $match[0]);
+            }, $text);
+        }
+
+        return $text;
+    }
+}
+```
+
+### I6.6 Anonymisierung im KI-Request-Flow (Integration)
+
+Die Anonymisierung ist nahtlos in den bestehenden KI-Flow integriert. Der `AiProviderRegistry`-Aufruf wird durch eine Wrapper-Methode ergänzt, die automatisch anonymisiert und de-anonymisiert:
+
+```php
+class AiRequestHandler
+{
+    public function processRequest(
+        string $taskType,
+        string $prompt,
+        array $context = []
+    ): string {
+        // 1. Anonymisierungs-Modus laden
+        $mode = $this->config->get('ai.anonymization_mode', 'strict');
+        $provider = $this->getProviderForTask($taskType);
+
+        // 2. Bei lokalem Provider (Ollama) und Modus "Aus": Skip
+        if ($mode === 'off' && $provider->isLocal()) {
+            return $provider->chatCompletion($prompt);
+        }
+
+        // 3. Cloud-Provider: IMMER anonymisieren (auch bei Modus "Standard")
+        if (!$provider->isLocal()) {
+            $mode = max($mode, 'standard'); // Mindestens Standard bei Cloud
+        }
+
+        // 4. Anonymisieren
+        $anonymizer = new AnonymizationService($this->db);
+        $anonPrompt = $anonymizer->anonymize($prompt, $mode);
+
+        // 5. An KI senden
+        $anonResponse = $provider->chatCompletion($anonPrompt);
+
+        // 6. De-Anonymisieren
+        $response = $anonymizer->deAnonymize($anonResponse);
+
+        // 7. Audit-Log (nur Platzhalter, nie Originaldaten)
+        $this->auditLog->log('ai_request', [
+            'task' => $taskType,
+            'provider' => $provider->getProviderName(),
+            'anonymization_mode' => $mode,
+            'replacements' => $anonymizer->getRedactedAuditLog(),
+            'tokens_in' => $provider->getLastTokenCount('input'),
+            'tokens_out' => $provider->getLastTokenCount('output'),
+        ]);
+
+        return $response;
+    }
+}
+```
+
+### I6.7 Sicherheitsgarantien
+
+Die Anonymisierungs-Pipeline bietet mehrere Sicherheitsgarantien:
+
+**Kein Bypass möglich bei Cloud-Providern:** Wenn ein Cloud-Provider konfiguriert ist, wird die Anonymisierung erzwungen – auch wenn der Admin den Modus auf „Aus" stellt, wird bei Cloud-Providern automatisch mindestens „Standard" aktiviert. Der Modus „Aus" ist hardcoded nur für Provider verfügbar, deren `isLocal()`-Methode `true` zurückgibt.
+
+**Ersetzungs-Map nur im RAM:** Die Zuordnung Platzhalter → Originaldaten wird ausschließlich im Arbeitsspeicher gehalten und nach Abschluss des Requests sofort verworfen. Sie wird nie in die Datenbank geschrieben, nie geloggt und nie an externe Services übermittelt. Im Audit-Log wird nur protokolliert, dass z.B. „[PERSON_1]" ersetzt wurde und wie viele Zeichen der Originalwert hatte, aber nie der Wert selbst.
+
+**Double-Check bei sensiblen Feldern:** IBAN, Steuernummern und Kreditkartennummern werden zusätzlich durch einen zweiten Regex-Pass validiert, um sicherzustellen, dass sie nicht durch eine ungewöhnliche Formatierung durchgerutscht sind.
+
+**Kontextuell intelligente Ersetzung:** Der Service erkennt, ob ein Name als Anrede, als Firmenname oder als Produktbezeichnung verwendet wird. „Müller" als Kundenname wird anonymisiert, aber „Müller Kransysteme" als bekannte Herstellerbezeichnung wird als Asset-Marke erkannt und nicht anonymisiert – vorausgesetzt, der Hersteller ist im System als Manufacturer registriert.
+
+### I6.8 Auftragsverarbeitungsvertrag (AVV) Management
+
+Für jeden Cloud-Provider zeigt die UI an, ob ein AVV (Data Processing Agreement) vorliegt. Der Admin kann das AVV-Dokument hochladen und mit dem Provider verknüpfen. Links zu den Standard-AVVs der großen Provider sind hinterlegt:
+
+- **Anthropic (Claude):** DPA abrufbar unter console.anthropic.com → Legal → Data Processing Addendum
+- **OpenAI:** DPA unter platform.openai.com → Settings → Data Processing Addendum
+- **Google (Gemini):** Cloud DPA automatisch Teil der Google Cloud Terms of Service
+- **Mistral:** EU-basiert, DSGVO-konform by default, DPA unter console.mistral.ai → Legal
+
+Wenn für einen Provider kein AVV hinterlegt ist und der Anonymisierungs-Modus nicht auf „Strikt" steht, zeigt die UI eine Warnung: „⚠️ Kein AVV für OpenAI hinterlegt. Anonymisierung wird auf ‚Strikt' erzwungen." Der Provider wird automatisch auf Strikt-Modus geschaltet, bis ein AVV hochgeladen wird.
+
+### I6.9 Audit-Trail für KI-Entscheidungen
+
+Jede KI-Aktion wird im Audit-Log protokolliert mit folgenden Informationen: Welcher Benutzer hat die Anfrage ausgelöst, an welchen Provider und welches Modell wurde sie gesendet, welcher Anonymisierungs-Modus war aktiv, wie viele Felder wurden anonymisiert (z.B. „3 Personen, 2 E-Mails, 1 IBAN ersetzt"), was war die Antwort (anonymisiert im Log), und wurde die Antwort vom Benutzer akzeptiert oder abgelehnt.
+
+Der Audit-Trail ist einsehbar unter Admin → System → Audit-Log → Filter: „KI-Aktionen". Jeder Eintrag zeigt auf einen Blick: Zeitpunkt, Benutzer, Task-Typ, Provider, Anonymisierungs-Status und Ergebnis. Bei DSGVO-Anfragen von Betroffenen (Art. 15 Auskunftsrecht) kann der Admin filtern: „Zeige alle KI-Verarbeitungen, die Daten von Kunde X betreffen" – das System findet alle Requests, in denen Daten dieses Kunden anonymisiert wurden, und listet auf, was wann an welchen Provider gesendet wurde (nur die anonymisierte Version, nie die Originaldaten).
+
+### I6.10 Transparenz für Endbenutzer
+
+In der UI wird der Anonymisierungsstatus für den Benutzer transparent angezeigt. Neben jeder KI-Ausgabe erscheint ein kleines Schloss-Icon mit Tooltip:
+
+```
+🔒 Datenschutz: 5 personenbezogene Daten wurden vor der
+KI-Verarbeitung anonymisiert (2 Namen, 1 Adresse,
+1 E-Mail, 1 IBAN). Kein Provider hat Zugang zu
+Ihren Kundendaten erhalten.
+```
+
+Dies schafft Vertrauen beim Benutzer und demonstriert die DSGVO-Konformität des Systems direkt in der täglichen Arbeit.
 
 ---
 
