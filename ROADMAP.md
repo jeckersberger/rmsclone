@@ -3417,7 +3417,7 @@ Diese umfassende Roadmap bietet einen strategischen Weg für MyRMS, sich von ein
 
 ---
 
-**Document Version:** 3.0 (Expanded + UI Design)
+**Document Version:** 3.1 (Expanded + UI Design + Multi-KI-Provider)
 **Last Updated:** 18. März 2026
 **Next Review:** Wöchentlich während Phase 1 (Montag 9:00 Uhr)
 **Owner:** Technical Steering Committee
@@ -3742,4 +3742,565 @@ Dies komplettiert die comprehensive UI-Design Spezifikation für MyRMS mit allen
 ---
 
 **Document Version:** 3.0
+**Last Updated:** March 18, 2026
+
+---
+
+# Part I: Multi-KI-Modell-Integration und API-Anbindung
+
+## Überblick und Strategie
+
+MyRMS setzt bereits auf KI-Funktionen (E-Mail-Entwürfe, Schadensbericht-Zusammenfassungen, AI Action Queue via Claude API). Dieses Kapitel erweitert die KI-Architektur grundlegend: Statt fest an einen einzigen Anbieter gebunden zu sein, wird ein **Provider-agnostisches Adapter-System** implementiert, das es Administratoren erlaubt, verschiedene KI-Modelle über die Oberfläche auszuwählen, zu konfigurieren und für unterschiedliche Aufgaben einzusetzen. Das Ziel ist maximale Flexibilität: Der Benutzer entscheidet selbst, ob er Cloud-APIs (OpenAI, Anthropic Claude, Google Gemini, Mistral) nutzt, oder ob er aus Datenschutzgründen ein lokal gehostetes Modell via Ollama oder vLLM einsetzt – alles konfigurierbar über die Settings-UI, ohne eine einzige Zeile Code anfassen zu müssen.
+
+Dieses Design folgt dem **Provider Strategy Pattern** – einer Kombination aus Strategy-Pattern (jeder Provider implementiert dasselbe Interface) und Adapter-Pattern (Provider übersetzen externe API-Formate in interne Contracts). In PHP existieren bereits ausgereifte Bibliotheken dafür: **php-llm/llm-chain** bietet eine universelle Abstraktionsschicht für LLM-basierte Features, **Neuron AI** liefert ein komplettes Agent-Framework mit Tool-Support und Orchestrierung, und **Prism** bietet eine saubere Abstraction Layer über verschiedene LLM-Provider. MyRMS nutzt ein eigenes leichtgewichtiges Adapter-System, das auf diesen Konzepten aufbaut, aber spezifisch auf die Anforderungen eines Rental Management Systems zugeschnitten ist.
+
+---
+
+## I1. Unterstützte KI-Provider und Modelle
+
+### I1.1 Cloud-basierte Provider
+
+#### OpenAI (GPT-Modelle)
+
+OpenAI ist der bekannteste KI-Anbieter und bietet eine breite Palette an Modellen für unterschiedliche Anforderungen. Die aktuelle Modellreihe umfasst GPT-4o als Flaggschiff für komplexe Aufgaben wie Vertragsanalyse, Angebotsoptimierung und intelligente Berichtserstellung, GPT-4o-mini als kosteneffiziente Alternative für alltägliche Aufgaben wie E-Mail-Entwürfe und einfache Zusammenfassungen, sowie die o1/o3-Reasoning-Modelle für besonders anspruchsvolle analytische Aufgaben wie Finanzprognosen und Anomalieerkennung. Die Preisgestaltung folgt einem Token-basierten Modell: GPT-4o liegt bei ca. $2.50/$10 pro Million Token (Input/Output), GPT-4o-mini bei ca. $0.15/$0.60, was es zu einer sehr wirtschaftlichen Wahl für Massenaufgaben macht.
+
+**API-Key beschaffen – Schritt für Schritt:**
+1. Besuche **platform.openai.com** (das ist die API-Plattform, nicht chatgpt.com)
+2. Klicke auf „Sign up" und erstelle einen Account mit E-Mail oder Google/Microsoft SSO
+3. Nach der Registrierung gehe zu **Settings → Billing** und hinterlege eine Kreditkarte (Prepaid möglich)
+4. Navigiere zu **API Keys** im linken Menü (oder direkt: platform.openai.com/api-keys)
+5. Klicke „Create new secret key", vergib einen Namen (z.B. „MyRMS Production")
+6. **Wichtig:** Der Key wird nur einmal angezeigt – sofort kopieren und sicher speichern
+7. Der Key beginnt mit `sk-` und wird in MyRMS unter Einstellungen → KI-Konfiguration → OpenAI eingegeben
+8. Optional: Setze ein monatliches Spending Limit unter Settings → Limits (z.B. $50/Monat)
+
+**Empfohlene Nutzung in MyRMS:** GPT-4o-mini als Standard für E-Mail-Drafts, Zusammenfassungen und Chat-Antworten (kostengünstig bei hoher Qualität). GPT-4o für komplexe Aufgaben wie Vertragsanalyse, Preisoptimierung und detaillierte Berichte. Die o-Serie für Predictive Analytics und Demand Forecasting wo präzise Reasoning wichtig ist.
+
+#### Anthropic Claude
+
+Anthropic Claude ist bekannt für besonders sichere, zuverlässige und kontexttreue Antworten und ist derzeit der primäre Provider in MyRMS. Die Modellreihe umfasst Claude Opus (das leistungsstärkste Modell für komplexe Analysen, ca. $15/$75 pro MTok), Claude Sonnet (der beste Allrounder mit exzellentem Preis-Leistungs-Verhältnis, ca. $3/$15 pro MTok) und Claude Haiku (das schnellste und günstigste Modell für einfache Aufgaben, ca. $0.25/$1.25 pro MTok). Claude hat ein besonders großes Kontextfenster (bis 200K Tokens), was ideal für die Verarbeitung langer Dokumente wie Verträge, Lieferscheine oder umfangreiche Schadensberichte ist.
+
+**API-Key beschaffen – Schritt für Schritt:**
+1. Besuche **console.anthropic.com** und erstelle einen Account
+2. Verifiziere deine E-Mail-Adresse
+3. Gehe zu **Settings → Billing** und hinterlege eine Zahlungsmethode (Kreditkarte)
+4. Neue Accounts erhalten häufig ein kleines Startguthaben (ca. $5) zum Testen
+5. Navigiere zu **API Keys** im Dashboard
+6. Klicke „Create Key", vergib einen beschreibenden Namen (z.B. „MyRMS-Prod-2026")
+7. **Wichtig:** Der Key wird nur einmal angezeigt – sofort sicher abspeichern
+8. Der Key beginnt mit `sk-ant-` und wird in MyRMS unter Einstellungen → KI-Konfiguration → Claude eingegeben
+9. Optional: Erstelle separate Keys für Development und Production mit unterschiedlichen Rate Limits
+
+**Empfohlene Nutzung in MyRMS:** Claude Haiku als Standard für schnelle Aufgaben (E-Mail-Entwürfe, kurze Zusammenfassungen, Chat-Antworten). Claude Sonnet für mittelschwere Aufgaben (Schadensberichte, Angebotsanalyse, Kundenkorrespondenz). Claude Opus für Premium-Features (Vertragsanalyse, umfassende Finanzberichte, komplexe Datenanalysen).
+
+#### Google Gemini
+
+Google Gemini bietet eine wettbewerbsfähige Alternative mit besonders starker multimodaler Fähigkeit (Text + Bild + Audio + Video). Die Modellreihe umfasst Gemini 2.5 Pro (das leistungsstärkste Modell mit 1M Token Kontext, ideal für umfangreiche Dokumentanalyse), Gemini 2.5 Flash (schnell und kostengünstig für Standardaufgaben), sowie Gemini 2.0 Flash Lite (extrem günstig für einfache Aufgaben). Ein besonderer Vorteil von Gemini ist die kostenlose Stufe: Gemini bietet großzügige Free-Tier-Limits, die für kleine Instanzen oder Testumgebungen ausreichen können.
+
+**API-Key beschaffen – Schritt für Schritt:**
+1. Besuche **aistudio.google.com** (Google AI Studio)
+2. Melde dich mit deinem Google-Account an
+3. Klicke auf „Get API key" im linken Menü
+4. Wähle „Create API key in new project" oder wähle ein bestehendes Google Cloud Project
+5. Der Key wird sofort generiert und angezeigt – kopieren und sicher speichern
+6. Der Key beginnt mit `AIza` und wird in MyRMS unter Einstellungen → KI-Konfiguration → Gemini eingegeben
+7. **Kostenlos starten:** Die Free Tier erlaubt bis zu 15 Requests/Minute und 1 Million Tokens/Tag für Flash-Modelle
+8. Für höhere Limits: Aktiviere Billing im Google Cloud Console (console.cloud.google.com)
+
+**Empfohlene Nutzung in MyRMS:** Gemini Flash als kosteneffiziente Alternative für Standard-KI-Aufgaben. Gemini Pro für multimodale Aufgaben wie OCR von Rechnungen/Lieferscheinen (Foto → strukturierte Daten), Schadensdokumentation mit Bildanalyse und Analyse von Equipment-Fotos für Zustandsbewertung.
+
+#### Mistral AI
+
+Mistral AI ist ein europäischer KI-Anbieter (Frankreich) und bietet besonders datenschutzfreundliche Optionen, die für den deutschen Markt und DSGVO-Konformität relevant sein können. Die Modellreihe umfasst Mistral Large (das leistungsstärkste Modell, vergleichbar mit GPT-4o), Mistral Small (hervorragendes Preis-Leistungs-Verhältnis bei ca. $0.20/$0.60 pro MTok – einer der günstigsten Anbieter überhaupt), und Mistral Nemo (Open-Source, extrem günstig bei $0.02/$0.02). Ein wichtiger Vorteil: Als europäisches Unternehmen unterliegt Mistral direkt der EU-Datenschutzverordnung, was die DSGVO-Konformität vereinfacht.
+
+**API-Key beschaffen – Schritt für Schritt:**
+1. Besuche **console.mistral.ai** und erstelle einen Account
+2. Aktiviere Billing: Wähle einen Plan (Free Tier verfügbar mit Limits, oder Pay-as-you-go)
+3. Hinterlege eine Zahlungsmethode zur Aktivierung
+4. Klicke im linken Menü auf **API keys**
+5. Klicke „Create new key", vergib einen Namen und ein Ablaufdatum
+6. **Wichtig:** Key wird nur einmal angezeigt – sofort sicher abspeichern
+7. Der Key wird in MyRMS unter Einstellungen → KI-Konfiguration → Mistral eingegeben
+
+**Empfohlene Nutzung in MyRMS:** Mistral Small als extrem kostengünstige Option für hohe Volumina (z.B. automatische Kategorisierung aller eingehenden E-Mails, Bulk-Beschreibungen für Asset-Katalog). Mistral Large als europäische Premium-Alternative wenn DSGVO-Konformität mit EU-Hosting Priorität hat.
+
+#### Weitere Cloud-Provider (erweiterbar)
+
+Die Adapter-Architektur erlaubt einfache Erweiterung um zusätzliche Provider. Potenzielle Kandidaten sind: **Cohere** (spezialisiert auf Enterprise-Suche und Retrieval Augmented Generation, ideal für Dokumentensuche), **DeepSeek** (chinesischer Anbieter mit sehr günstigen Preisen, ab $0.07/MTok, aber Datenschutzbedenken bei europäischem Einsatz), und **xAI Grok** (Elon Musks Modell mit Echtzeit-Zugang zu aktuellen Informationen).
+
+### I1.2 Lokal gehostete Modelle (Self-Hosted)
+
+#### Ollama – Lokale KI ohne Cloud
+
+Ollama ist die wichtigste Option für Unternehmen, die keine Daten an externe Cloud-Dienste senden wollen oder können. Ollama funktioniert wie Docker, aber für KI-Modelle: Man kann Modelle mit einem einzigen Befehl herunterladen und lokal ausführen. Ollama verwaltet automatisch das Herunterladen der Modellgewichte, das Speichermanagement und das Serving über eine lokale REST-API. Der entscheidende Vorteil: **Alle Daten bleiben auf dem eigenen Server** – es findet keinerlei Datenübertragung an Dritte statt. Das vereinfacht die DSGVO-Konformität enorm, da keine Auftragsverarbeitungsverträge (AVV) mit Cloud-Anbietern geschlossen werden müssen und kein Risiko besteht, dass ein Cloud-Provider versehentlich Daten loggt oder nutzt. Auch für HIPAA und SOC 2 Compliance ist Self-Hosting ideal.
+
+Die lokale REST-API ist kompatibel mit dem OpenAI-API-Format. Das bedeutet: Jede Anwendung, die mit OpenAI kommunizieren kann, kann ohne Code-Änderungen auf Ollama umgestellt werden – man ändert lediglich die Base-URL von `api.openai.com` auf `localhost:11434` und entfernt die Authentifizierung. Für MyRMS bedeutet das: Der gleiche Adapter, der OpenAI bedient, kann mit minimaler Konfigurationsänderung auf Ollama umgestellt werden.
+
+**Einrichtung – Schritt für Schritt:**
+1. **Installation:** `curl -fsSL https://ollama.com/install.sh | sh` (Linux/Mac) oder Installer von ollama.com (Windows)
+2. **Modell herunterladen:** `ollama pull llama3.1:8b` (8B-Modell, ca. 4.7 GB, läuft auf den meisten modernen PCs)
+3. **Server starten:** `ollama serve` (läuft standardmäßig auf `http://localhost:11434`)
+4. **Testen:** `curl http://localhost:11434/api/generate -d '{"model":"llama3.1:8b","prompt":"Hallo"}'`
+5. In MyRMS: Einstellungen → KI-Konfiguration → Provider „Ollama (Lokal)" wählen
+6. Server-URL eingeben: `http://localhost:11434` (oder die IP des Servers im lokalen Netzwerk)
+7. Modell auswählen aus der Liste verfügbarer Modelle (MyRMS fragt automatisch die installierte Modell-Liste ab)
+
+**Hardware-Anforderungen:**
+- 7B-Modelle (z.B. Llama 3.1 8B, Mistral 7B): mind. 8 GB RAM, besser 16 GB
+- 13B-Modelle: mind. 16 GB RAM
+- 70B-Modelle (beste Qualität): mind. 64 GB RAM oder GPU mit 48 GB VRAM
+- Empfehlung für MyRMS auf Synology NAS: Llama 3.1 8B oder Mistral 7B (guter Kompromiss aus Qualität und Ressourcen)
+
+**Empfohlene Modelle für MyRMS:**
+- **Llama 3.1 8B:** Bester Allrounder für lokales Hosting, gut für deutsche Sprache
+- **Mistral 7B:** Sehr effizient, gute Qualität bei niedrigem Ressourcenverbrauch
+- **Gemma 2 9B:** Googles Open-Source-Modell, stark bei Instruktionsbefolgung
+- **Phi-3 Mini:** Microsofts kompaktes Modell, ideal für schwache Hardware
+- **DeepSeek Coder 7B:** Spezialisiert auf Code-Generierung (z.B. für Report-Queries)
+
+#### vLLM – Produktions-Hosting für lokale Modelle
+
+Für größere Installationen mit höheren Anforderungen an Durchsatz und Zuverlässigkeit bietet vLLM eine professionelle Alternative zu Ollama. vLLM ist optimiert für Production-Workloads mit Features wie Continuous Batching (mehrere Anfragen gleichzeitig verarbeiten), PagedAttention (effizientere GPU-Speichernutzung) und OpenAI-kompatibler API. Die Empfehlung lautet: Ollama für Entwicklung und kleine Instanzen verwenden, für Production-Umgebungen mit hohem Durchsatz auf vLLM migrieren.
+
+---
+
+## I2. Architektur: Provider-agnostisches Adapter-System
+
+### I2.1 Interface-Design (LlmProviderInterface)
+
+Das Herzstück der Multi-KI-Architektur ist ein PHP-Interface, das alle Provider implementieren müssen. Dieses Interface definiert eine einheitliche API, unabhängig davon welcher Provider dahinter steht:
+
+```php
+<?php
+namespace App\Services\AI;
+
+interface LlmProviderInterface
+{
+    /**
+     * Sendet einen Chat-Completion-Request an den Provider.
+     * @param array $messages Array von ['role' => 'user|assistant|system', 'content' => '...']
+     * @param array $options Optionale Parameter (temperature, max_tokens, etc.)
+     * @return LlmResponse Standardisierte Antwort
+     */
+    public function chatCompletion(array $messages, array $options = []): LlmResponse;
+
+    /**
+     * Prüft ob der Provider konfiguriert und erreichbar ist.
+     * @return bool True wenn der Provider funktionsfähig ist
+     */
+    public function isAvailable(): bool;
+
+    /**
+     * Gibt die Liste der verfügbaren Modelle zurück.
+     * @return array Liste der Modell-IDs und Namen
+     */
+    public function listModels(): array;
+
+    /**
+     * Gibt den Namen des Providers zurück (für UI-Anzeige).
+     */
+    public function getProviderName(): string;
+
+    /**
+     * Gibt die geschätzten Kosten pro 1K Tokens zurück.
+     * @return array ['input' => float, 'output' => float, 'currency' => 'USD']
+     */
+    public function getEstimatedCost(): array;
+
+    /**
+     * Unterstützt der Provider multimodale Eingaben (Bilder)?
+     */
+    public function supportsVision(): bool;
+
+    /**
+     * Unterstützt der Provider Streaming-Responses?
+     */
+    public function supportsStreaming(): bool;
+}
+```
+
+### I2.2 Adapter-Implementierungen
+
+Jeder Provider erhält einen eigenen Adapter, der das Interface implementiert und die spezifische API-Kommunikation kapselt. Beispiel für den OpenAI-Adapter:
+
+```php
+<?php
+namespace App\Services\AI\Providers;
+
+class OpenAiAdapter implements LlmProviderInterface
+{
+    private string $apiKey;
+    private string $model;
+    private string $baseUrl = 'https://api.openai.com/v1';
+
+    public function __construct(string $apiKey, string $model = 'gpt-4o-mini')
+    {
+        $this->apiKey = $apiKey;
+        $this->model = $model;
+    }
+
+    public function chatCompletion(array $messages, array $options = []): LlmResponse
+    {
+        $payload = [
+            'model' => $this->model,
+            'messages' => $messages,
+            'temperature' => $options['temperature'] ?? 0.7,
+            'max_tokens' => $options['max_tokens'] ?? 2048,
+        ];
+
+        $response = $this->httpPost('/chat/completions', $payload);
+        return LlmResponse::fromOpenAiFormat($response);
+    }
+
+    // ... weitere Methoden
+}
+```
+
+Der entscheidende Vorteil dieser Architektur: Der Ollama-Adapter kann die gleiche Codebase wie der OpenAI-Adapter nutzen, da Ollama eine OpenAI-kompatible API bereitstellt. Man ändert lediglich die Base-URL:
+
+```php
+class OllamaAdapter extends OpenAiAdapter
+{
+    public function __construct(string $serverUrl = 'http://localhost:11434', string $model = 'llama3.1:8b')
+    {
+        parent::__construct('', $model); // Kein API-Key nötig
+        $this->baseUrl = $serverUrl . '/v1';
+    }
+}
+```
+
+### I2.3 Provider-Registry und Factory
+
+Eine Provider-Registry verwaltet alle konfigurierten Provider und ermöglicht die Auswahl über die UI:
+
+```php
+class AiProviderRegistry
+{
+    private array $providers = [];
+
+    public function register(string $name, LlmProviderInterface $provider): void
+    {
+        $this->providers[$name] = $provider;
+    }
+
+    public function get(string $name): LlmProviderInterface
+    {
+        return $this->providers[$name]
+            ?? throw new \InvalidArgumentException("Provider '$name' nicht registriert");
+    }
+
+    public function getDefault(): LlmProviderInterface
+    {
+        $defaultName = Config::get('ai.default_provider', 'claude');
+        return $this->get($defaultName);
+    }
+
+    public function listAvailable(): array
+    {
+        return array_map(fn($p) => [
+            'name' => $p->getProviderName(),
+            'available' => $p->isAvailable(),
+            'models' => $p->listModels(),
+            'cost' => $p->getEstimatedCost(),
+            'vision' => $p->supportsVision(),
+            'streaming' => $p->supportsStreaming(),
+        ], $this->providers);
+    }
+}
+```
+
+### I2.4 Task-basiertes Routing
+
+Verschiedene KI-Aufgaben haben unterschiedliche Anforderungen. MyRMS implementiert ein Task-basiertes Routing, das automatisch den optimalen Provider und das optimale Modell für jede Aufgabe auswählt – konfigurierbar über die Settings-UI:
+
+```
+Task-Routing-Konfiguration (Settings → KI → Task-Routing):
+
+┌────────────────────────────┬──────────────┬─────────────────┬───────────┐
+│ Aufgabe                    │ Provider     │ Modell          │ Priorität │
+├────────────────────────────┼──────────────┼─────────────────┼───────────┤
+│ E-Mail-Entwürfe            │ Claude       │ Haiku           │ Schnell   │
+│ Schadensbericht-Zusammenfassung │ Claude  │ Sonnet          │ Qualität  │
+│ Rechnungs-OCR (Bild → Text)│ Gemini      │ Flash           │ Vision    │
+│ Demand Forecasting         │ OpenAI       │ o1              │ Reasoning │
+│ Chat-Antworten             │ Ollama       │ Llama 3.1 8B    │ Lokal     │
+│ Preisoptimierung           │ OpenAI       │ GPT-4o          │ Qualität  │
+│ Bulk-Beschreibungen        │ Mistral      │ Small           │ Budget    │
+│ Vertragsanalyse            │ Claude       │ Opus            │ Premium   │
+└────────────────────────────┴──────────────┴─────────────────┴───────────┘
+```
+
+### I2.5 Fallback-Mechanismus
+
+Wenn ein Provider nicht erreichbar ist (API-Ausfall, Rate-Limit erreicht, lokaler Server offline), greift automatisch ein Fallback-Mechanismus:
+
+Die Fallback-Kette wird in der Konfiguration definiert (z.B. Claude → OpenAI → Ollama → Fehler-Meldung). Bei einem Fehler loggt das System den Ausfall, versucht den nächsten Provider in der Kette, und benachrichtigt den Admin per Toast-Notification wenn der Primary Provider ausfällt. Der Benutzer merkt idealerweise nichts vom Fallback – die Antwort kommt einfach von einem anderen Modell. Im Admin-Dashboard wird der aktuelle Provider-Status als Health-Widget angezeigt (Grün/Gelb/Rot pro Provider).
+
+---
+
+## I3. Settings-UI für KI-Konfiguration
+
+### I3.1 Haupt-Settings-Seite (Einstellungen → KI-Konfiguration)
+
+Die KI-Konfigurationsseite ist über die Settings-Sidebar unter der Kategorie „Integrationen" erreichbar und gliedert sich in folgende Bereiche:
+
+**Provider-Übersicht (Dashboard-Karte oben):**
+Eine horizontale Karten-Reihe zeigt alle konfigurierten Provider mit Status-Badge (Grün = aktiv, Grau = nicht konfiguriert, Rot = Fehler), dem aktuellen Modell, den geschätzten Kosten pro 1K Tokens, und einem Quick-Test-Button (sendet eine Test-Anfrage und zeigt die Antwortzeit). Der aktuell als Standard gesetzte Provider ist mit einem blauen Stern-Badge markiert.
+
+**Provider-Konfiguration (Tab-basiert):**
+Jeder Provider hat einen eigenen Tab mit den jeweiligen Konfigurationsfeldern:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ KI-Konfiguration                                        │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  [OpenAI] [Claude] [Gemini] [Mistral] [Ollama] [+Mehr] │
+│                                                         │
+│  ┌─ Claude (Anthropic) ──────────────────────────────┐  │
+│  │                                                    │  │
+│  │  API-Key:  [sk-ant-••••••••••••••] [👁] [🔄 Neu]  │  │
+│  │                                                    │  │
+│  │  Modell:   [Claude Sonnet 4.6          ▼]         │  │
+│  │                                                    │  │
+│  │  Temperatur: [0.7] ────●───────── (0.0 - 1.0)    │  │
+│  │                                                    │  │
+│  │  Max Tokens: [2048] (Maximale Antwortlänge)       │  │
+│  │                                                    │  │
+│  │  Status:    ● Verbunden (Antwortzeit: 230ms)      │  │
+│  │                                                    │  │
+│  │  [Verbindung testen]  [Als Standard setzen]       │  │
+│  │                                                    │  │
+│  │  Nutzung diesen Monat: 245K Tokens (≈ €0.73)     │  │
+│  │                                                    │  │
+│  └────────────────────────────────────────────────────┘  │
+│                                                         │
+│  ┌─ Task-Routing ────────────────────────────────────┐  │
+│  │                                                    │  │
+│  │  E-Mail-Entwürfe:      [Claude Haiku         ▼]  │  │
+│  │  Zusammenfassungen:    [Claude Sonnet        ▼]  │  │
+│  │  OCR/Bildanalyse:      [Gemini Flash         ▼]  │  │
+│  │  Chat-Antworten:       [Standard-Provider    ▼]  │  │
+│  │  Analytik/Prognosen:   [OpenAI o1            ▼]  │  │
+│  │  Bulk-Operationen:     [Mistral Small        ▼]  │  │
+│  │                                                    │  │
+│  │  [+ Eigene Regel hinzufügen]                      │  │
+│  └────────────────────────────────────────────────────┘  │
+│                                                         │
+│  ┌─ Fallback-Konfiguration ──────────────────────────┐  │
+│  │                                                    │  │
+│  │  Reihenfolge (Drag-and-Drop):                     │  │
+│  │  1. ≡ Claude (Primary)                            │  │
+│  │  2. ≡ OpenAI (Fallback 1)                        │  │
+│  │  3. ≡ Ollama (Fallback 2)                        │  │
+│  │                                                    │  │
+│  │  ☑ Admin benachrichtigen bei Fallback-Aktivierung │  │
+│  │  ☑ Fallback-Events im Audit-Log protokollieren    │  │
+│  └────────────────────────────────────────────────────┘  │
+│                                                         │
+│  ┌─ Kosten & Limits ─────────────────────────────────┐  │
+│  │                                                    │  │
+│  │  Monatliches Budget:   [€50.00        ]           │  │
+│  │  ☑ KI-Funktionen deaktivieren wenn Budget erreicht│  │
+│  │  ☑ Warnung bei 80% des Budgets                    │  │
+│  │                                                    │  │
+│  │  Nutzungsübersicht:                               │  │
+│  │  ████████░░ 62% (€31.00 / €50.00)                │  │
+│  │                                                    │  │
+│  │  Top-Verbraucher:                                 │  │
+│  │  • E-Mail-Drafts: 145K Tokens (€0.44)            │  │
+│  │  • Schadenberichte: 89K Tokens (€2.67)            │  │
+│  │  • Chat-Antworten: 234K Tokens (€0.70)            │  │
+│  └────────────────────────────────────────────────────┘  │
+│                                                         │
+│  [Änderungen speichern]  [Auf Standard zurücksetzen]    │
+└─────────────────────────────────────────────────────────┘
+```
+
+### I3.2 API-Key Sicherheit
+
+API-Keys werden niemals im Klartext gespeichert. In der Datenbank werden sie mit AES-256-GCM verschlüsselt, wobei der Encryption-Key aus einer Umgebungsvariable (`AI_ENCRYPTION_KEY`) abgeleitet wird. In der UI werden Keys maskiert dargestellt (`sk-ant-••••••••xxxx` – nur die letzten 4 Zeichen sichtbar) mit einem optionalen „Anzeigen"-Toggle (Auge-Icon) für kurzzeitige Ansicht. Beim Rotieren eines Keys (🔄-Button) wird der alte Key sofort invalidiert und ein Hinweis angezeigt, den neuen Key beim Provider zu generieren. Die Key-Eingabe validiert das Format automatisch (z.B. muss ein OpenAI-Key mit `sk-` beginnen, ein Claude-Key mit `sk-ant-`) und zeigt sofort eine Fehlermeldung bei ungültigem Format.
+
+### I3.3 Ollama-spezifische Settings
+
+Für Ollama gibt es zusätzliche Konfigurationsoptionen, da es sich um ein lokal gehostetes System handelt:
+
+```
+┌─ Ollama (Lokal) ─────────────────────────────────────┐
+│                                                       │
+│  Server-URL:    [http://localhost:11434    ]          │
+│                 (oder IP im Netzwerk, z.B. 192.168..) │
+│                                                       │
+│  Status:        ● Server erreichbar                   │
+│                                                       │
+│  Installierte Modelle:                                │
+│  ┌───────────────┬──────────┬─────────┬────────────┐ │
+│  │ Modell        │ Größe    │ Status  │ Aktion     │ │
+│  ├───────────────┼──────────┼─────────┼────────────┤ │
+│  │ llama3.1:8b   │ 4.7 GB   │ ● Bereit│ [Entfernen]│ │
+│  │ mistral:7b    │ 4.1 GB   │ ● Bereit│ [Entfernen]│ │
+│  │ gemma2:9b     │ 5.4 GB   │ ↓ 67%  │ [Abbrechen]│ │
+│  └───────────────┴──────────┴─────────┴────────────┘ │
+│                                                       │
+│  [+ Modell herunterladen ▼]                           │
+│   ├── llama3.1:70b (39 GB) - Beste Qualität          │
+│   ├── phi3:mini (2.3 GB) - Schnellstes               │
+│   ├── deepseek-coder:7b (4 GB) - Code-Spezialist     │
+│   └── [Eigenen Modellnamen eingeben...]               │
+│                                                       │
+│  GPU-Beschleunigung:  [Auto ▼] (CUDA / Metal / CPU)  │
+│  Gleichzeitige Anfragen: [2 ▼] (abhängig von RAM)    │
+│  Keep-Alive: [5 Minuten ▼] (Modell im RAM halten)    │
+│                                                       │
+│  Systemressourcen:                                    │
+│  RAM:  ████████████░░░░ 12.4 / 16.0 GB               │
+│  GPU:  ██████░░░░░░░░░░ 4.2 / 8.0 GB VRAM            │
+│  CPU:  ████░░░░░░░░░░░░ 25%                           │
+│                                                       │
+│  [Verbindung testen] [Server neu starten]             │
+└───────────────────────────────────────────────────────┘
+```
+
+---
+
+## I4. KI-Features und ihre Provider-Zuordnung
+
+### I4.1 Bestehende KI-Features (bereits implementiert)
+
+Diese Features nutzen aktuell die Claude API und werden auf das Multi-Provider-System umgestellt:
+
+**E-Mail-Drafting Service (ClaudeService):** Generiert professionelle E-Mail-Entwürfe basierend auf Kontext (Kunde, Projekt, vorherige Kommunikation). Wird umgestellt auf den Task-Route „email_drafts", standardmäßig Claude Haiku wegen der guten Balance aus Qualität, Geschwindigkeit und Kosten.
+
+**Schadensbericht-Zusammenfassungen:** Fasst detaillierte Schadensberichte in prägnante Zusammenfassungen zusammen, extrahiert Kernpunkte und empfiehlt Maßnahmen. Bleibt bei Claude Sonnet wegen der Notwendigkeit nuancierter Textanalyse.
+
+**AI Action Queue mit Approval-System:** Autonome KI-gesteuerte Aktionen (z.B. „Mahnungs-E-Mail vorschlagen", „Wiedervorlage erstellen") werden in eine Queue gestellt und vom Benutzer bestätigt oder abgelehnt. Jede Aktion zeigt an, welcher Provider/welches Modell sie generiert hat.
+
+### I4.2 Neue KI-Features (durch Multi-Provider ermöglicht)
+
+**Rechnungs-OCR und Dokumentenanalyse:** Eingehende Rechnungen (PDF, Foto) werden automatisch analysiert und die strukturierten Daten (Rechnungsnummer, Betrag, Positionen, USt-ID) extrahiert. Dieses Feature profitiert besonders von Gemini's multimodaler Fähigkeit (Bild-zu-Text) oder Claude's Vision-Fähigkeit. In der UI wird beim Upload eines Dokuments ein „KI-Analyse"-Button angezeigt, der das Dokument an den konfigurierten Vision-Provider sendet und die erkannten Felder in ein Formular einträgt, das der Benutzer überprüfen und bestätigen kann.
+
+**Smart Pricing / Preisvorschläge:** Basierend auf historischen Buchungsdaten, Saison, Nachfrage und Wettbewerbspreisen schlägt die KI optimale Mietpreise vor. Dieses Feature nutzt Reasoning-Modelle (o1/o3 oder Claude Opus) und wird als Widget im Equipment-Detail angezeigt: „KI-Preisvorschlag: €65/Tag (aktuell: €55/Tag, Begründung: Hohe Nachfrage im April, 3 Konkurrenten bei €70-80)".
+
+**Automatische Asset-Beschreibungen:** Beim Anlegen neuer Assets generiert die KI automatisch eine professionelle Beschreibung basierend auf Kategorie, Hersteller, Modell und technischen Daten. Für Bulk-Import von 100+ Assets wird Mistral Small empfohlen (extrem günstig bei hohen Volumina).
+
+**Intelligente Kundenkorrespondenz:** Die KI analysiert die Kommunikationshistorie eines Kunden und schlägt kontextbezogene Follow-up-Aktionen vor: „Kunde hat seit 3 Monaten nicht gebucht → Vorschlag: Personalisiertes Rückgewinnungs-Angebot senden". Die Vorschläge erscheinen als Info-Card auf der Kunden-Detailseite.
+
+**Demand Forecasting Dashboard-Widget:** Ein Dashboard-Widget zeigt KI-basierte Prognosen für die kommenden 30/60/90 Tage: erwartete Buchungen, Umsatzprognose, Equipment-Engpässe. Nutzt historische Daten und saisonale Muster. Reasoning-Modelle (OpenAI o1 oder Claude Opus) liefern hier die besten Ergebnisse.
+
+**Chat-basierter Assistent (MyRMS Copilot):** Ein Chat-Widget (Bottom-Right, expandierbar) erlaubt natürlichsprachige Fragen an das System: „Welche Assets sind nächste Woche verfügbar?", „Erstelle eine Rechnung für Kunde Müller über das letzte Projekt", „Zeige mir die umsatzstärksten Kunden dieses Quartals". Der Copilot nutzt Function Calling, um direkt mit der MyRMS-Datenbank und den Services zu interagieren. Für lokale Datenschutz-Anforderungen kann der Copilot auch über Ollama laufen.
+
+---
+
+## I5. Kosten-Tracking und Budget-Management
+
+### I5.1 Token-Tracking pro Request
+
+Jeder KI-API-Aufruf wird in der Datenbank protokolliert mit: Timestamp, Provider, Modell, Input-Tokens, Output-Tokens, Latenz (ms), Task-Typ (email_draft, summary, ocr, etc.), Benutzer-ID und geschätzte Kosten in EUR. Diese Daten speisen das Kosten-Dashboard in den Settings und ermöglichen detaillierte Auswertungen pro Provider, pro Task-Typ und pro Benutzer.
+
+### I5.2 Budget-Alerts und Auto-Limiting
+
+Administratoren können ein monatliches Budget setzen (z.B. €50). Bei Erreichen von 80% wird eine Warnung angezeigt (Toast + E-Mail an Admin). Bei 100% werden KI-Funktionen automatisch deaktiviert oder auf den günstigsten Provider (Ollama/Mistral Small) umgeleitet – konfigurierbar pro Instanz. Ein Kosten-Rechner in den Settings zeigt eine Prognose basierend auf dem bisherigen Verbrauch: „Bei aktuellem Verbrauch werden Sie ca. €45 diesen Monat ausgeben."
+
+### I5.3 Reporting-Widget
+
+Im Admin-Dashboard wird ein KI-Kosten-Widget angezeigt:
+
+```
+┌─ KI-Nutzung & Kosten (März 2026) ───────────────────┐
+│                                                       │
+│  Gesamtkosten: €31.40 / €50.00 Budget                │
+│  ████████████░░░░░░░░ 63%                             │
+│                                                       │
+│  Aufrufe gesamt: 1,247                                │
+│  Tokens gesamt: 2.3M (Input: 1.8M, Output: 0.5M)    │
+│  Ø Antwortzeit: 340ms                                 │
+│                                                       │
+│  Nach Provider:          Nach Task:                   │
+│  Claude: €24.50 (78%)    E-Mails: €8.20 (26%)       │
+│  OpenAI: €5.20 (17%)    Berichte: €12.40 (39%)      │
+│  Gemini: €1.70 (5%)     OCR: €3.80 (12%)            │
+│                          Chat: €7.00 (22%)            │
+│                                                       │
+│  [Detaillierter Bericht] [Export CSV]                 │
+└───────────────────────────────────────────────────────┘
+```
+
+---
+
+## I6. Datenschutz und DSGVO-Konformität
+
+### I6.1 Datenschutz-Konfiguration in der UI
+
+Ein eigener Tab in den KI-Settings ermöglicht feingranulare Datenschutz-Kontrolle:
+
+**Daten-Klassifizierung:** Der Administrator definiert, welche Datentypen an Cloud-Provider gesendet werden dürfen und welche nur lokal (Ollama) verarbeitet werden. Beispiel: Kundennamen und E-Mail-Inhalte dürfen an Claude gesendet werden (AVV mit Anthropic liegt vor), aber Bankdaten, IBAN-Nummern und Steuer-IDs werden automatisch vor dem Senden an Cloud-Provider maskiert (Redaktion) oder der Request wird automatisch an Ollama umgeleitet.
+
+**Auftragsverarbeitungsvertrag (AVV) Tracking:** Für jeden Cloud-Provider zeigt die UI an, ob ein AVV vorliegt (Pflicht für DSGVO bei Verarbeitung personenbezogener Daten). Links zu den AVV-Dokumenten der Provider werden hinterlegt: Anthropic (Terms of Service mit DPA), OpenAI (Data Processing Addendum), Google (Cloud DPA), Mistral (EU-basiert, standardmäßig DSGVO-konform).
+
+**Anonymisierung vor Versand:** Ein Toggle ermöglicht die automatische Anonymisierung: Vor dem Senden an die KI-API werden personenbezogene Daten (Namen, Adressen, Telefonnummern, E-Mail-Adressen) durch Platzhalter ersetzt ([KUNDE_1], [ADRESSE_1], etc.). Nach Erhalt der Antwort werden die Platzhalter wieder durch die echten Daten ersetzt. Dies ist besonders relevant für Unternehmen, die keinen AVV mit dem Provider abschließen können oder wollen.
+
+### I6.2 Audit-Trail für KI-Entscheidungen
+
+Jede KI-Aktion wird im Audit-Log protokolliert: Welcher Benutzer hat die Anfrage ausgelöst, an welchen Provider/welches Modell wurde sie gesendet, welche Daten wurden gesendet (mit Redaktionsmarkierung), was war die Antwort, und wurde die Antwort vom Benutzer akzeptiert oder abgelehnt. Dies ist essentiell für die DSGVO-Rechenschaftspflicht (Art. 5 Abs. 2 DSGVO) und ermöglicht es, bei Anfragen von Betroffenen oder Behörden nachzuweisen, wie personenbezogene Daten durch KI-Systeme verarbeitet wurden.
+
+---
+
+## I7. Erweiterbarkeit: Eigene Provider hinzufügen
+
+### I7.1 Custom Provider Anleitung
+
+MyRMS ermöglicht es Entwicklern, eigene KI-Provider zu integrieren. Ein neuer Provider benötigt lediglich eine PHP-Klasse, die das `LlmProviderInterface` implementiert, und einen Eintrag in der Provider-Registry. Die Dokumentation in den Developer-Docs enthält ein vollständiges Schritt-für-Schritt-Tutorial:
+
+1. Erstelle eine neue PHP-Klasse in `src/services/AI/Providers/` (z.B. `CustomApiAdapter.php`)
+2. Implementiere das `LlmProviderInterface` mit allen erforderlichen Methoden
+3. Registriere den Provider in `config/ai_providers.php`
+4. Der neue Provider erscheint automatisch in der Settings-UI unter dem Tab „+ Mehr"
+5. Teste mit dem integrierten Test-Button in den Settings
+
+### I7.2 OpenAI-kompatible APIs
+
+Viele KI-Services bieten eine OpenAI-kompatible API an (z.B. Azure OpenAI, Together AI, Fireworks AI, Groq, Perplexity). Für diese gibt es einen generischen „OpenAI Compatible"-Adapter in der UI, bei dem nur Base-URL und API-Key eingegeben werden müssen. Dies deckt bereits einen Großteil aller verfügbaren KI-Services ab, ohne dass Custom-Code geschrieben werden muss.
+
+```
+┌─ OpenAI-kompatible API hinzufügen ───────────────────┐
+│                                                       │
+│  Name:      [Groq Cloud                  ]           │
+│  Base-URL:  [https://api.groq.com/openai/v1]        │
+│  API-Key:   [gsk_••••••••••••            ]           │
+│  Modell:    [llama-3.1-70b-versatile     ]           │
+│                                                       │
+│  [Verbindung testen]  [Speichern]                    │
+└───────────────────────────────────────────────────────┘
+```
+
+---
+
+## I8. Preisvergleich und Empfehlungen
+
+### I8.1 Übersicht Kosten pro 1M Tokens (Stand März 2026)
+
+```
+┌──────────────────┬────────────┬─────────────┬──────────────────────────┐
+│ Provider/Modell  │ Input/MTok │ Output/MTok │ Empfehlung               │
+├──────────────────┼────────────┼─────────────┼──────────────────────────┤
+│ Mistral Small    │ $0.20      │ $0.60       │ Budget: Bulk-Tasks       │
+│ Gemini Flash     │ $0.10      │ $0.40       │ Budget: Standard-Tasks   │
+│ Claude Haiku     │ $0.25      │ $1.25       │ Standard: E-Mails, Chat  │
+│ GPT-4o-mini      │ $0.15      │ $0.60       │ Standard: Allrounder     │
+│ Claude Sonnet    │ $3.00      │ $15.00      │ Qualität: Berichte       │
+│ GPT-4o           │ $2.50      │ $10.00      │ Qualität: Analysen       │
+│ Gemini Pro       │ $1.25      │ $5.00       │ Qualität + Vision        │
+│ Claude Opus      │ $15.00     │ $75.00      │ Premium: Verträge        │
+│ OpenAI o1        │ $15.00     │ $60.00      │ Premium: Reasoning       │
+│ Ollama (Lokal)   │ €0.00      │ €0.00       │ Kostenlos: Datenschutz   │
+└──────────────────┴────────────┴─────────────┴──────────────────────────┘
+```
+
+### I8.2 Kostenbeispiel für eine typische MyRMS-Instanz
+
+Eine mittelgroße Verleih-Firma mit 5 Benutzern, 500 Assets und 50 Projekten/Monat verbraucht typischerweise ca. 2-3 Millionen Tokens pro Monat für KI-Features (E-Mail-Drafts, Zusammenfassungen, Chat, gelegentliche OCR). Mit der empfohlenen Mischung aus Haiku (Standard) + Sonnet (Qualität) + Gemini Flash (OCR) ergibt das geschätzte Kosten von **€15-30 pro Monat**. Mit Ollama als Primary für Standard-Tasks und Cloud nur für Premium-Aufgaben sinken die Kosten auf **€5-10 pro Monat**.
+
+---
+
+**Document Version:** 3.1 (+ Multi-KI-Provider)
 **Last Updated:** March 18, 2026
