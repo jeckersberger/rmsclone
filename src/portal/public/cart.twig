@@ -1,0 +1,202 @@
+{% extends "layout.twig" %}
+
+{% block title %}Booking Cart - {{ config.portal_title|default('Booking Portal') }}{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <a href="/portal/" style="color: var(--primary-color, #2563eb); text-decoration: none;">← Continue Shopping</a>
+</div>
+
+<h1 style="margin-bottom: 2rem;">Your Booking</h1>
+
+{% if message %}
+    <div class="alert alert-{{ message.type }}">
+        {{ message.text }}
+    </div>
+{% endif %}
+
+<div style="display: grid; grid-template-columns: 1fr 350px; gap: 2rem; margin-bottom: 3rem;">
+    <div>
+        <div style="background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1.5rem;">
+            <h2 style="margin-bottom: 1.5rem;">Items</h2>
+            <div id="cartItems">
+                <p class="text-muted">Loading cart...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary & Form -->
+    <div>
+        <div style="background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1.5rem; position: sticky; top: 20px;">
+            <h2 style="margin-bottom: 1.5rem;">Summary</h2>
+
+            <div style="background: #f9fafb; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+                <p style="margin: 0.5rem 0;">
+                    <strong>Check-in:</strong> <span id="summaryStart">-</span>
+                </p>
+                <p style="margin: 0.5rem 0;">
+                    <strong>Check-out:</strong> <span id="summaryEnd">-</span>
+                </p>
+                <p style="margin: 0.5rem 0;">
+                    <strong>Days:</strong> <span id="summaryDays">-</span>
+                </p>
+                <p style="margin: 0.5rem 0; border-top: 1px solid #e5e7eb; padding-top: 0.5rem; font-size: 1.25rem;">
+                    <strong>Total:</strong> €<span id="summaryTotal">0.00</span>
+                </p>
+            </div>
+
+            <form id="inquiryForm">
+                {% if not session %}
+                    <div class="form-group">
+                        <label for="guestName">Full Name *</label>
+                        <input type="text" id="guestName" name="guest_name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="guestEmail">Email *</label>
+                        <input type="email" id="guestEmail" name="guest_email" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="guestPhone">Phone</label>
+                        <input type="tel" id="guestPhone" name="guest_phone">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="guestCompany">Company</label>
+                        <input type="text" id="guestCompany" name="guest_company">
+                    </div>
+                {% else %}
+                    <p style="background: #dbeafe; padding: 0.75rem; border-radius: 0.5rem; font-size: 0.875rem; margin-bottom: 1rem;">
+                        Logged in as <strong>{{ session.name }}</strong>
+                    </p>
+                {% endif %}
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem;">
+                    Submit Inquiry
+                </button>
+
+                <p style="font-size: 0.875rem; color: #6b7280; margin-top: 1rem; text-align: center;">
+                    {% if config.require_admin_approval %}
+                        Your inquiry will be reviewed by our team.
+                    {% else %}
+                        Your booking will be confirmed shortly.
+                    {% endif %}
+                </p>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+const instanceId = {{ instance_id }};
+let cartData = null;
+
+function loadCart() {
+    const stored = sessionStorage.getItem('portalCart');
+    if (!stored) {
+        document.getElementById('cartItems').innerHTML = '<p class="text-muted">Your cart is empty</p>';
+        return;
+    }
+
+    cartData = JSON.parse(stored);
+    renderCart();
+    updateSummary();
+}
+
+function renderCart() {
+    const itemsContainer = document.getElementById('cartItems');
+    const html = cartData.items.map((item, idx) => `
+        <div style="border-bottom: 1px solid #e5e7eb; padding: 1rem 0;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <strong>${item.asset_type_name}</strong>
+                <span style="color: #ef4444; cursor: pointer;" onclick="removeItem(${idx})">Remove</span>
+            </div>
+            <p style="color: #6b7280; margin: 0.5rem 0;">
+                Quantity: <strong>${item.quantity}</strong>
+            </p>
+            <p style="color: #6b7280; margin: 0;">
+                Price: <strong>€${item.price.toFixed(2)}</strong>
+            </p>
+        </div>
+    `).join('');
+
+    itemsContainer.innerHTML = html || '<p class="text-muted">Your cart is empty</p>';
+}
+
+function removeItem(idx) {
+    cartData.items.splice(idx, 1);
+    if (cartData.items.length === 0) {
+        sessionStorage.removeItem('portalCart');
+        window.location.href = '/portal/';
+    } else {
+        sessionStorage.setItem('portalCart', JSON.stringify(cartData));
+        renderCart();
+        updateSummary();
+    }
+}
+
+function updateSummary() {
+    const start = new Date(cartData.rental_start);
+    const end = new Date(cartData.rental_end);
+    const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    const total = cartData.items.reduce((sum, item) => sum + item.price, 0);
+
+    document.getElementById('summaryStart').textContent = start.toLocaleDateString();
+    document.getElementById('summaryEnd').textContent = end.toLocaleDateString();
+    document.getElementById('summaryDays').textContent = days;
+    document.getElementById('summaryTotal').textContent = total.toFixed(2);
+}
+
+document.getElementById('inquiryForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const payload = {
+        instances_id: instanceId,
+        items: JSON.stringify(cartData.items),
+        rental_start: cartData.rental_start,
+        rental_end: cartData.rental_end,
+        message: sessionStorage.getItem('portalMessage') || ''
+    };
+
+    {% if session %}
+        payload.portal_session = '{{ session.token }}';
+    {% else %}
+        payload.guest_name = document.getElementById('guestName').value;
+        payload.guest_email = document.getElementById('guestEmail').value;
+        payload.guest_phone = document.getElementById('guestPhone').value;
+        payload.guest_company = document.getElementById('guestCompany').value;
+    {% endif %}
+
+    const btn = document.querySelector('[type="submit"]');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Submitting...';
+
+    try {
+        const response = await fetch('/api/portal/inquiry.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams(payload)
+        });
+
+        const data = await response.json();
+
+        if (data.result) {
+            sessionStorage.removeItem('portalCart');
+            alert('Inquiry submitted successfully! Our team will contact you soon.');
+            window.location.href = '/portal/?action=thank-you&id=' + data.response.inquiry_id;
+        } else {
+            alert('Error: ' + (data.error?.message || 'Failed to submit inquiry'));
+            btn.disabled = false;
+            btn.textContent = 'Submit Inquiry';
+        }
+    } catch (e) {
+        alert('Error submitting inquiry: ' + e.message);
+        btn.disabled = false;
+        btn.textContent = 'Submit Inquiry';
+    }
+});
+
+document.addEventListener('DOMContentLoaded', loadCart);
+</script>
+{% endblock %}

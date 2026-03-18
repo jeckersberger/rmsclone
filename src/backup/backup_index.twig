@@ -1,0 +1,690 @@
+{% extends "assets/template.twig" %}
+
+{% block content %}
+<style>
+    .backup-status-badge {
+        font-size: 12px;
+        padding: 5px 10px;
+        border-radius: 3px;
+        font-weight: 600;
+    }
+
+    .badge-pending {
+        background-color: #e3f2fd;
+        color: #1976d2;
+    }
+
+    .badge-running {
+        background-color: #f3e5f5;
+        color: #7b1fa2;
+    }
+
+    .badge-completed {
+        background-color: #e8f5e9;
+        color: #388e3c;
+    }
+
+    .badge-failed {
+        background-color: #ffebee;
+        color: #c62828;
+    }
+
+    .badge-cancelled {
+        background-color: #f1f8e9;
+        color: #558b2f;
+    }
+
+    .health-card {
+        border-left: 4px solid #007bff;
+        transition: all 0.3s ease;
+    }
+
+    .health-card.danger {
+        border-left-color: #dc3545;
+    }
+
+    .health-card.warning {
+        border-left-color: #ffc107;
+    }
+
+    .health-card.success {
+        border-left-color: #28a745;
+    }
+
+    .backup-table {
+        font-size: 13px;
+    }
+
+    .backup-table td {
+        vertical-align: middle;
+    }
+
+    .config-form {
+        max-width: 600px;
+    }
+
+    .accordion-button:not(.collapsed) {
+        background-color: #e7f3ff;
+        color: #0c5aa0;
+    }
+
+    .modal-backup-warning {
+        border: 2px solid #dc3545;
+    }
+
+    .backup-action-btn {
+        padding: 4px 8px;
+        font-size: 12px;
+        margin-right: 3px;
+    }
+
+    .restore-confirm-warning {
+        background-color: #fff3cd;
+        border: 1px solid #ffc107;
+        padding: 15px;
+        border-radius: 4px;
+        margin: 15px 0;
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-shield-alt"></i> Backup & Disaster Recovery</h2>
+            <p class="text-muted">Manage database backups, schedules, and recovery operations</p>
+        </div>
+        {% if canManage %}
+        <div class="col-md-4 text-right">
+            <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#newBackupModal">
+                <i class="fas fa-play-circle"></i> Jetzt Backup erstellen
+            </button>
+            <button class="btn btn-secondary btn-sm" data-toggle="modal" data-target="#configModal">
+                <i class="fas fa-cog"></i> Konfiguration
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Health Status Cards -->
+    <div class="row mb-4">
+        <!-- Last Backup -->
+        <div class="col-md-3">
+            <div class="card health-card {% if health.recent_failures > 0 %}danger{% elseif health.last_backup_age is null %}warning{% else %}success{% endif %}">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-4 text-center">
+                            <i class="fas fa-history fa-2x{% if health.recent_failures > 0 %} text-danger{% elseif health.last_backup_age is null %} text-warning{% else %} text-success{% endif %}"></i>
+                        </div>
+                        <div class="col-8">
+                            <div class="font-weight-bold">Letztes Backup</div>
+                            <div class="text-sm">
+                                {% if health.last_backup_age %}
+                                    vor {{ health.last_backup_age }}
+                                {% else %}
+                                    <span class="text-warning">Nie durchgeführt</span>
+                                {% endif %}
+                            </div>
+                            {% if health.last_backup %}
+                                <div class="text-xs text-muted">
+                                    {{ health.last_backup.completed_at|date('d.m.Y H:i') }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Next Scheduled -->
+        <div class="col-md-3">
+            <div class="card health-card">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-4 text-center">
+                            <i class="fas fa-clock fa-2x text-info"></i>
+                        </div>
+                        <div class="col-8">
+                            <div class="font-weight-bold">Nächstes Backup</div>
+                            <div class="text-sm">
+                                {% if health.next_scheduled %}
+                                    {{ health.next_scheduled|date('d.m.Y H:i') }}
+                                {% else %}
+                                    <span class="text-muted">Nicht geplant</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Storage Used -->
+        <div class="col-md-3">
+            <div class="card health-card">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-4 text-center">
+                            <i class="fas fa-database fa-2x text-info"></i>
+                        </div>
+                        <div class="col-8">
+                            <div class="font-weight-bold">Speicher genutzt</div>
+                            <div class="text-sm">{{ storage.total_gb }} GB</div>
+                            <div class="text-xs text-muted">{{ storage.backup_count }} Backups</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration Count -->
+        <div class="col-md-3">
+            <div class="card health-card">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-4 text-center">
+                            <i class="fas fa-cog fa-2x text-secondary"></i>
+                        </div>
+                        <div class="col-8">
+                            <div class="font-weight-bold">Konfigurationen</div>
+                            <div class="text-sm">{{ health.config_count }} aktiv</div>
+                            {% if health.recent_failures > 0 %}
+                                <div class="text-xs text-danger">{{ health.recent_failures }} Fehler</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backup History Table -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header with-border">
+                    <h3 class="card-title"><i class="fas fa-list"></i> Backup-Historie (letzte 20)</h3>
+                </div>
+                <div class="card-body table-responsive">
+                    {% if recent_jobs is not empty %}
+                        <table class="table table-hover table-sm backup-table">
+                            <thead>
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Typ</th>
+                                    <th>Gestartet</th>
+                                    <th>Abgeschlossen</th>
+                                    <th>Größe</th>
+                                    <th>Tabellen</th>
+                                    <th>Aktion</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for job in recent_jobs %}
+                                    <tr>
+                                        <td>
+                                            <span class="backup-status-badge badge-{{ job.status }}">
+                                                {% if job.status == 'completed' %}
+                                                    <i class="fas fa-check-circle"></i> Abgeschlossen
+                                                {% elseif job.status == 'failed' %}
+                                                    <i class="fas fa-times-circle"></i> Fehler
+                                                {% elseif job.status == 'running' %}
+                                                    <i class="fas fa-spinner fa-spin"></i> Läuft
+                                                {% elseif job.status == 'pending' %}
+                                                    <i class="fas fa-hourglass-half"></i> Ausstehend
+                                                {% else %}
+                                                    <i class="fas fa-ban"></i> Abgebrochen
+                                                {% endif %}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if job.type == 'scheduled' %}
+                                                <span class="badge badge-info">Geplant</span>
+                                            {% else %}
+                                                <span class="badge badge-warning">Manuell</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ job.started_at|date('d.m.Y H:i') }}</td>
+                                        <td>
+                                            {% if job.completed_at %}
+                                                {{ job.completed_at|date('d.m.Y H:i') }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if job.file_size_bytes %}
+                                                {{ (job.file_size_bytes / 1024 / 1024)|round(2) }} MB
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if job.tables_count %}
+                                                {{ job.tables_count }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if job.status == 'completed' and canRestore %}
+                                                <button class="btn btn-sm btn-warning backup-action-btn restore-btn" data-job-id="{{ job.id }}">
+                                                    <i class="fas fa-undo"></i> Restore
+                                                </button>
+                                                <button class="btn btn-sm btn-info backup-action-btn test-restore-btn" data-job-id="{{ job.id }}">
+                                                    <i class="fas fa-check"></i> Testen
+                                                </button>
+                                            {% endif %}
+                                            {% if job.status == 'failed' and job.error_message %}
+                                                <button class="btn btn-sm btn-danger backup-action-btn" data-toggle="tooltip" title="{{ job.error_message }}">
+                                                    <i class="fas fa-info-circle"></i>
+                                                </button>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% if job.error_message and job.status == 'failed' %}
+                                        <tr class="table-warning">
+                                            <td colspan="7">
+                                                <small><strong>Fehler:</strong> {{ job.error_message }}</small>
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> Keine Backups vorhanden.
+                            {% if canManage %}
+                                Erstellen Sie <a href="#newBackupModal" data-toggle="modal">jetzt ein Backup</a>.
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration Section -->
+    {% if canManage and configs is not empty %}
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header with-border">
+                    <h3 class="card-title"><i class="fas fa-cog"></i> Konfigurationen</h3>
+                </div>
+                <div class="card-body">
+                    {% for config in configs %}
+                        <div class="card mb-3">
+                            <div class="card-header p-2">
+                                <div class="row align-items-center">
+                                    <div class="col">
+                                        <h5>{{ config.name }}</h5>
+                                        <small class="text-muted">
+                                            {{ config.backup_type|upper }} |
+                                            {{ config.destination_type|upper }}
+                                            {% if config.schedule_cron %}
+                                                | Geplant: {{ config.schedule_cron }}
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                    <div class="col-auto">
+                                        {% if config.is_active %}
+                                            <span class="badge badge-success">Aktiv</span>
+                                        {% else %}
+                                            <span class="badge badge-secondary">Inaktiv</span>
+                                        {% endif %}
+                                        {% if config.encryption_enabled %}
+                                            <span class="badge badge-info"><i class="fas fa-lock"></i> Verschlüsselt</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body p-2">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <small>
+                                            <strong>Aufbewahrung:</strong><br>
+                                            Täglich: {{ config.retention_daily }} Tage<br>
+                                            Wöchentlich: {{ config.retention_weekly }} Wochen<br>
+                                            Monatlich: {{ config.retention_monthly }} Monate
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6 text-right">
+                                        <button class="btn btn-sm btn-primary edit-config-btn" data-config-id="{{ config.id }}">
+                                            <i class="fas fa-edit"></i> Bearbeiten
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal: New Backup -->
+{% if canManage %}
+<div class="modal fade" id="newBackupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-play-circle"></i> Backup erstellen</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                {% if configs is empty %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Keine Backup-Konfiguration gefunden.
+                        <a href="#configModal" data-toggle="modal" data-dismiss="modal">Erstellen Sie zuerst eine Konfiguration.</a>
+                    </div>
+                {% else %}
+                    <p>Ein neues manuelles Backup wird erstellt. Dies kann je nach Datenbankgröße mehrere Minuten dauern.</p>
+                    <div class="form-group">
+                        <label>Konfiguration:</label>
+                        <select id="backupConfigSelect" class="form-control form-control-sm">
+                            <option value="">Standard verwenden</option>
+                            {% for config in configs %}
+                                <option value="{{ config.id }}">{{ config.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Abbrechen</button>
+                {% if configs is not empty %}
+                    <button type="button" class="btn btn-primary btn-sm" id="runBackupBtn">
+                        <i class="fas fa-play-circle"></i> Backup starten
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal: Restore Confirmation -->
+<div class="modal fade" id="restoreConfirmModal" tabindex="-1">
+    <div class="modal-dialog modal-backup-warning">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Datenbankwiederherstellung</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="restore-confirm-warning">
+                    <strong><i class="fas fa-exclamation-circle"></i> Warnung!</strong><br>
+                    Durch diese Aktion wird Ihre Datenbank aus dem Backup wiederhergestellt.
+                    Alle Änderungen nach dem Sicherungszeitpunkt gehen verloren.
+                    Diese Aktion kann nicht rückgängig gemacht werden.
+                </div>
+                <p>
+                    <strong>Backup vom:</strong><br>
+                    <span id="restoreBackupDate"></span>
+                </p>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="confirmRestoreCheckbox">
+                    <label class="form-check-label" for="confirmRestoreCheckbox">
+                        Ich verstehe, dass alle Daten nach dem Sicherungszeitpunkt verloren gehen
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-danger btn-sm" id="confirmRestoreBtn" disabled>
+                    <i class="fas fa-undo"></i> Wiederherstellen
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Configuration -->
+{% if canManage %}
+<div class="modal fade" id="configModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-cog"></i> Backup-Konfiguration</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body config-form">
+                <form id="backupConfigForm">
+                    <div class="form-group">
+                        <label>Konfigurationsname:</label>
+                        <input type="text" class="form-control form-control-sm" name="name" placeholder="z.B. Tägliche Sicherung" value="Default Backup">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label>Backup-Typ:</label>
+                            <select class="form-control form-control-sm" name="backup_type">
+                                <option value="full" selected>Vollständig</option>
+                                <option value="incremental">Inkrementell</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label>Ziel:</label>
+                            <select class="form-control form-control-sm" name="destination_type">
+                                <option value="local" selected>Lokal</option>
+                                <option value="s3">Amazon S3</option>
+                                <option value="sftp">SFTP</option>
+                                <option value="backblaze">Backblaze B2</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cron-Schedule (optional):</label>
+                        <input type="text" class="form-control form-control-sm" name="schedule_cron" placeholder="z.B. 0 2 * * * (täglich um 02:00 Uhr)">
+                        <small class="text-muted">Standard Cron-Format (Minute Stunde Tag Monat Wochentag)</small>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-md-4">
+                            <label>Tägliche Aufbewahrung (Tage):</label>
+                            <input type="number" class="form-control form-control-sm" name="retention_daily" min="1" value="30">
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label>Wöchentliche Aufbewahrung (Wochen):</label>
+                            <input type="number" class="form-control form-control-sm" name="retention_weekly" min="1" value="12">
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label>Monatliche Aufbewahrung (Monate):</label>
+                            <input type="number" class="form-control form-control-sm" name="retention_monthly" min="1" value="12">
+                        </div>
+                    </div>
+
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" name="encryption_enabled" id="encryptionCheckbox" checked>
+                        <label class="form-check-label" for="encryptionCheckbox">
+                            AES-256 Verschlüsselung aktivieren
+                        </label>
+                    </div>
+
+                    <div class="form-check mt-2">
+                        <input type="checkbox" class="form-check-input" name="is_active" id="activeCheckbox" checked>
+                        <label class="form-check-label" for="activeCheckbox">
+                            Konfiguration aktiv
+                        </label>
+                    </div>
+
+                    <div class="form-group mt-3">
+                        <label>Zielkonfiguration (JSON, optional):</label>
+                        <textarea class="form-control form-control-sm" name="destination_config_json" rows="3" placeholder='{"path": "/var/backups/myrms/"}'></textarea>
+                        <small class="text-muted">Abhängig vom Zieltyp (Pfad, S3-Bucket, SFTP-Parameter, etc.)</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-primary btn-sm" id="saveConfigBtn">
+                    <i class="fas fa-save"></i> Speichern
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+    // Run manual backup
+    document.getElementById('runBackupBtn')?.addEventListener('click', function() {
+        const configId = document.getElementById('backupConfigSelect').value;
+
+        fetch('{{ CONFIG.ROOTURL }}/src/api/backup/run.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({ config_id: configId ? parseInt(configId) : null })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert('Backup gestartet (ID: ' + data.job_id + ')');
+                location.reload();
+            } else {
+                alert('Fehler: ' + (data.message || 'Backup-Start fehlgeschlagen'));
+            }
+            $('#newBackupModal').modal('hide');
+        })
+        .catch(e => alert('Fehler: ' + e.message));
+    });
+
+    // Test restore
+    document.querySelectorAll('.test-restore-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const jobId = this.getAttribute('data-job-id');
+
+            fetch('{{ CONFIG.ROOTURL }}/src/api/backup/test_restore.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({ job_id: parseInt(jobId) })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.valid) {
+                    alert('✓ Backup ist gültig und wiederherstellbar');
+                } else {
+                    alert('✗ Backup-Validierung fehlgeschlagen');
+                }
+            })
+            .catch(e => alert('Fehler: ' + e.message));
+        });
+    });
+
+    // Restore
+    document.querySelectorAll('.restore-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const jobId = this.getAttribute('data-job-id');
+            const row = this.closest('tr');
+            const backupDate = row.querySelector('td:nth-child(4)').innerText;
+
+            document.getElementById('restoreBackupDate').innerText = backupDate;
+            document.getElementById('confirmRestoreBtn').setAttribute('data-job-id', jobId);
+            document.getElementById('confirmRestoreCheckbox').checked = false;
+            document.getElementById('confirmRestoreBtn').disabled = true;
+
+            $('#restoreConfirmModal').modal('show');
+        });
+    });
+
+    // Confirm restore checkbox
+    document.getElementById('confirmRestoreCheckbox')?.addEventListener('change', function() {
+        document.getElementById('confirmRestoreBtn').disabled = !this.checked;
+    });
+
+    // Confirm restore
+    document.getElementById('confirmRestoreBtn')?.addEventListener('click', function() {
+        const jobId = parseInt(this.getAttribute('data-job-id'));
+
+        fetch('{{ CONFIG.ROOTURL }}/src/api/backup/restore.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({ job_id: jobId, confirm: true })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert('Wiederherstellung gestartet. Die Anwendung wird neu geladen.');
+                location.reload();
+            } else {
+                alert('Fehler: ' + (data.message || 'Wiederherstellung fehlgeschlagen'));
+            }
+            $('#restoreConfirmModal').modal('hide');
+        })
+        .catch(e => alert('Fehler: ' + e.message));
+    });
+
+    // Save config
+    document.getElementById('saveConfigBtn')?.addEventListener('click', function() {
+        const form = document.getElementById('backupConfigForm');
+        const formData = new FormData(form);
+
+        const data = {
+            name: formData.get('name'),
+            backup_type: formData.get('backup_type'),
+            destination_type: formData.get('destination_type'),
+            schedule_cron: formData.get('schedule_cron'),
+            retention_daily: parseInt(formData.get('retention_daily')),
+            retention_weekly: parseInt(formData.get('retention_weekly')),
+            retention_monthly: parseInt(formData.get('retention_monthly')),
+            encryption_enabled: formData.get('encryption_enabled') === 'on',
+            is_active: formData.get('is_active') === 'on',
+            destination_config: {}
+        };
+
+        // Parse destination config JSON
+        const configJson = formData.get('destination_config_json');
+        if (configJson) {
+            try {
+                data.destination_config = JSON.parse(configJson);
+            } catch (e) {
+                alert('Ungültiges JSON-Format für Zielkonfiguration');
+                return;
+            }
+        }
+
+        fetch('{{ CONFIG.ROOTURL }}/src/api/backup/configs.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify(data)
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert('Konfiguration gespeichert');
+                location.reload();
+            } else {
+                alert('Fehler: ' + (data.message || 'Speichern fehlgeschlagen'));
+            }
+            $('#configModal').modal('hide');
+        })
+        .catch(e => alert('Fehler: ' + e.message));
+    });
+
+    // Enable tooltips
+    $('[data-toggle="tooltip"]').tooltip();
+});
+</script>
+
+{% endblock %}
