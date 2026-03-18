@@ -5,6 +5,13 @@
 
 Diese Datei dokumentiert den Implementierungsstatus aller Features. Jedes Feature hat eine Checkliste mit den einzelnen Bausteinen (Migration, Service, API, UI). So ist jederzeit nachvollziehbar, was fertig ist, was noch getestet werden muss und was fehlt.
 
+**Regeln für die KI:**
+- Am Anfang jeder Coding-Session: Diese Datei lesen (zusammen mit FEATURE_REQUESTS.md und lessons_learned.md)
+- Nach jedem implementierten Feature/Baustein: Status hier aktualisieren
+- Neue Features aus FEATURE_REQUESTS.md hier als neuen Abschnitt anlegen
+- Stand-Datum oben aktualisieren
+- Zusammenfassung am Ende aktuell halten
+
 **Legende:**
 - ✅ = Implementiert und committed
 - 🔧 = Implementiert, braucht Review/Anpassung

@@ -98,3 +98,6 @@
   - [2026-03-18] Regel: Anonymisierungs-Service Replacement-Map NIE persistieren — nur im RAM halten, nach Request sofort verwerfen
   - [2026-03-18] Regel: Öffentliche Portale (Buchungsportal) brauchen eigenes CSS — nicht AdminLTE verwenden für public-facing UI
   - [2026-03-18] Regel: CRON-Scripts in /scripts/ ablegen, nicht in /src/api/ — trennt scheduled tasks von API-Endpunkten
+  - [2026-03-18] Regel: Am Anfang JEDER Coding-Session diese 3 Dateien lesen: lessons_learned.md, IMPLEMENTATION_CHECKLIST.md, FEATURE_REQUESTS.md — so weiß die KI was schon gebaut ist, was offen ist, und was als nächstes kommt
+  - [2026-03-18] Regel: Nach JEDEM implementierten Feature/Fix sofort IMPLEMENTATION_CHECKLIST.md + FEATURE_REQUESTS.md aktualisieren — nicht erst am Ende der Session
+  - [2026-03-18] Regel: Keine separaten Doku-Dateien pro Modul ins Root — alles gehört in ROADMAP.md, PROJECT_DOCS.md oder als Inline-Kommentare in den Code

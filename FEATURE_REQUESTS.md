@@ -1,106 +1,78 @@
 # MyRMS – Feature Requests
 
-**Zweck:** Hier werden neue Feature-Ideen so ausformuliert, dass sie direkt als Entwicklungsauftrag verwendet werden können. Jeder Eintrag enthält alle Infos, die der Entwicklungs-Agent braucht: Was, Warum, Wie, welche Tabellen/Services, wie die UI aussehen soll.
+**Zweck:** Lebendes Dokument für neue Feature-Ideen. Der Nutzer schreibt seine Idee rein (auch ganz kurz und formlos), die KI formuliert sie dann vollständig als Entwicklungsauftrag aus.
 
-**Wie nutzen:**
-1. Neue Idee unten eintragen (Format siehe Template)
-2. Status auf `OFFEN` setzen
-3. Wenn Entwicklung startet: Status auf `IN ARBEIT`
-4. Nach Implementierung: Status auf `ERLEDIGT` und Verweis auf Commit/Dateien
+**Workflow:**
+1. **Nutzer:** Schreibt eine neue Idee rein – reicht ein Satz, z.B. "Kunden sollen Rechnungen online bezahlen können"
+2. **KI:** Liest diese Datei am Anfang jeder Session, formuliert offene Ideen vollständig aus (Was/Warum/Wie/DB/API/UI) und setzt Status auf `AUSFORMULIERT`
+3. **Nutzer:** Prüft und gibt frei → Status `FREIGEGEBEN`
+4. **KI:** Implementiert das Feature, aktualisiert Status auf `IN ARBEIT`, dann `ERLEDIGT` mit Commit-Hash
+5. **KI:** Verschiebt erledigte Features nach unten in den "Abgeschlossen"-Bereich
+6. **KI:** Aktualisiert gleichzeitig die IMPLEMENTATION_CHECKLIST.md mit den neuen Bausteinen
+
+**Regeln für die KI:**
+- Am Anfang jeder Coding-Session: Diese Datei UND IMPLEMENTATION_CHECKLIST.md lesen
+- Neue Nutzer-Ideen (Status: IDEE) vollständig ausformulieren
+- Nach jedem implementierten Feature: Status hier UND in der Checklist aktualisieren
+- Erledigte Features nach unten verschieben, nicht löschen
+- FR-Nummern fortlaufend vergeben (FR-001, FR-002, ...)
 
 ---
 
-## Template für neue Features
+## Template (KI füllt das aus, Nutzer muss nur die Idee beschreiben)
 
 ```
 ### FR-XXX: [Kurzer Feature-Name]
 
-**Status:** OFFEN | IN ARBEIT | ERLEDIGT
+**Status:** IDEE | AUSFORMULIERT | FREIGEGEBEN | IN ARBEIT | ERLEDIGT
 **Priorität:** HOCH | MITTEL | NIEDRIG
 **Geschätzte Größe:** S (1-2h) | M (halber Tag) | L (1-2 Tage) | XL (3+ Tage)
+**Erstellt:** [Datum]
+**Erledigt:** [Datum] (wird von KI ausgefüllt)
 
-**Was soll es tun?**
-[Beschreibe in 2-3 Sätzen was das Feature macht. Was kann der Benutzer danach, was vorher nicht ging?]
+**Nutzer-Idee (Original):**
+[Hier steht was der Nutzer gesagt/geschrieben hat, unverändert]
 
-**Warum ist es wichtig?**
-[Welches Problem löst es? Wer profitiert davon?]
+**Ausformulierung (von KI):**
 
-**Wie soll es funktionieren?**
-[Detaillierte Beschreibung des Ablaufs. Schritt für Schritt was passiert.]
+Was soll es tun?
+[2-3 Sätze]
 
-**Datenbank:**
-[Welche neuen Tabellen/Spalten werden gebraucht? Oder welche bestehenden Tabellen sind betroffen?]
+Wie soll es funktionieren?
+[Schritt-für-Schritt Ablauf]
 
-**Service:**
-[Welcher bestehende Service wird erweitert, oder wird ein neuer Service gebraucht? Welche Methoden?]
+Datenbank:
+[Neue Tabellen/Spalten, oder "keine Änderung"]
 
-**API-Endpunkte:**
-[Welche neuen API-Endpunkte braucht es?]
+Service:
+[Neuer oder erweiterter Service, wichtige Methoden]
 
-**UI/Oberfläche:**
-[Wie soll es aussehen? Wo in der Navigation? Welche Eingabefelder, Buttons, Tabellen?]
+API-Endpunkte:
+[Neue Endpunkte mit HTTP-Methode und Pfad]
 
-**Abhängigkeiten:**
-[Braucht es andere Features die zuerst fertig sein müssen? Welche bestehenden Module sind betroffen?]
+UI/Oberfläche:
+[Wo in der Navigation, welche Elemente, wie sieht es aus]
 
-**Beispiel:**
-[Konkretes Beispiel: "Benutzer klickt auf X, sieht Y, gibt Z ein, Ergebnis ist W"]
+Abhängigkeiten:
+[Andere Module die betroffen sind]
 
-**Erledigt-Kriterien:**
-[Wann ist dieses Feature "fertig"? Was muss alles funktionieren?]
+Erledigt-Kriterien:
+[Wann ist es fertig? Was muss funktionieren?]
 
-**Commit/Dateien:** (wird nach Implementierung ausgefüllt)
-[Commit-Hash, neue Dateien]
+**Commit/Dateien:** (von KI nach Implementierung)
+[Commit-Hash, neue/geänderte Dateien]
 ```
 
 ---
 
 ## Offene Feature Requests
 
-*(Hier neue Ideen eintragen)*
-
----
-
-### FR-001: [Dein nächstes Feature hier]
-
-**Status:** OFFEN
-**Priorität:**
-**Geschätzte Größe:**
-
-**Was soll es tun?**
+*(Einfach eine neue Idee reinschreiben – die KI formuliert sie aus)*
 
 
-**Warum ist es wichtig?**
-
-
-**Wie soll es funktionieren?**
-
-
-**Datenbank:**
-
-
-**Service:**
-
-
-**API-Endpunkte:**
-
-
-**UI/Oberfläche:**
-
-
-**Abhängigkeiten:**
-
-
-**Beispiel:**
-
-
-**Erledigt-Kriterien:**
-
-
-**Commit/Dateien:**
 
 ---
 
 ## Abgeschlossene Feature Requests
 
-*(Erledigte Features werden hierher verschoben)*
+*(Erledigte Features werden automatisch hierher verschoben)*
