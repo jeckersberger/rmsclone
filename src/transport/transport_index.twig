@@ -1,0 +1,369 @@
+{% extends "assets/template.twig" %}
+
+{% block content %}
+<style>
+    .tour-card { padding: 15px; border: 1px solid #ddd; margin-bottom: 10px; border-radius: 4px; background: white; }
+    .tour-header { font-weight: bold; font-size: 16px; margin-bottom: 8px; }
+    .stop-item { padding: 8px; border-left: 3px solid #007bff; margin: 5px 0; background: #f8f9fa; }
+    .stop-badge { display: inline-block; padding: 3px 8px; font-size: 11px; border-radius: 3px; margin-right: 5px; }
+    .badge-pickup { background: #28a745; color: white; }
+    .badge-delivery { background: #007bff; color: white; }
+    .badge-return { background: #dc3545; color: white; }
+    .status-badge { padding: 5px 10px; border-radius: 3px; font-size: 12px; font-weight: bold; }
+    .status-planned { background: #e2e3e5; }
+    .status-loading { background: #ffc107; }
+    .status-in_transit { background: #17a2b8; color: white; }
+    .status-delivering { background: #fd7e14; color: white; }
+    .status-completed { background: #28a745; color: white; }
+    .status-cancelled { background: #dc3545; color: white; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin-bottom: 20px; }
+    .calendar-day { border: 1px solid #ddd; padding: 10px; min-height: 100px; }
+    .calendar-date { font-weight: bold; margin-bottom: 5px; }
+    .calendar-tours { font-size: 12px; }
+    .cost-row { padding: 8px; border-bottom: 1px solid #eee; }
+    .stats-box { padding: 15px; background: #f8f9fa; border-radius: 4px; margin-bottom: 10px; text-align: center; }
+    .stats-number { font-size: 24px; font-weight: bold; color: #007bff; }
+    .stats-label { color: #6c757d; font-size: 12px; }
+</style>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Transport & Logistik (J3)</h3>
+                    <div class="card-tools btn-group pull-right">
+                        <a href="{{ CONFIG.LINKS_USERGUIDEURL }}transport" target="_blank" type="button" class="btn btn-info btn-sm">Hilfe</a>
+                        {% if "TRANSPORT:EDIT"|instancePermissions %}
+                            <button type="button" class="btn btn-sm btn-success" onclick="newTourModal()">Neue Tour</button>
+                            <button type="button" class="btn btn-sm btn-primary" data-toggle="tab" href="#vehicles-tab">Fahrzeuge</button>
+                            <button type="button" class="btn btn-sm btn-primary" data-toggle="tab" href="#drivers-tab">Fahrer</button>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- DASHBOARD STATS -->
+                    <div class="row" id="dashboard-stats">
+                        <div class="col-md-3">
+                            <div class="stats-box">
+                                <div class="stats-number" id="stat-tours-today">0</div>
+                                <div class="stats-label">Touren heute</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stats-box">
+                                <div class="stats-number" id="stat-tours-upcoming">0</div>
+                                <div class="stats-label">Touren kommende 7 Tage</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stats-box">
+                                <div class="stats-number" id="stat-distance">0</div>
+                                <div class="stats-label">km diesen Monat</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stats-box">
+                                <div class="stats-number" id="stat-costs">0€</div>
+                                <div class="stats-label">Kosten diesen Monat</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TABS -->
+                    <ul class="nav nav-tabs" role="tablist">
+                        <li role="presentation"><a href="#calendar-tab" aria-controls="calendar-tab" role="tab" data-toggle="tab">Kalender</a></li>
+                        <li role="presentation"><a href="#tours-tab" aria-controls="tours-tab" role="tab" data-toggle="tab">Alle Touren</a></li>
+                        <li role="presentation"><a href="#vehicles-tab" aria-controls="vehicles-tab" role="tab" data-toggle="tab">Fahrzeuge</a></li>
+                        <li role="presentation"><a href="#drivers-tab" aria-controls="drivers-tab" role="tab" data-toggle="tab">Fahrer</a></li>
+                    </ul>
+
+                    <!-- TAB CONTENT -->
+                    <div class="tab-content">
+                        <!-- CALENDAR VIEW -->
+                        <div role="tabpanel" class="tab-pane active" id="calendar-tab">
+                            <div style="margin-top: 20px;">
+                                <h5>Touren pro Tag</h5>
+                                <div class="calendar-grid" id="calendar-grid">
+                                    <!-- Filled by JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ALL TOURS -->
+                        <div role="tabpanel" class="tab-pane" id="tours-tab">
+                            <div style="margin-top: 20px;">
+                                <div style="margin-bottom: 15px;">
+                                    <input type="date" id="filter-date-from" placeholder="Von" style="padding: 5px; margin-right: 10px;">
+                                    <input type="date" id="filter-date-to" placeholder="Bis" style="padding: 5px; margin-right: 10px;">
+                                    <select id="filter-status" style="padding: 5px; margin-right: 10px;">
+                                        <option value="">Alle Status</option>
+                                        <option value="planned">Geplant</option>
+                                        <option value="loading">Wird beladen</option>
+                                        <option value="in_transit">Unterwegs</option>
+                                        <option value="delivering">Wird geliefert</option>
+                                        <option value="completed">Abgeschlossen</option>
+                                        <option value="cancelled">Storniert</option>
+                                    </select>
+                                    <button class="btn btn-sm btn-primary" onclick="loadTours()">Filtern</button>
+                                </div>
+                                <div id="tours-list">
+                                    <!-- Filled by JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- VEHICLES -->
+                        <div role="tabpanel" class="tab-pane" id="vehicles-tab">
+                            <div style="margin-top: 20px;">
+                                {% if "TRANSPORT:EDIT"|instancePermissions %}
+                                    <button class="btn btn-sm btn-success" onclick="newVehicleModal()">Neues Fahrzeug</button>
+                                {% endif %}
+                                <table class="table table-striped table-hover" style="margin-top: 15px;">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Typ</th>
+                                            <th>Kennzeichen</th>
+                                            <th>Max. Gewicht</th>
+                                            <th>Volumen</th>
+                                            <th>Status</th>
+                                            <th>Aktionen</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="vehicles-table">
+                                        <!-- Filled by JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- DRIVERS -->
+                        <div role="tabpanel" class="tab-pane" id="drivers-tab">
+                            <div style="margin-top: 20px;">
+                                {% if "TRANSPORT:EDIT"|instancePermissions %}
+                                    <button class="btn btn-sm btn-success" onclick="newDriverModal()">Neuer Fahrer</button>
+                                {% endif %}
+                                <table class="table table-striped table-hover" style="margin-top: 15px;">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Führerscheinklassen</th>
+                                            <th>Telefon</th>
+                                            <th>Verfügbar</th>
+                                            <th>Aktionen</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="drivers-table">
+                                        <!-- Filled by JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOUR DETAIL MODAL -->
+    <div class="modal fade" id="tourDetailModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Tour Details</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="tour-detail-content">
+                    <!-- Filled by JavaScript -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Schließen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const API_BASE = "{{ CONFIG.ROOTURL }}/api/transport/";
+
+// Load initial data
+document.addEventListener('DOMContentLoaded', function() {
+    loadDashboardStats();
+    loadTours();
+    loadVehicles();
+    loadDrivers();
+});
+
+function loadDashboardStats() {
+    fetch(API_BASE + "dashboard.php")
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.stats) {
+                document.getElementById('stat-tours-today').textContent = data.stats.tours_today || 0;
+                document.getElementById('stat-tours-upcoming').textContent = data.stats.tours_upcoming || 0;
+                document.getElementById('stat-distance').textContent = Math.round(data.stats.total_distance_month_km || 0);
+                document.getElementById('stat-costs').textContent = (data.stats.total_costs_month || 0).toFixed(2) + '€';
+            }
+        });
+}
+
+function loadTours() {
+    const dateFrom = document.getElementById('filter-date-from')?.value || '';
+    const dateTo = document.getElementById('filter-date-to')?.value || '';
+    const status = document.getElementById('filter-status')?.value || '';
+
+    let url = API_BASE + "tours.php";
+    const params = [];
+    if (dateFrom) params.push("date_from=" + encodeURIComponent(dateFrom));
+    if (dateTo) params.push("date_to=" + encodeURIComponent(dateTo));
+    if (status) params.push("status=" + encodeURIComponent(status));
+    if (params.length) url += "?" + params.join("&");
+
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            const html = [];
+            if (data.success && data.tours) {
+                data.tours.forEach(tour => {
+                    html.push(`
+                        <div class="tour-card">
+                            <div class="tour-header">
+                                ${tour.name}
+                                <span class="status-badge status-${tour.status}">${tour.status}</span>
+                            </div>
+                            <small>
+                                <strong>Datum:</strong> ${tour.date} |
+                                <strong>Fahrer:</strong> ${tour.users_name1 || 'N/A'} |
+                                <strong>Fahrzeug:</strong> ${tour.vehicle_name || 'N/A'}
+                            </small>
+                            <br/>
+                            <button class="btn btn-xs btn-info" onclick="showTourDetail(${tour.id})">Details</button>
+                        </div>
+                    `);
+                });
+            }
+            if (html.length === 0) html.push('<p class="text-muted">Keine Touren gefunden.</p>');
+            document.getElementById('tours-list').innerHTML = html.join('');
+        });
+}
+
+function showTourDetail(tourId) {
+    fetch(API_BASE + "tour_get.php?id=" + tourId)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.tour) {
+                const tour = data.tour;
+                const stopsHtml = tour.stops.map((stop, idx) => `
+                    <div class="stop-item">
+                        <span class="stop-badge badge-${stop.type}">${stop.type}</span>
+                        <strong>Halt ${stop.stop_order}:</strong> ${stop.address || '(keine Adresse)'}
+                        ${stop.arrived_at ? '<br/>Ankunft: ' + stop.arrived_at : ''}
+                        ${stop.completed_at ? '<br/>Abgeschlossen: ' + stop.completed_at : ''}
+                    </div>
+                `).join('');
+
+                const costsHtml = tour.costs.map(cost => `
+                    <div class="cost-row">
+                        <strong>${cost.cost_type}:</strong> ${cost.amount.toFixed(2)}€ ${cost.description ? '(' + cost.description + ')' : ''}
+                    </div>
+                `).join('');
+
+                document.getElementById('tour-detail-content').innerHTML = `
+                    <h6>Tour: ${tour.name}</h6>
+                    <p><strong>Status:</strong> <span class="status-badge status-${tour.status}">${tour.status}</span></p>
+                    <p><strong>Datum:</strong> ${tour.date}</p>
+                    <p><strong>Fahrer:</strong> ${tour.driver ? tour.driver.users_userid : 'N/A'}</p>
+                    <p><strong>Fahrzeug:</strong> ${tour.vehicle ? tour.vehicle.name : 'N/A'}</p>
+                    <hr/>
+                    <h6>Haltestellen</h6>
+                    <div>${stopsHtml || '<p class="text-muted">Keine Haltestellen.</p>'}</div>
+                    <hr/>
+                    <h6>Kosten</h6>
+                    <div>${costsHtml || '<p class="text-muted">Keine Kosten erfasst.</p>'}</div>
+                `;
+                $('#tourDetailModal').modal('show');
+            }
+        });
+}
+
+function loadVehicles() {
+    fetch(API_BASE + "vehicles.php")
+        .then(r => r.json())
+        .then(data => {
+            const html = [];
+            if (data.success && data.vehicles) {
+                data.vehicles.forEach(vehicle => {
+                    html.push(`
+                        <tr>
+                            <td>${vehicle.name}</td>
+                            <td>${vehicle.type}</td>
+                            <td>${vehicle.license_plate || '—'}</td>
+                            <td>${vehicle.max_weight_kg ? vehicle.max_weight_kg + ' kg' : '—'}</td>
+                            <td>${vehicle.cargo_volume_m3 ? vehicle.cargo_volume_m3 + ' m³' : '—'}</td>
+                            <td>${vehicle.is_active ? '<span class="badge badge-success">Aktiv</span>' : '<span class="badge badge-secondary">Inaktiv</span>'}</td>
+                            <td>
+                                {% if "TRANSPORT:EDIT"|instancePermissions %}
+                                    <button class="btn btn-xs btn-info" onclick="editVehicle(${vehicle.id})">Bearbeiten</button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    `);
+                });
+            }
+            if (html.length === 0) html.push('<tr><td colspan="7" class="text-muted">Keine Fahrzeuge.</td></tr>');
+            document.getElementById('vehicles-table').innerHTML = html.join('');
+        });
+}
+
+function loadDrivers() {
+    fetch(API_BASE + "drivers.php")
+        .then(r => r.json())
+        .then(data => {
+            const html = [];
+            if (data.success && data.drivers) {
+                data.drivers.forEach(driver => {
+                    html.push(`
+                        <tr>
+                            <td>${driver.users_name1} ${driver.users_name2}</td>
+                            <td>${driver.license_types || '—'}</td>
+                            <td>${driver.phone || '—'}</td>
+                            <td>${driver.is_available ? '<span class="badge badge-success">Verfügbar</span>' : '<span class="badge badge-danger">Nicht verfügbar</span>'}</td>
+                            <td>
+                                {% if "TRANSPORT:EDIT"|instancePermissions %}
+                                    <button class="btn btn-xs btn-info" onclick="editDriver(${driver.id})">Bearbeiten</button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    `);
+                });
+            }
+            if (html.length === 0) html.push('<tr><td colspan="5" class="text-muted">Keine Fahrer.</td></tr>');
+            document.getElementById('drivers-table').innerHTML = html.join('');
+        });
+}
+
+function newTourModal() {
+    alert("Tour-Erstellung: Zu implementieren im Formulardialog");
+}
+
+function newVehicleModal() {
+    alert("Fahrzeug-Erstellung: Zu implementieren im Formulardialog");
+}
+
+function newDriverModal() {
+    alert("Fahrer-Erstellung: Zu implementieren im Formulardialog");
+}
+
+function editVehicle(id) {
+    alert("Fahrzeug " + id + " bearbeiten: Zu implementieren");
+}
+
+function editDriver(id) {
+    alert("Fahrer " + id + " bearbeiten: Zu implementieren");
+}
+</script>
+{% endblock %}

@@ -1,0 +1,574 @@
+{% extends "layout.twig" %}
+
+{% block title %}AI Provider Settings{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h1 class="mb-4">
+        <i class="fas fa-brain"></i> AI Provider Management
+    </h1>
+
+    <!-- Tab Navigation -->
+    <ul class="nav nav-tabs mb-4" id="aiTabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" id="providers-tab" data-bs-toggle="tab" href="#providers">
+                <i class="fas fa-plug"></i> Providers
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="routing-tab" data-bs-toggle="tab" href="#routing">
+                <i class="fas fa-network-wired"></i> Task Routing
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="costs-tab" data-bs-toggle="tab" href="#costs">
+                <i class="fas fa-euro-sign"></i> Costs & Budget
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="fallback-tab" data-bs-toggle="tab" href="#fallback">
+                <i class="fas fa-shield-alt"></i> Fallback
+            </a>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="aiTabContent">
+
+        <!-- ========== PROVIDERS TAB ========== -->
+        <div class="tab-pane fade show active" id="providers" role="tabpanel">
+            <div class="row">
+                <div class="col-md-8">
+                    <h3>Configured Providers</h3>
+                    <div id="providersList" class="row gap-3">
+                        <!-- Loaded via JavaScript -->
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <h3>Add Provider</h3>
+                    <form id="addProviderForm">
+                        <div class="mb-3">
+                            <label class="form-label">Provider Name</label>
+                            <input type="text" class="form-control" name="name" placeholder="e.g., Claude Main" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Provider Type</label>
+                            <select class="form-control" name="provider_type" id="providerType" required>
+                                <option value="">Select provider...</option>
+                                <option value="claude">Claude (Anthropic)</option>
+                                <option value="openai">OpenAI (GPT-4, GPT-3.5)</option>
+                                <option value="gemini">Google Gemini</option>
+                                <option value="mistral">Mistral AI</option>
+                                <option value="ollama">Ollama (Local)</option>
+                                <option value="openai_compatible">OpenAI-Compatible API</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3" id="apiKeyField">
+                            <label class="form-label">API Key</label>
+                            <input type="password" class="form-control" name="api_key" placeholder="Your API key">
+                            <small class="form-text text-muted">Keep this secret!</small>
+                        </div>
+
+                        <div class="mb-3" id="baseUrlField" style="display: none;">
+                            <label class="form-label">Base URL</label>
+                            <input type="url" class="form-control" name="base_url" placeholder="http://localhost:11434">
+                            <small class="form-text text-muted">For Ollama or custom APIs</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Default Model</label>
+                            <select class="form-control" name="default_model" id="defaultModel">
+                                <option value="">Select a model...</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" name="is_active" value="1" checked>
+                            <label class="form-check-label">Active</label>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" name="is_default" value="1">
+                            <label class="form-check-label">Set as Default</label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">Add Provider</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== TASK ROUTING TAB ========== -->
+        <div class="tab-pane fade" id="routing" role="tabpanel">
+            <h3>Task-Based Provider Routing</h3>
+            <p class="text-muted">Assign specific AI providers for different task types</p>
+
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Task Type</th>
+                        <th>Provider</th>
+                        <th>Model Override</th>
+                        <th>Priority</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="routingList">
+                    <!-- Loaded via JavaScript -->
+                </tbody>
+            </table>
+
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#routingModal">
+                <i class="fas fa-plus"></i> Add Routing Rule
+            </button>
+        </div>
+
+        <!-- ========== COSTS & BUDGET TAB ========== -->
+        <div class="tab-pane fade" id="costs" role="tabpanel">
+            <div class="row">
+                <div class="col-md-6">
+                    <h3>Monthly Budget Status</h3>
+                    <div id="budgetStatus" class="card p-4">
+                        <!-- Loaded via JavaScript -->
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h3>Usage by Provider</h3>
+                    <div id="usageByProvider" class="card p-4">
+                        <!-- Loaded via JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="mt-4">Usage by Task Type</h3>
+            <table class="table table-sm" id="usageByTask">
+                <thead>
+                    <tr>
+                        <th>Task Type</th>
+                        <th>Calls</th>
+                        <th>Input Tokens</th>
+                        <th>Output Tokens</th>
+                        <th>Cost (EUR)</th>
+                        <th>Avg Latency</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Loaded via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ========== FALLBACK TAB ========== -->
+        <div class="tab-pane fade" id="fallback" role="tabpanel">
+            <h3>Fallback Chains</h3>
+            <p class="text-muted">Automatically try backup providers if primary fails</p>
+
+            <div id="fallbackChains" class="row gap-3">
+                <!-- Loaded via JavaScript -->
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Provider Card Modal for Testing -->
+<div class="modal fade" id="testProviderModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Test Provider</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="testResult">
+                Testing...
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Routing Modal -->
+<div class="modal fade" id="routingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Routing Rule</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="routingForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Task Type</label>
+                        <input type="text" class="form-control" name="task_type" placeholder="e.g., asset_lookup" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Provider</label>
+                        <select class="form-control" name="provider_id" id="routingProvider" required>
+                            <option value="">Select provider...</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Model Override (optional)</label>
+                        <input type="text" class="form-control" name="model_override" placeholder="Leave empty to use default">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Priority</label>
+                        <input type="number" class="form-control" name="priority" value="0">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .provider-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 1rem;
+        transition: all 0.3s;
+    }
+
+    .provider-card:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .provider-status {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+    }
+
+    .provider-status.green {
+        background-color: #28a745;
+    }
+
+    .provider-status.red {
+        background-color: #dc3545;
+    }
+
+    .budget-bar {
+        background-color: #e9ecef;
+        border-radius: 4px;
+        height: 24px;
+        overflow: hidden;
+    }
+
+    .budget-bar-fill {
+        background-color: #28a745;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+
+    .budget-bar-fill.warning {
+        background-color: #ffc107;
+    }
+
+    .budget-bar-fill.danger {
+        background-color: #dc3545;
+    }
+</style>
+
+<script>
+    const apiBase = '/api/ai';
+    let allProviders = [];
+
+    // Load initial data
+    document.addEventListener('DOMContentLoaded', function () {
+        loadProviders();
+        loadRouting();
+        loadUsageStats();
+
+        // Handle provider type change
+        document.getElementById('providerType').addEventListener('change', onProviderTypeChange);
+
+        // Form submissions
+        document.getElementById('addProviderForm').addEventListener('submit', addProvider);
+        document.getElementById('routingForm').addEventListener('submit', addRouting);
+    });
+
+    function loadProviders() {
+        fetch(apiBase + '/providers')
+            .then(r => r.json())
+            .then(data => {
+                allProviders = data.data || [];
+                renderProviders();
+            })
+            .catch(err => console.error('Error loading providers:', err));
+    }
+
+    function renderProviders() {
+        const list = document.getElementById('providersList');
+        list.innerHTML = allProviders.map(p => `
+            <div class="col-md-6">
+                <div class="provider-card">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5>
+                            <span class="provider-status ${p.is_active ? 'green' : 'red'}"></span>
+                            ${p.name}
+                        </h5>
+                        <span class="badge ${p.is_default ? 'bg-primary' : 'bg-secondary'}">
+                            ${p.is_default ? 'Default' : p.provider_type}
+                        </span>
+                    </div>
+                    <p class="text-muted mb-2">
+                        <strong>Type:</strong> ${p.provider_type}<br>
+                        <strong>Model:</strong> ${p.default_model}
+                    </p>
+                    <div class="btn-group btn-group-sm w-100" role="group">
+                        <button class="btn btn-outline-primary" onclick="testProvider(${p.id})">
+                            <i class="fas fa-flask"></i> Test
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="editProvider(${p.id})">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="deleteProvider(${p.id})">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        // Update routing select
+        const select = document.getElementById('routingProvider');
+        select.innerHTML = '<option value="">Select provider...</option>' +
+            allProviders.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    }
+
+    function onProviderTypeChange() {
+        const type = document.getElementById('providerType').value;
+        const baseUrlField = document.getElementById('baseUrlField');
+        const apiKeyField = document.getElementById('apiKeyField');
+
+        // Show/hide fields based on provider type
+        baseUrlField.style.display = (type === 'ollama' || type === 'openai_compatible') ? 'block' : 'none';
+        apiKeyField.style.display = (type !== 'ollama') ? 'block' : 'none';
+
+        // Update available models
+        updateModelSelect(type);
+    }
+
+    function updateModelSelect(providerType) {
+        const select = document.getElementById('defaultModel');
+        const models = {
+            'claude': ['claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001'],
+            'openai': ['gpt-4-turbo', 'gpt-4', 'gpt-4o', 'gpt-3.5-turbo'],
+            'gemini': ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro'],
+            'mistral': ['mistral-large', 'mistral-medium', 'mistral-small'],
+            'ollama': ['llama2', 'mistral', 'neural-chat'],
+            'openai_compatible': ['gpt-4', 'gpt-3.5-turbo'],
+        };
+
+        const providerModels = models[providerType] || [];
+        select.innerHTML = providerModels.map(m => `<option value="${m}">${m}</option>`).join('');
+    }
+
+    function addProvider(e) {
+        e.preventDefault();
+        const form = e.target;
+        const data = new FormData(form);
+
+        const payload = {
+            name: data.get('name'),
+            provider_type: data.get('provider_type'),
+            api_key: data.get('api_key'),
+            base_url: data.get('base_url'),
+            default_model: data.get('default_model'),
+            is_active: form.querySelector('[name="is_active"]').checked ? 1 : 0,
+            is_default: form.querySelector('[name="is_default"]').checked ? 1 : 0,
+        };
+
+        fetch(apiBase + '/providers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    form.reset();
+                    loadProviders();
+                    alert('Provider added successfully!');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            });
+    }
+
+    function testProvider(id) {
+        const modal = new bootstrap.Modal(document.getElementById('testProviderModal'));
+        const result = document.getElementById('testResult');
+        result.innerHTML = 'Testing...';
+        modal.show();
+
+        fetch(apiBase + '/provider_test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider_id: id })
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    result.innerHTML = `
+                        <div class="alert alert-success">
+                            <strong>✓ Connection Successful</strong><br>
+                            Model: ${data.model}<br>
+                            Response: ${data.response}
+                        </div>
+                    `;
+                } else {
+                    result.innerHTML = `
+                        <div class="alert alert-danger">
+                            <strong>✗ Connection Failed</strong><br>
+                            ${data.message}
+                        </div>
+                    `;
+                }
+            });
+    }
+
+    function deleteProvider(id) {
+        if (!confirm('Are you sure? This will delete all task routing rules for this provider.')) return;
+
+        fetch(apiBase + '/provider_delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider_id: id })
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    loadProviders();
+                    loadRouting();
+                    alert('Provider deleted');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            });
+    }
+
+    function loadRouting() {
+        fetch(apiBase + '/task_routing')
+            .then(r => r.json())
+            .then(data => {
+                const list = document.getElementById('routingList');
+                list.innerHTML = (data.data || []).map(r => `
+                    <tr>
+                        <td><code>${r.task_type}</code></td>
+                        <td>${r.provider?.name || 'Unknown'}</td>
+                        <td>${r.model_override || '-'}</td>
+                        <td>${r.priority}</td>
+                        <td>
+                            <button class="btn btn-sm btn-danger" onclick="deleteRouting(${r.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            });
+    }
+
+    function addRouting(e) {
+        e.preventDefault();
+        const form = e.target;
+        const data = new FormData(form);
+
+        const payload = {
+            task_type: data.get('task_type'),
+            provider_id: parseInt(data.get('provider_id')),
+            model_override: data.get('model_override') || null,
+            priority: parseInt(data.get('priority')),
+        };
+
+        fetch(apiBase + '/task_routing', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    form.reset();
+                    loadRouting();
+                    bootstrap.Modal.getInstance(document.getElementById('routingModal')).hide();
+                    alert('Routing rule added!');
+                }
+            });
+    }
+
+    function deleteRouting(id) {
+        if (confirm('Delete this routing rule?')) {
+            // TODO: Implement routing deletion API
+            alert('TODO: Implement');
+        }
+    }
+
+    function loadUsageStats() {
+        fetch(apiBase + '/usage?period=month')
+            .then(r => r.json())
+            .then(data => {
+                renderBudgetStatus(data.data.monthly_budget);
+                renderUsageByProvider(data.data.summary);
+                renderUsageByTask(data.data.by_task_type);
+            });
+    }
+
+    function renderBudgetStatus(budget) {
+        const div = document.getElementById('budgetStatus');
+        const percentage = Math.min(budget.percentage_used, 100);
+        const warningClass = percentage > 80 ? 'warning' : (percentage > 50 ? '' : '');
+
+        div.innerHTML = `
+            <h5>${budget.current_month}</h5>
+            <p><strong>Budget:</strong> €${budget.budget_limit_eur.toFixed(2)} / month</p>
+            <p><strong>Used:</strong> €${budget.current_month_cost_eur.toFixed(6)}</p>
+            ${budget.remaining_eur !== null ? '<p><strong>Remaining:</strong> €' + budget.remaining_eur.toFixed(2) + '</p>' : ''}
+            <div class="budget-bar">
+                <div class="budget-bar-fill ${warningClass}" style="width: ${percentage}%">
+                    ${percentage.toFixed(0)}%
+                </div>
+            </div>
+        `;
+    }
+
+    function renderUsageByProvider(summary) {
+        const div = document.getElementById('usageByProvider');
+        div.innerHTML = summary.by_provider.slice(0, 5).map(p => `
+            <div class="mb-2">
+                <strong>${p.model}</strong><br>
+                <small>${p.calls} calls · €${p.total_cost_eur.toFixed(6)}</small>
+            </div>
+        `).join('');
+    }
+
+    function renderUsageByTask(data) {
+        const tbody = document.querySelector('#usageByTask tbody');
+        tbody.innerHTML = (data.by_task || []).map(t => `
+            <tr>
+                <td><code>${t.task_type || 'unknown'}</code></td>
+                <td>${t.calls}</td>
+                <td>${t.total_input_tokens}</td>
+                <td>${t.total_output_tokens}</td>
+                <td>€${t.total_cost_eur?.toFixed(6) || '0'}</td>
+                <td>${t.avg_latency_ms?.toFixed(0) || '0'}ms</td>
+            </tr>
+        `).join('');
+    }
+</script>
+{% endblock %}
