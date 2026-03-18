@@ -6,6 +6,8 @@
 FROM composer:lts AS deps
 WORKDIR /app
 COPY composer.json composer.lock ./
+# Autoload classmap referenziert src/ — leere Verzeichnisse anlegen damit Composer nicht abbricht
+RUN mkdir -p src/services src/common/libs
 RUN composer install --no-dev --no-interaction --ignore-platform-reqs
 
 # Stage 2: PHP 8.3 + Apache
