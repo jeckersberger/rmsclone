@@ -3417,7 +3417,7 @@ Diese umfassende Roadmap bietet einen strategischen Weg für MyRMS, sich von ein
 
 ---
 
-**Document Version:** 2.0 (Expanded)
+**Document Version:** 3.0 (Expanded + UI Design)
 **Last Updated:** 18. März 2026
 **Next Review:** Wöchentlich während Phase 1 (Montag 9:00 Uhr)
 **Owner:** Technical Steering Committee
@@ -3425,8 +3425,321 @@ Diese umfassende Roadmap bietet einen strategischen Weg für MyRMS, sich von ein
 
 ---
 
-## Document Metadata
+# Part H: UI-Design-Spezifikationen für alle Module
 
-**Document Version:** 2.0
+## H1. Design-System und Style Guide
+
+Das Design-System von MyRMS bildet die Grundlage für alle Benutzeroberflächen und gewährleistet konsistenz, Zugänglichkeit und eine angenehme Nutzerexperience über alle Module hinweg. Das System folgt Modern SaaS Dashboard Patterns von 2025 und basiert auf einer neutralen Farbpalette mit gezielten Accent-Farben für Alerts und Statusinformationen.
+
+Die Farbpalette besteht aus Primary Color (Mittleres Blau, #2563EB), Secondary Color (Dezentes Grau, #6B7280), sowie semantischen Farben für Feedback: Success (Grün #10B981), Warning (Bernstein #F59E0B), Danger (Rot #EF4444), Info (Cyan #06B6D4). Hintergrundfarben nutzen ein neutrales Palette aus Off-White (#F9FAFB) für Seiten und #FFFFFF für Cards und Container, um Tiefe und Hierarchie zu erzeugen.
+
+Die Typografie folgt einer Modern Sans-Serif Familie (Inter oder Segoe UI als Fallback). Heading Styles sind definiert als H1 (32px, Weight 700), H2 (24px, Weight 600), H3 (20px, Weight 600), H4 (16px, Weight 600) sowie Body Text (14px, Weight 400), Small Text (12px, Weight 400) und Labels (12px, Weight 500). Das 8px Grid-System wird konsistent angewendet: 8px, 16px, 24px, 32px, 48px für Spacing und Padding. Das Layout basiert auf einem 12-Column Grid mit 20px Gutter und 1200px Max-Width für Desktop.
+
+Das Icon-System nutzt Lucide Icons in den Größen 16px (UI-Controls), 20px (default), 24px (prominente Actions), und 32px (Hero/Empty States). Icons sind monochromatisch und werden in Körperfarbton oder Accent-Farben eingefärbt. Schatten und Elevation nutzen drei Stufen: Cards (box-shadow: 0 1px 3px rgba(0,0,0,0.1)), Dropdowns/Modals (0 10px 15px rgba(0,0,0,0.15)), und Modal Overlay (0 20px 25px rgba(0,0,0,0.2)). Border Radius ist konsistent bei 4px für kleine Elemente (Input, Buttons), 8px für Cards und Panels, 12px für größere Modals. Alle Animationen nutzen eine Standard-Easing von ease-in-out mit 150ms Duration für Micro-Interactions (Hover, Focus), 300ms für Modal-Übergänge und 500ms für Page-Transitions.
+
+## H2. Dashboard-UI (Referenz: Rentman, Booqable)
+
+Das Dashboard bildet die Landingpage nach dem Login und präsentiert KPIs, aktive Projekte, anstehende Aufgaben und Finanz-Übersichten in einem customisable Widget-System. Das Layout folgt einem 4-Spalten Grid auf Desktop mit automatischem Responsive Reflow zu 2 Spalten auf Tablet und 1 Spalte auf Mobile. KPI-Karten zeigen numerische Metriken (z.B. „Gesamtumsatz diesen Monat", „Verfügbare Assets", „Überfällige Rechnungen") mit großer, leicht lesbarer Zahlendarstellung (32px Weight 700), einer kurzen Beschreibung, sowie einer farbcodierten Trend-Anzeige (grüner Pfeil nach oben für positive Trends, roter Pfeil nach unten für negative, grauer Strich für neutral).
+
+Das Widget-System ermöglicht Drag-and-Drop Anordnung: Benutzer können Cards verschieben, in der Größe anpassen (1x1, 2x1, 2x2 Grid Spots) und beliebig ein-/ausblenden. Jedes Widget hat einen Header mit Titel, Info-Icon (Tooltip mit Erklärung), und ein Menü-Icon (Zahnrad) für Widget-spezifische Einstellungen. Die Aktion „Widget entfernen" ist im Kontextmenü hinterlegt und wird mit einer Toast-Nachricht bestätigt, die einen „Undo" Link anbietet.
+
+Chart-Widgets zeigen Umsatzentwicklung (Linien-Diagramm mit Monatstrends), Auslastungsquoten (Säulen-Diagramm: Assets pro Kategorie), und fällige Rechnungen (sortiertes Ranking mit Fälligkeitsdatum). Die Quick-Action-Leiste am oberen Dashboard-Rand bietet primäre Buttons für wiederkehrende Actionen: „+ Neues Projekt", „+ Neuer Kunde", „+ Neue Rechnung", „+ Equipment erfassen" mit Icon + Text. Diese Buttons öffnen je ein Modal oder Seite zum Anlegen.
+
+Kritische Alarme (z.B. „Zahlungsfällige Rechnungen", „Server-Fehler", „Benutzer-Einladung ausstehend") werden als Notification-Banner oben auf dem Dashboard angezeigt, mit Farbe rot (#EF4444), einem Warning-Icon und einer Dismiss-Option (X). Dashboard-Presets sind pro Benutzer-Rolle konfiguriert: Admin sieht Finanzen + System-Health, Projektmanager sieht Projekte + Team-Auslastung, Lager-Personal sieht Asset-Verfügbarkeit + Scan-Queue, Finanzen sieht Rechnungen + Zahlungseingänge. Benutzer können vordefinierte Presets über ein Dropdown am Dashboard-Titel auswählen oder ein Custom Preset speichern.
+
+## H3. Navigations-UI
+
+Die primäre Navigation besteht aus einer vertikalen Sidebar auf der linken Seite, die in einer Standard-Breite von 240px expandiert wird und auf 64px (Icon-Only Modus) kollabiert werden kann. Der Toggle-Button (Hamburger-Icon) ist oben rechts in der Sidebar positioniert und hat einen klaren Hover-State mit Hintergrundfarbe. Die Sidebar-Struktur nutzt Sektion Headers (Labels in Small-Text, Weight 500, Gray-600) mit jeweils 4-6 Menüpunkten. Jeder Menüpunkt hat ein Icon (20px, links), einen Label (Body Text, zentriert vertikal), und optional einen Badge (z.B. rote Punkt für Unread-Benachrichtigungen). Der aktive Menüpunkt wird mit einer linken Border (4px, Primary-Blau) und geändertem Hintergrund (#F3F4F6) hervorgehoben.
+
+Für komplexe Bereiche mit vielen Subitems (z.B. Modulverwaltung, Berichterstellung) wird ein Mega-Menu eingesetzt: beim Hover über einen Menüpunkt wird horizontal ein Panel ausgeklappt, das Subitems in Kolonnen strukturiert. Dies verhindert endlose verschachtelte Menüs und macht Abschnitte schneller navigierbar. Das Breadcrumb-System unter dem Page-Titel zeigt die aktuelle Position in der Navigation (z.B. „Dashboard > Projekte > Projektname") und erlaubt Rücksprünge durch Klick auf einzelne Seiten.
+
+Für Power-User wird eine Command Palette implementiert, erreichbar über Ctrl+K (oder Cmd+K auf Mac). Die Palette öffnet ein Modal mit einer Search-Box und einer Rangliste kürzlich genutzter Commands sowie Search-Results nach Eingabe von Keywords (z.B. „Rechnung erstellen", „Assets exportieren"). Dies reduziert Klicks für häufige Aufgaben erheblich.
+
+Auf Mobile-Geräten (< 768px) wird die Sidebar in einen Bottom-Navigation-Tab-Bar transformiert mit 5 Haupt-Tabs (Dashboard, Projekte, Assets, Kunden, Mehr). Der „Mehr"-Tab öffnet ein Menü-Modal mit restlichen Navigation Items. Eine Contextual Quick-Action wird als Floating Action Button (FAB) implementiert, typischerweise mit dem Icon „+" (Primary-Farbe, Box-Shadow, 56px Durchmesser), positioniert unten rechts mit 16px Abstand zu den Edges, um schnelle Aktionen auf Mobile zu ermöglichen (z.B. „Schnell scannen" auf der Assets-Seite).
+
+## H4. Tabellen-UI (Datentabellen für alle Listen)
+
+Alle Listen von Daten (Projekte, Assets, Kunden, Rechnungen, etc.) werden in Tabellen-Form mit einer erweiterten Feature-Set dargestellt. Die Column Headers sind sortierbar (Klick auf Header führt ASC-Sort aus, zweiter Klick DESC, dritter Klick entfernt Sorting). Ein Pfeil-Icon neben dem Spalten-Name zeigt die Sortierungsrichtung an (▲ für ASC, ▼ für DESC). Column Headers sind auch resizable: Benutzer können die Grenze zwischen zwei Spalten mit der Maus greifen und verschieben (Cursor wird zu col-resize), die Breite wird im Browser Local Storage persistiert.
+
+Eine collapsible Filter-Bar sitzt über der Tabelle und zeigt aktive Filter als removable Chips an (z.B. „Status: Aktiv ✕", „Kategorie: Equipment ✕"). Neue Filter werden über ein „+ Filter" Button hinzugefügt, welches ein Dropdown mit verfügbaren Spalten und ihren Filter-Operatoren öffnet (Text: contains/equals, Number: =/>/<, Date: before/after/range). Angewendete Filter werden dynamisch aus der Spalten-Liste genommen, um Redundanzen zu vermeiden.
+
+Inline-Editing ist für viele Spalten unterstützt: beim Hover über eine Zelle wird ein kleines Bleistift-Icon (Edit-Icon) rechts in der Zelle sichtbar. Klick auf die Zelle oder das Icon öffnet einen Edit-Mode: die Zelle erhält einen Focus-Highlight (1px Border, Primary-Farbe), zeigt ein Input-Feld oder Select-Dropdown je nach Datentyp, und hat zwei Buttons (Checkmark zum Speichern, X zum Abbrechen). Nach erfolgreicher Speicherung blinkt die Zelle kurz grün auf.
+
+Bulk-Selection ist durch eine Checkbox in der ersten Spalte implementiert. Ein „Select All" Checkbox im Column Header wählt alle sichtbaren (oder alle) Datensätze. Sobald >= 1 Zeile ausgewählt ist, wird eine Floating-Action-Toolbar am unteren Rand der Tabelle angezeigt mit Bulk-Aktionen: „Delete" (mit Bestätigungs-Modal), „Archive", „Export", „Assign to..." (z.B. zu einem Projekt oder Besitzer). Diese Toolbar hat einen Semi-transparenten Hintergrund, sticky positioning und ist weit oben z-index weise (um Modals nicht zu blocken).
+
+Row Hover States zeigen zusätzliche Interaktivität: beim Hover über eine Zeile wird der komplette Row mit einem leichten Hintergrund-Highlight (#F3F4F6) versehen, und am rechten Ende werden Quick-Action Icons erscheinen (Edit, Details-anschauen, Löschen, Duplikate, etc.). Diese Icons sind nur auf Hover sichtbar, um Tabellen nicht zu überladen. Der Row selbst ist auch als Link konfigurierbar, um die Detailseite zu öffnen.
+
+Responsive Verhalten auf Mobile: statt Horizontales Scrollen wird ein Card-Layout verwendet. Jede Zeile wird zu einer vertikalen Card mit großeren, stacked Labels und Values, sowie einem Expand-Icon zum Anschauen aller Spalten. Pagination vs. Infinite Scroll ist konfigurierbar per Tabellen-Konfiguration: Standard ist Pagination mit Seite X von Y und Größen-Selector (10, 25, 50, 100 Einträge pro Seite). Infinite Scroll kann für mobile Erfahrung aktiviert werden, wo Scroll zum Seitende automatisch weitere Einträge lädt.
+
+Column Visibility Toggle ist über ein Spalten-Icon (drei Punkte oder ähnlich) im Header erreichbar und öffnet ein Dropdown mit Checkboxen für jede Spalte. Deselektierte Spalten werden ausgeblendet. Ein Export-Button (Download-Icon) bietet CSV, Excel, und PDF Export mit konfigurierbarem Spalten-Include.
+
+Saved Views/Filter-Presets ermöglichen Benutzer, häufig verwendete Filter-Kombinationen unter einem Namen zu speichern (z.B. „Meine aktiven Projekte diese Woche") und später schnell wieder zu laden über ein Dropdown im Filter-Bar.
+
+## H5. Formular-UI (Alle Eingabemasken)
+
+Alle Formular-Eingaben folgen einem konsistenten Design, ob einfache Single-Page Formulare oder komplexe Multi-Step Wizards. Für komplexe Szenarien (z.B. Projekt anlegen, Rechnung erstellen) wird ein Multi-Step Wizard mit 3-5 Feldern pro Step implementiert. Der Wizard zeigt oben einen Progress Indicator: Schritte als nummerierte Kreise (z.B. „1. Basis-Info → 2. Positionen → 3. Konditionen → 4. Bestätigung"), wobei der aktuelle Schritt gefüllt und blau ist, vorherige grün, und kommende grau.
+
+Jeder Step hat einen Titel und optionalen Beschreibungstext, gefolgt von den Eingangsfeldern. Progressive Disclosure ist zentral: grundlegende Informationen (Name, Datum, Kunde) werden im ersten Step gezeigt, komplexe Feldgruppen (z.B. Zahlungsbedingungen, Versanddetails) erst später. Conditional Fields werden basierend auf vorherigen Antworten sichtbar oder verborgen (z.B. wenn Zahlungsart „SEPA" ist, zeige IBAN-Feld).
+
+Feldtypen sind standardisiert: Text-Input (mit Placeholder-Text), Number-Input (mit +/- Spinner oder nur Tastatur-Input), Date Picker (Icon öffnet Kalender mit schnellen Presets), Select-Dropdown (mit Suchbar falls > 10 Optionen), Multi-Select (Chips/Tags anzeigen Auswahl), Toggle-Switch (für Boolean Werte), File-Upload (Drag-Drop Zone mit „Click to upload" Fallback).
+
+Inline Validation bietet Echtzeit-Feedback: während des Eingabe wird das Feld überprüft (auf Seite oder via API), und ein Validierungsstatus wird angezeigt als färbiger Border (grün für valid, rot für error) mit optional einer Meldung unter dem Feld (rote Schrift, 12px, mit Icon). Ein grüner Checkmark-Icon im Feld selbst (rechts) zeigt completion an.
+
+Auto-Save Draft ist zentral für UX: alle 30 Sekunden werden Formulardaten im Local Storage (oder via API) gespeichert. Ein Indicator oben im Wizard zeigt „Entwurf wird gespeichert..." → „Entwurf gespeichert" mit Timestamp. Falls Benutzer die Seite verlässt, wird beim Zurückkommen das Formular wieder geladen und ein Banner oben fragt, ob Entwurf fortgesetzt oder neu gestartet werden soll.
+
+Keyboard Navigation ist vollständig implementiert: Tab durchläuft alle Felder in logischer Reihenfolge, Enter absendert das Formular oder geht zum nächsten Step, Escape bricht ab (mit Bestätigungs-Modal wenn Changes vorhanden). Help Text und Tooltips werden über ein Info-Icon (Info-Icon, Farbe Gray-500) neben jedem Label angezeigt; Hover zeigt einen Tooltip mit erweiterter Erklärung.
+
+Required Field Indicators nutzen einen roten Stern (*) neben dem Label. Buttons am unteren Ende des Wizards sind „Zurück" (Secondary Button, disabled im Step 1), „Weiter" oder „Absenden" (Primary Button, disabled wenn validation errors vorhanden). Nach erfolgreichem Submit wird eine Success-Toast-Nachricht angezeigt (grüner Hintergrund, Checkmark-Icon, Auto-Dismiss nach 5s) mit Link zu nächster relevanter Seite (z.B. „Projekt erstellt. → Zum Projekt").
+
+## H6. Projekt-UI (Referenz: Rentman Drag-Drop)
+
+Die Projekt-Management Oberfläche bietet multiple Ansichten für verschiedene Workflow-Phasen und -Aspekte. Die Standard-Ansicht ist ein Kanban-Board, das die Pipeline eines Projekts visualisiert: fünf Spalten repräsentieren die Stages „Anfrage" (gelb), „Angebot" (blau), „Bestätigt" (grün), „Aktiv" (dunkelgrün), „Abgeschlossen" (grau). Jede Stage zeigt Cards für Projekte in dieser Phase, mit Projekt-Name, Kunde, Datum und Progress-Indikator (% mit Fortschritts-Balken).
+
+Drag-and-Drop Funktionalität erlaubt, eine Projekt-Card von einer Stage in die nächste zu ziehen, um den Status zu ändern. Ein visuelles Feedback zeigt dabei: die Card hebt sich ab (Schatten), die Ziel-Spalte wird leicht hervorgehoben (Border, Hintergrund-Farbe), und beim Loslassen animiert die Card in die neue Position. Falls die Stage ein Bestätigungsschritt ist (z.B. „Bestätigt"), öffnet sich optional ein Modal zum Eintragen von Informationen (z.B. Termin bestätigen).
+
+Auf der Projekt-Detail-Seite wird eine Tabbed-Navigation mit fünf Tabs genutzt: „Übersicht" (Basis-Infos, Status, Kunde, Termine), „Equipment" (zugeordnete Assets mit Mengen, Preisen), „Team" (zugeordnete Crew, Rollen, Vefügbarkeiten), „Dokumente" (Angebot, Rechnung, Lieferschein, weitere hochgeladene Dateien), „Finanzen" (Kostenaufschlüsselung, Umsatz), „Aktivität" (Änderungshistorie, Kommentare). Jeder Tab ist eine separate „Seite" im Frontend, kann aber derselben URL-Struktur folgen (z.B. /projects/123/equipment).
+
+Drag-and-Drop Equipment-Zuordnung wird auf dem Equipment-Tab implementiert: die linke Seite zeigt verfügbare Assets (aus dem Lagerbestand, gefiltert nach Kategorie und Verfügbarkeit), die rechte Seite zeigt zugeordnete Assets für dieses Projekt. Assets können von links nach rechts gezogen werden, oder umgekehrt zum Entfernen. Bei Zuordnung wird eine Menge eingegeben (Number-Input oder Spinner) und optional ein Custom-Price-Override.
+
+Timeline-View zeigt ein Gantt-Chart: Projekte/Positionen auf Y-Achse, Zeit auf X-Achse, farbige Blöcke repräsentieren Projektdauer oder Asset-Nutzungszeiträume. Zoom-Controls (+/-) ermöglichen, die Zeitspanne anzupassen (Tage/Woche/Monat View). Heute ist mit einer roten Vertikallinie markiert. Drag-and-Drop am Gantt erlaubt Projekte zu verschieben oder Dauer zu ändern (Anfass am Block-Ende zum Resize).
+
+Konflikt-Anzeige ist zentral: falls ein Asset für dieses Projekt zu zwei Zeiten verwendet werden soll (oder für zwei Projekte gleichzeitig), wird eine rote Markierung angezeigt, mit Hover-Tooltip detaillierter Info. Der Konflikt kann basierend auf verfügbarer Menge oder bestehenden Buchungen sein. Eine Warn-Banner oberhalb der Seite zeigt „1 Konflikt erkannt" mit Link zum Konflikt.
+
+Status-Badges zeigen den Projekt-Status mit Farben: Grau für Entwurf, Gelb für Anfrage/Angebot, Grün für Bestätigt/Aktiv, Orange für Überfällig, Rot für Abgebrochen. Ein Dropdown erlaubt Status-Änderungen mit optionalem Grund/Notiz (Modal öffnet sich).
+
+## H7. Equipment/Asset-UI (Referenz: EZRentOut)
+
+Die Asset-Management Oberfläche präsentiert Vermögenswerte (Geräte, Möbel, etc.) in einer flexiblen Ansicht. Die Standard-Ansicht ist ein Card-basiertes Layout (Gitter) mit je einer Asset-Karte pro Item: oben ein großes Foto (oder Placeholder-Icon falls keine Foto), darunter Name (14px, Weight 600), Kategorie (Small-Text, Gray-600), und Status-Badge (farbcodiert: Verfügbar=Grün, Reserviert=Orange, In-Benutzung=Dunkelblau, Wartung=Rot). Darunter eine Preis/Tag Anzeige (16px, Weight 600, Primary-Farbe). Ein Menü-Icon (drei Punkte) oben rechts in jeder Karte bietet Quick-Actions: Bearbeiten, Duplizieren, QR-Code anzeigen, Historie, Löschen.
+
+Alternativ ist eine Tabellenansicht verfügbar (Toggle oben rechts), welche Assets als Zeilen mit Spalten für Name, Kategorie, Verfügbarkeit, Preis/Tag, Letzter Scan, Status zeigt, mit denselben Inline-Edit und Quick-Action Funktionen wie in H4 beschrieben.
+
+Die Verfügbarkeits-Kalender auf der Asset-Detail-Seite zeigt einen Monatliche/Wochenliche/Tägliche Ansicht (Tabs zum Wechsel). Tage oder Zeitblöcke werden farbcodiert: Grün=verfügbar, Orange=teilweise verfügbar (nur einige Mengen), Rot=vollständig ausgebucht. Klick auf einen Tag öffnet ein Detail-Modal, das alle Buchungen an diesem Tag zeigt (Projekt, Kunde, Zeitraum, Notizen).
+
+Der QR-Code Scanner UI wird vollbildig dargestellt (Modal oder vollständige Seite, je nach Kontext). Der Kamera-Bereich zeigt den Live-Video-Feed mit einer Fokussierungs-Box in der Mitte (quadratisch, mit vier Ecken-Markern). Oben ist ein großes Text-Label „Richte deine Kamera auf einen QR-Code oder Barcode" mit freundlichem Icon. Ein erfolgreicher Scan triggert eine Vibration (auf mobilen Geräten) und einen kurzen Beep-Sound, gefolgt von einer grünen Bestätigungs-Animation (Checkmark, kurz eingeblendet). Das gescannte Asset wird automatisch hinzugefügt oder eine „Asset gefunden" Meldung wird angezeigt mit Optionen (Bestätigen, Nochmal scannen, Ändern).
+
+Die Asset-Detail-Seite hat Tabs: „Info" (Name, Seriennummer, Kategorie, Preis, Beschreibung, Fotos), „Buchungen" (Chronologische Liste kommender/vergangener Buchungen), „Wartung" (Wartungshistorie mit Datum, Art, Notizen, Kosten), „Fotos" (Grid aller hochgeladenen Bilder, mit Möglichtkeit neue hochzuladen), „Historie" (Änderungslog mit Wer/Was/Wann). Jeder Tab hat einen Button zum Hinzufügen („+ Wartung eintragen", „+ Foto hinzufügen", etc.).
+
+Die Zustandserfassungs-Formular wird angezeigt, wenn ein Asset aus einer Miete zurückkommt. Ein Modal zeigt: „Zustand erfassen für [Asset-Name]" mit einer Checkliste von häufigen Schäden (Kratzer, Dellen, Flecken, Elektronik defekt, etc.) mit Checkboxen, sowie ein großer Button zum Hochladen von Fotos (vorher/nachher). Ein Textarea für Notizen ist auch present. Ein „Bestätigen" Button speichert die Zustandserfassung und triggert eine Toast-Nachricht.
+
+Barcode-Label Druck-UI ist erreichbar über einen „Print-Label" Button auf Asset-Detail. Ein Modal zeigt eine Vorschau des Labels (QR-Code + Asset-Name + Seriennummer + Barcode) mit Optionen für Label-Größe (A6, A5, A4, etc.) und Menge (1-10). Ein „Drucken" Button öffnet das Browser-Print-Dialog mit optimierten Layout für diese Label. Optional kann ein Label-Vorlage-Editor angeboten werden (Custom-Text, Logo-Position, Farben).
+
+Lagerplatz-Visualisierung kann zwei Formen annehmen: Grid-View zeigt Lagerplatz als eine Top-Down Map mit Regalblöcken und Positionen, farbcodiert nach Asset-Kategorie oder Status (Grün=bestückt, Grau=leer). Klick auf Position zeigt Asset-Details. Eine Alternative ist Map-View (für größere Lager) mit zoom-baren Grundriss und Asset-Positionen als Pins.
+
+## H8. Kunden-UI
+
+Das Kundenmanagement bietet mehrere Ansichten und Interaktionsmöglichkeiten. Die Kundenübersicht wird in zwei Ansichten angeboten: Card-View (ähnlich Asset-Cards, mit Kundenname, Ort, Gesamtumsatz, letzter Kontakt, Status-Badge) und Tabellen-View (mit Sortierung, Filtering, Inline-Edit wie in H4). Ein „+ Neue Kunde" Button öffnet ein Quick-Create Inline-Formular am oberen Ende der Liste oder ein vollständiges Modal.
+
+Die Kunden-Detail-Seite ist in Tabs organisiert: „Stammdaten" (Name, Adresse, Steuernummer, E-Mail, Telefon, Web, Zahlungsbedingungen, Kreditlimit, Rechnungs-Adresse vs. Lieferadresse Auswahl), „Projekte" (Tabellenansicht aller Projekte dieses Kunden, sortierbar nach Datum oder Umsatz), „Rechnungen" (Tabellenansicht mit Status, Betrag, Fälligkeitsdatum, mit Filtermöglichkeiten nach Status), „Kommunikation" (siehe unten), „Dokumente" (hochgeladene Dateien, Verträge, Angebote).
+
+Kontaktpersonen-Management zeigt auf der „Stammdaten" Tab eine Sub-Liste von Ansprechpersonen (Name, Rolle, E-Mail, Telefon) mit Edit/Delete Actions pro Person. Ein „+ Kontaktperson hinzufügen" Button öffnet ein Quick-Form oder Modal.
+
+Kommunikations-Timeline ist eine chronologische Ansicht aller Interaktionen: E-Mails (mit Subject, Datum, Gesprächspartner, kurzer Preview), Anrufe (Datum, Dauer, Notizen), Notizen (manuell erstellt, Datum, Autor). Diese werden in umgekehrter chronologischer Reihenfolge angezeigt (neueste oben). Ein „+ Notiz hinzufügen" Button erlaubt schnelle Notiz-Erfassung. Ein @-Mention Autocomplete erlaubt, Teamkollegen zu verlinken.
+
+Kundenbewertung/Scoring wird als farbcodiertes Zeichen oben auf der Kunden-Detail angezeigt: A-Kunde (Gold-Farbe, hohes Volumen), B-Kunde (Silber), C-Kunde (Standard). Das Score wird basierend auf Gesamtumsatz, Zahlungshistorie (Pünktlichkeit), und Kontakthäufigkeit berechnet. Ein Tooltip oder Info-Sektion erklärt die Berechnung.
+
+Quick-Create Inline-Formular auf der Kundenübersicht: Ein kollabierter Card-Block mit „+ Neue Kunde hinzufügen" Text. Klick expandiert den Block, um 3-4 Grundfelder anzuzeigen (Name, Ort, Telefon, E-Mail) mit Enter zum Speichern oder X zum Abbrechen. Dies reduziert Klicks für häufige Actionen.
+
+## H9. Rechnungs- und Finanz-UI
+
+Der Rechnungs-Editor bietet ein WYSIWYG-Interface mit Split-Screen: linke Seite zeigt das Editor-Formular mit Standard-Feldern (Rechnungsnummer, Datum, Kunde, Lieferdatum, Zahlungsbedingungen, Discount, Steuersatz), rechts zeigt die Live-Vorschau wie die Rechnung aussieht (mit Firma-Logo, Kopfzeile, Positionen, Summen, Zahlungshinweise). Änderungen in Editor aktualisieren die Vorschau in Echtzeit.
+
+Positionen werden in einer Tabelle unterhalb des Editors hinzugefügt: Spalten für Pos.-Nummer, Artikel-Name, Menge, Einheit (Tage, Stunden, Stück), Einzelpreis, Summe. Drag-Drop erlaubt Umsortieren von Positionen. Ein „+ Position hinzufügen" Button öffnet eine neue Zeile mit Select-Dropdown für Artikel (aus Asset-Bibliothek), Number-Input für Menge, Auto-Berechnung von Summe. Jede Position hat ein Edit und Delete Icon. Bei Bearbeitung wird Inline-Edit Mode aktiviert (wie in H4).
+
+Rechnungsliste zeigt Tabellenansicht mit Spalten: Rechnungsnummer, Kunde, Betrag, Datum, Fälligkeitsdatum, Status-Badge (mit Farben: Entwurf=Grau, Gesendet=Blau, Bezahlt=Grün, Überfällig=Rot, Mahnung=Orange). Inline-Edit erlaubt Status-Änderung durch Klick auf die Status-Zelle. Ein Badge-Klick öffnet ein Modal zum Vermerken von Zahlungseingang (Betrag, Datum, Zahlungsart, Referenz).
+
+Zahlungs-Zuordnung UI ist kritisch für Finanzprozesse: ein Split-Screen zeigt links alle unbezahlten Rechnungen (mit Betrag und Fälligkeitsdatum), rechts alle eingegangenen Zahlungen (mit Betrag, Eingangsdatum, Referenz, optional Kundenzuweisung). Ein Drag-Drop Interface erlaubt, Zahlungen auf Rechnungen zu ziehen, um sie zuzuordnen. Ein Match-Algorithmus kann auch automatische Vorschläge machen (bei Betragsgleichheit oder Customer-Referenz-Match). Nach Zuordnung wird die Zeile in beiden Seiten grün hervorgehoben und kann entfernt werden.
+
+Mahnwesen-Dashboard zeigt alle überfälligen Rechnungen in einer Tabelle, gruppiert nach Eskalationsstufe (Stufe 1: bis 7 Tage überfällig, Stufe 2: bis 30 Tage, Stufe 3: über 30 Tage). Jede Gruppe ist farbcodiert (gelb/orange/rot). Ein Button „Mahnung schreiben" öffnet einen E-Mail Template Editor mit vorausgefüllter Rechnungsinformation und Kundenadresse. Ein weiterer Button „Zuordnung aktualisieren" nach Zahlungseingang setzt den Status auf „Bezahlt".
+
+Kassenbuch-UI zeigt eine Tabellenansicht aller Zahlungsbewegungen (Rechnungen, Zahlungseingänge, manuell erfasste Buchungen): Datum, Art (Rechnung/Zahlung/Gutschrift), Partner (Kunde/Lieferant), Betrag (positiv für Einnahmen, negativ für Ausgaben), Saldo-Laufzeile (kumulierte Summe). Eine Saldo-Laufzeile auf der rechten Seite zeigt die laufende Bilanz nach jeder Transaktion. Ein „Saldo zu Datum anschauen" Button erlaubt, den Kontostand zu einem beliebigen Termin zu ermitteln.
+
+SEPA-Lastschrift Management UI ist ein Bereich für Setup und Verwaltung von automatischen Zahlungen. Ein „Lastschrift-Mandat erstellen" Button öffnet ein Formular, welches Kundendaten abfragt (Name, IBAN, Mandatreferenz, Gültigkeitsdatum). Gespeicherte Mandate werden in einer Tabelle aufgelistet mit Optionen zum Einsehen, Bearbeiten oder Widerrufen. Ein „Batch-Lastschrift-Einzug erstellen" Button öffnet einen Wizard zum Auswählen von Rechnungen und zum Starten des Einzugsprozesses.
+
+ZUGFeRD/XRechnung Export UI bietet einen Button „Als XRechnung exportieren" auf der Rechnungs-Detail Seite. Das öffnet ein Modal mit Export-Optionen: Format (XRechnung, ZUGFeRD), Zielort (Download, E-Mail an Kunde, Server). Nach Export ist eine Success-Meldung mit Link zum Download angezeigt.
+
+## H10. Crew/Team-UI (Referenz: Rentman Crew Planner)
+
+Der Crew-Planner ist das Herzstück der Team-Ressourcenplanung. Eine Kalender-Ansicht (Woche oder Monat, schaltbar) zeigt Tage/Wochen auf der X-Achse und Crew-Mitglieder auf der Y-Achse. Jede Zelle repräsentiert die Verfügbarkeit einer Person an einem Tag oder ein Zeitblock (Stunden). Farbcodierung zeigt: Grün=verfügbar, Rot=vollständig gebucht, Orange=teilweise gebucht, Grau=nicht eingetragen (keine Info). Klick auf eine Zelle öffnet ein Detail-Panel mit bestehenden Zuordnungen und der Möglichkeit, neue hinzuzufügen.
+
+Drag-and-Drop Zuordnung ist zentral: von der Projekt-Liste (oder Projekt-Detail Crew-Tab) kann eine benötigte Rolle/Aufgabe auf den Crew-Planner gezogen werden, z.B. „Kamera-Op benötigt für 18.4. 8h" wird auf einen freien Mitarbeiter zu dem Termin gezogen. Das System zeigt visuelles Feedback (Ziel wird hervorgehoben, Cursor ändert sich). Nach dem Drop wird die Zuordnung bestätigt (oder optional ein Modal öffnet für Details wie Schicht, Sondervergütung, Anmerkungen).
+
+Verfügbarkeits-Heatmap ist eine Ansicht, die alle Crew-Mitarbeiter zeigt mit farbcodierter Heatmap für ihre Verfügbarkeit (über einen Monat oder Quartal hinweg): pro Tag ein Quadrat, Farbe zeigt Verfügbarkeit (Grün=0-20% belegt, Gelb=20-50%, Orange=50-80%, Rot=80-100%). Dies gibt einen schnellen Überblick, wer wann überlastet ist. Klick auf einen Tag in der Heatmap öffnet die Crew-Planner Ansicht für diesen Tag.
+
+Skill-Matrix ist eine Tabelle: Zeilen sind Crew-Mitarbeiter, Spalten sind Skills (Kamera, Licht, Ton, Rigging, etc.). Zellen zeigen Kompetenz-Level (1-5 Sterne oder Farben: Keine Erfahrung/Anfänger/Fortgeschritten/Experte). Edit-Mode erlaubt Klick auf eine Zelle zum Ändern des Levels oder Datum der letzten Zertifizierung. Ein „Skill-Gap Analysieren" Report kann automatisch zeigen, welche Skills für kommende Projekte fehlen.
+
+Schichtplan-Ansicht ist eine Wochenansicht (Montag-Sonntag) mit Zeiten (8:00-22:00 oder konfigurierbar). Jeder Crew-Mitarbeiter hat eine Reihe, und seine Schichten sind farbige Blöcke (Farbe je nach Rolle: Kamera=Blau, Licht=Orange, etc.). Die Blöcke zeigen Start-/Endzeit und optional Projekt-Name. Drag-Drop erlaubt Schicht-Verschiebung oder Resize (Dauer ändern). Ein Klick zeigt Schicht-Details (Projekt, Rolle, Pay, Standort, Notizen). Überlappende Schichten werden mit Warnung angezeigt (rote Markierung, Warning-Toast).
+
+Kostenübersicht pro Crew-Mitglied: unter dem Crew-Planner oder in der Crew-Detail-Seite, eine Zusammenfassung der Arbeitskosten für einen Zeitraum (z.B. April): Stunden pro Schicht × Stundensatz = Kosten pro Schicht, aufgesummiert zu Gesamt-Crew-Budget. Ein «Budget vs. Actual» Chart kann zeigen, falls Ist-Kosten über geplante Kosten gehen. Die Ansicht kann pro Projekt oder pro Mitarbeiter gefiltert werden.
+
+Push-Benachrichtigung bei Zuordnungs-Änderung: wenn ein Admin eine Schicht zu einem Crew-Mitglied zuordnet oder ändert, wird eine Push-Notification an diese Person gesendet (in der App + optional E-Mail). Der Notification zeigt Projekt-Name, Datum, Uhrzeit, Rolle. Ein Link in der Notification öffnet das Schicht-Detail im Crew-Portal.
+
+## H11. RFID/Scan-UI
+
+Der RFID/Barcode-Scanning Modus wird vollbildig dargestellt, entweder als Modal (für Scanning innerhalb eines Prozesses) oder als vollständige Seite (für dedizierte Scan-Sessions, z.B. im Lager). Der Scan-Bereich zeigt einen großen Input-Feld oben (mit Cursor automatisch fokussiert) oder eine Live-Kamera mit Fokus-Box (falls Kamera-Scanning verwendet wird). Die Hintergrundfarbe ist neutral (hellgrau) mit großer, leicht lesbarer Instruktions-Text: „Richte Kamera auf QR-Code oder tippe Barcode ein" in 18px, zentriert.
+
+Nach erfolgreichen Scan wird unmittelbar ein Feedback gegeben: Der gescannte Code wird in einer Bestätigungs-Animation angezeigt (kurz grüner Hintergrund, Checkmark-Icon, „[Asset-Name] hinzugefügt" Text mit grünem Farbton). Ein kurzer Beep-Sound bestätigt auch akustisch (wenn Volume > 0). Das gescannte Item wird sofort unten in eine Liste hinzugefügt (siehe unten).
+
+Batch-Scan-Modus erlaubt mehrere Items hintereinander zu scannen: nach jedem erfolgreichen Scan wird das Item der Liste hinzugefügt und das Input-Feld wird geleert und bleibt fokussiert für den nächsten Scan. Eine "Fertig scannen" Button (oder Escape-Taste) beendet die Scanning-Session und zeigt eine Zusammenfassung (X Items gescannt). Ein "Zurückgehen" Button erlaubt, einzelne Items aus der Liste zu entfernen (X Icon neben jedem Item).
+
+Scan-History zeigt die letzten 50 Scans in einer Dropdown-Liste oder separaten View: für jeden Scan wird Barcode/QR-Code, Asset-Name, Timestamp (hh:mm:ss), Status (Erfolg/Fehler mit Icon und Farbe) angezeigt. Dies ist hilfreich für Debugging oder zur Überprüfung von Scanning-Aktivitäten. Ein „Historie löschen" Button setzt diese zurück.
+
+Sound-Feedback ist konfigurierbar im Settings: Success-Ton (kurzer positiver Sound, z.B. "Ding"), Error-Ton (Warnung, z.B. "Buzzer"). Vibrationen auf Mobil sind auch möglich (Vibration API, kurze Pulse für Erfolg, längere für Error).
+
+Offline-Scan mit Sync-Queue: falls die Netzverbindung unterbrochen wird, können Scans weiterhin lokal gepuffert werden (im Local Storage/IndexedDB). Ein Offline-Banner mit gelber Hintergrundfarbe wird oben angezeigt: "Keine Verbindung. Scans werden lokal gespeichert und synchronisiert, wenn Verbindung wiederhergestellt ist." Sobald Netzwerk verfügbar, wird ein Auto-Sync ausgelöst und ein Success-Toast zeigt "X Scans synchronisiert". Falls Sync fehlschlägt, wird eine Fehler-Toast angezeigt mit Option "Später versuchen" oder "Manuell senden".
+
+## H12. Benachrichtigungs-System UI
+
+Das Benachrichtigungs-System ist zentral für User-Engagement und Awareness. Ein Bell-Icon (Glocken-Icon, Farbe Gray-600) sitzt in der oberen rechten Ecke des Headers, neben User-Profil. Falls ungelesene Benachrichtigungen vorhanden sind, zeigt ein rotes Badge (Kreis mit Zahl, z.B. "5") die Anzahl an. Klick auf das Bell-Icon öffnet ein Dropdown-Panel mit einer Höhe von ~400px.
+
+Das Notification-Dropdown zeigt die letzte 20 Benachrichtigungen, gruppiert optional nach Typ oder Zeitraum (z.B. "Heute", "Diese Woche"). Jede Benachrichtigung ist ein Eintrag mit: Icon (je nach Typ: Project=Briefcase, Payment=CreditCard, System=Gear), kurzer Title (16px), optional kurzer Description (Small-Text, Gray-600), Timestamp (z.B. "vor 2h"), und ein Read/Unread Status (grauer Punkt wenn ungelesen). Ein Link oder Klick-Area leitet zur entsprechenden Seite weiter.
+
+Das Notification-Center (Vollansicht) ist über einen „See All" Link im Dropdown erreichbar oder über ein Menu-Item in der Sidebar. Die Seite zeigt eine Tabelle mit allen Benachrichtigungen (sortierbar nach Datum, Typ, Status). Filter können nach Typ (Project, Payment, System, Team), Status (Unread, Starred, Archived) und Zeitraum gefiltert werden. Eine Bulk-Aktion ermöglicht, mehrere Benachrichtigungen als gelesen zu markieren oder zu archivieren.
+
+Toast-Benachrichtigungen erscheinen oben rechts am Bildschirm (Margin 16px vom Top und Right Edge), weiße Card mit leichtem Schatten. Sie zeigen ein Icon (abhängig von Typ), Nachricht (14px Body-Text), optional einen Action-Link (z.B. "Jetzt anschauen"), und ein Close-Icon (X). Standard-Dauer ist 5 Sekunden, danach animiert die Toast aus dem Sichtfeld (Fade + Slide nach rechts). Der Benutzer kann die Toast früher schließen mit einem Klick auf X oder kann mit Hover die Dauer "pausieren" (Timer stoppt).
+
+Snackbar ist eine Variante für destruktive Aktionen (z.B. "Item gelöscht"): eine dunkle Bar am unteren Rand des Bildschirms mit Action-Text und einem „Undo" Button oder Link (in Primary-Farbe). Klick auf Undo rückgängig die Aktion. Die Snackbar verschwindet nach 10 Sekunden oder wenn der Benutzer die Seite navigiert.
+
+Real-time Benachrichtigungen nutzen WebSocket (oder Server-Sent Events als Fallback) für sofortige Delivery. Ein "Verbindungsstatus" Indicator (grüner Punkt für verbunden, grauer für getrennt) ist optional neben dem Bell-Icon. Falls Verbindung unterbrochen und Benachrichtigung würde verpasst werden, wird diese beim Wiederherstellen der Verbindung nachgeliefert.
+
+Multi-Channel Delivery: Benachrichtigungen werden über mehrere Kanäle zugestellt: In-App Toast/Notification-Dropdown, optionale Browser Push-Notification (falls Benutzer diese aktiviert hat), und E-Mail-Fallback für kritische Benachrichtigungen (z.B. Überfällige Rechnung). Der Benutzer kann die Kanäle und Häufigkeit per Benachrichtigungs-Typ konfigurieren (siehe H13 Einstellungen).
+
+## H13. Settings/Einstellungs-UI
+
+Die Settings-Seite ist unterteilt in kategorisierte Sektionen, erreichbar über User-Profil-Menü oder Sidebar-Menü-Item. Eine Sidebar auf der linken Seite (150px breit) zeigt Kategorien als einfache Links: „Mein Profil", „Mein Team", „Firma-Einstellungen", „Rechnungen & Finanzen", „Integrationen", „Sicherheit", „Benachrichtigungen", „System/Admin" (falls Rolle Admin). Klick auf eine Kategorie wechselt den Inhalt rechts (Main Content Area).
+
+Profil-Kategorie zeigt Felder zum Bearbeiten: Profilfoto (mit Upload-Area oder Gravatar-Integration), Name, E-Mail, Telefon, Sprache (Dropdown: Deutsch, Englisch), Zeitzone (mit Suche), Arbeitszeit/Verfügbarkeit (Dropdown oder Kalender). Ein "Passwort ändern" Abschnitt mit alter/neuer Passwort Feldern.
+
+Mein Team zeigt Tabelle von Kollegen (nur für Admin oder Team-Lead Rollen sichtbar): Name, Rolle, E-Mail, Status (Aktiv/Inaktiv), Letzte Aktivität. Edit-Icon öffnet User-Detail Modal zum Ändern von Rolle, Berechtigungen. Ein "Team-Mitglied einladen" Button öffnet ein Modal zum Eingeben von E-Mail und Rolle; eine Einladungs-E-Mail wird versandt.
+
+Firma-Einstellungen (Admin-only) hat mehrere Sub-Tabs: „Basis-Info" (Firmenname, Logo, Adresse, Steuernummer, Webseite), „Branding" (Primary-Farbe, Logo für Dokumente, E-Mail Footer), „Standard-Zahlungsbedingungen" (Zahlungsziel in Tagen, SEPA-Account-Info), „Standard-Gebühren/Rabatte" (prozentuale oder festbetrag Rabatte, Liefergebühren).
+
+Rechnungen & Finanzen Kategorie (Admin-only): „Rechnungs-Einstellungen" (Nummernformat, nächste Nummer, Präfix, Rechnungszeitraum), „Zahlungsarten" (SEPA, Überweisung, PayPal, Kreditkarte - aktivieren/deaktivieren), „SEPA-Setup" (Kontoinhaber, IBAN, BIC, Gläubiger-ID).
+
+Integrationen zeigt eine Liste von verfügbaren Services (Zapier, Make, E-Mailing-Service, Buchhaltungs-Software): für jede ist ein Connect-Button oder ein Status angezeigt (z.B. "Verbunden seit 12.3.2025"). Klick auf einen Integrations-Namen öffnet Detail-Panel mit Konfigurationsoptionen (z.B. für E-Mail: SMTP-Server, Port, Credentials eintragen - auf sichere Weise mit Password-Manager oder OAuth wenn verfügbar). Ein "Disconnect" Button trennt die Integration.
+
+Sicherheit Kategorie: „Zwei-Faktor-Authentifizierung" (An-/Aus-Toggle mit Setup-Wizard für TOTP), „Aktive Sessions" (Liste, mit "Diese Session abmelden" Option), „Login-Benachrichtigungen" (Toggle: benachrichtige mich bei Login von neuem Gerät), „API-Keys" (Tabelle mit erstellte Keys, Letzter Zugriff, Scope, mit "Neue API-Key generieren" Button und "Widerrufen" Option).
+
+Benachrichtigungen Kategorie: eine Tabelle von Benachrichtigungs-Typen (Projekt erstellt, Rechnung überfällig, Teamkollege zugeordnet, etc.) mit Spalten für Benachrichtigungstyp, In-App (Toggle), Push (Toggle), Email (Toggle). Ein weiterer Sub-Tab zeigt E-Mail-Digest-Einstellungen: Häufigkeit (Sofort, Täglich um 09:00, Wöchentlich Montag um 09:00) mit Dropdown.
+
+System/Admin Kategorie (Admin-only): „Feature Flags" (Tabelle von experimentellen Features mit Toggle zum An-/Ausschalten für die Org), „Audit Log" (Tabelle: Benutzer, Aktion, Datum, IP-Adresse, mit Filtern und Export), „Webhooks" (Tabelle: Event-Type, Target-URL, aktiver Status, Letzter Aufruf, mit "Test-Webhook senden" und "Löschen" Buttons).
+
+Alle Toggle-Settings sind mit Icon und Beschreibungstext versehen (z.B. "Sende mir E-Mails für kritische System-Alerts"). Ein "Speichern" Button am unteren Ende speichert alle Änderungen mit Success-Toast.
+
+## H14. Dokument-Editor UI
+
+Der Dokument-Editor ist ein WYSIWYG (What You See Is What You Get) Interface zur Erstellung und Bearbeitung von Rechnungen, Angeboten und Lieferscheinen. Das Layout ist Split-View: linke Seite (60%) zeigt den Editor mit Formularfeldern und Komponenten, rechte Seite (40%) zeigt Live-Vorschau des finalen Dokuments (wie es aussieht in PDF).
+
+Der Editor oben hat eine Toolbar mit: Font-Family Dropdown, Font-Size Dropdown (10-48px), Bold/Italic/Underline Buttons, Text-Farbe Picker, Align-Buttons (Links/Mitte/Rechts), und List-Buttons (Bullet/Numbered). Die Seite selbst ist wie ein leeres Dokument-Template mit Platzhaltern. Eine Platzhalter-Bibliothek ist auf der linken Seite sichtbar (unter dem Editor) mit verfügbaren Variablen (z.B. {kunde.name}, {kunde.ort}, {projekt.datum}, {projekt.summe}, {rechnungsnummer}, {positionen_tabelle}). Drag-Drop oder Doppel-Klick fügt einen Platzhalter ein.
+
+Template-Bibliothek zeigt vordefinierte Designs: Minimalistische Vorlage, Modern mit Farbe, Classic mit Firmennamen, etc. Klick auf eine Vorlage lädt diese (mit Bestätigungs-Dialog falls aktuelle Changes vorhanden). Neue Vorlagen können gespeichert werden ("Aktuelle als Vorlage speichern" Button), mit Name und Beschreibung.
+
+Versions-Historie ist erreichbar über ein Menu-Item oder Button (History-Icon). Ein Modal zeigt eine Liste aller Versionen (mit Timestamp, Autor, kurzer Beschreibung). Klick auf eine alte Version öffnet Diff-View: alte und neue Seite nebeneinander mit Unterschieden farbcodiert hervorgehoben (Hinzugefügt=grün, Gelöscht=rot). Ein "Diese Version restore" Button setzt den Editor zurück auf diese Version.
+
+PDF-Export wird über einen großen "PDF exportieren" Button unten rechts oder in der Toolbar ausgelöst. Ein Modal öffnet sich mit: PDF-Einstellungen (Seitengröße A4/A5/Letter, Ausrichtung Portrait/Landscape, Qualität, Passwort optional), und zwei Buttons "Download" und "E-Mail an Kunde" (öffnet eine Auswahl des Empfängers).
+
+Unterschriften-Feld kann per Drag-Drop oder Platzhalter {unterschrift_kunde} eingefügt werden. Ein Canvas-Bereich wird danach im finalen Dokument angezeigt; der Unterzeichner kann digital (mit Maus oder Touch) unterschreiben. Alternativ kann ein Upload-Bereich zum Hochladen einer Unterschriften-Bild angeboten werden.
+
+## H15. Kalender-UI
+
+Der Kalender ist zentral für Projektplanung und Ressourcenmanagement. Mehrere Ansichten sind verfügbar, schaltbar über Buttons oben: Monats-Ansicht (Default), Wochen-Ansicht (7 Tage nebeneinander), Tages-Ansicht (Stunden-Grid). Mini-Kalender auf der linken Seite ermöglicht schnelle Navigation (vorherige/nächste Monat Pfeile, Klick auf Tag springt zu diesem Tag).
+
+Farb-Kodierung ist konsistent: Projekte (Blau), Wartungsfenster (Orange), Lieferungen (Grün), Interne Meetings (Grau), Crew-Schichten (Lila). Jeder Event ist ein farbiger Block mit Event-Name und Uhrzeit (falls relevant). Hover zeigt ein Tooltip mit mehr Details (Projekt-Name, Kunde, Ressourcen, etc.).
+
+Drag-and-Drop Event-Verschiebung: ein Event kann auf einen anderen Tag/Zeitblock gezogen werden. Ein visuelles Feedback zeigt den Ziel-Tag hervorgehoben. Nach Drop wird die Event-Uhrzeit aktualisiert (mit Bestätigungs-Dialog falls Konflikte entstehen).
+
+Konflikt-Overlay: falls zwei Events überlappen (z.B. zwei Projekte zur gleichen Zeit oder Ressource doppelt gebucht), wird eine visuelle Markierung angezeigt (z.B. rote Markierung oder Icon). Ein "Konflikt anschauen" Link öffnet ein Detail-Modal mit Konflikt-Erklärung und Options zum Auflösen (Verschieben, Löschen, Genehmigen als Exception).
+
+iCal/Google Calendar Sync-Status ist oben im Kalender angezeigt: „Synchronisiert mit Google Calendar" oder „Synchronisierungsfehler - letzte erfolgreiche Sync vor 2h". Ein Sync-Button triggert manuelles Sync. Ein Settings-Icon öffnet Sync-Einstellungen (Google Calendar Verbindung, welche Kalender bidirektional synchen, Auto-Sync Häufigkeit).
+
+Recurring Events UI: beim Erstellen oder Bearbeiten eines Events kann eine "Wiederholung" Option aktiviert werden. Ein Modal öffnet sich mit Optionen: Häufigkeit (Täglich, Wöchentlich, Monatlich, Jährlich), Enddatum oder Anzahl der Wiederholungen, Wochentage für Wöchentliche Wiederholungen. Ein "Speichern" Button erstellt alle Instanzen.
+
+## H16. Chat/Kommunikations-UI
+
+Ein Messaging-System ermöglicht Kommunikation innerhalb von Projekten und zwischen Teamkollegen. Das Layout ist Messenger-Style: Kontaktliste auf der linken Seite (200px breit, mit Suchbar oben), Chat-Bereich rechts. Die Kontaktliste zeigt: Profilfoto (32px Avatar), Name, optional Online-Status (grüner Punkt), letzter Nachricht Preview und Timestamp. Favoriten können gepinnt sein (Stern-Icon).
+
+Chat-Fenster rechts zeigt Konversation mit Nachrichtenhistorie (älteste oben, neueste unten). Jede Nachricht zeigt: Sender-Avatar, Name, Timestamp, Nachrichtentext, optional Anhänge oder Reaktionen. Eigene Nachrichten sind rechts aligniert (hellblauer Hintergrund), fremde Nachrichten links (grauer Hintergrund). Message-Grouping: aufeinanderfolgende Nachrichten desselben Senders werden gebündelt (nur erste hat Avatar).
+
+Projekt-gebundene Channels: in der Kontaktliste können auch Team-Channels angezeigt werden (z.B. "#Projekt_Großveranstaltung", "#Team_Lager"). Klick auf Channel öffnet die Channel-Konversation. Ein "+" Button ermöglicht, neue Channel zu erstellen mit Name, optionaler Beschreibung, und Mitgliederliste.
+
+@Mentions mit Autocomplete: wenn "@" eingegeben wird, öffnet sich ein Autocomplete-Dropdown mit allen Team-Mitgliedern. Auswahl eines Namens fügt @Name ein, und eine Benachrichtigung wird an die erwähnte Person versandt. Thread/Reply-System: ein Hover über eine Nachricht zeigt ein "Reply" Icon; Klick öffnet einen Thread-Panel auf der rechten Seite, wo Replies die Original-Nachricht referenzieren.
+
+Datei-Anhänge sind Drag-Drop Zonen unterhalb des Chat-Eingabebereichs. Ein "+" Button erlaubt Datei-Upload oder Bilder-Aufnahme (mit Kamera-Icon). Hochgeladene Dateien zeigen eine Vorschau (Bild als Thumbnail, Dokumente als File-Icon mit Name). Ein Download-Icon erlaubt Download.
+
+Read Receipts: sobald eine Nachricht gelesen wird, wird ein Häkchen angezeigt (einfaches Häkchen = gesendet, doppeltes Häkchen = gelesen). Ein Hover auf das Häkchen zeigt Zeitstempel des Lesens.
+
+Emoji-Reactions: ein Emoji-Icon unterhalb jeder Nachricht ermöglicht, Reaktionen hinzuzufügen. Ein Emoji-Picker öffnet sich mit häufigen Emojis und Suche. Ausgewählter Emoji wird als Chip unter der Nachricht angezeigt (mit Zähler wie viele Reaktionen).
+
+## H17. Reporting-UI
+
+Das Report-Builder Interface erlaubt Geschäftsnutzern, Custom Reports ohne Programmierung zu erstellen. Ein Drag-Drop Interface zeigt: linke Seite eine Liste von verfügbaren Metriken (Umsatz, Anzahl Projekte, durchschn. Projektdauer, etc.) und Dimensionen (Kunde, Projekttyp, Monat, Kategorie, etc.). Rechte Seite zeigt die aktuelle Report-Konfiguration: ausgewählte Metriken, Dimensionen, Filter, Sortierung, Chart-Type.
+
+Metriken werden von links per Drag-Drop in die "Metriken" Sektion rechts gezogen. Dimensionen werden in die "Dimensionen" Sektion gezogen (z.B. X-Achse = Monat, Y-Achse = Umsatz nach Kunde). Filter können hinzugefügt werden über ein Filter-Button: Datum-Range, Text-Match, numerische Ranges, etc. Ein "Sortierung hinzufügen" erlaubt Sortiertierfolge zu definieren.
+
+Chart-Type Selector zeigt Optionen: Linie (Trends), Balken/Säule (Vergleiche), Kreis/Donut (Anteile), Tabelle (Details), Heatmap (Muster erkennen), Scatter (Korrelation). Auswahl eines Chart-Types aktualisiert die Vorschau sofort.
+
+Date Range Picker hat Presets: „Heute", „7 Tage", „30 Tage", „Quartalsanfang bis jetzt", „Jahresanfang bis jetzt", „Letztes Jahr", „Custom...". Custom öffnet einen Kalender-Picker für Start- und Enddatum.
+
+Drill-Down: Klick auf einen Datenpunkt im Chart (z.B. ein Balken) öffnet eine Detail-Ansicht mit Einzelheiten zu diesem Punkt (z.B. alle Projekte im April, wenn im Chart ein Balken für April geklickt wurde).
+
+Export-Optionen: Button "Export" oben zeigt Dropdown mit „Als PDF", „Als Excel (Spreadsheet)", „Als CSV", „Als Dashboard-Widget". "Als Dashboard-Widget" speichert den Report und zeigt ihn als Widget im Dashboard.
+
+Scheduling-UI: Button "Zeitplan" öffnet ein Modal zum Konfigurieren von regelmäßigen Report-Zustellungen: Häufigkeit (täglich, wöchentlich, monatlich), Wochentag/Tageszeit, Format (PDF, Excel, als E-Mail-Tabelle), An wen (Liste von E-Mail-Adressen, mit Autocomplete von Team-Mitgliedern). Ein "Test-Report versenden" Button sendet eine Sofort-Version.
+
+Saved Reports Library: alle erstellten Reports werden in einer Bibliothek gespeichert. Ein Sidebar-Menü unter "Berichte" zeigt die Liste (mit Suchbar, Kategorien, Sortierung). Klick auf einen Report öffnet ihn zum Anschauen oder Bearbeiten.
+
+## H18. Mobile-Spezifische UI-Patterns
+
+Mobile-Oberflächen (< 768px) folgen etablierten Mobile-UI Patterns für Effizienz und Benutzerfreundlichkeit. Bottom Sheets werden statt vollständige Modals verwendet: ein Modal öffnet von unten statt von der Mitte, und kann nach unten weggeswiped werden (statt mit X-Button zu schließen). Dies nutzt verfügaren Platz besser auf kleinen Screens.
+
+Pull-to-Refresh: Ziehen der Liste nach unten triggert ein Refresh (API-Call für neue Daten). Ein Spinner zeigt während des Ladens. Dies ist das Mobile-Standard-Pattern und reduziert need für Refresh-Buttons.
+
+Swipe-Actions auf Listeneinträgen: Swipe nach links auf einen Listeneintrag zeigt Quick-Action Buttons (z.B. "Bearbeiten", "Löschen", "Archivieren"). Dies spart Platz statt Buttons direkt zu zeigen. Swipe nach rechts kann "Markieren" oder andere Aktion triggern.
+
+Floating Action Button (FAB) sitzt unten rechts (56px Durchmesser, Primary-Farbe, weißer Icon). Dies ist für die Haupt-Aktion der Seite (z.B. "Neues Projekt", "Neuer Scan"). Druck auf FAB öffnet optional ein Speed-Dial mit mehreren sekundären Aktionen (z.B. FAB mit "+" zeigt bei Druck mehrere Buttons).
+
+Sticky Header mit Titel + Zurück-Button: der Seiten-Titel (z.B. "Projektdetails") bleibt immer oben sichtbar, mit Zurück-Pfeil (← Icon) links zum Zurück-Navigation. Dies gibt immer Kontakt, wo man ist.
+
+Touch-friendly Design: alle interaktive Elemente haben min. 48px Größe (Apple HIG, WCAG), mit min. 8px Abstand zwischen. Buttons sind große Ziele, keine kleinen Symbole. Text ist min. 16px (12px nur für unwichtige Labels).
+
+Offline-Banner: falls keine Netzverbindung, erscheint ein gelbes Banner oben: "Keine Verbindung - lokal arbeitend". Synced Daten sind grün markiert, nicht-synced rot.
+
+## H19. Onboarding- und Hilfe-UI
+
+Der Setup-Wizard wird gezeigt, wenn neue Nutzer das System zum ersten Mal öffnen. Ein Multi-Step Wizard (ähnlich wie H5, aber fokussiert auf Basis-Setup) führt durch: Schritt 1 - "Firma Setup" (Firmenname, Logo, Adresse), Schritt 2 - "Bankdaten" (IBAN für Lastschriften), Schritt 3 - "Erster Artikel" (ein Sample-Equipment zum Starten). Jeder Schritt hat großes Icon und ermutigender Text ("Fast fertig!"). Ein Skip-Button erlaubt, Setup später zu vollenden.
+
+Feature-Tour wird nach Onboarding auf spezifischen Seiten angezeigt. Ein Spotlight-Overlay highlights ein Bereich (mit semi-transparentem Overlay rings herum), und ein Tooltip erklärt die Funktion ("Dies ist der Crew-Planner. Drag-drop Aufgaben hier um zu planen."). Pfeile (← →) erlauben, zwischen Tour-Steps zu navigieren. Ein "Skip Tour" Button beendet die Tour. Tours werden pro Feature konfiguriert und können mehrfach angezeigt werden (oder "Don't show again" Option).
+
+Contextual Help: neben Formularfeldern und Funktionen ist ein kleines Info-Icon (?) sichtbar. Klick zeigt ein Tooltip oder öffnet ein Help-Panel mit erweiterte Erklärung und Link zur Dokumentation/Video. Ein "Help-Center öffnen" Link navigiert zur externen Dokumentations-Website.
+
+Empty States (leere Ansichten): wenn eine Liste leer ist (z.B. keine Projekte), wird eine motivierende Grafik angezeigt (Illustration mit Projekt-Symbol), kurzer Text ("Noch keine Projekte"), und ein großer "Erstes Projekt erstellen" CTA Button. Dies ist besser als leere weiße Fläche.
+
+Keyboard Shortcuts Overlay: drücken der "?" Taste öffnet ein Modal mit einer Tabelle aller verfügbaren Shortcuts (z.B. "Ctrl+K = Command Palette", "? = Diese Hilfe", "D = Dashboard", etc.). Diese sind nach Kategorie gruppiert.
+
+What's New Modal: nach Deployment von neuen Features, wird beim nächsten Login ein Modal angezeigt mit "Was gibt's Neues" Überschrift und Bullet Points von Major Changes. Bilder/GIFs zeigen die neuen Features. Ein "Verstanden" Button schließt das Modal (mit Option "Nicht mehr zeigen").
+
+In-App Feedback Widget: ein kleiner Icon (Sprechblase oder Feedback-Icon) in der unteren rechten Ecke erlaubt Benutzer, Feedback/Bug-Reports zu senden. Klick öffnet ein Modal mit Kategorie-Select (Bug, Feature-Request, Feedback), Nachricht-Textarea, optionaler Screenshot-Upload (Screenshot-Button öffnet ein Tool zum Bereich auszuwählen). Ein "Senden" Button sendet das Feedback an das Team (via E-Mail oder Ticketing-System).
+
+## H20. Barrierefreiheit (Accessibility UI)
+
+MyRMS ist vollständig barrierefrei für Nutzer mit verschiedenen Fähigkeiten, im Einklang mit WCAG 2.1 Stufe AA. Keyboard-Only Navigation ist möglich: alle Funktionen (nicht nur Links) sind via Tastatur erreichbar. Tab-Taste navigiert durch fokussierbare Elemente in logischer Reihenfolge, Shift+Tab geht zurück. Enter und Space aktivieren Buttons und Links. Pfeiltasten navigieren in Menüs und Listen. Escape schließt Modals und Dropdowns.
+
+Focus Management ist korrekt implementiert: die Focus-Outline ist sichtbar (1-2px Border in Primary-Farbe oder Kontrast-Farbe), kein Element hat `outline: none` ohne sichtbare Alternative. In Modals wird Focus "getrappt" (Tab innerhalb des Modal zirkuliert nicht zum Hintergrund). Nach Schließen eines Modal springt Focus zurück zum öffnenden Element.
+
+Skip Links: am Anfang jeder Seite ist ein Skip-Link vorhanden ("Skip to main content"), der fokussierbar ist (nur bei Keyboard-Navigation sichtbar), und erlaubt zu springen über Navigation direkt zum Haupt-Inhalt.
+
+Screen Reader Kompatibilität: alle visuellen Informationen sind auch für Screen Reader erreichbar. Bilder haben alt-Text. Icons haben aria-label. Formularfelder haben explizite Labels (nicht nur Placeholder). Tabellen haben richtige thead/tbody/th Struktur. Statusänderungen werden über aria-live regions angekündigt (z.B. "Datei hochgeladen" Meldung).
+
+Kontrastanforderungen: alle Text hat min. 4.5:1 Kontrast-Verhältnis gegen Hintergrund (WCAG AA). Dies ist auch im Color-System berücksichtigt (Primary-Blau auf Weiß, Rot auf Grau, etc.).
+
+Barrierefreiheits-Modus kann in Settings aktiviert werden: ein Toggle "Erhöhter Kontrast" invertiert Farben für bessere Sichtbarkeit (dunkle Hintergründe, helle Text). Ein weitere Toggle "Reduzierte Bewegung" deaktiviert alle Animationen und Übergänge (statt 300ms Fade wird sofort angezeigt).
+
+Spracheinstellungen: das System unterstützt mehrere Sprachen (Deutsch, Englisch) mit rechtzeitiger Umschaltung. Formularfelder und Fehler-Meldungen folgen Spracheinstellung.
+
+Text-Skalierung: die Seite unterstützt Browser-Zoom bis zu 200% ohne Funktionsverlust (Layout sollte responsive bleiben). Text-Größe sollte nicht via px sondern rem/em definiert sein, um Zoom zu respektieren.
+
+Dies komplettiert die comprehensive UI-Design Spezifikation für MyRMS mit allen 20 Sektionen, jede mit detaillierter Beschreibung und Referenzen zu Best Practices aus Competitors und modernen SaaS Standards.
+
+---
+
+**Document Version:** 3.0
 **Last Updated:** March 18, 2026
-**Total Lines:** 3431
