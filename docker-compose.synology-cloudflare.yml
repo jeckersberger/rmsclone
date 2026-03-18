@@ -19,7 +19,7 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.synology
     restart: always
     depends_on:
       db:

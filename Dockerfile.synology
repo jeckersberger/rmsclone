@@ -1,0 +1,53 @@
+################################################################################
+# MyRMS - Synology-kompatibles Dockerfile (kein BuildKit nötig)
+################################################################################
+
+# Stage 1: Composer Dependencies
+FROM composer:lts AS deps
+WORKDIR /app
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-interaction --ignore-platform-reqs
+
+# Stage 2: PHP 8.3 + Apache
+FROM php:8.3-apache AS final
+
+# PHP Extensions installieren
+RUN apt-get update && apt-get install -y \
+    libicu-dev \
+    libzip-dev \
+    libpng-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql mysqli intl zip
+
+# PHP Konfiguration
+RUN echo "post_max_size=64M" >> "$PHP_INI_DIR/php.ini" \
+    && echo "memory_limit=256M" >> "$PHP_INI_DIR/php.ini" \
+    && echo "max_execution_time=600" >> "$PHP_INI_DIR/php.ini" \
+    && echo "sys_temp_dir=/tmp" >> "$PHP_INI_DIR/php.ini" \
+    && echo "upload_max_filesize=64M" >> "$PHP_INI_DIR/php.ini"
+
+# Document Root auf /src setzen
+RUN sed -ri -e 's!/var/www/html!/var/www/html/src!g' /etc/apache2/sites-available/*.conf
+
+# Apache mod_rewrite aktivieren
+RUN a2enmod rewrite
+
+# Composer Dependencies kopieren
+COPY --from=deps /app/vendor/ /var/www/html/vendor
+
+# App-Dateien kopieren
+COPY ./src /var/www/html/src
+COPY ./db /var/www/html/db
+COPY ./phinx.php /var/www/html/
+COPY ./migrate.sh /var/www/html/
+COPY ./scripts /var/www/html/scripts
+RUN chmod +x /var/www/html/migrate.sh
+
+# Storage-Verzeichnis erstellen
+RUN mkdir -p /var/www/html/storage && chown www-data:www-data /var/www/html/storage
+
+# Berechtigungen
+RUN chown -R www-data:www-data /var/www/html/src
+
+USER www-data
+ENTRYPOINT ["/var/www/html/migrate.sh"]
