@@ -153,21 +153,19 @@ function handleCreateAdmin() {
     try {
         $data = json_decode(file_get_contents('php://input'), true);
 
-        if (!$data || !isset($data['admin']) || !isset($data['company'])) {
+        if (!$data || !isset($data['admin'])) {
             throw new Exception('Invalid data provided');
         }
 
         $admin = $data['admin'];
-        $company = $data['company'];
 
         // Validate required fields
         if (empty($admin['firstname']) || empty($admin['lastname']) || empty($admin['email']) || empty($admin['password'])) {
             throw new Exception('Missing required admin fields');
         }
 
-        if (empty($company['name'])) {
-            throw new Exception('Missing company name');
-        }
+        // Company data is optional at this step — will be added in create_company step
+        $company = $data['company'] ?? ['name' => 'Meine Firma'];
 
         // Check if user exists
         $DBLIB->where('users_email', $admin['email']);
