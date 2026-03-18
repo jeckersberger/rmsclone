@@ -5401,5 +5401,1414 @@ Das Lernsystem respektiert vollständig die DSGVO. Benutzer können unter Einste
 
 ---
 
-**Document Version:** 3.3 (+ KI-Lernsystem)
+**Document Version:** 4.0 (Complete Roadmap)
 **Last Updated:** March 18, 2026
+
+# MyRMS Roadmap – Parts J, K, L
+## Erweiterte Funktionalität für Professionelle Mietbetriebe
+
+---
+
+## Part J: Vertragsmanagement, Wartung & Logistik
+
+### J1. Digitales Vertragsmanagement
+
+Das Vertragsmanagement-Modul automatisiert den gesamten Lebenszyklus von Mietverträgen, von der automatischen Generierung bis zur digitalen Unterzeichnung und Archivierung. Dies ist insbesondere für Veranstaltungstechnik-Betriebe essentiell, da bei jedem Projekt rechtliche Dokumentation erforderlich ist.
+
+Das System basiert auf einer Template-Engine, die Platzhalter wie `{kunde.name}`, `{projekt.startdatum}`, `{equipment.liste}` automatisch aus den Projektdaten befüllt. Über einen integrierten WYSIWYG-Editor können Vorlagen direkt in MyRMS bearbeitet werden – ähnlich einem Dokument-Editor. Die Versionierung stellt sicher, dass jede Änderung nachverfolgbar ist.
+
+Die digitale Unterzeichnung erfolgt entweder canvas-basiert direkt in der Anwendung oder durch Integration mit externen Services wie DocuSign/Adobe Sign. Der Vertragsstatus-Workflow folgt einer standardisierten Pipeline: Entwurf → Gesendet → Unterschrieben → Aktiv → Beendet → Archiviert. Dies ermöglicht der Compliance-Anforderung gerecht zu werden.
+
+Für unterschiedliche Kundengruppen und Projekttypen können separate AGB-Sets verwaltet werden. Die automatische Verlängerungsfunktion benachrichtigt X Tage vor Vertragablauf und bietet die Option für Auto-Renewal. Die GoBD-konforme Archivierung gewährleistet 10 Jahre Aufbewahrung gemäß deutschem Recht.
+
+**Vertragslisten-UI Mockup:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│ VERTRAGSMANAGEMENT                                    [+ NEU] │
+├─────────────────────────────────────────────────────────────┤
+│ Status: ○ Alle ○ Aktiv ○ Unterschrieben ○ Ausstehend │
+│ Suche: [                        ]                            │
+├─────────────────────────────────────────────────────────────┤
+│ ID      │ Kunde         │ Status        │ Ablauf    │ Aktion │
+├─────────────────────────────────────────────────────────────┤
+│ VTR-001 │ Soundcheck AG │ ✓ Untersch.   │ 30.06.24 │ [⋯]   │
+│ VTR-002 │ Event GmbH    │ ⚠ Ausstehend  │ 15.03.24 │ [⋯]   │
+│ VTR-003 │ Stage Design  │ ✗ Abgelaufen  │ 01.03.24 │ [⋯]   │
+│ VTR-004 │ Tech-Masters  │ ✓ Untersch.   │ 22.12.24 │ [⋯]   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Vertragsdetail-Seite mit Timeline:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ Vertrag: VTR-001 – Soundcheck AG                         │
+├──────────────────────────────────────────────────────────┤
+│ Kunde: Soundcheck AG │ Von: 01.04.2024 │ Bis: 30.06.2024 │
+│ Lagerort: München    │ Projekt: "Musikfest 24"          │
+├──────────────────────────────────────────────────────────┤
+│ TIMELINE:                                                 │
+│ 01.04.2024 [●] Entwurf erstellt                          │
+│ 02.04.2024 [●] Gesendet an Kunde                         │
+│ 05.04.2024 [●] Unterschrieben (Kunde + Betrieb)         │
+│ 06.04.2024 [●] Status: AKTIV                             │
+│                                                           │
+│ [VERTRAG ANZEIGEN] [NOCHMALS SENDEN] [UNTERSCHRIFT]     │
+│ [EXTEND] [ARCHIVIEREN]                                   │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Settings-UI für Vertragsmanagement:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│ EINSTELLUNGEN > VERTRAGSMANAGEMENT                          │
+├─────────────────────────────────────────────────────────────┤
+│ ☑ Digitale Unterschriften aktivieren                        │
+│   Methode: ○ Canvas (intern)  ○ DocuSign  ○ Adobe Sign     │
+│                                                             │
+│ ☑ Automatische Erinnerungen                                │
+│   Tage vor Ablauf: [30] │ Häufigkeit: ○ täglich ○ wöchentl│
+│                                                             │
+│ AGB-Management:                                             │
+│   ┌─────────────────────────────────┐                      │
+│   │ Standard-AGB      [Bearbeiten]  │                      │
+│   │ Premium-AGB       [Bearbeiten]  │                      │
+│   │ Veranstaltungs-AGB [Bearbeiten] │                      │
+│   └─────────────────────────────────┘                      │
+│   [+ NEUE AGB-SET]                                         │
+│                                                             │
+│ Versicherungsnachweis erforderlich:                         │
+│   ☑ Für alle Projekte  ○ Nur für Großveranstaltungen     │
+│                                                             │
+│ Archivierung:                                              │
+│   Aufbewahrung: [10] Jahre │ Format: ○ PDF ○ Signiert    │
+│   Speicherort: [S3 Bucket]                                 │
+│                                                             │
+│                                              [SPEICHERN]   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### J2. Wartung & Predictive Maintenance
+
+Die Wartung ist eines der kritischsten Elemente für Veranstaltungstechnik-Equipment. Jedes Asset benötigt einen individuellen Wartungsplan basierend auf Typ, Herstellervorgaben und Einsatzhäufigkeit. Das System dokumentiert automatisch jede Wartung, Reparatur und Inspektion mit Datum, zuständigem Techniker, Kosten und optionalen Fotos.
+
+Automatische Erinnerungen werden X Tage vor Fälligkeit oder nach X Betriebsstunden/Einsätzen ausgelöst. Der Wartungsstatus wird auf jeder Asset-Karte farblich dargestellt: Grün=OK, Gelb=bald fällig, Rot=überfällig. Die Predictive Maintenance Funktion nutzt KI-Algorithmen, um basierend auf Nutzungshistorie, Alter und Einsatzhäufigkeit Ausfallrisiken vorherzusagen.
+
+Das System verfügt über ein umfassendes Wartungskosten-Tracking, das die Gesamtkosten pro Asset über dessen Lebenszyklus aggregiert und ROI-Analysen ermöglicht. Die Techniker-Zuordnung erfolgt skill-basiert – System kennt, welcher Mitarbeiter welche Wartungen durchführen darf. Das digitale Checklisten-System ermöglicht während der Wartung Abhakungen, Fotodokumentation und Kommentarfunktion.
+
+**Wartungskalender-Ansicht:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ WARTUNGSPLANUNG                         [⚠️ 3 ÜBERFÄLLIG] │
+├──────────────────────────────────────────────────────────┤
+│ Monat: ◀ März 2024 ▶  │ ☑ Überfällige │ ☑ Diese Woche   │
+├──────────────────────────────────────────────────────────┤
+│ MO │ DI │ MI │ DO │ FR │ SA │ SO                          │
+├────┼────┼────┼────┼────┼────┼────┤                       │
+│ 01 │ 02 │ 03 │ 04 │ 05 │ 06 │ 07 │                       │
+│    │    │⚠️·1│ ●·2│    │    │    │ ← ●=Wartung, ⚠=Fehler│
+├────┼────┼────┼────┼────┼────┼────┤                       │
+│ 08 │ 09 │ 10 │ 11 │ 12 │ 13 │ 14 │                       │
+│    │ ●·3│    │    │ ●·4│ ●·1│    │                       │
+├────┼────┼────┼────┼────┼────┼────┤                       │
+│ ... Weitere Monate ...                                    │
+└──────────────────────────────────────────────────────────┘
+
+ÜBERFÄLLIGE WARTUNGEN:
+┌──────────────────────────────────────────────────────────┐
+│ Asset-ID │ Asset-Name     │ Art              │ Fällig seit │
+├──────────────────────────────────────────────────────────┤
+│ AS-245   │ Par 64 LED x12 │ E-Check          │ 15 Tagen   │
+│ AS-089   │ Moving Head    │ Lampen + Optiken │ 8 Tagen    │
+│ AS-512   │ Kabelrolle 500m│ Isolationsprüfung│ 22 Tagen   │
+│ [JETZT ZUWEISEN] [ERINNERN]                             │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Asset-Lifecycle mit Wartungshistorie:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ Asset: Moving Head EOS Titanium (ID: AS-124)             │
+├──────────────────────────────────────────────────────────┤
+│ Kaufdatum: 12.02.2019  │ Lebenszyklus: 4 Jahre  │ ROI: ok │
+│                                                          │
+│ WARTUNGSHISTORIE:                                        │
+│ 15.02.2019 [●] Eingangsinspektion   ✓ Bestanden        │
+│ 15.02.2022 [●] Umfassende Wartung   ✓ von Tech-01      │
+│ 15.02.2023 [●] Lampenwechsel        ✓ von Tech-03      │
+│ 10.08.2023 [●] Schaden + Reparatur  ⚠ Kosten: €340     │
+│ 15.02.2024 [●] Jahreswartung fällig │ [JETZT STARTEN]  │
+│                                                          │
+│ Gesamtkosten Wartung/Reparatur: €2.145                 │
+│ Einsätze: 64  │  Miet-Einnahmen: €28.500               │
+│ Prognose nächster Ausfall: 65% Wahrsch. in 8 Monaten  │
+│                                                          │
+│ [WARTUNG STARTEN] [HISTORY EXPORT]                      │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Settings-UI für Wartungsintervalle:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ EINSTELLUNGEN > WARTUNGSPLANUNG                          │
+├──────────────────────────────────────────────────────────┤
+│ WARTUNGSINTERVALLE PRO KATEGORIE:                        │
+│                                                          │
+│ Kategorie: Lichttechnik                                 │
+│   Wartungstyp          │ Intervall  │ Einheit           │
+│   ───────────────────────────────────────────────       │
+│   E-Check              │ [12]       │ ○ Monate ○ Tage  │
+│   Lampen-Kontrolle     │ [6]        │ ○ Monate ○ Tage  │
+│   Oberflächenreinigung │ [3]        │ ○ Monate ○ Tage  │
+│   [+ WEITERES INTERVALL]                                │
+│                                                          │
+│ Erinnerungs-Vorlage:                                    │
+│   Tage im Voraus: [14]                                  │
+│   E-Mail Text:                                          │
+│   ┌────────────────────────────────────┐               │
+│   │ Hallo {{techniker.vorname}},       │               │
+│   │ Asset {{asset.name}} ist fällig... │               │
+│   └────────────────────────────────────┘               │
+│                                                          │
+│ Eskalationsregeln:                                      │
+│   ☑ Nach 30 Tagen überfällig → Produktionsstop        │
+│   ☑ Nach 60 Tagen überfällig → Benachrichtigung        │
+│                                                          │
+│ Predictive Maintenance:                                 │
+│   ☑ KI-Vorhersagen aktivieren                          │
+│   Modell: ○ Standard ○ Erweitert                       │
+│   Retraining-Intervall: [30] Tage                      │
+│                                                          │
+│                                           [SPEICHERN]   │
+└──────────────────────────────────────────────────────────┘
+```
+
+---
+
+### J3. Transport & Logistik
+
+Die Logistik-Module verwaltet den gesamten Transport von Equipment. Das System bietet eine Tourenplanung mit Karten-Visualisierung und automatischer Routenoptimierung. Mehrere Lieferungen werden intelligent zu effizienten Touren kombiniert.
+
+Die Fahrer-Zuordnung erfolgt basierend auf Verfügbarkeit und wird in einer Kalender-Ansicht dargestellt. Das System kennt die Ladekapazität jedes Fahrzeugs (Maße, Gewicht), und bei Buchung eines Projektes wird automatisch berechnet, welche Fahrzeuge benötigt werden und ob die Beladung realistisch ist.
+
+Kunden können ihre bevorzugten Lieferzeitfenster wählen, und das System optimiert die Route basierend auf diesen Constraints. Die QR-Code-Übergabe beschleunigt den Prozess: Der Fahrer scannt den QR am Lieferschein, und die Übergabe wird automatisch bestätigt und dokumentiert mit Foto.
+
+Das Rückholung-Management plant geplante Rückholungen nach Projektende. Das Kosten-Tracking verfügt über Kraftstoff-, Kilometer- und Mauterfassung pro Lieferung, die automatisch auf das Projekt umgelegt werden. Das Live-Tracking ermöglicht Kunden, in Echtzeit zu sehen: "Fahrer ist in 15 Minuten da" – ähnlich Pizza-Lieferdiensten.
+
+**Tourenplan-Kalender:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ TOURENPLANUNG                                [+ NEU]     │
+├──────────────────────────────────────────────────────────┤
+│ Woche: ◀ 18.-24. März 2024 ▶  │ Fahrzeug: [Alle ▼]     │
+├──────────────────────────────────────────────────────────┤
+│ TAG │ FAHRER          │ TOUREN │ STATUS                 │
+├─────┼─────────────────┼────────┼──────────────────────┤
+│ MO  │ Thomas Müller   │ 3      │ ✓ Geplant (08:30)    │
+│ DI  │ Anna Schmidt    │ 2      │ ⚠ Fehlt: Fahrzeug   │
+│ MI  │ Johannes Beck   │ 4      │ ✓ Geplant (07:00)    │
+│ DO  │ Thomas Müller   │ 2      │ ✓ Geplant (09:15)    │
+│ FR  │ Urlaub          │ -      │ (Keine Touren)       │
+│ SA  │ Johannes Beck   │ 1      │ ✓ Geplant (11:00)    │
+│                                                          │
+│ [TOUR BEARBEITEN] [FAHRZEUG ZUWEISEN] [OPTIMIEREN]     │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Karten-Ansicht mit Routenoptimierung:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ TOURENROUTE – Freitag, 22. März 2024 – Thomas Müller   │
+├──────────────────────────────────────────────────────────┤
+│ [Karten-Widget]                                         │
+│ ┌───────────────────────────────────┐                   │
+│ │  Lager München                    │                   │
+│ │  [START 08:30]●                   │                   │
+│ │        ↓ 12 km                    │                   │
+│ │  Kundenlager Dachau [1]●  10:15   │                   │
+│ │        ↓ 18 km                    │                   │
+│ │  Event-Gelände Schleißheim [2]●   │                   │
+│ │        ↓ 25 km                    │                   │
+│ │  Rückholung München-Nord [3]●     │                   │
+│ │                                   │                   │
+│ │  Gesamtroute: 55 km │ ETA 16:45   │                   │
+│ └───────────────────────────────────┘                   │
+│                                                          │
+│ TOUR-DETAILS:                                           │
+│ [1] Equipment Lieferung: 4 Paletten │ Ankunft: 10:15  │
+│ [2] Aufbau vor Ort (2h Arbeitszeit)  │ Abfahrt: 14:00  │
+│ [3] Altgeräte-Rückholung 6 Paletten  │ Ankunft: 16:45  │
+│                                                          │
+│ Kosten dieser Tour:  Kraftstoff €8.80  │ Maut €2.50     │
+│ Fahrerzeit 8h: €120  │  Gesamtkosten: €131.30          │
+│                                                          │
+│ [ROUTE OPTIMIEREN] [PDF DRUCKEN] [LIEFERSCHEIN]        │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Fahrzeug-Verwaltung mit Ladekapazität:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ FAHRZEUG: MAN TGX 18.460 (Kennzeichen: MUC-TR-42)       │
+├──────────────────────────────────────────────────────────┤
+│ Typ: Schwerlaster Kastenwagen  │ Baujahr: 2020         │
+│ Ladefläche: 7,50m × 2,50m × 2,80m (52,5 m³)            │
+│ Max. Gewicht: 18.000 kg  │  Nutzlast: 10.500 kg       │
+│ Verbrauch: 28 L/100km    │  CO₂: 744g/km              │
+│                                                          │
+│ VERFÜGBARKEIT (nächste 4 Wochen):                       │
+│ ┌──────────────────────────────────┐                   │
+│ │ MO  TU  WE  TH  FR  SA  SU        │                   │
+│ │ ✓   ✓   ✓   ✓   ✓   ○   ○        │  ← Verfügbar     │
+│ │ WK1 WK2 WK3 WK4                  │  ○ = Wartung     │
+│ │ ✓   ✓   ✓   ✓   ✓   ○   ✓        │                   │
+│ └──────────────────────────────────┘                   │
+│                                                          │
+│ AKTUELLE BELADUNG (19.03.2024):                         │
+│ 6 × Stahlträgersystem   560 kg   7 m³ (belegt: 13%)    │
+│ 8 × Equipment-Box       280 kg   4 m³ (belegt: 8%)     │
+│ Palette Kabel + Zubehör 120 kg   2 m³ (belegt: 4%)     │
+│ Freier Platz: 39 m³     9.100 kg verbleibend          │
+│                                                          │
+│ [FAHRER ZUWEISEN] [WARTUNG BUCHEN] [KM-STAND AKTUALIS.]│
+└──────────────────────────────────────────────────────────┘
+```
+
+**Settings-UI für Transport-Management:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ EINSTELLUNGEN > TRANSPORT & LOGISTIK                    │
+├──────────────────────────────────────────────────────────┤
+│ FAHRZEUGVERWALTUNG:                                    │
+│   Fahrzeuge im System: [7]  ☑ Wartungsplan aktuell    │
+│   Standard-Fahrzeugtyp: [Kastenwagen 3,5t ▼]          │
+│                                                          │
+│ KOSTENSÄTZE:                                           │
+│   Fahrersatz pro Stunde: €[15.50]                      │
+│   Kraftstoff (Auto): €[1.80]/L │ (Laster): €[1.75]/L  │
+│   Kilometerersatz: €[0.35]/km  (für Kundenverrechnung) │
+│   Mautsätze:       ☑ Automatisch von Routing-API       │
+│   Set-up Zeit (Auf- Abbau): €[25.00]                  │
+│                                                          │
+│ LIEFERZEITFENSTER:                                     │
+│   ┌────────────────────────────────┐                   │
+│   │ Frühtouren (06:00-09:00) [✎]  │                   │
+│   │ Morgentouren (09:00-12:00) [✎] │                   │
+│   │ Mittagstouren (12:00-15:00) [✎]│                   │
+│   │ Spättouren (15:00-18:00) [✎]  │                   │
+│   │ [+ WEITERES FENSTER]            │                   │
+│   └────────────────────────────────┘                   │
+│                                                          │
+│ ROUTENOPTIMIERUNG:                                     │
+│   Routing-Engine: ○ OSRM (OSM) ○ Google Maps API      │
+│   ☑ Verkehrsdaten berücksichtigen                      │
+│   Max. Touren pro Fahrzeug pro Tag: [4]                │
+│   ☑ CO₂-Optimierung bevorzugen                         │
+│                                                          │
+│ LIVE-TRACKING (für Kunden):                            │
+│   ☑ Live-Tracking aktivieren                           │
+│   Genauigkeit: ○ Genau (5min) ○ Ungefähr (30min)      │
+│   Kunde sieht: ○ Exakte GPS ○ Nur "Auf dem Weg"       │
+│                                                          │
+│                                           [SPEICHERN]   │
+└──────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Part K: Workflows, Versicherung & Schadenmanagement
+
+### K1. Automatisierte Workflows (Trigger-Engine)
+
+Das Workflow-System ist das Herzstück der Automatisierung in MyRMS. Es ermöglicht die Erstellung komplexer Geschäftsprozesse ohne Code über einen visuellen No-Code Workflow Builder. Der Editor basiert auf einer grafischen Oberfläche mit WENN → DANN Logik: Trigger-Typen können zeitbasiert (CRON Expressions), ereignisbasiert (Rechnung erstellt, Asset zurückgefordert) oder manuell aktiviert sein.
+
+Die umfangreichen Aktionen ermöglichen E-Mails (mit Template-Support), automatische Aufgaben-Erstellung, Status-Änderungen, Benachrichtigungen, Webhooks zu externen Systemen, und sogar KI-basierte Aktionen (z.B. automatische Schadensbewertung via Bildanalyse). Komplexe Bedingungen mit UND/ODER-Logik und numerischen/zeitlichen Vergleichen ermöglichen differenzierte Workflows.
+
+Das System enthält vorgefertigte Workflow-Templates für häufige Szenarien: Mahnwesen, Rückgabe-Prüfung, Wartungs-Erinnerungen, Angebots-Follow-Up. Jede Workflow-Ausführung wird protokolliert – mit Erfolg/Fehler, Zeitstempel und betroffenen Datensätzen für vollständige Transparenz.
+
+Praktische Beispiel-Workflows:
+1. Automatisches Mahnwesen: "Rechnung 30 Tage überfällig → Mahnung senden → 60 Tage → 2. Mahnung → 90 Tage → Inkasso-Warnung"
+2. Rückgabe-Workflow: "Asset zurückgegeben → Zustandsprüfung-Task erstellen → Wenn Schaden erkannt → Schadenprotokoll starten"
+3. Kunden-Onboarding: "Neuer Kunde angelegt → Begrüßungs-Mail → 7 Tage → Follow-Up Anruf erinnern"
+4. Projekt-Logistics: "Projekt endet in 3 Tagen → Rückholung-Erinnerung → Lieferung automatisch planen"
+
+**Visueller Flow-Editor (Drag-Drop):**
+```
+┌──────────────────────────────────────────────────────────┐
+│ WORKFLOW EDITOR: "Automatisches Mahnwesen"              │
+├──────────────────────────────────────────────────────────┤
+│ Speichern │ Testen │ Aktivieren │ Historie │ Duplizieren │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  ┌─────────────────┐                                    │
+│  │ TRIGGER:        │                                    │
+│  │ Rechnung        │                                    │
+│  │ > 30 Tage       │                                    │
+│  │ überfällig      │                                    │
+│  └────────┬────────┘                                    │
+│           │                                              │
+│           ▼                                              │
+│  ┌─────────────────────┐                                │
+│  │ AKTION:             │                                │
+│  │ E-Mail senden       │                                │
+│  │ Template: "1. Mahnung"                              │
+│  └────────┬────────────┘                                │
+│           │                                              │
+│      ┌────▼─────┐                                       │
+│      │ WARTEZEIT │                                       │
+│      │ 30 Tage   │                                       │
+│      └────┬──────┘                                       │
+│           │                                              │
+│  ┌────────▼──────────┐                                  │
+│  │ BEDINGUNG:        │                                  │
+│  │ Noch nicht bezahlt│                                  │
+│  │ AND Betrag > €500 │                                  │
+│  └─────┬──────┬──────┘                                  │
+│        │      │                                         │
+│      JA│      │NEIN                                     │
+│        │      │                                         │
+│  ┌─────▼──┐   │                                         │
+│  │ 2. Mahnung    └──▶ ENDE                              │
+│  └────────┘                                             │
+│                                                          │
+│ [Neue Aktion] [Bedingung] [WENN/DANN] [ENDE]           │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Workflow-Liste mit Execution-Status:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ WORKFLOWS                                  [+ NEUER]    │
+├──────────────────────────────────────────────────────────┤
+│ Suche: [              ]  Status: ○ Alle ○ Aktiv ○ Inaktiv│
+├──────────────────────────────────────────────────────────┤
+│ ID   │ Name                    │ Status  │ Letzte Ausf. │
+├──────┼─────────────────────────┼─────────┼──────────────┤
+│ WF01 │ Automatisches Mahnwesen │ ✓ Aktiv │ 18.03.24     │
+│      │ Ausführungen: 142      │ Erfolg: 98% Fehler: 2%  │
+├──────┼─────────────────────────┼─────────┼──────────────┤
+│ WF02 │ Rückgabe-Inspection     │ ✓ Aktiv │ 17.03.24     │
+│      │ Ausführungen: 312      │ Erfolg: 99% Fehler: 1%  │
+├──────┼─────────────────────────┼─────────┼──────────────┤
+│ WF03 │ Kundengewinnung-Follow  │ ✓ Aktiv │ 16.03.24     │
+│      │ Ausführungen: 47       │ Erfolg: 95% Fehler: 5%  │
+├──────┼─────────────────────────┼─────────┼──────────────┤
+│ WF04 │ Wartungs-Erinnerungen   │ ○ Inaktiv│ 10.03.24    │
+│      │ Ausführungen: 856      │ Erfolg: 97% Fehler: 3%  │
+│ [AKTIVIEREN]                                             │
+│                                                          │
+│ [BEARBEITEN] [DUPLIZIEREN] [LOGS ANZEIGEN]             │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Settings-UI für Workflow-Engine:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ EINSTELLUNGEN > WORKFLOW-ENGINE                         │
+├──────────────────────────────────────────────────────────┤
+│ SYSTEM-KONFIGURATION:                                  │
+│   Max. parallele Workflows: [10]                        │
+│   Max. Workflow-Schritte: [20]                          │
+│   Timeout pro Ausführung: [5] Minuten                   │
+│   ☑ Automatische Retry bei Fehler (Max: [3]x)         │
+│                                                          │
+│ E-MAIL TEMPLATES FÜR AKTIONEN:                          │
+│   Template-Set für E-Mail-Aktionen:                     │
+│   ┌──────────────────────────────────┐                 │
+│   │ 1. Mahnung               [✎]    │                 │
+│   │ 2. Mahnung               [✎]    │                 │
+│   │ Zahlungserinnerung       [✎]    │                 │
+│   │ Wartungs-Erinnerung      [✎]    │                 │
+│   │ Projekt-Folge-Up         [✎]    │                 │
+│   └──────────────────────────────────┘                 │
+│   [+ NEUE TEMPLATE]                                    │
+│                                                          │
+│ WEBHOOK-INTEGRATIONEN:                                 │
+│   ☑ Stripe (Zahlungs-Updates)                          │
+│   ☑ Slack (Benachrichtigungen)                         │
+│   ☑ Zapier (externe Automation)                        │
+│   ☑ Make.com (Workflow-Integration)                    │
+│   [+ WEITERE INTEGRATION]                              │
+│                                                          │
+│ WORKFLOW-SCHEDULING:                                   │
+│   ☑ Cron-Jobs aktivieren                               │
+│   ☑ Tägliche Nacht-Batch-Prozesse (02:00 Uhr)        │
+│   ☑ Fehler-Benachrichtigung an Admin                   │
+│                                                          │
+│                                           [SPEICHERN]   │
+└──────────────────────────────────────────────────────────┘
+```
+
+---
+
+### K2. Versicherungsmanagement
+
+Das Versicherungsmanagement ist für einen Mietbetrieb mit teurer Ausrüstung kritisch. Das System verwaltet Versicherungspolicen – entweder pro einzelnem Asset oder pro Asset-Gruppe (Transportversicherung, Allgefahrenversicherung, Haftpflicht). Bei der Anlage eines neuen Projektes wird automatisch geprüft, ob alle benötigten Assets versichert sind.
+
+Der Versicherungsstatus wird auf jeder Asset-Karte farblich dargestellt: Grün=vollständig versichert, Rot=nicht versichert, Gelb=läuft bald ab. Jede Police wird mit allen relevanten Metadaten gespeichert: Versicherungsnummer, Anbieter, Deckungssumme, Selbstbeteiligung, Geltungsdauer. Kunden können eigene Versicherungsnachweise hochladen (z.B. Haftpflicht), um Deckungslücken zu schließen.
+
+Das System sendet X Tage vor Ablauf einer Police automatische Benachrichtigungen. Die Prämien werden als Kostenfaktor pro Projekt/Einsatztag kalkuliert. Im Schadensfall kann eine Meldung direkt aus dem Schadenprotokoll an die Versicherung weitergeleitet werden.
+
+**Policen-Verwaltung:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ VERSICHERUNGSMANAGEMENT                    [+ NEUE]     │
+├──────────────────────────────────────────────────────────┤
+│ Filter: ○ Alle ○ Aktiv ○ Auslaufen ○ Abgelaufen │      │
+├──────────────────────────────────────────────────────────┤
+│ Versicherungs-ID │ Typ          │ Anbieter    │ Status  │
+├──────────────────┼──────────────┼─────────────┼─────────┤
+│ VER-001          │ Transportvers│ Allianz     │ ✓ Aktiv │
+│ Assets: 45       │ Deckung: €500k │ Ablauf: 15.05.24    │
+│ Prämie: €2.400/a │ Selbstbeteil: €500 │ [DETAILS] [✎]  │
+├──────────────────┼──────────────┼─────────────┼─────────┤
+│ VER-002          │ Allgefahren  │ AXA         │ ✓ Aktiv │
+│ Assets: 78       │ Deckung: €2M  │ Ablauf: 22.08.24    │
+│ Prämie: €8.500/a │ Selbstbeteil: €1000│ [DETAILS] [✎]  │
+├──────────────────┼──────────────┼─────────────┼─────────┤
+│ VER-003          │ Haftpflicht  │ Ergo        │ ⚠ Auslauf│
+│ Assets: Gebäude  │ Deckung: €100M│ Ablauf: 28.03.24    │
+│ Prämie: €1.200/a │ Selbstbeteil: €0 │ [VERLÄNGERN]    │
+│                                                          │
+│ [POLICE BEARBEITEN] [SCHADEN MELDEN] [EXPORT]          │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Deckungsprüfung bei Projektanlage:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ PROJEKT: "Kirchenhochzeit Augsburg" (Deckung prüfen)    │
+├──────────────────────────────────────────────────────────┤
+│ AUSGEWÄHLTES EQUIPMENT:                                 │
+│                                                          │
+│ 12× LED-Strahler         [✓] Versichert (VER-002)      │
+│ 2× Moving Head           [✓] Versichert (VER-002)      │
+│ 1× Mischpult             [✓] Versichert (VER-002)      │
+│ 4× Boxen-System          [✓] Versichert (VER-002)      │
+│ Transportkosten          [✓] Versichert (VER-001)      │
+│ Kundenversicherung       [✗] NICHT VORHANDEN          │
+│ Haftpflicht Kunde        [⚠] LÄUFT AB 28.03.24        │
+│                                                          │
+│ ERGEBNIS: ⚠ DECKUNGSLÜCKEN ERKANNT                     │
+│                                                          │
+│ Empfehlung:                                             │
+│ - Kunde auffordern: Haftpflicht-Nachweis hochladen     │
+│ - Oder: Zusatz-Police VER-003 (Haftpflicht) erneuern   │
+│ - Oder: Projekt mit Risiko starten (Admin-Freigabe)    │
+│                                                          │
+│ [HOCHLADEN] [POLICE ERNEUERN] [PROJEKT STARTEN]        │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Settings-UI für Versicherungsmanagement:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ EINSTELLUNGEN > VERSICHERUNGSMANAGEMENT                 │
+├──────────────────────────────────────────────────────────┤
+│ STANDARD-VERSICHERUNGEN:                               │
+│   Standard pro Equipment-Kategorie:                      │
+│   ○ Lichttechnik      → [VER-002 (Allgefahren) ▼]      │
+│   ○ Audiotechnik      → [VER-002 (Allgefahren) ▼]      │
+│   ○ Bühnenbau         → [VER-002 (Allgefahren) ▼]      │
+│   ○ Transport         → [VER-001 (Transport) ▼]        │
+│   [+ WEITERE KATEGORIE]                                │
+│                                                          │
+│ MINDESTDECKUNGEN PRO PROJEKTTYP:                        │
+│   Hochzeitsevent: Min. Deckung €[100.000]              │
+│   Firmenveranstaltung: Min. Deckung €[500.000]        │
+│   Großveranstaltung: Min. Deckung €[2.000.000]        │
+│                                                          │
+│ SELBSTBETEILIGUNGSSÄTZE:                               │
+│   Standard: €[500]  │  Premium: €[1.000]               │
+│                                                          │
+│ ERINNERUNGEN:                                           │
+│   Tage vor Ablauf: [30] Tage                            │
+│   ☑ E-Mail an Admin  ☑ Dashboard-Warning               │
+│                                                          │
+│ KUNDENVERSICHERUNG-ANFORDERUNG:                        │
+│   ☑ Für Projekte > €[5.000] Mietsumme erforderlich     │
+│   ☑ Mindestdeckung: €[250.000]                         │
+│   Akzeptierte Anbieter: [Alle / Whitelist]            │
+│                                                          │
+│                                           [SPEICHERN]   │
+└──────────────────────────────────────────────────────────┘
+```
+
+---
+
+### K3. Schadenmanagement-Workflow
+
+Der Schadenmanagement-Workflow ist ein vollständiger Prozess zur Dokumentation, Bewertung, Reparatur und Abrechnung von Equipment-Schäden. Der gesamte Prozess ist transparent und nachverfolgbar.
+
+Der Workflow beginnt mit der Schadenerfassung: Wer hat den Schaden entdeckt, wann, wo, unter welchen Umständen, mit Fotos und detaillierter Beschreibung. In der Bewertungsphase wird der Schweregrad klassifiziert (Leicht/Mittel/Schwer/Totalschaden) und eine erste Kostenestimation durchgeführt. Ein Kostenvoranschlag wird entweder intern erstellt oder bei externen Dienstleistern eingeholt.
+
+Die Entscheidungsphase resultiert in einer der Optionen: Reparatur, Ersatz, oder Abschreibung. Das System tracking den gesamten Reparaturprozess: Beauftragung → in Werkstatt → fertig → Qualitäts-Check. Nach der Reparatur wird automatisch eine Rechnung erstellt oder die Kosten von der Kaution des Kunden abgezogen. Bei Versicherungsschäden wird automatisch ein Formular an die Versicherung weitergeleitet.
+
+Das KI-gestützte Schadenbewertungs-Feature ermöglicht Upload von Fotos, und ein Bildanalyse-Modell schätzt automatisch Schweregrad und Reparaturkosten. Die Schadensstatistik hilft zu identifizieren, welche Assets problematisch sind und welche Kunden gehäuft Schäden verursachen.
+
+**Schadens-Kanban Board:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ SCHADENSMANAGEMENT – KANBAN-ANSICHT                     │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│ OFFEN (5)        BEWERTET (3)       IN REPARATUR (2)    │
+│ ┌──────────┐     ┌──────────┐       ┌──────────┐       │
+│ │ SC-087   │     │ SC-081   │       │ SC-073   │       │
+│ │ Scheinw. │     │ Moving   │       │ Pult     │       │
+│ │ Kaput    │     │ Head     │       │ Wasser   │       │
+│ │ 17.03.   │     │ Glas     │       │ schaden  │       │
+│ │ [FOTO]   │     │ gebrochen│       │ Reparatur│       │
+│ └──────────┘     │ EST: €240│       │ in Gang  │       │
+│ [BEWERTEN]       │ 15.03.   │       │ ETA: 25.3│       │
+│                  │ [REPARATUR]       │ [Kosten] │       │
+│ ┌──────────┐     └──────────┘       └──────────┘       │
+│ │ SC-089   │                                            │
+│ │ Kabel    │     ┌──────────┐                          │
+│ │ beschädigt│     │ SC-082   │                          │
+│ │ 18.03.   │     │ Schaden? │                          │
+│ │ [AUTO-AI]│     │ Foto     │                          │
+│ │ -> Leicht│     │ hochgel. │       ABGESCHLOSSEN (4)  │
+│ └──────────┘     │ KI: Mittel      ┌──────────┐       │
+│                  │ EST: €420│       │ SC-071   │       │
+│                  │ [VORANSCH.]     │ Repariert│       │
+│                  └──────────┘       │ Freigabe │       │
+│                                    │ 14.03.   │       │
+│                  ┌──────────┐       │ ✓        │       │
+│                  │ SC-085   │       │ [RECHNG] │       │
+│                  │ Beschlg. │       └──────────┘       │
+│                  │ keine Fotos      ┌──────────┐       │
+│                  │ 16.03.   │       │ SC-068   │       │
+│                  │ [FOTOS ANFORDERN] Ersatz    │       │
+│                  └──────────┘       │ 10.03.   │       │
+│                                    │ ✓        │       │
+│                                    └──────────┘       │
+│                                                          │
+│ [+ NEUER SCHADEN] [STATISTIK] [BERICHT]               │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Schadensdetail mit KI-Bewertung:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ SCHADENSPROTOKOLL – SC-089: Kabel beschädigt           │
+├──────────────────────────────────────────────────────────┤
+│ ERFASSUNG:                                              │
+│ Datum: 18.03.2024 17:30 │ Ort: Projekt "Kirchenchor"  │
+│ Entdeckt von: Thomas Müller (Techniker)                │
+│ Asset: Starkstromkabel 32A 50m (ID: AS-512)            │
+│                                                          │
+│ FOTODOKUMENTATION:                                     │
+│ [Foto 1] [Foto 2] [Foto 3] ← KI-Analyse lädt...       │
+│                                                          │
+│ KI-BEWERTUNG (automatisch):                            │
+│ Schweregrad: ⭐⭐ MITTEL (Konfidenz 89%)              │
+│ Beschreibung: Isolationsschaden ca. 5cm, noch sicher   │
+│ Geschätzte Reparaturkosten: €85 - €120                │
+│ Reparaturdauer: 2-3 Tage                               │
+│ Empfehlung: ⚠ Temporär flicken, später ersetzen       │
+│                                                          │
+│ NACHGEWERTUNG (Sachverständiger):                      │
+│ Reparaturkosten-Voranschlag: €95                       │
+│ Werkstatt: "Tech-Service München"                      │
+│ Fertigstellung: 21.03.2024 geschätzt                  │
+│                                                          │
+│ KOSTEN-VERRECHNUNG:                                    │
+│ Kunde: "Kirchenchor ev. Gemeinde"                      │
+│ Kaution vorhanden: €500 verfügbar                      │
+│ ☑ Reparaturkosten von Kaution abziehen                │
+│ Verbleibend: €405                                       │
+│                                                          │
+│ [REPARATUR BEAUFTRAGEN] [VERSICHERUNG MELDEN]         │
+│ [KOSTENVORANSCHLAG EXPORT] [FOTOS LÖSCHEN]            │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Settings-UI für Schadensmanagement:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ EINSTELLUNGEN > SCHADENSMANAGEMENT                      │
+├──────────────────────────────────────────────────────────┤
+│ SCHWEREGRAD-KLASSIFIZIERUNG:                           │
+│   ⭐ LEICHT:     < €100      │ Reparaturdauer < 1 Tag  │
+│   ⭐⭐ MITTEL:   €100-€500   │ Reparaturdauer 1-5 Tage│
+│   ⭐⭐⭐ SCHWER: €500-€2000  │ Reparaturdauer 5-14 Tage│
+│   ⭐⭐⭐⭐ TOTAL: > €2000    │ Austausch empfohlen     │
+│   [Kosten anpassen...]                                 │
+│                                                          │
+│ KI-SCHADENBEWERTUNG:                                   │
+│   ☑ Automatische Foto-Analyse aktivieren               │
+│   Modell: ○ Standard ○ Professional                   │
+│   ☑ Kosten-Schätzung auto-generieren                   │
+│   ☑ KI-Empfehlung anzeigen (Reparatur vs. Ersatz)     │
+│                                                          │
+│ STANDARD-KOSTENANSÄTZE:                               │
+│   Lichttechnik-Reparatur (h): €[45.00]                │
+│   Elektro-Reparatur (h): €[50.00]                     │
+│   Mechanik-Reparatur (h): €[40.00]                    │
+│   Material-Zuschlag: [+15%]                            │
+│                                                          │
+│ VERSICHERUNGSFORMULAR:                                 │
+│   Versicherungs-Formular Vorlage: [Allianz_KFZ_2024.pdf│
+│   ☑ Automatisch an Versicherer senden (bei Schaden)   │
+│   Admin-Freigabe erforderlich: ○ Ja ○ Nein            │
+│                                                          │
+│ KAUTIONS-VERRECHNUNG:                                  │
+│   ☑ Schadenskosten automatisch von Kaution abziehen   │
+│   ☑ Kunde benachrichtigen bei Kostenerstattung        │
+│                                                          │
+│                                           [SPEICHERN]   │
+└──────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Part L: Multi-Standort, Preiskalkulation, Online-Buchung, Backup & Nachhaltigkeit
+
+### L1. Flexible Lagerorte – Immer wissen wo was ist
+
+Im Alltag eines Verleih-Betriebs lagert Equipment nicht nur in einem Hauptlager, sondern verteilt sich auf viele verschiedene Orte: im Auto, auf dem Anhänger, im Büro, in der Garage, im Keller, beim Kunden, auf einer Baustelle, im Proberaum – überall dort, wo es gerade gebraucht wird oder zwischengelagert ist. MyRMS bildet diese Realität mit einem System **frei definierbarer Lagerorte** ab.
+
+Der entscheidende Unterschied zu klassischen Multi-Lager-Systemen: **Assets bleiben immer frei buchbar, unabhängig vom aktuellen Lagerort.** Der Lagerort ist reine Information – er zeigt an, wo sich ein Asset physisch befindet, schränkt aber die Buchbarkeit nicht ein. Wenn ein Scheinwerfer gerade im Keller steht, kann er trotzdem für ein Projekt nächste Woche gebucht werden – der Benutzer weiß nur dank der Lagerort-Anzeige, dass er ihn vorher aus dem Keller holen muss.
+
+Lagerorte werden vom Benutzer **frei definiert** – es gibt keine starren Vorgaben. Der Admin erstellt beliebig viele Orte mit einem Namen, einer optionalen Beschreibung und einem Icon/Farbe zur schnellen visuellen Unterscheidung. Typische Lagerorte in einem kleinen bis mittelgroßen Verleih-Betrieb sind z.B.: „Hauptlager", „Garage", „Keller", „Auto (VW Bus)", „Anhänger 1", „Büro Regal", „Beim Kunden (Firma Müller)", „Proberaum", „Reparatur-Werkstatt". Große Betriebe können das System natürlich auch für echte Multi-Standorte nutzen (München, Hamburg, etc.), aber der Fokus liegt auf der flexiblen, unkomplizierten Nutzung.
+
+Das Zuweisen eines Lagerorts geschieht einfach und schnell: Beim Zurückbuchen eines Assets (Check-In nach Projektrückgabe) wird der Lagerort als Dropdown abgefragt: „Wohin kommt das Equipment?" Der Benutzer wählt aus der Liste oder tippt einen neuen Ort ein (der dann automatisch angelegt wird). Auch per QR-Scan ist das möglich: Asset scannen → Lagerort wählen → fertig. Beim Umlagern (z.B. vom Keller ins Auto für morgen) kann der Lagerort jederzeit in der Asset-Detail-Ansicht mit einem Klick geändert werden.
+
+**Asset-Liste mit Lagerort-Anzeige:**
+```
+┌──────────────────────────────────────────────────────────────┐
+│ ASSETS                                             [+ Neu]  │
+├──────────────────────────────────────────────────────────────┤
+│ Filter: [Alle Lagerorte ▼]  [Alle Kategorien ▼]  [Suche..] │
+├──────────────────────────────────────────────────────────────┤
+│ Asset           │ Kategorie    │ Status    │ 📍 Lagerort     │
+├──────────────────────────────────────────────────────────────┤
+│ S4 LED S3 #001  │ Licht        │ ● Frei    │ 🏠 Hauptlager   │
+│ S4 LED S3 #002  │ Licht        │ ● Frei    │ 🚗 Auto (VW Bus)│
+│ S4 LED S3 #003  │ Licht        │ 🔴 Verlieh│ 📦 Beim Kunden  │
+│ Hazer MDG ME1   │ Effekte      │ ● Frei    │ 🏚️ Keller       │
+│ Sennheiser EW-D │ Audio        │ ● Frei    │ 🏢 Büro Regal   │
+│ Kabelrolle 50m  │ Zubehör      │ ● Frei    │ 🚛 Anhänger 1   │
+│ d&b E8 #001     │ Audio        │ ● Frei    │ 🔧 Werkstatt    │
+│ Avolites Arena  │ Steuerpulte  │ ● Frei    │ 🏠 Hauptlager   │
+├──────────────────────────────────────────────────────────────┤
+│ Lagerort-Zusammenfassung:                                    │
+│ 🏠 Hauptlager: 42 Assets  │ 🚗 Auto: 8  │ 🏚️ Keller: 15   │
+│ 🚛 Anhänger: 12           │ 🏢 Büro: 5  │ 🔧 Werkstatt: 3  │
+└──────────────────────────────────────────────────────────────┘
+```
+
+Der Lagerort wird überall angezeigt, wo er relevant ist: In der Asset-Liste als eigene Spalte mit Icon, auf der Asset-Detail-Seite prominent unter dem Status-Badge, im Projekt-Equipment-Tab (damit der Projektleiter weiß, wo er alles einsammeln muss), und im Dispatch-Board (Kanban) als Label unter dem Asset-Namen.
+
+**Schnelle Lagerort-Änderung (Asset-Detail-Seite):**
+```
+┌──────────────────────────────────────────────────────────┐
+│ ETC Source Four LED S3 #002                     [Bearbeiten]│
+├──────────────────────────────────────────────────────────┤
+│ Status: ● Verfügbar                                      │
+│ Kategorie: Licht > Profilscheinwerfer                    │
+│                                                          │
+│ 📍 Aktueller Lagerort:                                   │
+│ ┌──────────────────────────────────────────────────┐    │
+│ │ 🚗 Auto (VW Bus)                    [Ändern ▼]  │    │
+│ │    Seit: 17.03.2026 14:30                        │    │
+│ │    Geändert von: Max Mustermann                  │    │
+│ └──────────────────────────────────────────────────┘    │
+│                                                          │
+│ Lagerort-Historie (letzte 10):                           │
+│ 17.03. 14:30  🚗 Auto (VW Bus)      ← Max Mustermann   │
+│ 17.03. 08:00  🏠 Hauptlager         ← Auto-Check-In    │
+│ 14.03. 18:00  📦 Beim Kunden (Müller)← Projekt P-2026-15│
+│ 10.03. 09:00  🏠 Hauptlager         ← Max Mustermann   │
+│ 08.03. 16:00  🔧 Werkstatt          ← Wartung W-445    │
+└──────────────────────────────────────────────────────────┘
+```
+
+Besonders praktisch ist die **Lagerort-Übersicht als Dashboard-Widget**: Ein kompaktes Widget zeigt alle Lagerorte mit Asset-Anzahl. So sieht man auf einen Blick: „Im Anhänger liegen noch 12 Teile, die müssen heute noch ins Hauptlager zurück." Klick auf einen Lagerort filtert die Asset-Liste auf alle Assets an diesem Ort.
+
+Für die Projekt-Vorbereitung ist die Lagerort-Information besonders wertvoll: Wenn ein Projekt zusammengestellt wird, zeigt das System pro Equipment-Position den aktuellen Lagerort an. Der Projektleiter sieht sofort: „4 Scheinwerfer sind im Hauptlager, 2 sind noch im Auto, 1 ist in der Werkstatt (Achtung: Wartung!)." So kann die Kommissionierung effizient geplant werden.
+
+**Bulk-Umlagern (mehrere Assets gleichzeitig verschieben):**
+```
+┌──────────────────────────────────────────────────────────┐
+│ ASSETS UMLAGERN                                          │
+├──────────────────────────────────────────────────────────┤
+│ Ausgewählt: 8 Assets                                     │
+│                                                          │
+│ Von: [Verschiedene Orte]                                 │
+│ Nach: [Hauptlager              ▼]                        │
+│       ├── 🏠 Hauptlager                                  │
+│       ├── 🚗 Auto (VW Bus)                               │
+│       ├── 🚛 Anhänger 1                                  │
+│       ├── 🏚️ Keller                                      │
+│       ├── 🏢 Büro Regal                                  │
+│       ├── 🔧 Werkstatt                                   │
+│       └── ✏️ Neuen Lagerort anlegen...                    │
+│                                                          │
+│ Assets:                                                  │
+│ ☑ S4 LED S3 #002      (bisher: 🚗 Auto)                │
+│ ☑ S4 LED S3 #005      (bisher: 🚗 Auto)                │
+│ ☑ Hazer MDG ME1        (bisher: 🏚️ Keller)              │
+│ ☑ Kabelrolle 50m ×3   (bisher: 🚛 Anhänger)            │
+│ ☑ Sennheiser EW-D     (bisher: 🏢 Büro)                │
+│                                                          │
+│ Notiz: [Equipment von Gig zurück ins Lager     ]        │
+│                                                          │
+│ [Alle umlagern]  [Abbrechen]                            │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Settings-UI für Lagerorte:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ EINSTELLUNGEN > LAGERORTE                                │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│ Definierte Lagerorte:                                    │
+│ ┌──────────────────────────────────────────────────┐    │
+│ │ Icon │ Name              │ Beschreibung  │ Aktion│    │
+│ ├──────┼───────────────────┼───────────────┼───────┤    │
+│ │ 🏠   │ Hauptlager        │ Industriestr. │ [✏️🗑]│    │
+│ │ 🚗   │ Auto (VW Bus)     │ Kennz. N-XY.. │ [✏️🗑]│    │
+│ │ 🚛   │ Anhänger 1        │ Großer Hänger │ [✏️🗑]│    │
+│ │ 🏢   │ Büro Regal        │ Regal neben.. │ [✏️🗑]│    │
+│ │ 🏚️   │ Keller            │ Kellerraum 2  │ [✏️🗑]│    │
+│ │ 🔧   │ Werkstatt         │ Reparaturen   │ [✏️🗑]│    │
+│ │ 🎪   │ Proberaum         │ Übungsraum    │ [✏️🗑]│    │
+│ └──────────────────────────────────────────────────┘    │
+│ [+ Neuen Lagerort anlegen]                               │
+│                                                          │
+│ Allgemeine Einstellungen:                                │
+│ ☑ Lagerort bei Check-In abfragen (Pflichtfeld)          │
+│ ☑ Lagerort-Spalte in Asset-Listen anzeigen               │
+│ ☑ Lagerort-Widget auf Dashboard anzeigen                 │
+│ ☑ Lagerort-Historie pro Asset speichern (max. 50)       │
+│ ☐ Benutzer dürfen neue Lagerorte inline anlegen          │
+│                                                          │
+│ Standard-Lagerort für neue Assets: [Hauptlager ▼]       │
+│ Standard-Lagerort nach Check-In:   [Hauptlager ▼]       │
+│                                                          │
+│ [Änderungen speichern]                                   │
+└──────────────────────────────────────────────────────────┘
+```
+
+---
+
+### L2. Flexible Preiskalkulations-Engine
+
+Das Pricing-System ist ausgesprochen flexibel und unterstützt alle gängigen Geschäftsmodelle. Die Tages/Wochen/Monats-Staffel ermöglicht differentielle Preisgestaltung: 1 Tag=€50, 3 Tage=€120, 1 Woche=€250, 1 Monat=€600 pro Asset. Das System berechnet automatisch, welche Staffel am günstigsten ist.
+
+Mengenrabatte sind graduell konfigurierbar: ab 5 Stück 10%, ab 10 Stück 20%. Saisonzuschläge reflektieren Nachfragevariationen: Hochsaison (Mai-Sep) +20%, Messesaison +30%, Feiertage +50%. Minimale Mietdauern pro Asset-Typ verhindern unwirtschaftliche Vermietungen.
+
+Paketpreise (Bundles) wie "Basis-Lichtpaket" (12× S4 + 2× Hazer + 1× Pult) werden mit einem Paketpreis von z.B. €800/Tag statt €950 für Einzelbuchung angeboten, was Kunden incentiviert. Kundenspezifische Preislisten ermöglichen Stammkunde-Rabatte (z.B. 15% auf alles) oder Festpreise für spezifische Kunden.
+
+Beim Erstellen eines Angebotes schlägt das System automatisch Preise basierend auf allen Regeln vor. Optional kann ein Dynamic Pricing Modul KI-basiert die Auslastung berücksichtigen – hohe Nachfrage führt zu höheren Preisen. Rabatt-Codes mit Ablaufdatum ermöglichen zeitlich begrenzte Kampagnen.
+
+**Preislistenverwaltung:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ PREISKALKULATION & PREISLISTEN                         │
+├──────────────────────────────────────────────────────────┤
+│ Standard-Preisliste für "Lichttechnik":                │
+│                                                          │
+│ Asset-Typ         │ 1 Tag │ 3 Tage │ 1 Woche │ 1 Monat │
+├───────────────────┼───────┼────────┼─────────┼─────────┤
+│ Par 64 LED        │ €45   │ €110   │ €250    │ €600    │
+│ Moving Head       │ €85   │ €200   │ €450    │ €1200   │
+│ Pult (Konsole)    │ €120  │ €280   │ €600    │ €1500   │
+│ Hazer/Nebelmasch. │ €65   │ €150   │ €350    │ €850    │
+│                                                          │
+│ MENGENRABATTE:                                         │
+│ ☑ Aktiviert │ Ab [5] Stück: [10]%  │ Ab [10] Stück: [20]% │
+│                                                          │
+│ SAISONZUSCHLÄGE:                                       │
+│ ┌──────────────────────────────────┐                   │
+│ │ Hochsaison (01.05-30.09): +[20]% │                   │
+│ │ Messesaison (01.03, 10.10-30.11): +[30]% │          │
+│ │ Feiertage-Zuschlag: +[50]%        │                   │
+│ └──────────────────────────────────┘                   │
+│                                                          │
+│ MINDESTMIETDAUER:                                      │
+│ ○ Nicht erforderlich  ○ 1 Tag  ○ 3 Tage  ○ 1 Woche   │
+│                                                          │
+│ [PREISLISTE EXPORTIEREN] [KUNDENPREISE] [BUNDLES]      │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Bundle-Builder:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ PAKET-BUILDER (Bundle)                                 │
+├──────────────────────────────────────────────────────────┤
+│ Paketname: [Basis-Lichtpaket (Small)]                  │
+│ Beschreibung: [Kleine Veranstaltung 100-300 Personen] │
+│                                                          │
+│ ENTHALTENES EQUIPMENT:                                 │
+│ ┌────────────────────────────────────┐                 │
+│ │ 12× Par 64 LED (1000W)             │                 │
+│ │ 2× Moving Head                     │                 │
+│ │ 1× Mischpult (16 Kanäle)          │                 │
+│ │ 2× Nebelmaschinen                  │                 │
+│ │ Kabelset (Standard)                │                 │
+│ │ [+ Equipment hinzufügen]            │                 │
+│ └────────────────────────────────────┘                 │
+│                                                          │
+│ PREIS-BERECHNUNG:                                      │
+│ Einzeln (1 Tag):                                       │
+│   12× Par €45 = €540                                   │
+│   2× Moving Head €85 = €170                            │
+│   Pult €120                                             │
+│   2× Hazer €65 = €130                                  │
+│   Kabel-Set €80                                         │
+│   ─────────────────                                    │
+│   Summe Einzeln: €1.040                                │
+│                                                          │
+│ PAKET-PREIS: €[850] pro Tag (18% Rabatt)             │
+│                                                          │
+│ Verfügbarkeit: ○ Nur auf Anfrage ○ Standard           │
+│                                                          │
+│                              [SPEICHERN] [VORSCHAU]    │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Kundenspezifische Preislisten:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ KUNDENSPEZIFISCHE PREISE                               │
+├──────────────────────────────────────────────────────────┤
+│ Kunde: Soundcheck AG (Stammkunde seit 2016)            │
+│                                                          │
+│ Rabatt-Art: ○ Prozentual  ☑ Festpreise                │
+│                                                          │
+│ Festpreis-Tabelle:                                      │
+│ ┌──────────────────────────────────┐                   │
+│ │ Par 64 LED:    €35/Tag (statt €45) │                 │
+│ │ Moving Head:   €70/Tag (statt €85) │                 │
+│ │ Pult (Konsole):€100/Tag (statt €120)│               │
+│ │ Hazer:         €55/Tag (statt €65)  │                 │
+│ │ Paket: €700/Tag (statt €850)        │                 │
+│ └──────────────────────────────────┘                   │
+│                                                          │
+│ oder Rabatt-Prozentsatz:                               │
+│ ☑ [15]% Rabatt auf alle Preise                        │
+│ ☑ Zusätzlich [5]% bei Langzeit-Buchung (>1 Woche)    │
+│                                                          │
+│ Gültig ab: [01.01.2024] Bis: [31.12.2024]            │
+│                                                          │
+│ Automatisches Kostenvoranschlag: ○ Manuelle OK ☑ Auto  │
+│                                                          │
+│                              [SPEICHERN] [ANGEBOT-TEST] │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Settings-UI für Preiskalkulationen:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ EINSTELLUNGEN > PREISKALKULATIONS-ENGINE               │
+├──────────────────────────────────────────────────────────┤
+│ STAFFELPREISE & GRUNDEINSTELLUNGEN:                    │
+│   Standard-Preismodell: ○ Staffel ○ Pauschal ○ Hybrid│
+│   Rundungsregel: ○ Kaufmännisch ○ Auf .99            │
+│   MwSt-Satz: [19]%  │ Währung: [EUR]                  │
+│                                                          │
+│ MENGENRABATTE:                                         │
+│   ☑ Aktiviert                                          │
+│   Rabatt-Tabelle:                                       │
+│   ┌──────────────────────┐                             │
+│   │ [5] Stück:   [10]%   │                             │
+│   │ [10] Stück:  [20]%   │                             │
+│   │ [25] Stück:  [30]%   │                             │
+│   │ [50] Stück:  [40]%   │                             │
+│   └──────────────────────┘                             │
+│                                                          │
+│ SAISONMODELL:                                          │
+│   ☑ Saisonzuschläge aktivieren                         │
+│   ○ Automatisch (Feiertage)  ☑ Manuell definierbar    │
+│                                                          │
+│ DYNAMIC PRICING (Optional):                            │
+│   ☑ KI-basiertes Dynamic Pricing aktivieren            │
+│   Modell: ○ Standard ○ Aggressiv                      │
+│   ☑ Auslastung berücksichtigen (>90% = +20%)         │
+│   ☑ Anschauung-Tracking                                │
+│                                                          │
+│ RABATT-CODES:                                          │
+│   Max. parallele Codes: [50]                            │
+│   ☑ Einmalcodes  ☑ Kampagnen-Codes                    │
+│   ☑ Staffelungen pro Code (z.B. 1-5: 10%, 6+: 20%)   │
+│                                                          │
+│                                           [SPEICHERN]   │
+└──────────────────────────────────────────────────────────┘
+```
+
+---
+
+### L3. Online-Buchungsportal (B2C/B2B)
+
+Das öffentliche Online-Buchungsportal ermöglicht Kunden Selbstbedienung: Equipment durchstöbern, Verfügbarkeit in Echtzeit prüfen, in den Warenkorb legen, und entweder direkt buchen oder ein Angebot anfragen. Das System zeigt einen interaktiven Verfügbarkeitskalender, der täglich aktualisiert wird.
+
+Das Warenkorb-System ähnelt E-Commerce-Plattformen: Equipment wird mit Anzahl und Mietdauer hinzugefügt, automatische Rabatt-Berechnung erfolgt, und dann entweder ein Sofort-Booking oder Angebotsanfrage. Die Selbstregistrierung ermöglicht es, dass neue Kunden Konten erstellen (mit optionaler Admin-Freigabe für Großkunden).
+
+Eine Angebotsanfrage triggert automatisch die Erstellung eines Projektes und eines Kostenvoranschlages in MyRMS. Die Online-Zahlung via Stripe/PayPal akzeptiert Vorkasse oder Kautionszahlung. Das Portal ist vollständig im Corporate Design konfigurierbar (Logo, Farben, Custom-Domain).
+
+SEO-Optimierung ermöglicht es, dass der Equipment-Katalog über Google gefunden wird (Meta-Tags, Sitemap, Structured Data). Ein Embed-Widget ermöglicht es bestehende Websites, einen Verfügbarkeits-Kalender als iFrame einzubetten.
+
+**Öffentliches Buchungsportal – Startseite:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ TECHNIK-VERLEIH München – Online Katalog               │
+├──────────────────────────────────────────────────────────┤
+│ Logo [TECHNIK-VERLEIH]  [Suche...]  [Warenkorb (0)] [DE]│
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│ KATEGORIEN:                                             │
+│ ○ Lichttechnik  ○ Bühnenbau  ○ Audio  ○ Video  ○ Zubeh│
+│                                                          │
+│ FEATURED PRODUKTE:                                      │
+│ ┌───────────────┐  ┌───────────────┐  ┌───────────────┐│
+│ │ Par 64 LED    │  │ Moving Head   │  │ Nebelmaschine ││
+│ │ [Bild]        │  │ [Bild]        │  │ [Bild]        ││
+│ │ €45/Tag       │  │ €85/Tag       │  │ €65/Tag       ││
+│ │ 4.8★ (234)    │  │ 4.9★ (567)    │  │ 4.6★ (189)    ││
+│ │ [DETAILS]     │  │ [DETAILS]     │  │ [DETAILS]     ││
+│ └───────────────┘  └───────────────┘  └───────────────┘│
+│                                                          │
+│ RATGEBER:                                               │
+│ [Wie buche ich Equipment?] [Versicherung erklärt]     │
+│ [Mietpreise Vergleich]     [FAQ]                       │
+│                                                          │
+│ KUNDENREVIEWS:                                          │
+│ "Zuverlässig und professionell!" – Martin K.           │
+│ "Tolle Preise, schnelle Lieferung!" – Eva B.           │
+│                                                          │
+│                                     © 2024 Technik-Verleih│
+└──────────────────────────────────────────────────────────┘
+```
+
+**Produktseite mit Verfügbarkeits-Kalender:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ Par 64 LED Scheinwerfer (1000W) – Warmweiß             │
+├──────────────────────────────────────────────────────────┤
+│ [Bilder: Vorder/Seite/Detail]    €45 pro Tag           │
+│                                                          │
+│ Bewertung: 4.8★ (234 Bewertungen)                      │
+│ Verfügbare Stückzahl: 28/45                             │
+│                                                          │
+│ SPEZIFIKATIONEN:                                        │
+│ - Leistung: 1000W Halogen                              │
+│ - Farbtemperatur: 3200K (Warmweiß)                     │
+│ - Gewicht: 8 kg │ Abmessungen: 330×280×320mm          │
+│ - Stromversorgung: 400V 16A CEE                        │
+│ - Lieferumfang: Scheinwerfer + Transportkoffer         │
+│                                                          │
+│ VERFÜGBARKEITSKALENDER:                                │
+│ ┌────────────────────────────────┐                     │
+│ │ März 2024                      │                     │
+│ │ MO TU WE TH FR SA SU            │                     │
+│ │ [01]○ ○ ●4 ●6 ○ ○ ○            │ ← ○=frei, ●=n verf│
+│ │ [08]● ● ●12○ ○ ○ ○  ← Auswählen│                   │
+│ │ [15]○ ○ ○ ○ ○ ○ ○              │                     │
+│ │ [22]○ ○ ○ ○ ●3 ●5 ○             │                     │
+│ │ [29]○ ○                         │                     │
+│ └────────────────────────────────┘                     │
+│                                                          │
+│ Von: [23.03.2024 ▼]  │ Bis: [28.03.2024 ▼]  [6 Tage] │
+│ Anzahl: [5] Stück                                      │
+│ Preis: 5 × €45 × 6 Tage = €1.350                      │
+│ Mengenrabatt: -€135 (10% ab 5 Stück)                 │
+│ Versand: +€50                                          │
+│ ────────────────────                                   │
+│ Gesamtpreis: €1.265 (zzgl. 19% MwSt)                 │
+│                                                          │
+│ ☑ Versicherung (€45) hinzufügen                        │
+│                                                          │
+│                   [IN WARENKORB] [ANGEBOT ANFRAGEN]    │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Warenkorb & Checkout:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ WARENKORB (3 Artikel)                                   │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│ 5× Par 64 LED        [23.-28.03] 6 Tage  €1.350  [✕]   │
+│ 2× Moving Head       [23.-28.03] 6 Tage  €1.020  [✕]   │
+│ Nebelmaschine        [23.-28.03] 6 Tage    €390  [✕]   │
+│                                                          │
+│ Versand (München):                                      │
+│ Lieferung: Kostenlos (besorgt)        €0               │
+│ Rückholung: Kostenlos (am Ende)        €0               │
+│                                                          │
+│ Zwischensumme:                         €2.760          │
+│ Mengenrabatt (10%):                   -€276           │
+│ Versicherung (optional):               +€90            │
+│ MwSt (19%):                            +€494           │
+│ ──────────────────────────────────────────             │
+│ GESAMTPREIS:                           €3.068          │
+│                                                          │
+│ Gutschein-Code: [___________] [ANWENDEN]               │
+│                                                          │
+│ CHECKOUT:                                               │
+│ ☑ Ich bin schon Kunde  ○ Ich bin Neukunde             │
+│ Name: [_____________]                                  │
+│ E-Mail: [_____________]                                │
+│ Telefon: [_____________]                               │
+│                                                          │
+│ Veranstaltungsdetails:                                 │
+│ Event-Typ: [Hochzeit ▼]                                │
+│ Anzahl Gäste: [150]                                    │
+│ Ort: [München ▼]                                       │
+│                                                          │
+│ Zahlungsmethode:                                        │
+│ ○ Sofortkauf (Vorkasse)  ○ Angebotsanfrage  ○ Ratenkauf│
+│                                                          │
+│                      [WEITER ZU ZAHLUNG] [SPEICHERN]   │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Settings-UI für Online-Buchungsportal:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ EINSTELLUNGEN > ONLINE-BUCHUNGSPORTAL                  │
+├──────────────────────────────────────────────────────────┤
+│ AKTIVIERUNG:                                            │
+│   ☑ Portal aktiv  ○ Nur für registrierte Kunden      │
+│   Domain: [www.technik-verleih-muenchen.de]           │
+│                                                          │
+│ BRANDING:                                               │
+│   Logo: [Upload-Button] [preview-logo.png]             │
+│   Farben: [Primär: #003366] [Sekundär: #FF6600]       │
+│   Schrift: ○ Standard ○ Custom-Font                   │
+│                                                          │
+│ KATALOG-EINSTELLUNGEN:                                │
+│   ☑ Alle Kategorien sichtbar                           │
+│   ○ Ausgewählte Kategorien: [Lichttechnik, Audio]    │
+│   ☑ Preise anzeigen                                    │
+│   ○ "Auf Anfrage" statt Preise                         │
+│   ☑ Kundenbewertungen anzeigen                         │
+│                                                          │
+│ SELBSTREGISTRIERUNG:                                   │
+│   ☑ Selbstregistrierung aktivieren                     │
+│   Admin-Freigabe erforderlich: ○ Ja ☑ Nein           │
+│   Kreditlimit Neukunde: €[1.500]                      │
+│                                                          │
+│ ZAHLUNGSOPTIONEN:                                      │
+│   ☑ Stripe (Kreditkarte)                               │
+│   ☑ PayPal                                              │
+│   ○ SEPA-Überweisung                                   │
+│   Vorkasse erforderlich: [25]%                         │
+│   Kaution: [1.000 EUR oder 10% Mietsumme, max 5.000] │
+│                                                          │
+│ VERSAND-MODELL:                                        │
+│   ○ Kostenlos  ○ Selbstabholung  ☑ Lieferpauschale   │
+│   Pauschale: €[75]                                     │
+│   ☑ Kostenlos Lieferung ab €[1.000]                   │
+│                                                          │
+│ SEO:                                                    │
+│   ☑ Katalog für Google indexierbar                     │
+│   Meta-Description: [...]                              │
+│   Keywords: [Lichttechnik-Verleih, Equipment, Events]│
+│                                                          │
+│ EMBED-WIDGET (für externe Websites):                   │
+│   [Widget-Code kopieren]                               │
+│   <iframe src="https://portal.technik-verleih..." >   │
+│                                                          │
+│                                           [SPEICHERN]   │
+└──────────────────────────────────────────────────────────┘
+```
+
+---
+
+### L4. Backup & Disaster Recovery
+
+Für ein System wie MyRMS ist zuverlässiges Backup essentiell. Das System führt automatisierte Datenbank-Backups durch: tägliche Vollsicherungen und stündliche inkrementelle Backups. Ziele sind konfigurierbar: lokales NAS, Remote-Speicher (S3, Backblaze B2, SFTP), oder geo-redundante Systeme.
+
+Point-in-Time Recovery auf Basis von Binlogs ermöglicht es, die Datenbank auf jeden beliebigen historischen Zeitpunkt zurückzusetzen – essentiell bei Datenbeschädigungen. Datei-Backups (Fotos, Dokumente, PDFs) werden separat gesichert. AES-256 Verschlüsselung schützt Backup-Dateien im Ruhezustand.
+
+Die Retention-Policy ist granular: Täglich 30 Tage, wöchentlich 12 Wochen, monatlich 12 Monate. Monatliche automatisierte Recovery-Tests stellen sicher, dass Backups tatsächlich funktionieren – automatisch wird ein Backup auf einem Test-Server wiederhergestellt und Checksummen geprüft.
+
+Das System monitort kontinuierlich und benachrichtigt sofort per E-Mail/Toast bei fehlgeschlagenem Backup. Die Recovery Time Objective (RTO) beträgt < 4 Stunden, Recovery Point Objective (RPO) < 1 Stunde. Ein dokumentierter Disaster Recovery Plan mit Schritten, Verantwortlichen und Kontakten existiert.
+
+**Backup-Status-Dashboard:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ BACKUP & DISASTER RECOVERY                              │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│ ZULETZT ERSTELLTE BACKUPS:                              │
+│ ┌──────────────────────────────────────────────────────┐│
+│ │ Typ       Größe    Speicherort  Erstellt  Status    ││
+│ ├──────────────────────────────────────────────────────┤│
+│ │ Vollsich. 4.2GB   S3 + Local   18.03 00:15 ✓ OK    ││
+│ │ Inkrementell 142MB S3 + Local   18.03 01:00 ✓ OK    ││
+│ │ Inkrementell 156MB S3 + Local   18.03 02:00 ✓ OK    ││
+│ │ Inkrementell 189MB S3 + Local   18.03 03:00 ✓ OK    ││
+│ └──────────────────────────────────────────────────────┘│
+│                                                          │
+│ NÄCHSTES BACKUP: Heute 18.03.2024 um 00:00 (Vollsich.)│
+│ [JETZT MANUELL BACKUP STARTEN]                         │
+│                                                          │
+│ RECOVERY-PUNKTE (letzte 30 Tage):                      │
+│ Bis auf beliebiger Zeitpunkt zurückgehen:             │
+│ [Datum wählen] [Uhrzeit 00:00 ▼]  [RESTORE PREVIEW] │
+│                                                          │
+│ LETZTER RECOVERY-TEST:                                 │
+│ Datum: 15.03.2024  │ Erfolg: ✓ Ja                     │
+│ Test-Server: Was wiederhergestellt, Test-DBs gelöscht│
+│ Ergebnis: DB Integrität OK, 100% Daten wiederhergestellt│
+│ Nächster Test: 15.04.2024 (Automatisch)               │
+│                                                          │
+│ BACKUP-SPEICHER:                                        │
+│ ┌──────────────────────────────────────────────────────┐│
+│ │ Speicherort    Kapazität  Belegt   Verfügbar        ││
+│ ├──────────────────────────────────────────────────────┤│
+│ │ Local NAS      500 GB     62 GB    438 GB           ││
+│ │ S3 (AWS)       Unbegrenzt 58 GB    OK               ││
+│ │ Backblaze B2   Unbegrenzt 61 GB    OK               ││
+│ └──────────────────────────────────────────────────────┘│
+│                                                          │
+│ RTO/RPO-METRIKEN:                                       │
+│ Recovery Time Objective (RTO): 2.5 Stunden (< 4h) ✓  │
+│ Recovery Point Objective (RPO): 45 Minuten (< 1h) ✓  │
+│                                                          │
+│ [RESTORE] [DETAILS] [DISASTER-PLAN]                   │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Settings-UI für Backup & Recovery:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ EINSTELLUNGEN > BACKUP & DISASTER RECOVERY              │
+├──────────────────────────────────────────────────────────┤
+│ AUTOMATISIERTE BACKUPS:                                │
+│   ☑ Vollsicherung aktiviert                            │
+│   Schedule: Täglich um [00:00 Uhr]                     │
+│   ☑ Inkrementelle Backups (stündlich)                  │
+│                                                          │
+│ BACKUP-ZIELE:                                          │
+│   ┌──────────────────────────────────┐                 │
+│   │ ☑ Lokal (NAS)     Pfad: /backup │                 │
+│   │ ☑ AWS S3          Bucket: myRMS-bck              │
+│   │ ☑ Backblaze B2    Account ID: [***]              │
+│   │ ☑ SFTP            Server: backup.example.com     │
+│   └──────────────────────────────────┘                 │
+│   [+ WEITERES ZIEL]                                    │
+│                                                          │
+│ VERSCHLÜSSELUNG:                                       │
+│   ☑ AES-256 Verschlüsselung aktivieren                │
+│   Encryption-Key: [Auto-generated, sicher gespeichert] │
+│   ☑ Key-Backup exportieren (für Notfall)              │
+│                                                          │
+│ RETENTION-POLICY:                                      │
+│   Täglich (Vollsich.): [30] Tage                      │
+│   Wöchentlich:        [12] Wochen                     │
+│   Monatlich:          [12] Monate                     │
+│   ☑ Automatisch alte Backups löschen                  │
+│                                                          │
+│ RECOVERY-TEST:                                         │
+│   ☑ Automatischer monatlicher Recovery-Test          │
+│   Test-Durchführung: [15.] des Monats um [03:00]     │
+│   Test-Server: [Test-DB Umgebung]                     │
+│   ☑ Checksummen-Verifikation                          │
+│   ☑ Integrität-Check                                  │
+│                                                          │
+│ BENACHRICHTIGUNGEN:                                    │
+│   ☑ E-Mail bei Backup-Fehler (sofort)                │
+│   ☑ Täglicher Status-Report (07:00 Uhr)              │
+│   Empfänger: [admin@example.com, backup-team@...]    │
+│                                                          │
+│ DISASTER RECOVERY PLAN:                               │
+│   Plan-Dokument: [DRP_2024.pdf ▼] [HERUNTERLADEN]    │
+│   Letzte Überprüfung: 01.03.2024                      │
+│   Nächste Überprüfung: 01.06.2024                     │
+│   RTO Ziel: [4] Stunden  │ RPO Ziel: [1] Stunde     │
+│                                                          │
+│                                           [SPEICHERN]   │
+└──────────────────────────────────────────────────────────┘
+```
+
+---
+
+### L5. Nachhaltigkeitsreporting & ESG
+
+Das Nachhaltigkeitsreporting ermöglicht es Mietbetrieben, ihre Umweltauswirkungen zu quantifizieren und zu berichten. Das CO₂-Tracking pro Transport multipliziert Kilometer mit dem Emissionsfaktor des Fahrzeugtyps (z.B. 0,198 kg CO₂/km für einen Standard-Kastenwagen) und berechnet kg CO₂. Der Energieverbrauch pro Projekt wird aus der Leistungsaufnahme der eingesetzten Equipment und Einsatzstunden kalkuliert.
+
+Nach jedem Projekt können Kunden einen Nachhaltigkeitsbericht herunterladen: "Ihr Event verursachte 145 kg CO₂" – sowohl als gesamte Betrachtung als auch Breakdown nach Transport, Energie, etc. Das Equipment-Lifecycle-Tracking zeigt, wie lange Assets im Einsatz sind, wann sie recycelt oder weiterverkauft werden.
+
+Das ESG-Dashboard aggregiert Daten: Gesamtemissionen seit Jahresanfang, Trend über Monate, Vergleich YoY (Jahr-zu-Jahr). Equipment mit niedriger Energieaufnahme erhält Green-Label Badges. Optional können Kunden CO₂-Kompensation direkt auf ihrer Rechnung hinzufügen.
+
+Das System bereitet Unternehmen auf die EU-CSRD (Corporate Sustainability Reporting Directive) vor, die ab 2026 für große Unternehmen verbindliche Nachhaltigkeitsberichterstattung vorsieht.
+
+**ESG-Dashboard:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ NACHHALTIGKEITSREPORTING & ESG                          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│ GESAMT-EMISSIONEN (2024):                               │
+│ ┌─────────────────────────────────────┐                 │
+│ │                                     │                 │
+│ │   CO₂-Ausstoß 2024:  2.847 kg CO₂   │                 │
+│ │   Trend: ▲ +12% ggü. 2023           │                 │
+│ │                                     │                 │
+│ │   Strom-Verbrauch: 18.450 kWh      │                 │
+│ │   Transport: 2.280 km               │                 │
+│ │   Energie-Äquivalent: €4.234        │                 │
+│ └─────────────────────────────────────┘                 │
+│                                                          │
+│ TREND (letzte 12 Monate):                               │
+│ ┌──────────────────────────────────────────┐            │
+│ │ CO₂-Emissionen  [Linien-Chart]            │            │
+│ │ 3000 ├─────────────────────────────┐     │            │
+│ │      │     ▁▂▃▄▅▆▇▅▄▃▂▁ 2024      │     │            │
+│ │ 2000 ├─▁▂▃▄▅▆▇▅▄▂▁ 2023 ─────────┤     │            │
+│ │      │▂▃▄▅▆▇ 2022 ─────────────────│     │            │
+│ │ 1000 ├────────────────────────────┤     │            │
+│ │      └──────────────────────────────┘     │            │
+│ │ J F M A M J J A S O N D                  │            │
+│ └──────────────────────────────────────────┘            │
+│                                                          │
+│ EMISSIONS-QUELLE BREAKDOWN:                             │
+│ ┌────────────────────────────────────────┐              │
+│ │ Transport (Lieferungen):  1.456 kg (51%)│              │
+│ │ Stromverbrauch Equipment:   894 kg (31%)│              │
+│ │ Gebäude/Lager-Betrieb:     497 kg (18%)│              │
+│ └────────────────────────────────────────┘              │
+│                                                          │
+│ GREEN-AUSZEICHNUNGEN:                                   │
+│ [🌿 Energieeffiziente LED]  45 Assets (12% Portfolio)   │
+│ [🌱 Renewable-ready]        Noch keine Daten            │
+│                                                          │
+│ [PROJEKT-NACHHALTIGKEITSBERICHT] [CO₂-KOMPENSATION]    │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Projekt-Nachhaltigkeitsbericht (PDF-Export):**
+```
+┌──────────────────────────────────────────────────────────┐
+│ NACHHALTIGKEITSBERICHT – Kirchenchor Gala 2024         │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│ Event: "Konzert für eine bessere Welt"                 │
+│ Datum: 15.-16. März 2024 │ Ort: München                │
+│ Gäste: 1.200 │ Einnahmen: €45.000                      │
+│                                                          │
+│ UMWELTAUSWIRKUNGEN DIESES EVENTS:                       │
+│                                                          │
+│ CO₂-FUSSABDRUCK: 287 kg CO₂ Äq.                        │
+│ = Äquivalent zu:                                        │
+│   • 1.430 km Autofahrt (PKW 200g CO₂/km)              │
+│   • 0,73 Flüge München-Berlin (h&h)                    │
+│   • 37 Liter Benzin (2,3kg CO₂/Liter)                  │
+│                                                          │
+│ BREAKDOWN:                                              │
+│                                                          │
+│ 1. LIEFERKETTE (Transport)  ............ 156 kg CO₂ (54%)│
+│    • Anlieferung Equipment: 52 kg  (18%)               │
+│    • Rückholung: 48 kg  (17%)                          │
+│    • Fahrer-Fahrt hin/zurück: 56 kg  (19%)             │
+│                                                          │
+│ 2. STROMVERBRAUCH ..................... 98 kg CO₂ (34%)│
+│    • 12× LED-Scheinwerfer, 16h: 68 kWh                │
+│    • Mischpult + Verstärker, 16h: 28 kWh              │
+│    • Nebelmaschine, 4h: 8 kWh                          │
+│    Emissionsfaktor DE 2024: 0,475 kg/kWh              │
+│                                                          │
+│ 3. SONSTIGE .......................... 33 kg CO₂ (12%)│
+│    • Verpackungsmaterial: 12 kg                        │
+│    • Gebäude-Klima: 21 kg                              │
+│                                                          │
+│ EMPFEHLUNGEN:                                           │
+│ ☑ Equipment mit Green-Label nutzen (12% CO₂ Einsparung)│
+│ ☐ Lokale LED-Beleuchtung installieren (statt Anlieferung)│
+│ ☐ Virtuelle Gast-Zuschaltung (30% Emissions-Reduktion)│
+│                                                          │
+│ CO₂-KOMPENSATION:                                       │
+│ ☑ 287 kg CO₂ kompensieren?                             │
+│   (via Atmosfair: Windkraftprojekt Äthiopien)         │
+│   Kosten: €8,50 │ [JA, HINZUFÜGEN]                    │
+│                                                          │
+│ ─────────────────────────────────────                  │
+│ Bericht erstellt: 18.03.2024                            │
+│ MyRMS – Nachhaltiges Gerätemanagement                  │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Settings-UI für ESG & Nachhaltigkeit:**
+```
+┌──────────────────────────────────────────────────────────┐
+│ EINSTELLUNGEN > NACHHALTIGKEIT & ESG                    │
+├──────────────────────────────────────────────────────────┤
+│ CO₂-TRACKING:                                           │
+│   ☑ CO₂-Berechnung aktivieren                          │
+│                                                          │
+│   Emissionsfaktoren pro Fahrzeugtyp:                   │
+│   ┌───────────────────────────────┐                    │
+│   │ PKW (Benzin):    [0.195] kg CO₂/km                │
+│   │ PKW (Diesel):    [0.198] kg CO₂/km                │
+│   │ Transporter:     [0.245] kg CO₂/km                │
+│   │ Lastkraftwagen:  [0.285] kg CO₂/km                │
+│   └───────────────────────────────┘                    │
+│                                                          │
+│   Strom-Emissionsfaktor: [0.475] kg CO₂/kWh (DE 2024)│
+│   Quelle: ○ ENTSO-E Daten  ○ Eigener Wert             │
+│                                                          │
+│ EQUIPMENT-ENERGIEKLASSIFIZIERUNG:                      │
+│   ☑ Green-Label für < [300W] Verbrauch                │
+│   ☑ Auto-Einstufung basierend auf Herstellerangaben   │
+│   Update-Quelle: [Datenbank-API]                       │
+│                                                          │
+│ NACHHALTIGKEITSBERICHTE:                               │
+│   ☑ Pro-Projekt Report generieren                      │
+│   ☑ Kundenbericht mit CO₂-Footprint versenden          │
+│   Report-Format: ○ PDF ○ HTML                         │
+│                                                          │
+│ CO₂-KOMPENSATION (Optional):                           │
+│   ☑ Kompensationsangebot aktivieren                    │
+│   Standard-Anbieter: [Atmosfair ▼]                     │
+│   Kosten pro kg CO₂: [€0.02965]                        │
+│   ☑ Auf Rechnung erweiterbar                           │
+│                                                          │
+│ EU-CSRD VORBEREITUNG:                                  │
+│   ☑ Scope-3-Emissionen (indirekt) erfassen             │
+│   ☑ Datenaggregation für Jahresberichte                │
+│   Berichtszeitraum: [Kalendarjahr]                     │
+│   Nächste Berichtsfälligkeit: [31.12.2026]             │
+│                                                          │
+│ REPORTING:                                              │
+│   Automatischer ESG-Report: [Monatlich ▼]             │
+│   Versand an: [nachhaltigkeit@example.com]             │
+│   ☑ Trend-Analyse über Monate                          │
+│   ☑ YoY-Vergleich                                      │
+│                                                          │
+│                                           [SPEICHERN]   │
+└──────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Zusammenfassung: Parts J, K, L
+
+Die drei neuen Major Parts erweitern MyRMS um kritische Funktionalität für professionelle Vermietungsbetriebe:
+
+**Part J (Vertragsmanagement, Wartung & Logistik)** automatisiert Verträge, Wartungspläne und Transport – essentiell für die tägliche Betriebseffizienz und Compliance.
+
+**Part K (Workflows, Versicherung & Schadenmanagement)** bietet flexible Automatisierung (No-Code), umfassende Versicherungsverwaltung und einen strukturierten Schadensworkflow mit KI-Unterstützung.
+
+**Part L (Multi-Standort, Preiskalkulation, Online-Buchung, Backup, ESG)** ergänzt die Plattform um Enterprise-Features: Multi-Lager-Management, flexible Preiskalkulationen, ein öffentliches Buchungsportal, robuste Disaster-Recovery und Nachhaltigkeitsreporting für modernen E-Commerce und ESG-Compliance.
+
+Zusammen bieten diese Parts ein vollständiges, zukunftssicheres System für mittlere bis große Veranstaltungstechnik- und Equipment-Vermietungsbetriebe im deutschsprachigen Raum.
+
+---
+
+*Dokumentation erstellt: 18. März 2026*
+*MyRMS – Professional Rental Management System*
+
+---
+
+**Document Version:** 4.0
+**Last Updated:** March 18, 2026
+**Total Parts:** A-L (12 Parts, 230+ Sektionen)
