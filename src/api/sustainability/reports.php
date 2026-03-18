@@ -12,7 +12,7 @@
  *   - period_end: End date (Y-m-d)
  */
 
-require_once dirname(__DIR__, 3) . '/bootstrap.php';
+require_once __DIR__ . '/../apiHeadSecure.php';
 
 $sustainabilityService = new SustainabilityService($db);
 

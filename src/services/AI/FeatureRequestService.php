@@ -172,7 +172,7 @@ class FeatureRequestService
     {
         $this->db->where('instances_id', $instanceId);
         $this->db->orderBy('id', 'DESC');
-        $latest = $this->db->getOne('ai_feature_requests', ['fr_number']);
+        $latest = $this->db->getOne('ai_feature_requests', null, ['fr_number']);
 
         if (!$latest) {
             return 'FR-001';

@@ -337,7 +337,8 @@ class PricingEngineService
      */
     public function getBundle(int $bundleId): ?array
     {
-        $bundle = $this->db->getOne('pricing_bundles', ['id' => $bundleId]);
+        $this->db->where('id', $bundleId);
+        $bundle = $this->db->getOne('pricing_bundles');
         if (!$bundle) return null;
 
         $this->db->where('bundle_id', $bundleId);
