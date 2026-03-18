@@ -4588,5 +4588,427 @@ Response: AssetDataResult als JSON
 
 ---
 
-**Document Version:** 3.2 (+ KI-gestützte Asset-Erstellung)
+## I10. KI-Lernsystem: Continuous Learning & Self-Improvement
+
+### I10.1 Überblick und Vision
+
+Das KI-Lernsystem ist das Herzstück einer wirklich intelligenten Rental-Management-Plattform. Statt einer statischen KI, die immer die gleichen Antworten gibt, baut MyRMS ein System auf, das sich **kontinuierlich verbessert** – es lernt aus jeder Benutzerinteraktion, merkt sich Präferenzen, korrigiert eigene Fehler und wird über Zeit immer genauer, schneller und nützlicher. Dieses Konzept folgt dem Prinzip der **Feedback-Driven AI**, bei der Benutzerinteraktionen gesammelt, analysiert und zur Verfeinerung des Systems genutzt werden, sodass sich Genauigkeit, Relevanz und Nutzererlebnis stetig verbessern.
+
+Das Lernsystem arbeitet auf **vier Ebenen**, die sich gegenseitig ergänzen:
+
+1. **Explizites Feedback** – Der Benutzer bewertet KI-Ausgaben aktiv (Daumen hoch/runter, Korrekturen)
+2. **Implizites Feedback** – Das System beobachtet, was der Benutzer mit KI-Vorschlägen macht (übernommen, geändert, ignoriert)
+3. **Knowledge Base (RAG)** – Unternehmensspezifisches Wissen wird als durchsuchbare Wissensbasis aufgebaut
+4. **Few-Shot Learning** – Die besten Beispiele aus der Vergangenheit werden automatisch in Prompts eingebaut
+
+Durch die Kombination dieser vier Ebenen entsteht ein System, das sich nicht nur an einzelne Benutzer anpasst, sondern auch instanzübergreifend lernt – die Erfahrungen aller Benutzer verbessern das System für jeden.
+
+### I10.2 Explizites Feedback-System (Daumen hoch/runter)
+
+Jede KI-generierte Ausgabe in MyRMS – ob E-Mail-Entwurf, Schadensbericht-Zusammenfassung, Asset-Beschreibung, Preisvorschlag oder Chat-Antwort – erhält eine kleine **Feedback-Leiste** direkt unter der Ausgabe:
+
+```
+┌─ KI-generierter E-Mail-Entwurf ─────────────────────────┐
+│                                                           │
+│  Sehr geehrter Herr Müller,                               │
+│  vielen Dank für Ihre Anfrage bezüglich der Anmietung     │
+│  von 12 LED-Scheinwerfern für Ihr Event am 15. April...   │
+│                                                           │
+│  ─────────────────────────────────────────────────────    │
+│  War diese Antwort hilfreich?                             │
+│  [👍 Gut]  [👎 Schlecht]  [✏️ Bearbeitet]  [💬 Feedback] │
+│                                                           │
+└───────────────────────────────────────────────────────────┘
+```
+
+**👍 Gut:** Die Ausgabe wird als positives Beispiel gespeichert. Sie fließt in die Few-Shot-Beispiel-Datenbank ein und wird bei ähnlichen zukünftigen Anfragen als Referenz verwendet. Je mehr positive Bewertungen ein bestimmter Stil oder eine Formulierung erhält, desto wahrscheinlicher wird dieser Stil in Zukunft bevorzugt.
+
+**👎 Schlecht:** Es öffnet sich ein optionales Dropdown mit Gründen: „Zu formal", „Zu lang", „Inhaltlich falsch", „Falscher Ton", „Fehlende Details", „Sonstiges (Freitext)". Diese negativen Beispiele werden als **Anti-Patterns** markiert und aktiv in zukünftigen Prompts vermieden. Wenn z.B. mehrere Benutzer „Zu formal" anklicken, passt das System den Standard-Ton automatisch an.
+
+**✏️ Bearbeitet:** Wenn der Benutzer die KI-Ausgabe vor dem Verwenden bearbeitet (z.B. E-Mail-Text anpasst), speichert das System sowohl den Original-Output als auch die bearbeitete Version. Die Differenz (Diff) wird analysiert: Welche Passagen wurden geändert? Wurden Informationen hinzugefügt oder entfernt? Wurde der Ton geändert? Diese Informationen fließen in die Prompt-Optimierung ein, sodass zukünftige Ausgaben näher an dem sind, was der Benutzer tatsächlich braucht.
+
+**💬 Feedback:** Freitextfeld für detailliertes Feedback. Besonders wertvoll für Fälle, die nicht in die vorgefertigten Kategorien passen. Beispiel: „Bei Angeboten für Lichtequipment bitte immer die DMX-Kanäle erwähnen" – solche Hinweise werden als dauerhafte Präferenz gespeichert.
+
+### I10.3 Implizites Feedback-Tracking
+
+Neben dem aktiven Feedback beobachtet das System auch **passive Signale**, die auf die Qualität der KI-Ausgaben hindeuten:
+
+**Akzeptanz-Rate:** Wird ein KI-Vorschlag unverändert übernommen? Wird er bearbeitet? Wird er komplett verworfen? Für jeden Task-Typ (E-Mail, Beschreibung, Preis, Kategorie) wird eine Akzeptanz-Rate berechnet und im Admin-Dashboard angezeigt. Eine Rate von 80%+ zeigt: Die KI ist gut kalibriert. Eine Rate unter 50% signalisiert: Handlungsbedarf, die Prompts oder das Modell müssen angepasst werden.
+
+**Bearbeitungszeit:** Wie lange braucht der Benutzer, um die KI-Ausgabe zu überprüfen und ggf. anzupassen? Kürzere Zeiten deuten auf höhere Qualität hin. Wenn die Bearbeitungszeit über Zeit sinkt, verbessert sich das System.
+
+**Wiederverwendungsmuster:** Welche Phrasen, Formulierungen oder Strukturen verwendet der Benutzer immer wieder? Wenn ein Benutzer z.B. bei jeder E-Mail die Grußformel ändert, lernt das System die bevorzugte Grußformel.
+
+**Undo-Aktionen:** Wenn ein Benutzer einen KI-Vorschlag übernimmt, dann aber innerhalb von 60 Sekunden die Aktion rückgängig macht, wird das als starkes negatives Signal gewertet.
+
+**Asset-Korrekturen:** Wenn die KI bei der Smart Asset Creation technische Daten vorschlägt und der Benutzer Werte ändert (z.B. Gewicht von 8.2 kg auf 7.9 kg korrigiert), wird die Korrektur als Ground-Truth gespeichert und bei zukünftigen Lookups desselben Produkts berücksichtigt.
+
+### I10.4 Knowledge Base und RAG (Retrieval Augmented Generation)
+
+Das RAG-System ist die Grundlage für kontextbewusstes, unternehmensspezifisches KI-Wissen. Statt sich nur auf das allgemeine Training des LLM zu verlassen, baut MyRMS eine lokale **Wissensbasis** auf, die bei jeder KI-Anfrage durchsucht wird und relevante Kontextinformationen in den Prompt injiziert.
+
+**Automatisch indexierte Datenquellen:**
+
+Die Wissensbasis wird automatisch aus den vorhandenen MyRMS-Daten aufgebaut – der Benutzer muss nichts manuell pflegen. Folgende Quellen werden indexiert:
+
+- **E-Mail-Vorlagen und Korrespondenz:** Alle gesendeten E-Mails, erfolgreiche Angebote, Kundenkommunikation. Die KI kann so den Kommunikationsstil des Unternehmens lernen und bei neuen E-Mails anwenden.
+- **Projekthistorie:** Abgeschlossene Projekte mit Equipment-Listen, Preisen, Zeiträumen. Die KI kann bei neuen ähnlichen Anfragen auf historische Projekte verweisen: „Ähnliches Projekt für Firma Müller im Oktober 2025: 15 Scheinwerfer, 3 Tage, €4.200."
+- **Asset-Datenbank:** Alle technischen Daten, Beschreibungen, Kategorien, Preise. Die KI kennt den gesamten Bestand und kann bei Anfragen sofort relevante Assets empfehlen.
+- **Kundenpräferenzen:** Notizen, bevorzugte Geräte, Rabattvereinbarungen, Besonderheiten pro Kunde.
+- **Unternehmens-Richtlinien:** AGB, Mietbedingungen, Versicherungsregelungen, Schadens-Policies – alles, was die KI kennen muss, um korrekte Antworten zu geben.
+- **Benutzer-Feedback-Datenbank:** Alle positiven/negativen Bewertungen und Korrekturen aus I10.2 und I10.3.
+
+**Technische Umsetzung:**
+
+Die Texte werden in **Embeddings** umgewandelt (Vektordarstellungen) und in einer Vektordatenbank gespeichert. Bei jeder KI-Anfrage wird die Anfrage ebenfalls in einen Embedding-Vektor umgewandelt und die semantisch ähnlichsten Einträge aus der Wissensbasis abgerufen. Diese relevanten Kontexte werden dem LLM-Prompt vorangestellt, sodass die KI auf unternehmensspezifisches Wissen zugreifen kann, ohne es im LLM-Training gesehen zu haben.
+
+```
+Technologie-Optionen:
+├── Vektordatenbank: ChromaDB (Self-Hosted, Python) oder pgvector (PostgreSQL Extension)
+├── Embedding-Modell: OpenAI text-embedding-3-small ($0.02/MTok) oder lokales Modell
+├── Chunk-Größe: 500 Tokens pro Dokument-Segment (mit 50 Token Overlap)
+├── Aktualisierung: Echtzeit bei Datenänderung (Event-basiert)
+└── Suche: Top-5 relevanteste Chunks pro Anfrage in den Prompt injiziert
+```
+
+**RAG-Pipeline im Detail:**
+
+```
+Benutzer-Anfrage: "Erstelle ein Angebot für Firma Schneider über Lichttechnik"
+        │
+        ▼
+┌─ Embedding-Suche ─────────────────────────────────────────┐
+│  Query → Vector → Similarity Search in Knowledge Base     │
+│                                                           │
+│  Gefundene relevante Kontexte:                            │
+│  1. Kundenprofil Schneider (Rabatt 10%, bevorzugt ETC)    │
+│  2. Letztes Projekt Schneider (Okt 2025, €3.800, Licht)  │
+│  3. E-Mail-Vorlage Angebote (Firmen-Stil, Grußformel)    │
+│  4. Aktuelle Preisliste Beleuchtung (Stand: März 2026)    │
+│  5. Positives Feedback: "Angebot im Bullet-Point-Stil"   │
+└───────────────────────────────────────────────────────────┘
+        │
+        ▼
+┌─ Prompt-Zusammensetzung ──────────────────────────────────┐
+│  System-Prompt (Rolle, Regeln)                            │
+│  + RAG-Kontext (5 relevante Chunks)                       │
+│  + Few-Shot-Beispiele (2 erfolgreiche Angebote)           │
+│  + Benutzer-Präferenzen (Ton: professionell, Format: kurz)│
+│  + Aktuelle Anfrage                                       │
+└───────────────────────────────────────────────────────────┘
+        │
+        ▼
+  LLM generiert kontextbewusstes, personalisiertes Angebot
+```
+
+### I10.5 Few-Shot Learning: Die besten Beispiele automatisch nutzen
+
+Few-Shot Learning bedeutet: Die besten Beispiele aus der Vergangenheit werden automatisch in den Prompt eingebaut, damit die KI weiß, wie eine gute Ausgabe für diesen spezifischen Kontext aussieht. MyRMS baut automatisch eine **Beispiel-Bibliothek** auf:
+
+**Automatische Kuratierung:** Jede KI-Ausgabe, die einen Daumen-Hoch erhält oder unverändert übernommen wird, wird als positives Beispiel in die Bibliothek aufgenommen. Negative Beispiele werden ebenfalls gespeichert. Das System wählt bei jeder neuen Anfrage die 2-3 relevantesten positiven Beispiele aus und fügt sie als Few-Shot-Kontext in den Prompt ein.
+
+**Beispiel-Selektion:** Die Auswahl der besten Beispiele basiert auf mehreren Faktoren: semantische Ähnlichkeit zur aktuellen Anfrage (gleicher Task-Typ, ähnlicher Kontext), Bewertungsqualität (mehr Daumen-Hoch = höhere Priorität), Aktualität (neuere Beispiele werden bevorzugt), und Benutzer-Spezifität (Beispiele vom gleichen Benutzer werden bevorzugt, da dieser möglicherweise einen eigenen Stil hat).
+
+**Dynamische Prompt-Optimierung:** Das System passt die System-Prompts kontinuierlich an, basierend auf aggregiertem Feedback. Wenn z.B. 70% der Benutzer E-Mail-Entwürfe als „zu lang" bewerten, wird der System-Prompt automatisch um die Anweisung „Halte E-Mails kurz und prägnant, max. 5-7 Sätze" ergänzt. Diese Anpassungen werden protokolliert und können vom Admin überprüft und rückgängig gemacht werden.
+
+### I10.6 Instanz-spezifisches Lernprofil
+
+Jede MyRMS-Instanz (jedes Unternehmen) entwickelt über Zeit ein eigenes **Lernprofil**, das die KI auf die spezifischen Bedürfnisse und den Stil des Unternehmens anpasst:
+
+```
+┌─ Lernprofil: Event-Technik Müller GmbH ──────────────────┐
+│                                                           │
+│  Kommunikationsstil:                                      │
+│  ├── Anrede: "Hallo [Vorname]" (85% der Korrekturen)    │
+│  ├── Ton: Freundlich-professionell (nicht steif)         │
+│  ├── Länge: Kurz (Ø 4 Sätze pro E-Mail bevorzugt)      │
+│  └── Grußformel: "Viele Grüße, Team Müller Event"       │
+│                                                           │
+│  Branchenwissen:                                          │
+│  ├── Fokus: Veranstaltungstechnik (Licht, Ton, Video)    │
+│  ├── Hauptkunden: Agenturen, Corporates, Kommunen        │
+│  ├── Preismodell: Tages-/Wochenmiete + Pauschalen        │
+│  └── Besonderheiten: Immer Transport inkl., 10% Rabatt   │
+│      für Stammkunden, Kaution bei Neukunden              │
+│                                                           │
+│  Asset-Präferenzen:                                       │
+│  ├── Bevorzugte Marken: ETC, d&b, Sennheiser            │
+│  ├── Standard-Pakete: "Basis Licht" = 12× S4 + 2× Haze │
+│  ├── Mietpreis-Faktor: 1.3% (über Branchendurchschnitt) │
+│  └── Kategorie-Struktur: 4 Hauptkategorien, 18 Sub      │
+│                                                           │
+│  Lernfortschritt:                                         │
+│  ├── Gesamt-Interaktionen: 2,847                         │
+│  ├── Positive Bewertungen: 2,134 (75%)                   │
+│  ├── Akzeptanz-Rate: 68% → 82% (letzte 3 Monate: +14%) │
+│  ├── Ø Bearbeitungszeit: 45s → 28s (Verbesserung: 38%) │
+│  └── Knowledge Base: 1,247 Einträge, 89 Few-Shot-Bsp.   │
+│                                                           │
+│  [Profil exportieren]  [Profil zurücksetzen]              │
+│                                                           │
+└───────────────────────────────────────────────────────────┘
+```
+
+### I10.7 Benutzer-spezifische Personalisierung
+
+Zusätzlich zum Instanz-Profil merkt sich das System auch **individuelle Benutzer-Präferenzen**. Verschiedene Mitarbeiter haben unterschiedliche Stile, Aufgabenbereiche und Erwartungen. Das System passt sich pro Benutzer an:
+
+Der Buchhalter bevorzugt formal-korrekte E-Mails mit allen rechtlichen Klauseln, der Projektmanager will kurze, direkte Kommunikation, und der Geschäftsführer erwartet professionelle Angebote mit detaillierten Begründungen. Das System lernt diese Unterschiede automatisch und liefert jedem Benutzer passende Ergebnisse – ohne dass jemand explizit etwas konfigurieren muss. Die Personalisierung entsteht organisch aus dem Nutzungsverhalten.
+
+### I10.8 Admin-Dashboard: KI-Lern-Analytics
+
+Im Admin-Bereich zeigt ein dediziertes Dashboard den Lernfortschritt der KI:
+
+```
+┌─ KI-Lernsystem Status ───────────────────────────────────┐
+│                                                           │
+│  Gesamtbewertungen: 2,847  │  Akzeptanz: 82% (+14% QoQ) │
+│                                                           │
+│  Lernfortschritt über Zeit:                               │
+│  100%│                                          ╱──82%   │
+│   80%│                              ╱──────────╱         │
+│   60%│              ╱──────────────╱                     │
+│   40%│  ╱──────────╱                                     │
+│   20%│ ╱                                                  │
+│    0%│──────────────────────────────────────────          │
+│      Jan    Feb    Mär    Apr    Mai    Jun               │
+│                                                           │
+│  ─── Top-Verbesserungen ──────────────────────────────    │
+│  • E-Mail-Ton: 54% → 89% Akzeptanz (+35%)               │
+│  • Asset-Kategorisierung: 61% → 91% (+30%)               │
+│  • Mietpreis-Vorschläge: 45% → 78% (+33%)               │
+│  • Schadensbericht-Qualität: 72% → 88% (+16%)           │
+│                                                           │
+│  ─── Handlungsbedarf ─────────────────────────────────    │
+│  ⚠️ Angebotstexte: nur 52% Akzeptanz (Feedback: "zu     │
+│     generisch") → Empfehlung: Mehr Branchen-Beispiele    │
+│     in Few-Shot-Bibliothek aufnehmen                     │
+│                                                           │
+│  ─── Knowledge Base ──────────────────────────────────    │
+│  Einträge: 1,247 │ Vektoren: 4,832 │ Letzte Sync: 2min  │
+│  Few-Shot-Beispiele: 89 (47 E-Mail, 12 Angebot,         │
+│                          18 Beschreibung, 12 Sonstige)   │
+│                                                           │
+│  ─── Prompt-Anpassungen (automatisch) ────────────────    │
+│  #12 Mär 15: "E-Mails max 5 Sätze" (78% neg. "zu lang")│
+│  #11 Mär 08: "DU-Form für Stammkunden" (82% Korrekturen)│
+│  #10 Feb 28: "Preise immer netto + MwSt" (91% Korrektur)│
+│  [Alle anzeigen] [Anpassung rückgängig machen]           │
+│                                                           │
+└───────────────────────────────────────────────────────────┘
+```
+
+### I10.9 Prompt-Versioning und A/B-Testing
+
+Um die Prompt-Optimierung messbar zu machen, implementiert MyRMS ein **Prompt-Versioning-System**: Jede Änderung am System-Prompt wird als neue Version gespeichert, mit Timestamp, Auslöser (manuell oder automatisch) und Performance-Metriken. Administratoren können verschiedene Prompt-Versionen per A/B-Test vergleichen: 50% der Anfragen gehen an Prompt v12 (bisherig), 50% an Prompt v13 (optimiert). Nach ausreichend Datenpunkten (z.B. 100 Bewertungen pro Version) wird automatisch die besser bewertete Version zum Standard.
+
+```
+┌─ Prompt-Versionen (E-Mail-Drafts) ───────────────────────┐
+│                                                           │
+│  Version │ Erstellt   │ Akzeptanz │ Status    │ Aktion   │
+│  v13     │ 15.03.2026 │ 86%       │ ● A/B-Test│ [Stopp]  │
+│  v12     │ 08.03.2026 │ 82%       │ ● Aktiv   │ [Edit]   │
+│  v11     │ 28.02.2026 │ 74%       │ ○ Archiv  │ [Restore]│
+│  v10     │ 15.02.2026 │ 68%       │ ○ Archiv  │ [Restore]│
+│                                                           │
+│  [+ Neue Version erstellen]  [A/B-Test starten]          │
+│                                                           │
+│  Diff v12 → v13:                                          │
+│  + "Antworte in maximal 5 Sätzen, sei direkt und klar."  │
+│  + "Verwende DU-Form bei Kunden mit >= 3 Projekten."     │
+│  - "Formuliere stets höflich und professionell."          │
+│                                                           │
+└───────────────────────────────────────────────────────────┘
+```
+
+### I10.10 Konfigurations-UI (Settings → KI → Lernsystem)
+
+```
+┌─ Einstellungen → KI → Lernsystem ────────────────────────┐
+│                                                           │
+│  ─── Feedback-Sammlung ──────────────────────────────    │
+│  ☑ Feedback-Buttons unter KI-Ausgaben anzeigen            │
+│  ☑ Bearbeitungs-Diffs automatisch erfassen                │
+│  ☑ Akzeptanz-Raten tracken                                │
+│  ☑ Undo-Aktionen als negatives Signal werten              │
+│                                                           │
+│  ─── Knowledge Base (RAG) ───────────────────────────    │
+│  ☑ E-Mail-Korrespondenz indexieren                        │
+│  ☑ Projekthistorie indexieren                             │
+│  ☑ Asset-Beschreibungen indexieren                        │
+│  ☑ Kundendaten indexieren (Name, Notizen, Präferenzen)   │
+│  ☐ Dokumente (Verträge, AGB) indexieren                  │
+│  Embedding-Provider: [OpenAI text-embedding-3-small ▼]   │
+│  Vektordatenbank: [ChromaDB (lokal) ▼]                   │
+│  [Knowledge Base neu aufbauen] [Status: 1,247 Einträge]  │
+│                                                           │
+│  ─── Few-Shot Learning ──────────────────────────────    │
+│  Max. Beispiele pro Prompt: [3 ▼]                        │
+│  Nur Beispiele mit Bewertung >= [👍 Gut ▼] nutzen        │
+│  Beispiele älter als [90 Tage ▼] archivieren             │
+│  [Beispiel-Bibliothek anzeigen: 89 Einträge]            │
+│                                                           │
+│  ─── Automatische Prompt-Optimierung ────────────────    │
+│  ☑ System-Prompts automatisch anpassen                    │
+│  Schwellwert: Anpassung wenn [>70%] neg. Feedback         │
+│  Min. Datenpunkte: [50] Bewertungen vor Anpassung        │
+│  ☑ Admin benachrichtigen vor Anpassung                    │
+│  ☐ Anpassung erst nach Admin-Freigabe aktivieren         │
+│                                                           │
+│  ─── A/B-Testing ────────────────────────────────────    │
+│  ☑ A/B-Tests erlauben                                     │
+│  Traffic-Split: [50/50 ▼]                                │
+│  Min. Datenpunkte pro Variante: [100 ▼]                  │
+│  Auto-Winner: [Ja, nach 200 Bewertungen ▼]              │
+│                                                           │
+│  ─── Datenschutz ────────────────────────────────────    │
+│  ☑ Feedback-Daten anonymisieren nach 12 Monaten          │
+│  ☑ Benutzer können eigene Feedback-Daten löschen         │
+│  ☐ Knowledge Base auf lokale Vektordatenbank beschränken │
+│    (kein Embedding an Cloud-Provider senden)             │
+│                                                           │
+│  [Änderungen speichern]  [Lernsystem zurücksetzen]       │
+│                                                           │
+└───────────────────────────────────────────────────────────┘
+```
+
+### I10.11 Technische Architektur
+
+**Datenbank-Tabellen:**
+
+```sql
+-- Feedback-Tabelle
+CREATE TABLE ai_feedback (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    instance_id INT NOT NULL,
+    task_type VARCHAR(50) NOT NULL,       -- 'email_draft', 'asset_description', etc.
+    ai_output TEXT NOT NULL,               -- Original KI-Ausgabe
+    user_edited TEXT,                       -- Bearbeitete Version (NULL wenn unverändert)
+    rating ENUM('positive','negative','neutral'),
+    feedback_reason VARCHAR(100),          -- 'too_formal', 'too_long', etc.
+    feedback_text TEXT,                    -- Freitext-Feedback
+    accepted BOOLEAN DEFAULT FALSE,        -- Wurde der Vorschlag übernommen?
+    edit_time_ms INT,                      -- Bearbeitungszeit in Millisekunden
+    provider VARCHAR(50),                  -- Welcher KI-Provider wurde genutzt
+    model VARCHAR(100),                    -- Welches Modell
+    prompt_version INT,                    -- Welche Prompt-Version
+    tokens_input INT,
+    tokens_output INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_task_rating (task_type, rating),
+    INDEX idx_instance_date (instance_id, created_at)
+);
+
+-- Few-Shot-Beispiel-Bibliothek
+CREATE TABLE ai_few_shot_examples (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    instance_id INT NOT NULL,
+    task_type VARCHAR(50) NOT NULL,
+    input_context TEXT NOT NULL,           -- Der Kontext/die Anfrage
+    output_example TEXT NOT NULL,          -- Die gute Ausgabe
+    positive_votes INT DEFAULT 0,
+    negative_votes INT DEFAULT 0,
+    usage_count INT DEFAULT 0,            -- Wie oft als Beispiel genutzt
+    embedding BLOB,                        -- Vektor für Similarity-Suche
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_task_active (task_type, is_active)
+);
+
+-- Prompt-Versionen
+CREATE TABLE ai_prompt_versions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    task_type VARCHAR(50) NOT NULL,
+    version INT NOT NULL,
+    system_prompt TEXT NOT NULL,
+    change_reason TEXT,                    -- Warum wurde geändert
+    change_source ENUM('manual','automatic','ab_test'),
+    acceptance_rate DECIMAL(5,2),          -- Ø Akzeptanz-Rate
+    total_uses INT DEFAULT 0,
+    is_active BOOLEAN DEFAULT FALSE,
+    is_ab_test BOOLEAN DEFAULT FALSE,
+    ab_test_traffic_pct INT DEFAULT 50,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE INDEX idx_task_version (task_type, version)
+);
+
+-- Instanz-Lernprofil
+CREATE TABLE ai_learning_profile (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    instance_id INT NOT NULL,
+    profile_key VARCHAR(100) NOT NULL,     -- 'email_greeting', 'tone', 'price_factor'
+    profile_value TEXT NOT NULL,
+    confidence DECIMAL(3,2),               -- 0.00-1.00
+    data_points INT DEFAULT 0,            -- Anzahl Beobachtungen
+    last_updated TIMESTAMP,
+    UNIQUE INDEX idx_instance_key (instance_id, profile_key)
+);
+```
+
+**FeedbackLearningService (PHP):**
+
+```php
+class FeedbackLearningService
+{
+    /**
+     * Speichert Feedback und triggert ggf. Prompt-Optimierung.
+     */
+    public function recordFeedback(
+        int $userId,
+        string $taskType,
+        string $aiOutput,
+        ?string $userEdited,
+        string $rating,
+        ?string $reason = null
+    ): void {
+        // 1. Feedback speichern
+        $this->db->insert('ai_feedback', [...]);
+
+        // 2. Bei positivem Feedback: Few-Shot-Kandidat prüfen
+        if ($rating === 'positive') {
+            $this->fewShotService->addCandidate($taskType, $aiOutput);
+        }
+
+        // 3. Lernprofil aktualisieren
+        $this->profileService->updateFromFeedback($taskType, $rating, $reason, $userEdited);
+
+        // 4. Prüfen ob Prompt-Optimierung nötig
+        $this->checkAutoOptimization($taskType);
+    }
+
+    /**
+     * Baut den optimierten Prompt mit RAG + Few-Shot + Profil.
+     */
+    public function buildEnrichedPrompt(
+        int $userId,
+        string $taskType,
+        string $userQuery,
+        array $context = []
+    ): array {
+        // 1. RAG: Relevante Kontexte aus Knowledge Base
+        $ragChunks = $this->ragService->search($userQuery, limit: 5);
+
+        // 2. Few-Shot: Beste Beispiele für diesen Task-Typ
+        $examples = $this->fewShotService->getBest($taskType, $userQuery, limit: 3);
+
+        // 3. Lernprofil: Benutzer- und Instanz-Präferenzen
+        $profile = $this->profileService->getForUser($userId);
+
+        // 4. Aktive Prompt-Version
+        $systemPrompt = $this->promptService->getActive($taskType);
+
+        // 5. Zusammenbauen
+        return $this->assemblePrompt($systemPrompt, $ragChunks, $examples, $profile, $userQuery);
+    }
+}
+```
+
+### I10.12 Datenschutz und Löschrechte
+
+Das Lernsystem respektiert vollständig die DSGVO. Benutzer können unter Einstellungen → Datenschutz → KI-Daten ihre gesamten Feedback-Daten einsehen und löschen (Recht auf Löschung, Art. 17 DSGVO). Feedback-Daten werden nach 12 Monaten automatisch anonymisiert (Benutzer-ID entfernt, nur aggregierte Muster bleiben erhalten). Die Knowledge Base kann so konfiguriert werden, dass Embeddings ausschließlich lokal erstellt werden (kein Versand an Cloud-Provider). Beim Löschen eines Benutzer-Accounts werden alle personenbezogenen Feedback-Daten automatisch gelöscht, während anonymisierte Muster erhalten bleiben.
+
+---
+
+**Document Version:** 3.3 (+ KI-Lernsystem)
 **Last Updated:** March 18, 2026
