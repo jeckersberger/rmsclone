@@ -4302,5 +4302,291 @@ Eine mittelgroße Verleih-Firma mit 5 Benutzern, 500 Assets und 50 Projekten/Mon
 
 ---
 
-**Document Version:** 3.1 (+ Multi-KI-Provider)
+## I9. KI-gestützte Asset-Erstellung (Smart Asset Creator)
+
+### I9.1 Überblick und Nutzen
+
+Die Erfassung neuer Equipment-Assets ist einer der zeitaufwändigsten Prozesse im Verleih-Alltag. Ein typisches Asset hat 20-40 Felder (Name, Hersteller, Modell, Kategorie, Gewicht, Maße, Leistungsaufnahme, Anschlusswerte, Preis, Ersatzwert, Beschreibung, technische Daten, Zubehör, Wartungsintervalle, etc.), die manuell recherchiert und eingetragen werden müssen. Bei der Ersteinrichtung eines Systems mit 200-500 Assets bedeutet das mehrere Tage reiner Dateneingabe.
+
+Der **Smart Asset Creator** löst dieses Problem grundlegend: Der Benutzer gibt lediglich den **Herstellernamen und die Modellbezeichnung** ein (z.B. „ETC Source Four LED Series 3" oder „Sennheiser EW-DX SK"), und die KI recherchiert automatisch alle verfügbaren technischen Daten, füllt die Formularfelder aus, generiert eine professionelle Beschreibung und schlägt sogar eine passende Kategorie, einen Mietpreis und ein Produktbild vor. Der Benutzer überprüft die vorausgefüllten Daten, korrigiert bei Bedarf und bestätigt – fertig.
+
+Dieses Feature nutzt eine Kombination aus drei Datenquellen: **Produktdatenbanken** (strukturierte technische Daten), **KI-gestützte Webrecherche** (Herstellerwebsites, Datenblätter) und **LLM-Verarbeitung** (Extraktion, Strukturierung, Beschreibungsgenerierung). Durch diesen mehrstufigen Ansatz erreicht das System eine Datenqualität von 90-95% bei den meisten gängigen Veranstaltungstechnik-, Bau- und Industriegeräten.
+
+### I9.2 Datenquellen und Lookup-Strategie
+
+Die Datenermittlung folgt einer priorisierten Kaskade – das System versucht zunächst die zuverlässigsten Quellen und fällt bei Bedarf auf weniger strukturierte zurück:
+
+**Stufe 1: Produktdatenbanken (Icecat, Open Product Data)**
+
+Icecat ist der weltweit größte offene Produktdaten-Katalog mit über 26 Millionen Datenblättern von mehr als 28.000 Marken. Die Icecat-API liefert strukturierte technische Spezifikationen im JSON-Format, inklusive Produktbilder, Marketing-Texte, Feature-Listen und detaillierter technischer Parameter. MyRMS fragt die Icecat-API mit EAN/GTIN-Code, Herstellername + Modellnummer oder freier Textsuche ab. Die zurückgelieferten Daten werden automatisch in die MyRMS-Felder gemappt (z.B. Icecat „Weight" → MyRMS „Gewicht in kg", Icecat „Power consumption" → MyRMS „Leistungsaufnahme in Watt").
+
+Für den Fall, dass kein Icecat-Eintrag existiert, wird parallel die **Open Product Data** Initiative abgefragt, eine Community-getriebene Datenbank mit Fokus auf europäische Produkte und EAN-Codes. Zusätzlich können branchenspezifische Datenbanken angebunden werden, z.B. für Veranstaltungstechnik die Herstellerkataloge von ETC, Robe, Clay Paky, d&b audiotechnik, Sennheiser, Shure etc., die häufig maschinenlesbare Produktdaten (CSV, XML) für Händler bereitstellen.
+
+**Stufe 2: KI-gestützte Webrecherche (LLM + Web Search)**
+
+Wenn Stufe 1 keine ausreichenden Daten liefert, nutzt das System die KI mit Webzugang (Function Calling mit Web-Search-Tool): Die KI sucht automatisch nach der Herstellerwebsite, findet die Produktseite und extrahiert die technischen Daten. Dieser Ansatz nutzt die Fähigkeit moderner LLMs, unstrukturierte Webseiten zu verstehen und relevante Informationen in strukturierte Felder umzuwandeln – mit einer Genauigkeit von 95-98% auf gut strukturierten Herstellerseiten.
+
+Konkret funktioniert das so: Die KI erhält den Prompt „Finde alle technischen Spezifikationen für [Hersteller] [Modell]. Extrahiere: Gewicht, Maße (L×B×H), Leistungsaufnahme, Anschlüsse, Schutzklasse, Besonderheiten. Formatiere als JSON." und durchsucht die Herstellerwebsite, Thomann.de (für Audio/Licht), Amazon, idealo oder spezialisierte Fachhändler. Die extrahierten Daten werden als Vorschlag angezeigt, nie direkt ohne Bestätigung übernommen.
+
+**Stufe 3: LLM-Wissensbasierte Schätzung (Fallback)**
+
+Für sehr spezielle oder ältere Geräte, bei denen weder Datenbank noch Webrecherche Ergebnisse liefern, nutzt das System das trainierte Wissen des LLM als Fallback. Wenn das Modell beispielsweise „ETC Source Four" kennt (was bei allen großen Modellen der Fall ist), kann es die ungefähren technischen Daten aus seinem Training wiedergeben. Diese Daten werden deutlich als „KI-Schätzung (bitte verifizieren)" markiert mit einem gelben Warn-Badge, um den Benutzer auf die geringere Zuverlässigkeit hinzuweisen.
+
+### I9.3 Benutzeroberfläche: Smart Asset Creator Wizard
+
+Der Smart Asset Creator wird als mehrstufiger Wizard implementiert, der den Benutzer durch den Prozess führt:
+
+**Schritt 1: Eingabe (Minimal-Input)**
+
+```
+┌─ Neues Asset anlegen (Smart Mode) ───────────────────────┐
+│                                                           │
+│  Wie möchten Sie das Asset erfassen?                      │
+│                                                           │
+│  [🤖 Smart Mode]  [📝 Manuell]  [📷 Foto/Scan]          │
+│                                                           │
+│  ─── Smart Mode: KI-gestützte Erfassung ───               │
+│                                                           │
+│  Hersteller:  [ETC                          ] 🔍          │
+│               └─ Vorschläge: ETC, Elation, Eurolite...    │
+│                                                           │
+│  Modell:      [Source Four LED Series 3     ] 🔍          │
+│               └─ Vorschläge: Source Four LED S3,           │
+│                  Source Four LED Lustr 3, ...              │
+│                                                           │
+│  Optional:                                                │
+│  EAN/GTIN:    [                             ]             │
+│  Seriennr.:   [                             ]             │
+│                                                           │
+│  [🔎 Technische Daten suchen]                             │
+│                                                           │
+└───────────────────────────────────────────────────────────┘
+```
+
+Das Hersteller-Feld bietet Autocomplete aus einer gepflegten Herstellerliste (initial ~500 Hersteller aus der Veranstaltungstechnik, Bau, Industrie). Bei Eingabe eines unbekannten Herstellers wird dieser automatisch der Liste hinzugefügt. Das Modell-Feld bietet ebenfalls Autocomplete, basierend auf bereits im System vorhandenen Assets desselben Herstellers und auf Icecat-Daten.
+
+**Schritt 2: KI-Recherche (Ladeanimation mit Live-Status)**
+
+```
+┌─ Technische Daten werden gesucht... ─────────────────────┐
+│                                                           │
+│  🔄 ETC Source Four LED Series 3                          │
+│                                                           │
+│  ✅ Icecat-Datenbank durchsucht (3 Treffer)               │
+│  ✅ Herstellerwebsite gefunden (etcconnect.com)           │
+│  🔄 Technische Daten werden extrahiert...                 │
+│  ⏳ Produktbild wird geladen...                           │
+│  ⏳ Preisvergleich wird durchgeführt...                   │
+│                                                           │
+│  Geschätzte Dauer: ~5-10 Sekunden                         │
+│                                                           │
+└───────────────────────────────────────────────────────────┘
+```
+
+**Schritt 3: Ergebnis-Review (Vorausgefülltes Formular)**
+
+```
+┌─ KI-Ergebnis: ETC Source Four LED Series 3 ──────────────┐
+│                                                           │
+│  ┌──────────┐  ETC Source Four LED Series 3               │
+│  │  [BILD]  │  Profilscheinwerfer / LED Moving Light      │
+│  │          │  ★ Datenqualität: 94% (Icecat + Hersteller) │
+│  └──────────┘                                             │
+│                                                           │
+│  ─── Stammdaten ──────────────────────────────────────    │
+│  Name:          [ETC Source Four LED S3     ] ✅ Icecat   │
+│  Hersteller:    [ETC                        ] ✅ Icecat   │
+│  Kategorie:     [Beleuchtung > Profilscheinwerfer ▼] 🤖  │
+│  Unterkategorie:[LED-Scheinwerfer           ▼] 🤖        │
+│                                                           │
+│  ─── Technische Daten ────────────────────────────────    │
+│  Gewicht:       [8.2 kg                     ] ✅ Icecat   │
+│  Maße (L×B×H):  [590 × 267 × 406 mm        ] ✅ Herstell.│
+│  Leistung:      [170 W                      ] ✅ Herstell.│
+│  Lichtquelle:   [LED Array, RGBL            ] ✅ Herstell.│
+│  Farbtemperatur: [2700K - 6500K             ] ✅ Herstell.│
+│  Lichtstrom:    [9800 lm                    ] ✅ Herstell.│
+│  Abstrahlwinkel:[5° - 50° (Zoombereich)     ] ✅ Herstell.│
+│  Schutzklasse:  [IP20                       ] ✅ Icecat   │
+│  Spannung:      [100-240V, 50/60Hz          ] ✅ Herstell.│
+│  DMX-Kanäle:    [7 / 11 / 14 / 18          ] 🌐 Web     │
+│  Anschluss:     [PowerCON TRUE1 In/Out      ] 🌐 Web     │
+│                                                           │
+│  ─── Preise & Werte ──────────────────────────────────    │
+│  Neupreis (UVP): [€3.890,00                 ] 🌐 Web     │
+│  Ersatzwert:     [€3.500,00                 ] 🤖 KI-Vorschl│
+│  Mietpreis/Tag:  [€45,00                    ] 🤖 KI-Vorschl│
+│  └─ Berechnung: 1.15% vom Neupreis/Tag (Branchenüblich)  │
+│                                                           │
+│  ─── Beschreibung ────────────────────────────────────    │
+│  ┌────────────────────────────────────────────────────┐   │
+│  │ Der ETC Source Four LED Series 3 ist ein hoch-     │   │
+│  │ wertiger LED-Profilscheinwerfer der neuesten       │   │
+│  │ Generation. Mit seinem RGBL-LED-Array liefert er   │   │
+│  │ 9800 Lumen bei nur 170W Leistungsaufnahme und      │   │
+│  │ bietet einen Zoombereich von 5° bis 50°. Die       │   │
+│  │ Farbtemperatur ist stufenlos von 2700K bis 6500K   │   │
+│  │ einstellbar. Ideal für Theater, Veranstaltungen    │   │
+│  │ und Festinstallationen.                    🤖 KI   │   │
+│  └────────────────────────────────────────────────────┘   │
+│                                                           │
+│  ─── Zubehör-Vorschläge ─────────────────────────────    │
+│  🤖 KI schlägt vor:                                      │
+│  ☑ Sicherungsseil (bereits im System: #AS-1042)          │
+│  ☑ DMX-Kabel 5m (bereits im System: #KA-0123)           │
+│  ☐ Gobo-Set Standard (nicht im System – anlegen?)        │
+│  ☐ Farbfilter-Set (nicht im System – anlegen?)           │
+│                                                           │
+│  Legende: ✅ = verifizierte Quelle  🌐 = Webrecherche    │
+│           🤖 = KI-Vorschlag        ⚠️ = bitte prüfen     │
+│                                                           │
+│  [← Zurück]  [Alle Felder prüfen]  [Asset speichern ✓]  │
+│                                                           │
+└───────────────────────────────────────────────────────────┘
+```
+
+Jedes Feld zeigt über ein kleines Badge an, woher die Daten stammen (✅ Icecat = verifizierte Produktdatenbank, ✅ Hersteller = Herstellerwebsite, 🌐 Web = allgemeine Webrecherche, 🤖 KI = KI-generierter Vorschlag). Felder mit geringerer Konfidenz (< 80%) werden gelb hinterlegt und mit einem ⚠️-Icon markiert. Der Benutzer kann jedes Feld überschreiben – die KI-Daten sind immer nur Vorschläge, nie verbindlich.
+
+### I9.4 Foto-basierte Erfassung (Vision AI)
+
+Neben der textbasierten Suche unterstützt der Smart Asset Creator auch eine **Foto-basierte Erfassung**: Der Benutzer fotografiert das Gerät (oder das Typenschild), und die Vision-KI identifiziert Hersteller und Modell automatisch. Dieser Modus ist besonders nützlich bei der Ersterfassung großer Lagerbestände, wo Geräte physisch vorhanden sind, aber keine digitale Inventarliste existiert.
+
+Der Ablauf funktioniert so: Der Benutzer klickt auf „📷 Foto/Scan" und macht ein Foto mit der Smartphone-Kamera (PWA) oder lädt ein Bild hoch. Die Vision-KI (Gemini Pro Vision, Claude Vision, oder GPT-4o Vision – je nach konfiguriertem Provider) analysiert das Bild und extrahiert sichtbare Informationen: Herstellerlogo, Modellbezeichnung, Typenschilddaten (Seriennummer, Leistungsangaben, CE-Kennzeichnung). Anschließend startet automatisch die Datenrecherche wie in Schritt 2 beschrieben.
+
+Für Typenschilder mit Barcode/QR-Code wird zusätzlich der integrierte Scanner aktiviert, der EAN/GTIN-Codes erkennt und direkt in der Icecat-Datenbank nachschlägt. Die Kombination aus Bilderkennung und Barcode-Scan erreicht bei gängigen Geräten eine Erkennungsrate von über 90%.
+
+### I9.5 Bulk-Import mit KI-Anreicherung
+
+Für die Ersteinrichtung oder den Import großer Gerätemengen bietet der Smart Asset Creator einen **Bulk-Import-Modus**: Der Benutzer lädt eine einfache CSV- oder Excel-Datei hoch, die nur zwei Spalten benötigt (Hersteller + Modell), und die KI reichert automatisch alle Zeilen mit technischen Daten an. Dies läuft als Hintergrund-Job über die Job-Queue (siehe Part C, C4) und der Benutzer wird per Notification benachrichtigt, wenn der Import abgeschlossen ist.
+
+```
+┌─ Bulk-Import mit KI-Anreicherung ────────────────────────┐
+│                                                           │
+│  📁 CSV/Excel hochladen: [Datei wählen...]               │
+│                                                           │
+│  Vorschau (erste 5 Zeilen):                               │
+│  ┌────┬──────────────┬────────────────────────┬──────────┐│
+│  │ #  │ Hersteller   │ Modell                 │ Status   ││
+│  ├────┼──────────────┼────────────────────────┼──────────┤│
+│  │ 1  │ ETC          │ Source Four LED S3      │ ✅ 94%  ││
+│  │ 2  │ Sennheiser   │ EW-DX SK               │ ✅ 91%  ││
+│  │ 3  │ d&b          │ E8                      │ ✅ 88%  ││
+│  │ 4  │ Robe         │ T2 Profile              │ 🔄 ...  ││
+│  │ 5  │ Avolites     │ Arena                   │ ⏳      ││
+│  └────┴──────────────┴────────────────────────┴──────────┘│
+│                                                           │
+│  Gesamt: 127 Assets │ Gefunden: 98 │ Manuell: 29         │
+│  ████████████████░░░░ 77% abgeschlossen                   │
+│                                                           │
+│  Geschätzte Kosten: ~€0.85 (Mistral Small für Bulk)      │
+│  Geschätzte Dauer: ~3 Minuten                             │
+│                                                           │
+│  [Import starten]  [Abbrechen]                            │
+│                                                           │
+└───────────────────────────────────────────────────────────┘
+```
+
+Für Bulk-Imports wird standardmäßig Mistral Small verwendet (günstigster Provider), es sei denn der Benutzer konfiguriert einen anderen Provider für Bulk-Operationen im Task-Routing. Bei 100 Assets und durchschnittlich 500 Tokens pro Asset entstehen ca. €0.06 Kosten mit Mistral Small – vernachlässigbar.
+
+### I9.6 KI-Mietpreisvorschlag
+
+Ein besonders wertvolles Sub-Feature des Smart Asset Creators ist der **automatische Mietpreisvorschlag**. Die KI berechnet einen empfohlenen Tagespreis basierend auf mehreren Faktoren:
+
+Der **Neupreis** des Geräts wird aus der Webrecherche ermittelt. Daraus leitet die KI einen Tagesrichtwert ab (Branchenüblich: 1-2% des Neupreises für Veranstaltungstechnik, 0.5-1% für Baugeräte). Zusätzlich werden **interne historische Daten** berücksichtigt: Wenn ähnliche Assets im System bereits vermietet werden, wird deren durchschnittlicher Mietpreis als Referenz herangezogen. Die KI prüft auch **Marktpreise** durch Webrecherche bei Verleiher-Websites (z.B. grover.com, mietpark.com, eventrent.de) für vergleichbare Geräte.
+
+Der Preisvorschlag wird transparent dargestellt: „€45/Tag (Berechnung: Neupreis €3.890 × 1.15% Faktor = €44.74, gerundet. Vergleich: 3 ähnliche Scheinwerfer in Ihrem System Ø €42/Tag, Markt Ø €48/Tag)". Der Benutzer kann den Vorschlag übernehmen, anpassen oder ignorieren.
+
+### I9.7 Auto-Kategorisierung
+
+Die KI schlägt automatisch die passende Kategorie und Unterkategorie vor, basierend auf der Produktbeschreibung und den technischen Daten. Das System lernt aus den Kategorisierungen des Benutzers: Wenn ein Benutzer die KI-Kategorie ändert, wird diese Korrektur als Trainingsignal gespeichert und bei zukünftigen ähnlichen Produkten berücksichtigt. So wird die Kategorisierung über Zeit immer genauer.
+
+Beispiel-Mapping:
+- „Source Four LED" → Beleuchtung > Profilscheinwerfer > LED
+- „EW-DX SK" → Audio > Funkmikrofon > Taschensender
+- „E8" → Audio > Lautsprecher > Line Array Element
+- „Arena" → Licht > Steuerpulte > Moving Light Controller
+
+### I9.8 Settings-UI für Smart Asset Creator
+
+```
+┌─ Einstellungen → KI → Smart Asset Creator ───────────────┐
+│                                                           │
+│  ─── Datenquellen ────────────────────────────────────    │
+│  ☑ Icecat Produktdatenbank (kostenlos, Open Catalog)      │
+│    API-Key: [                              ] (optional)   │
+│    └─ Für Full Icecat (alle Marken): Registrierung auf    │
+│       icecat.biz → „Sign up as channel partner" (kostenlos)│
+│                                                           │
+│  ☑ Herstellerwebsites durchsuchen (KI-Webrecherche)       │
+│    Provider für Webrecherche: [Standard-Provider ▼]       │
+│                                                           │
+│  ☑ Preisvergleich-Portale (idealo, Thomann, Amazon)       │
+│  ☐ Google Shopping API (API-Key erforderlich)             │
+│                                                           │
+│  ─── Automatische Felder ─────────────────────────────    │
+│  ☑ Technische Daten (Gewicht, Maße, Leistung)            │
+│  ☑ Beschreibung generieren                                │
+│  ☑ Kategorie vorschlagen                                  │
+│  ☑ Mietpreis vorschlagen                                  │
+│  ☑ Neupreis/Ersatzwert ermitteln                          │
+│  ☑ Produktbild laden                                      │
+│  ☑ Zubehör-Vorschläge                                     │
+│  ☐ Wartungsintervall vorschlagen                          │
+│                                                           │
+│  ─── Mietpreis-Kalkulation ──────────────────────────    │
+│  Standard-Faktor: [1.15] % vom Neupreis/Tag              │
+│  Pro Kategorie überschreiben:                             │
+│  • Beleuchtung:    [1.2 ] %                              │
+│  • Audio:          [1.0 ] %                              │
+│  • Video:          [0.8 ] %                              │
+│  • Rigging:        [1.5 ] %                              │
+│  [+ Kategorie-Faktor hinzufügen]                         │
+│                                                           │
+│  ─── Bulk-Import ─────────────────────────────────────    │
+│  Provider für Bulk: [Mistral Small (günstigst) ▼]        │
+│  Max. gleichzeitige Lookups: [5 ▼]                       │
+│  Timeout pro Asset: [30 Sekunden ▼]                       │
+│                                                           │
+│  [Änderungen speichern]                                   │
+│                                                           │
+└───────────────────────────────────────────────────────────┘
+```
+
+### I9.9 Technische Implementierung
+
+**AssetLookupService (PHP)**
+
+Der bestehende `AiAssetLookupService` wird erweitert um einen `SmartAssetLookupService`, der die Kaskade aus Icecat → Webrecherche → LLM-Wissen orchestriert. Der Service gibt ein standardisiertes `AssetDataResult`-Objekt zurück, das für jedes Feld die Quelle und Konfidenz enthält:
+
+```php
+class AssetDataResult {
+    public string $name;
+    public string $manufacturer;
+    public string $model;
+    public ?string $category;           // KI-Vorschlag
+    public ?float  $weight;             // in kg
+    public ?string $dimensions;         // L×B×H in mm
+    public ?int    $powerConsumption;   // in Watt
+    public ?float  $newPrice;           // UVP in EUR
+    public ?float  $suggestedRentalPrice; // Tagespreis in EUR
+    public ?string $description;        // KI-generiert
+    public ?string $imageUrl;           // Produktbild-URL
+    public array   $technicalSpecs;     // Key-Value Paare
+    public array   $accessories;        // Vorgeschlagenes Zubehör
+    public array   $sources;            // Pro Feld: ['field' => 'source', 'confidence' => 0.94]
+}
+```
+
+**API-Endpunkt:**
+```
+POST /api/v2/assets/smart-lookup
+Body: { "manufacturer": "ETC", "model": "Source Four LED S3", "ean": "" }
+Response: AssetDataResult als JSON
+```
+
+**Caching:** Lookup-Ergebnisse werden 30 Tage im Redis-Cache gespeichert (Key: `asset_lookup:{manufacturer}:{model}`), um wiederholte API-Aufrufe zu vermeiden. Wenn ein anderer Benutzer oder eine andere Instanz dasselbe Produkt nachschlägt, wird das Cache-Ergebnis innerhalb von Millisekunden zurückgegeben.
+
+---
+
+**Document Version:** 3.2 (+ KI-gestützte Asset-Erstellung)
 **Last Updated:** March 18, 2026
