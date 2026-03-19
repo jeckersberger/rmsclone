@@ -7,12 +7,14 @@ class FlexibleLagerorte extends AbstractMigration
     public function change()
     {
         // Add emoji_icon field to locations table for flexible icon support
-        if (!$this->table('locations')->hasColumn('emoji_icon')) {
-            $this->table('locations')
-                ->addColumn('emoji_icon', 'string', ['limit' => 10, 'null' => true])
-                ->addColumn('instances_id', 'integer', ['signed' => false, 'null' => true])
-                ->update();
+        $locations = $this->table('locations');
+        if (!$locations->hasColumn('emoji_icon')) {
+            $locations->addColumn('emoji_icon', 'string', ['limit' => 10, 'null' => true]);
         }
+        if (!$locations->hasColumn('instances_id')) {
+            $locations->addColumn('instances_id', 'integer', ['signed' => false, 'null' => true]);
+        }
+        $locations->update();
 
         // Create bulk_move_log table for tracking bulk relocations
         if (!$this->hasTable('bulk_move_log')) {
