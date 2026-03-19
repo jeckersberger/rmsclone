@@ -21,7 +21,7 @@ final class BookingPortal extends AbstractMigration
         if (!$this->hasTable('portal_config')) {
             $portalConfig = $this->table('portal_config', ['id' => false, 'primary_key' => ['instances_id']]);
             $portalConfig
-                ->addColumn('instances_id', 'integer', ['signed' => false])
+                ->addColumn('instances_id', 'integer', ['signed' => false, 'null' => false])
                 ->addColumn('is_active', 'boolean', ['default' => false, 'null' => false])
                 ->addColumn('portal_title', 'string', ['limit' => 255, 'null' => true])
                 ->addColumn('portal_description', 'text', ['null' => true])
