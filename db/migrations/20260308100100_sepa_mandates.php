@@ -17,10 +17,10 @@ class SepaMandates extends AbstractMigration
     {
         // SEPA-Mandate Tabelle
         if (!$this->hasTable('sepa_mandates')) {
-            $table = $this->table('sepa_mandates', ['signed' => false]);
+            $table = $this->table('sepa_mandates');
             $table
-                ->addColumn('clients_id', 'integer', ['signed' => false, 'null' => false, 'comment' => 'FK zu clients'])
-                ->addColumn('instances_id', 'integer', ['signed' => false, 'null' => false, 'comment' => 'FK zu instances'])
+                ->addColumn('clients_id', 'integer', ['null' => false, 'comment' => 'FK zu clients'])
+                ->addColumn('instances_id', 'integer', ['null' => false, 'comment' => 'FK zu instances'])
                 ->addColumn('mandate_reference', 'string', ['limit' => 35, 'null' => false, 'comment' => 'Eindeutige Mandatsreferenz (z.B. MNDT-2026-0001)'])
                 ->addColumn('mandate_date', 'date', ['null' => false, 'comment' => 'Datum der Mandatserteilung'])
                 ->addColumn('iban', 'string', ['limit' => 34, 'null' => false, 'comment' => 'IBAN des Zahlungspflichtigen'])
