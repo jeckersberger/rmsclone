@@ -6,20 +6,22 @@ class LabelSizes extends AbstractMigration
     public function change()
     {
         // Configurable label size presets per instance
-        $table = $this->table('label_size_presets', ['signed' => false]);
-        $table
-            ->addColumn('instances_id', 'integer', ['signed' => false, 'default' => 0, 'comment' => '0 = global preset'])
-            ->addColumn('name', 'string', ['limit' => 100])
-            ->addColumn('width_mm', 'decimal', ['precision' => 6, 'scale' => 2])
-            ->addColumn('height_mm', 'decimal', ['precision' => 6, 'scale' => 2])
-            ->addColumn('width_dots', 'integer', ['comment' => 'at 203dpi: mm * 8'])
-            ->addColumn('height_dots', 'integer', ['comment' => 'at 203dpi: mm * 8'])
-            ->addColumn('dpi', 'integer', ['default' => 203])
-            ->addColumn('is_system', 'boolean', ['default' => false, 'comment' => 'system presets cannot be deleted'])
-            ->addColumn('sort_order', 'integer', ['default' => 0])
-            ->addColumn('created_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP'])
-            ->addIndex(['instances_id'])
-            ->create();
+        if (!$this->hasTable('label_size_presets')) {
+            $table = $this->table('label_size_presets', ['signed' => false]);
+            $table
+                ->addColumn('instances_id', 'integer', ['signed' => false, 'default' => 0, 'comment' => '0 = global preset'])
+                ->addColumn('name', 'string', ['limit' => 100])
+                ->addColumn('width_mm', 'decimal', ['precision' => 6, 'scale' => 2])
+                ->addColumn('height_mm', 'decimal', ['precision' => 6, 'scale' => 2])
+                ->addColumn('width_dots', 'integer', ['comment' => 'at 203dpi: mm * 8'])
+                ->addColumn('height_dots', 'integer', ['comment' => 'at 203dpi: mm * 8'])
+                ->addColumn('dpi', 'integer', ['default' => 203])
+                ->addColumn('is_system', 'boolean', ['default' => false, 'comment' => 'system presets cannot be deleted'])
+                ->addColumn('sort_order', 'integer', ['default' => 0])
+                ->addColumn('created_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP'])
+                ->addIndex(['instances_id'])
+                ->create();
+        }
 
         if ($this->isMigratingUp()) {
             // System presets for Zebra LP2824 (203dpi, max 58mm width)

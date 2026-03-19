@@ -17,89 +17,99 @@ class WorkflowEngine extends AbstractMigration
     public function change()
     {
         // Main workflows table
-        $table = $this->table('workflows', ['id' => 'id', 'signed' => false]);
-        $table->addColumn('instances_id', 'integer', ['signed' => false, 'null' => false])
-              ->addColumn('name', 'string', ['length' => 255, 'null' => false])
-              ->addColumn('description', 'text', ['null' => true])
-              ->addColumn('trigger_type', 'enum', ['values' => ['event', 'cron', 'manual'], 'default' => 'manual'])
-              ->addColumn('trigger_config', 'json', ['null' => true])
-              ->addColumn('is_active', 'boolean', ['default' => false])
-              ->addColumn('created_by', 'integer', ['signed' => false, 'null' => true])
-              ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
-              ->addColumn('updated_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP', 'update' => 'CURRENT_TIMESTAMP'])
-              ->addIndex(['instances_id'])
-              ->addIndex(['trigger_type'])
-              ->addIndex(['is_active'])
-              ->addIndex(['instances_id', 'is_active'])
-              ->create();
+        if (!$this->hasTable('workflows')) {
+            $table = $this->table('workflows', ['id' => 'id', 'signed' => false]);
+            $table->addColumn('instances_id', 'integer', ['signed' => false, 'null' => false])
+                  ->addColumn('name', 'string', ['length' => 255, 'null' => false])
+                  ->addColumn('description', 'text', ['null' => true])
+                  ->addColumn('trigger_type', 'enum', ['values' => ['event', 'cron', 'manual'], 'default' => 'manual'])
+                  ->addColumn('trigger_config', 'json', ['null' => true])
+                  ->addColumn('is_active', 'boolean', ['default' => false])
+                  ->addColumn('created_by', 'integer', ['signed' => false, 'null' => true])
+                  ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+                  ->addColumn('updated_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP', 'update' => 'CURRENT_TIMESTAMP'])
+                  ->addIndex(['instances_id'])
+                  ->addIndex(['trigger_type'])
+                  ->addIndex(['is_active'])
+                  ->addIndex(['instances_id', 'is_active'])
+                  ->create();
+        }
 
         // Individual workflow steps/actions
-        $table = $this->table('workflow_steps', ['id' => 'id', 'signed' => false]);
-        $table->addColumn('workflow_id', 'integer', ['signed' => false, 'null' => false])
-              ->addColumn('step_order', 'integer', ['signed' => false, 'null' => false])
-              ->addColumn('action_type', 'enum', [
-                  'values' => [
-                      'send_email',
-                      'create_task',
-                      'change_status',
-                      'send_notification',
-                      'webhook',
-                      'delay',
-                      'condition'
-                  ],
-                  'default' => 'send_email'
-              ])
-              ->addColumn('action_config', 'json', ['null' => false])
-              ->addColumn('condition_config', 'json', ['null' => true])
-              ->addIndex(['workflow_id'])
-              ->addIndex(['workflow_id', 'step_order'])
-              ->create();
+        if (!$this->hasTable('workflow_steps')) {
+            $table = $this->table('workflow_steps', ['id' => 'id', 'signed' => false]);
+            $table->addColumn('workflow_id', 'integer', ['signed' => false, 'null' => false])
+                  ->addColumn('step_order', 'integer', ['signed' => false, 'null' => false])
+                  ->addColumn('action_type', 'enum', [
+                      'values' => [
+                          'send_email',
+                          'create_task',
+                          'change_status',
+                          'send_notification',
+                          'webhook',
+                          'delay',
+                          'condition'
+                      ],
+                      'default' => 'send_email'
+                  ])
+                  ->addColumn('action_config', 'json', ['null' => false])
+                  ->addColumn('condition_config', 'json', ['null' => true])
+                  ->addIndex(['workflow_id'])
+                  ->addIndex(['workflow_id', 'step_order'])
+                  ->create();
+        }
 
         // Execution records
-        $table = $this->table('workflow_executions', ['id' => 'id', 'signed' => false]);
-        $table->addColumn('workflow_id', 'integer', ['signed' => false, 'null' => false])
-              ->addColumn('instances_id', 'integer', ['signed' => false, 'null' => false])
-              ->addColumn('trigger_data', 'json', ['null' => true])
-              ->addColumn('status', 'enum', [
-                  'values' => ['running', 'completed', 'failed', 'cancelled'],
-                  'default' => 'running'
-              ])
-              ->addColumn('started_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
-              ->addColumn('completed_at', 'datetime', ['null' => true])
-              ->addColumn('error_message', 'text', ['null' => true])
-              ->addIndex(['workflow_id'])
-              ->addIndex(['instances_id'])
-              ->addIndex(['status'])
-              ->addIndex(['started_at'])
-              ->addIndex(['workflow_id', 'status'])
-              ->create();
+        if (!$this->hasTable('workflow_executions')) {
+            $table = $this->table('workflow_executions', ['id' => 'id', 'signed' => false]);
+            $table->addColumn('workflow_id', 'integer', ['signed' => false, 'null' => false])
+                  ->addColumn('instances_id', 'integer', ['signed' => false, 'null' => false])
+                  ->addColumn('trigger_data', 'json', ['null' => true])
+                  ->addColumn('status', 'enum', [
+                      'values' => ['running', 'completed', 'failed', 'cancelled'],
+                      'default' => 'running'
+                  ])
+                  ->addColumn('started_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+                  ->addColumn('completed_at', 'datetime', ['null' => true])
+                  ->addColumn('error_message', 'text', ['null' => true])
+                  ->addIndex(['workflow_id'])
+                  ->addIndex(['instances_id'])
+                  ->addIndex(['status'])
+                  ->addIndex(['started_at'])
+                  ->addIndex(['workflow_id', 'status'])
+                  ->create();
+        }
 
         // Execution step logs
-        $table = $this->table('workflow_execution_logs', ['id' => 'id', 'signed' => false]);
-        $table->addColumn('execution_id', 'integer', ['signed' => false, 'null' => false])
-              ->addColumn('step_id', 'integer', ['signed' => false, 'null' => false])
-              ->addColumn('status', 'enum', [
-                  'values' => ['success', 'failed', 'skipped'],
-                  'default' => 'success'
-              ])
-              ->addColumn('input_data', 'json', ['null' => true])
-              ->addColumn('output_data', 'json', ['null' => true])
-              ->addColumn('error_message', 'text', ['null' => true])
-              ->addColumn('executed_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
-              ->addIndex(['execution_id'])
-              ->addIndex(['step_id'])
-              ->addIndex(['status'])
-              ->create();
+        if (!$this->hasTable('workflow_execution_logs')) {
+            $table = $this->table('workflow_execution_logs', ['id' => 'id', 'signed' => false]);
+            $table->addColumn('execution_id', 'integer', ['signed' => false, 'null' => false])
+                  ->addColumn('step_id', 'integer', ['signed' => false, 'null' => false])
+                  ->addColumn('status', 'enum', [
+                      'values' => ['success', 'failed', 'skipped'],
+                      'default' => 'success'
+                  ])
+                  ->addColumn('input_data', 'json', ['null' => true])
+                  ->addColumn('output_data', 'json', ['null' => true])
+                  ->addColumn('error_message', 'text', ['null' => true])
+                  ->addColumn('executed_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+                  ->addIndex(['execution_id'])
+                  ->addIndex(['step_id'])
+                  ->addIndex(['status'])
+                  ->create();
+        }
 
         // Pre-built workflow templates
-        $table = $this->table('workflow_templates', ['id' => 'id', 'signed' => false]);
-        $table->addColumn('name', 'string', ['length' => 255, 'null' => false])
-              ->addColumn('description', 'text', ['null' => true])
-              ->addColumn('category', 'string', ['length' => 100, 'null' => true])
-              ->addColumn('workflow_json', 'json', ['null' => false])
-              ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
-              ->addIndex(['category'])
-              ->create();
+        if (!$this->hasTable('workflow_templates')) {
+            $table = $this->table('workflow_templates', ['id' => 'id', 'signed' => false]);
+            $table->addColumn('name', 'string', ['length' => 255, 'null' => false])
+                  ->addColumn('description', 'text', ['null' => true])
+                  ->addColumn('category', 'string', ['length' => 100, 'null' => true])
+                  ->addColumn('workflow_json', 'json', ['null' => false])
+                  ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+                  ->addIndex(['category'])
+                  ->create();
+        }
 
         // Insert default templates
         $this->table('workflow_templates')->insert([

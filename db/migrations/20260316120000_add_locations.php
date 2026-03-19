@@ -6,7 +6,10 @@ class AddLocations extends AbstractMigration
 {
     public function change()
     {
-        // Create locations table
+        // Create locations table (skip if already exists from RemainingFeatures migration)
+        if ($this->hasTable('locations')) {
+            // Table already exists — just ensure columns exist
+        } else {
         $locationsTable = $this->table('locations', ['signed' => false]);
         $locationsTable->addColumn('name', 'string', ['limit' => 100, 'null' => false])
                        ->addColumn('description', 'string', ['limit' => 255, 'null' => true])
@@ -30,8 +33,10 @@ class AddLocations extends AbstractMigration
                 ('Extern', 'Externer Standort', '#dc3545', 'fas fa-map-marker-alt', 6)
             ");
         }
+        } // end if !hasTable locations
 
         // Create location_log table
+        if (!$this->hasTable('location_log')) {
         $logTable = $this->table('location_log', ['signed' => false]);
         $logTable->addColumn('entity_type', 'enum', ['values' => ['asset', 'stock_instance'], 'null' => false])
                  ->addColumn('entity_id', 'integer', ['unsigned' => true, 'null' => false])
@@ -47,19 +52,26 @@ class AddLocations extends AbstractMigration
                  ->addIndex(['moved_by'], ['name' => 'idx_moved_by'])
                  ->addIndex(['created_at'], ['name' => 'idx_created_at'])
                  ->create();
+        } // end if !hasTable location_log
 
-        // Add columns to assets table
+        // Add columns to assets table (skip if already exist)
         $assetsTable = $this->table('assets');
-        $assetsTable->addColumn('current_location_id', 'integer', ['unsigned' => true, 'null' => true])
-                    ->addColumn('current_location_custom', 'string', ['limit' => 255, 'null' => true])
-                    ->addColumn('location_updated_at', 'timestamp', ['null' => true])
-                    ->update();
+        if (!$assetsTable->hasColumn('current_location_id')) {
+            $assetsTable->addColumn('current_location_id', 'integer', ['unsigned' => true, 'null' => true])
+                        ->addColumn('current_location_custom', 'string', ['limit' => 255, 'null' => true])
+                        ->addColumn('location_updated_at', 'timestamp', ['null' => true])
+                        ->update();
+        }
 
-        // Add columns to stock_instances table
-        $stockInstancesTable = $this->table('stock_instances');
-        $stockInstancesTable->addColumn('current_location_id', 'integer', ['unsigned' => true, 'null' => true])
-                            ->addColumn('current_location_custom', 'string', ['limit' => 255, 'null' => true])
-                            ->addColumn('location_updated_at', 'timestamp', ['null' => true])
-                            ->update();
+        // Add columns to stock_instances table (skip if already exist)
+        if ($this->hasTable('stock_instances')) {
+            $stockInstancesTable = $this->table('stock_instances');
+            if (!$stockInstancesTable->hasColumn('current_location_id')) {
+                $stockInstancesTable->addColumn('current_location_id', 'integer', ['unsigned' => true, 'null' => true])
+                                    ->addColumn('current_location_custom', 'string', ['limit' => 255, 'null' => true])
+                                    ->addColumn('location_updated_at', 'timestamp', ['null' => true])
+                                    ->update();
+            }
+        }
     }
 }
