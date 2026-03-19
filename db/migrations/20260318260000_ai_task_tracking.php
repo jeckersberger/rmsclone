@@ -11,7 +11,7 @@ final class AiTaskTracking extends AbstractMigration
         // Table: ai_feature_requests
         // Tracks feature request lifecycle: idea -> formulation -> approval -> implementation -> done
         if (!$this->hasTable('ai_feature_requests')) {
-            $featureRequests = $this->table('ai_feature_requests', ['signed' => false]);
+            $featureRequests = $this->table('ai_feature_requests');
             $featureRequests
                 ->addColumn('fr_number', 'string', ['limit' => 10, 'comment' => 'FR-001, FR-002, etc.'])
                 ->addColumn('title', 'string', ['limit' => 255])
@@ -44,7 +44,7 @@ final class AiTaskTracking extends AbstractMigration
         // Table: ai_implementation_status
         // Tracks implementation progress of features by module and baustein (component)
         if (!$this->hasTable('ai_implementation_status')) {
-            $implementationStatus = $this->table('ai_implementation_status', ['signed' => false]);
+            $implementationStatus = $this->table('ai_implementation_status');
             $implementationStatus
                 ->addColumn('module_code', 'string', ['limit' => 10, 'comment' => 'Module identifier: L1, L2, J1, J2, K1, K2, K3, I1-I10'])
                 ->addColumn('module_name', 'string', ['limit' => 100, 'comment' => 'Human-readable module name'])
@@ -66,7 +66,7 @@ final class AiTaskTracking extends AbstractMigration
         // Table: ai_task_log
         // Audit trail of what the KI system did automatically (feature request processing, status updates, etc.)
         if (!$this->hasTable('ai_task_log')) {
-            $taskLog = $this->table('ai_task_log', ['signed' => false]);
+            $taskLog = $this->table('ai_task_log');
             $taskLog
                 ->addColumn('task_type', 'string', ['limit' => 50, 'comment' => 'Type of action: formulate_request, update_status, sync_markdown, update_baustein, etc.'])
                 ->addColumn('module_code', 'string', ['limit' => 10, 'null' => true, 'comment' => 'Related module code if applicable'])

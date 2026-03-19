@@ -16,7 +16,7 @@ class AiAnonymization extends AbstractMigration
         // ── Anonymization Configuration ──
         if (!$this->hasTable('ai_anonymization_config')) {
             $this->table('ai_anonymization_config', ['id' => false, 'primary_key' => ['instances_id']])
-                ->addColumn('instances_id', 'integer', ['signed' => false])
+                ->addColumn('instances_id', 'integer', ['signed' => false, 'null' => false])
                 ->addColumn('mode', 'enum', [
                     'values' => ['strict', 'standard', 'minimal', 'off'],
                     'default' => 'strict'
@@ -31,7 +31,7 @@ class AiAnonymization extends AbstractMigration
         // ── Anonymization Audit Log ──
         // CRITICAL: Never stores actual PII. Only stores replacement counts and types.
         if (!$this->hasTable('ai_anonymization_log')) {
-            $this->table('ai_anonymization_log', ['id' => true, 'signed' => false])
+            $this->table('ai_anonymization_log')
                 ->addColumn('instances_id', 'integer', ['signed' => false])
                 ->addColumn('request_id', 'string', ['limit' => 64, 'null' => true])
                 ->addColumn('replacements_count', 'integer', ['default' => 0, 'signed' => false])

@@ -6,7 +6,7 @@ class ErrorTerminal extends AbstractMigration
 {
     public function change()
     {
-        $table = $this->table('system_error_log', ['signed' => false]);
+        $table = $this->table('system_error_log');
         $table
             ->addColumn('level', 'enum', ['values' => ['debug','info','warning','error','critical'], 'default' => 'error', 'null' => false])
             ->addColumn('source', 'string', ['limit' => 100, 'null' => false])

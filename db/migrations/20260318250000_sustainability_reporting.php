@@ -63,7 +63,7 @@ final class SustainabilityReporting extends AbstractMigration
                 'comment' => 'Distance traveled in kilometers'
             ])
             ->addColumn('vehicle_type', 'string', [
-                'length' => 50,
+                'limit' => 50,
                 'null' => false,
                 'comment' => 'Type of vehicle (van, truck, car, etc.)'
             ])
@@ -107,7 +107,7 @@ final class SustainabilityReporting extends AbstractMigration
         // ESG reports
         $this->table('sustainability_reports')
             ->addColumn('name', 'string', [
-                'length' => 255,
+                'limit' => 255,
                 'null' => false,
                 'comment' => 'Report name/title'
             ])
@@ -129,7 +129,7 @@ final class SustainabilityReporting extends AbstractMigration
                 'comment' => 'Report data as JSON (metrics, calculations, trends)'
             ])
             ->addColumn('pdf_path', 'string', [
-                'length' => 500,
+                'limit' => 500,
                 'null' => true,
                 'comment' => 'Path to generated PDF file if available'
             ])
