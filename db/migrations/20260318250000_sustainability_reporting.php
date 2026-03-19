@@ -124,7 +124,7 @@ final class SustainabilityReporting extends AbstractMigration
                 'null' => false,
                 'comment' => 'Report period end date'
             ])
-            ->addColumn('data_json', 'longtext', [
+            ->addColumn('data_json', 'text', ['limit' => MysqlAdapter::TEXT_LONG,
                 'null' => false,
                 'comment' => 'Report data as JSON (metrics, calculations, trends)'
             ])

@@ -33,12 +33,12 @@ class AiAnonymization extends AbstractMigration
         if (!$this->hasTable('ai_anonymization_log')) {
             $this->table('ai_anonymization_log', ['id' => true, 'signed' => false])
                 ->addColumn('instances_id', 'integer', ['signed' => false])
-                ->addColumn('request_id', 'varchar', ['limit' => 64, 'null' => true])
+                ->addColumn('request_id', 'string', ['limit' => 64, 'null' => true])
                 ->addColumn('replacements_count', 'integer', ['default' => 0, 'signed' => false])
                 ->addColumn('replacement_types', 'json', [
                     'comment' => 'e.g., {"PERSON": 3, "EMAIL": 2, "IBAN": 1} - never actual values'
                 ])
-                ->addColumn('provider', 'varchar', ['limit' => 50])
+                ->addColumn('provider', 'string', ['limit' => 50])
                 ->addColumn('mode', 'enum', ['values' => ['strict', 'standard', 'minimal', 'off']])
                 ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
                 ->addIndex(['instances_id', 'created_at'])

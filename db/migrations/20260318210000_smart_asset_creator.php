@@ -22,15 +22,15 @@ final class SmartAssetCreator extends AbstractMigration
             $this->table('asset_lookup_cache', ['id' => false, 'primary_key' => ['id']])
                 ->addColumn('id', 'integer', ['identity' => true, 'signed' => false])
                 ->addColumn('instances_id', 'integer', ['signed' => false])
-                ->addColumn('manufacturer', 'varchar', [
+                ->addColumn('manufacturer', 'string', [
                     'limit' => 255,
                     'collation' => 'utf8mb4_unicode_ci',
                 ])
-                ->addColumn('model', 'varchar', [
+                ->addColumn('model', 'string', [
                     'limit' => 255,
                     'collation' => 'utf8mb4_unicode_ci',
                 ])
-                ->addColumn('ean', 'varchar', [
+                ->addColumn('ean', 'string', [
                     'limit' => 50,
                     'null' => true,
                 ])
@@ -64,7 +64,7 @@ final class SmartAssetCreator extends AbstractMigration
                 ->addColumn('id', 'integer', ['identity' => true, 'signed' => false])
                 ->addColumn('instances_id', 'integer', ['signed' => false])
                 ->addColumn('cache_id', 'integer', ['signed' => false, 'null' => true])
-                ->addColumn('field_name', 'varchar', [
+                ->addColumn('field_name', 'string', [
                     'limit' => 100,
                     'collation' => 'utf8mb4_unicode_ci',
                     'comment' => 'Field that was corrected (e.g., "weight_kg", "power_watts")',
@@ -87,7 +87,7 @@ final class SmartAssetCreator extends AbstractMigration
         // For bulk lookups running in background
         if (!$this->hasTable('smart_lookup_jobs')) {
             $this->table('smart_lookup_jobs', ['id' => false, 'primary_key' => ['id']])
-                ->addColumn('id', 'varchar', [
+                ->addColumn('id', 'string', [
                     'limit' => 64,
                     'collation' => 'utf8mb4_unicode_ci',
                     'comment' => 'UUID job ID',

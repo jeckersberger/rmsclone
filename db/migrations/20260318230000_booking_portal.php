@@ -30,7 +30,7 @@ final class BookingPortal extends AbstractMigration
                 ->addColumn('show_prices', 'boolean', ['default' => true, 'null' => false])
                 ->addColumn('require_registration', 'boolean', ['default' => true, 'null' => false])
                 ->addColumn('require_admin_approval', 'boolean', ['default' => true, 'null' => false])
-                ->addColumn('terms_html', 'longtext', ['null' => true])
+                ->addColumn('terms_html', 'text', ['limit' => MysqlAdapter::TEXT_LONG, 'null' => true])
                 ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
                 ->addColumn('updated_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP', 'update' => 'CURRENT_TIMESTAMP'])
                 ->create();
