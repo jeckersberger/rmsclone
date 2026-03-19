@@ -20,7 +20,7 @@ final class SmartAssetCreator extends AbstractMigration
         // 30-day TTL for automatic refresh
         if (!$this->hasTable('asset_lookup_cache')) {
             $this->table('asset_lookup_cache', ['id' => false, 'primary_key' => ['id']])
-                ->addColumn('id', 'integer', ['autoIncrement' => true, 'signed' => false])
+                ->addColumn('id', 'integer', ['identity' => true, 'signed' => false])
                 ->addColumn('instances_id', 'integer', ['signed' => false])
                 ->addColumn('manufacturer', 'varchar', [
                     'limit' => 255,
@@ -61,7 +61,7 @@ final class SmartAssetCreator extends AbstractMigration
         // User corrections for ML feedback loop
         if (!$this->hasTable('asset_lookup_corrections')) {
             $this->table('asset_lookup_corrections', ['id' => false, 'primary_key' => ['id']])
-                ->addColumn('id', 'integer', ['autoIncrement' => true, 'signed' => false])
+                ->addColumn('id', 'integer', ['identity' => true, 'signed' => false])
                 ->addColumn('instances_id', 'integer', ['signed' => false])
                 ->addColumn('cache_id', 'integer', ['signed' => false, 'null' => true])
                 ->addColumn('field_name', 'varchar', [

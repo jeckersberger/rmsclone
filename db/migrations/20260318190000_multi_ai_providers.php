@@ -21,7 +21,7 @@ final class MultiAiProviders extends AbstractMigration
         // Defines available LLM providers and their configuration
         if (!$this->hasTable('ai_providers')) {
             $table = $this->table('ai_providers', ['id' => false, 'primary_key' => ['id']]);
-            $table->addColumn('id', 'integer', ['autoIncrement' => true, 'signed' => false])
+            $table->addColumn('id', 'integer', ['identity' => true, 'signed' => false])
                 ->addColumn('instances_id', 'integer', ['signed' => false, 'comment' => 'Multi-tenancy'])
                 ->addColumn('name', 'string', [
                     'limit' => 128,
@@ -78,7 +78,7 @@ final class MultiAiProviders extends AbstractMigration
         // Maps task types to preferred providers and models
         if (!$this->hasTable('ai_task_routing')) {
             $table = $this->table('ai_task_routing', ['id' => false, 'primary_key' => ['id']]);
-            $table->addColumn('id', 'integer', ['autoIncrement' => true, 'signed' => false])
+            $table->addColumn('id', 'integer', ['identity' => true, 'signed' => false])
                 ->addColumn('instances_id', 'integer', ['signed' => false, 'comment' => 'Multi-tenancy'])
                 ->addColumn('task_type', 'string', [
                     'limit' => 64,
@@ -114,7 +114,7 @@ final class MultiAiProviders extends AbstractMigration
         // Track all AI API calls for billing and analytics
         if (!$this->hasTable('ai_usage_log')) {
             $table = $this->table('ai_usage_log', ['id' => false, 'primary_key' => ['id']]);
-            $table->addColumn('id', 'biginteger', ['autoIncrement' => true, 'signed' => false])
+            $table->addColumn('id', 'biginteger', ['identity' => true, 'signed' => false])
                 ->addColumn('instances_id', 'integer', ['signed' => false])
                 ->addColumn('provider_id', 'integer', [
                     'signed' => false,
@@ -162,7 +162,7 @@ final class MultiAiProviders extends AbstractMigration
         // Defines fallback order when primary provider fails
         if (!$this->hasTable('ai_fallback_chain')) {
             $table = $this->table('ai_fallback_chain', ['id' => false, 'primary_key' => ['id']]);
-            $table->addColumn('id', 'integer', ['autoIncrement' => true, 'signed' => false])
+            $table->addColumn('id', 'integer', ['identity' => true, 'signed' => false])
                 ->addColumn('instances_id', 'integer', ['signed' => false])
                 ->addColumn('task_type', 'string', [
                     'limit' => 64,

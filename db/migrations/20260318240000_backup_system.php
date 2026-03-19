@@ -21,7 +21,7 @@ final class BackupSystem extends AbstractMigration
             ]);
 
             $backupConfigs
-                ->addColumn('id', 'biginteger', ['signed' => false, 'autoIncrement' => true])
+                ->addColumn('id', 'biginteger', ['signed' => false, 'identity' => true])
                 ->addColumn('instances_id', 'integer', ['signed' => false, 'null' => false])
                 ->addColumn('name', 'string', ['limit' => 255, 'null' => false, 'comment' => 'Configuration name'])
                 ->addColumn('backup_type', 'enum', ['values' => ['full', 'incremental'], 'default' => 'full'])
@@ -50,7 +50,7 @@ final class BackupSystem extends AbstractMigration
             ]);
 
             $backupJobs
-                ->addColumn('id', 'biginteger', ['signed' => false, 'autoIncrement' => true])
+                ->addColumn('id', 'biginteger', ['signed' => false, 'identity' => true])
                 ->addColumn('instances_id', 'integer', ['signed' => false, 'null' => false])
                 ->addColumn('backup_configs_id', 'biginteger', ['signed' => false, 'null' => true])
                 ->addColumn('status', 'enum', ['values' => ['pending', 'running', 'completed', 'failed', 'cancelled'], 'default' => 'pending'])
@@ -79,7 +79,7 @@ final class BackupSystem extends AbstractMigration
             ]);
 
             $backupRestoreLog
-                ->addColumn('id', 'biginteger', ['signed' => false, 'autoIncrement' => true])
+                ->addColumn('id', 'biginteger', ['signed' => false, 'identity' => true])
                 ->addColumn('backup_job_id', 'biginteger', ['signed' => false, 'null' => false])
                 ->addColumn('restored_by', 'integer', ['signed' => false, 'null' => false, 'comment' => 'User ID who triggered restore'])
                 ->addColumn('restore_type', 'enum', ['values' => ['full', 'partial', 'test'], 'default' => 'full'])

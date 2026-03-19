@@ -28,7 +28,7 @@ class ForeignLoansTracking extends AbstractMigration
                 'collation' => 'utf8mb4_unicode_ci',
             ])
                 ->addColumn('id', 'integer', [
-                    'autoIncrement' => true,
+                    'identity' => true,
                     'signed' => false,
                 ])
                 ->addColumn('instances_id', 'integer', [
