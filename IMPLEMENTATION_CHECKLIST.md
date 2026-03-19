@@ -282,6 +282,120 @@ Feedback (👍/👎), implizites Tracking, Few-Shot-Bibliothek, Prompt-Versionin
 
 ---
 
+## I11 – KI-Transportkostenberechnung
+
+KI-gestützte Kostenprognose für Touren, Fahrzeug-TCO-Analyse, Budget-Forecasting und Anomalie-Erkennung im Fuhrpark.
+
+| # | Baustein | Status | Datei |
+|---|----------|--------|-------|
+| 1 | DB-Migration: 2 Tabellen (ai_transport_cost_predictions, ai_vehicle_tco_cache) | ⬜ | `db/migrations/YYYYMMDD_ai_transport_costs.php` |
+| 2 | AiTransportCostService: Kraftstoffkosten-Prognose (Strecke × Fahrzeugtyp × Beladung × Spritpreise) | ⬜ | `src/services/AiTransportCostService.php` |
+| 3 | AiTransportCostService: Tourkosten-Vorhersage (Maut, Sprit, Zeit, Verschleiß) | ⬜ | `src/services/AiTransportCostService.php` |
+| 4 | AiTransportCostService: Fahrzeug-Empfehlung (optimales Fahrzeug pro Tour nach Kosten/Effizienz) | ⬜ | `src/services/AiTransportCostService.php` |
+| 5 | AiTransportCostService: TCO-Analyse pro Fahrzeug (Sprit + Wartung + Versicherung + AfA) | ⬜ | `src/services/AiTransportCostService.php` |
+| 6 | AiTransportCostService: Budget-Forecasting (Transport-Kosten nächster Monat/Quartal) | ⬜ | `src/services/AiTransportCostService.php` |
+| 7 | AiTransportCostService: Anomalie-Erkennung (ungewöhnlich hohe Kosten pro Tour/Fahrzeug flaggen) | ⬜ | `src/services/AiTransportCostService.php` |
+| 8 | API: 5 Endpunkte (transportCostPredict, vehicleRecommend, tcoAnalysis, transportBudget, transportAnomalies) | ⬜ | `src/api/ai/transportCost*.php` |
+| 9 | UI: KI-Kosten-Widget in Transport-Dashboard | ⬜ | `src/transport/transport_index.twig` |
+| 10 | Integration: Automatische Kostenschätzung bei Touren-Erstellung | ⬜ | `src/services/TransportLogisticsService.php` |
+| 11 | Tests | 🧪 | Unit-Tests für AiTransportCostService |
+
+---
+
+## I12 – KI-Versicherungsanalyse
+
+KI-gestützte Schadensrisiko-Bewertung, Deckungslücken-Analyse, Schadenmeldung-Assistent und Prämien-Optimierung.
+
+| # | Baustein | Status | Datei |
+|---|----------|--------|-------|
+| 1 | AiInsuranceService: Schadensrisiko-Bewertung pro Asset/Projekt (basierend auf Historie) | ⬜ | `src/services/AiInsuranceService.php` |
+| 2 | AiInsuranceService: Deckungslücken-Analyse mit Empfehlungen | ⬜ | `src/services/AiInsuranceService.php` |
+| 3 | AiInsuranceService: Schadenmeldung-Assistent (automatische Formulierung für Versicherung) | ⬜ | `src/services/AiInsuranceService.php` |
+| 4 | AiInsuranceService: Prämien-Optimierung (Vergleich und Empfehlung) | ⬜ | `src/services/AiInsuranceService.php` |
+| 5 | API: 3 Endpunkte (insuranceRisk, coverageAnalysis, claimAssist) | ⬜ | `src/api/ai/insurance*.php` |
+| 6 | UI: Risiko-Badge auf Asset-Karten + Empfehlungs-Panel | ⬜ | `src/insurance/insurance_index.twig` |
+| 7 | Tests | 🧪 | Unit-Tests für AiInsuranceService |
+
+---
+
+## I13 – KI-Bestandsoptimierung
+
+KI-gestützte Nachfrage-Prognose, optimale Lagermengen, Nachbestellungs-Empfehlung und saisonale Muster-Erkennung.
+
+| # | Baustein | Status | Datei |
+|---|----------|--------|-------|
+| 1 | AiInventoryService: Nachfrage-Prognose (welche Assets werden wann gebraucht) | ⬜ | `src/services/AiInventoryService.php` |
+| 2 | AiInventoryService: Optimale Lagermengen berechnen | ⬜ | `src/services/AiInventoryService.php` |
+| 3 | AiInventoryService: Nachbestellungs-Empfehlung (Zeitpunkt + Menge) | ⬜ | `src/services/AiInventoryService.php` |
+| 4 | AiInventoryService: Saisonale Muster-Erkennung aus historischen Buchungen | ⬜ | `src/services/AiInventoryService.php` |
+| 5 | API: 3 Endpunkte (demandForecast, stockOptimize, reorderSuggest) | ⬜ | `src/api/ai/inventory*.php` |
+| 6 | UI: Prognose-Widget im Inventar-Dashboard | ⬜ | `src/inventory/inventory_index.twig` |
+| 7 | Tests | 🧪 | Unit-Tests für AiInventoryService |
+
+---
+
+## I14 – KI-Mahnwesen & Zahlungsprognose
+
+KI-gestützte Zahlungswahrscheinlichkeit, optimale Mahnstufen-Empfehlung, Zahlungsdatum-Vorhersage und Inkasso-Scoring.
+
+| # | Baustein | Status | Datei |
+|---|----------|--------|-------|
+| 1 | AiDunningService: Zahlungswahrscheinlichkeit pro Kunde/Rechnung | ⬜ | `src/services/AiDunningService.php` |
+| 2 | AiDunningService: Optimale Mahnstufe und Zeitpunkt-Empfehlung | ⬜ | `src/services/AiDunningService.php` |
+| 3 | AiDunningService: Zahlungsdatum-Vorhersage | ⬜ | `src/services/AiDunningService.php` |
+| 4 | AiDunningService: Inkasso-Erfolgswahrscheinlichkeit | ⬜ | `src/services/AiDunningService.php` |
+| 5 | API: 2 Endpunkte (paymentPredict, dunningOptimize) | ⬜ | `src/api/ai/dunning*.php` |
+| 6 | UI: Zahlungsprognose-Ampel in Mahnübersicht | ⬜ | `src/dunning/dunning_index.twig` |
+| 7 | Tests | 🧪 | Unit-Tests für AiDunningService |
+
+---
+
+## I15 – KI-Reporting & Anomalie-Erkennung
+
+KI-gestützte Anomalie-Erkennung in Finanzdaten, Trend-Vorhersage, natürlichsprachliche Report-Zusammenfassungen und KPI-Warnungen.
+
+| # | Baustein | Status | Datei |
+|---|----------|--------|-------|
+| 1 | AiReportingService: Automatische Anomalie-Erkennung in Finanzdaten | ⬜ | `src/services/AiReportingService.php` |
+| 2 | AiReportingService: Trend-Vorhersage (Umsatz, Kosten, Auslastung) | ⬜ | `src/services/AiReportingService.php` |
+| 3 | AiReportingService: Natürlichsprachliche Report-Zusammenfassung | ⬜ | `src/services/AiReportingService.php` |
+| 4 | AiReportingService: KPI-Abweichungs-Warnung mit Ursachenanalyse | ⬜ | `src/services/AiReportingService.php` |
+| 5 | API: 3 Endpunkte (detectAnomalies, forecastTrend, reportSummary) | ⬜ | `src/api/ai/reporting*.php` |
+| 6 | UI: Anomalie-Alerts + Trend-Charts im Dashboard | ⬜ | `src/dashboard/index.twig` |
+| 7 | Tests | 🧪 | Unit-Tests für AiReportingService |
+
+---
+
+## I16 – KI-Workflow-Optimierung
+
+KI-gestützte Workflow-Vorschläge, Engpass-Erkennung und automatische Trigger-Optimierung.
+
+| # | Baustein | Status | Datei |
+|---|----------|--------|-------|
+| 1 | AiWorkflowService: Workflow-Vorschläge basierend auf Nutzungsmuster | ⬜ | `src/services/AiWorkflowService.php` |
+| 2 | AiWorkflowService: Engpass-Erkennung in bestehenden Workflows | ⬜ | `src/services/AiWorkflowService.php` |
+| 3 | AiWorkflowService: Automatische Trigger-Optimierung | ⬜ | `src/services/AiWorkflowService.php` |
+| 4 | API: 2 Endpunkte (suggestWorkflow, analyzeBottleneck) | ⬜ | `src/api/ai/workflow*.php` |
+| 5 | UI: Vorschlags-Panel im Workflow-Editor | ⬜ | `src/workflows/workflows_index.twig` |
+| 6 | Tests | 🧪 | Unit-Tests für AiWorkflowService |
+
+---
+
+## I17 – KI-Packoptimierung
+
+KI-gestützte Packsequenz-Optimierung, Gewichtsverteilung, Container-Zuordnung und Fehlteile-Vorhersage.
+
+| # | Baustein | Status | Datei |
+|---|----------|--------|-------|
+| 1 | AiPackingService: Optimale Packsequenz + Gewichtsverteilung | ⬜ | `src/services/AiPackingService.php` |
+| 2 | AiPackingService: Container/Fahrzeug-Zuordnung (Tetris-Optimierung) | ⬜ | `src/services/AiPackingService.php` |
+| 3 | AiPackingService: Fehlende-Teile-Vorhersage basierend auf historischen Packlisten | ⬜ | `src/services/AiPackingService.php` |
+| 4 | API: 2 Endpunkte (optimizePacking, suggestContainer) | ⬜ | `src/api/ai/packing*.php` |
+| 5 | UI: Optimierungs-Button in Packliste | ⬜ | `src/packing/packing_index.twig` |
+| 6 | Tests | 🧪 | Unit-Tests für AiPackingService |
+
+---
+
 ## L3 – Online-Buchungsportal
 
 Öffentlicher Equipment-Katalog, Verfügbarkeitsprüfung, Warenkorb, Kunden-Registrierung.
@@ -352,11 +466,11 @@ CO₂-Tracking pro Transport, Energieverbrauch pro Projekt, Kunden-Reports, EU-C
 |--------|--------|
 | ✅ Implementiert | 162 |
 | 🔧 Braucht Integration/Review | 18 |
-| ⬜ Noch nicht implementiert | 4 |
-| 🧪 Braucht Tests | 15 |
+| ⬜ Noch nicht implementiert | 48 |
+| 🧪 Braucht Tests | 22 |
 
-**Migrationen:** 16 neue Phinx-Migrationen (63 neue DB-Tabellen)
-**Services:** 15 neue PHP-Services + 6 AI-Adapter
-**API-Endpunkte:** 136 neue Endpunkte
+**Migrationen:** 17 neue Phinx-Migrationen (65 neue DB-Tabellen)
+**Services:** 22 neue PHP-Services + 6 AI-Adapter (davon 7 neue KI-Services: I11-I17)
+**API-Endpunkte:** 156 neue Endpunkte
 **Twig-Templates:** 23 neue Templates
 **CRON-Scripts:** 1 (backup_cron.php)
