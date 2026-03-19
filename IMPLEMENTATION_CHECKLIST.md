@@ -460,17 +460,47 @@ CO₂-Tracking pro Transport, Energieverbrauch pro Projekt, Kunden-Reports, EU-C
 
 ---
 
+## E1 – Elektro-Check / DGUV V3 Prüfdokumentation
+
+DGUV V3 / VDE 0701-0702 / DIN EN 50699 konforme Prüfdokumentation für ortsveränderliche elektrische Betriebsmittel. RFID-Scan startet Prüf-Workflow, Messwerte werden dokumentiert, Prüfprotokoll-PDF wird generiert. Nicht bestandene Geräte werden automatisch gesperrt.
+
+| # | Baustein | Status | Datei |
+|---|----------|--------|-------|
+| 1 | DB-Migration: 3 Tabellen (echeck_protocols, echeck_tester_qualifications, echeck_measurement_devices) | ⬜ | `db/migrations/YYYYMMDD_echeck_dguv_v3.php` |
+| 2 | ECheckService: Prüfung erfassen per RFID-Scan (Asset scannen → Prüfformular öffnen) | ⬜ | `src/services/ECheckService.php` |
+| 3 | ECheckService: Messwerte dokumentieren (Schutzleiterwiderstand ≤0,3Ω, Isolationswiderstand ≥1MΩ, Ableitstrom, Berührungsstrom, Differenzstrom) | ⬜ | `src/services/ECheckService.php` |
+| 4 | ECheckService: Prüfergebnis (bestanden/nicht bestanden/bedingt bestanden) mit automatischer Grenzwert-Validierung nach VDE 0701-0702 | ⬜ | `src/services/ECheckService.php` |
+| 5 | ECheckService: Prüfplakette-Daten (nächster Prüftermin, Prüfer-ID, Prüfgeräte-Nr.) | ⬜ | `src/services/ECheckService.php` |
+| 6 | ECheckService: Automatische Prüfintervall-Berechnung (6/12/24 Monate nach Schutzklasse + Beanspruchung) | ⬜ | `src/services/ECheckService.php` |
+| 7 | ECheckService: Gerätesperre bei Nicht-Bestehen (Asset-Status → "gesperrt", nicht verleihbar bis Nachprüfung) | ⬜ | `src/services/ECheckService.php` |
+| 8 | ECheckService: Prüfprotokoll-PDF (VDE 0701-0702 / DIN EN 50699 konform, Dompdf) | ⬜ | `src/services/ECheckService.php` |
+| 9 | ECheckService: Prüfer-Qualifikations-Verwaltung (EFK/EuP, Gültigkeit, Nachweis-Upload) | ⬜ | `src/services/ECheckService.php` |
+| 10 | ECheckService: Prüfgeräte-Verwaltung (Seriennr., Kalibrierungsstatus, nächste Kalibrierung) | ⬜ | `src/services/ECheckService.php` |
+| 11 | ECheckService: Prüfhistorie pro Asset (alle Prüfungen chronologisch mit Messwerten) | ⬜ | `src/services/ECheckService.php` |
+| 12 | ECheckService: Dashboard (überfällige Prüfungen, ablaufende Qualifikationen, Prüfstatistik) | ⬜ | `src/services/ECheckService.php` |
+| 13 | API: 8+ Endpunkte (startECheck, recordResults, getProtocol, generatePdf, testerQualifications, measurementDevices, dashboard, overdue) | ⬜ | `src/api/echeck/` |
+| 14 | UI: E-Check Dashboard mit Ampelsystem (grün=bestanden, gelb=bald fällig, rot=überfällig/gesperrt) | ⬜ | `src/echeck/echeck_dashboard.twig` |
+| 15 | UI: Prüfformular mit Messwert-Eingabe + Grenzwert-Anzeige + Sofort-Validierung | ⬜ | `src/echeck/echeck_form.twig` |
+| 16 | Android-App: RFID scannen → E-Check starten (neuer Screen im Chafon-App) | ⬜ | `android-app/` |
+| 17 | Integration: Wartungssystem (MaintenanceService als Basis für Prüf-Scheduling) | ⬜ | `src/services/MaintenanceService.php` |
+| 18 | Integration: Workflow-Engine (automatische Erinnerung bei fälligen Prüfungen) | ⬜ | `src/services/WorkflowEngineService.php` |
+| 19 | Integration: RFID-System (Scan-Aktion "echeck" im UniversalScanHandler) | ⬜ | `src/services/RfidService.php` |
+| 20 | KI-Erweiterung (I18): Prüfergebnisse analysieren, Ausfallrisiko vorhersagen, Prüfintervall-Empfehlung | ⬜ | `src/services/AiECheckService.php` |
+| 21 | Tests | 🧪 | Unit-Tests für ECheckService |
+
+---
+
 ## Zusammenfassung
 
 | Status | Anzahl |
 |--------|--------|
 | ✅ Implementiert | 162 |
 | 🔧 Braucht Integration/Review | 18 |
-| ⬜ Noch nicht implementiert | 48 |
-| 🧪 Braucht Tests | 22 |
+| ⬜ Noch nicht implementiert | 68 |
+| 🧪 Braucht Tests | 23 |
 
-**Migrationen:** 17 neue Phinx-Migrationen (65 neue DB-Tabellen)
-**Services:** 22 neue PHP-Services + 6 AI-Adapter (davon 7 neue KI-Services: I11-I17)
-**API-Endpunkte:** 156 neue Endpunkte
-**Twig-Templates:** 23 neue Templates
+**Migrationen:** 18 neue Phinx-Migrationen (68 neue DB-Tabellen)
+**Services:** 24 neue PHP-Services + 6 AI-Adapter (davon 7 KI-Services I11-I17, 1 ECheckService, 1 AiECheckService)
+**API-Endpunkte:** 164+ neue Endpunkte
+**Twig-Templates:** 25 neue Templates
 **CRON-Scripts:** 1 (backup_cron.php)
