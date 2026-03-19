@@ -39,12 +39,12 @@ class AddLocations extends AbstractMigration
         if (!$this->hasTable('location_log')) {
         $logTable = $this->table('location_log', ['signed' => false]);
         $logTable->addColumn('entity_type', 'enum', ['values' => ['asset', 'stock_instance'], 'null' => false])
-                 ->addColumn('entity_id', 'integer', ['unsigned' => true, 'null' => false])
-                 ->addColumn('location_id', 'integer', ['unsigned' => true, 'null' => true])
+                 ->addColumn('entity_id', 'integer', ['signed' => false, 'null' => false])
+                 ->addColumn('location_id', 'integer', ['signed' => false, 'null' => true])
                  ->addColumn('location_custom', 'string', ['limit' => 255, 'null' => true])
-                 ->addColumn('previous_location_id', 'integer', ['unsigned' => true, 'null' => true])
+                 ->addColumn('previous_location_id', 'integer', ['signed' => false, 'null' => true])
                  ->addColumn('previous_location_custom', 'string', ['limit' => 255, 'null' => true])
-                 ->addColumn('moved_by', 'integer', ['unsigned' => true, 'null' => false])
+                 ->addColumn('moved_by', 'integer', ['signed' => false, 'null' => false])
                  ->addColumn('notes', 'text', ['null' => true])
                  ->addColumn('created_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP'])
                  ->addIndex(['entity_type', 'entity_id'], ['name' => 'idx_entity'])
@@ -57,7 +57,7 @@ class AddLocations extends AbstractMigration
         // Add columns to assets table (skip if already exist)
         $assetsTable = $this->table('assets');
         if (!$assetsTable->hasColumn('current_location_id')) {
-            $assetsTable->addColumn('current_location_id', 'integer', ['unsigned' => true, 'null' => true])
+            $assetsTable->addColumn('current_location_id', 'integer', ['signed' => false, 'null' => true])
                         ->addColumn('current_location_custom', 'string', ['limit' => 255, 'null' => true])
                         ->addColumn('location_updated_at', 'timestamp', ['null' => true])
                         ->update();
@@ -67,7 +67,7 @@ class AddLocations extends AbstractMigration
         if ($this->hasTable('stock_instances')) {
             $stockInstancesTable = $this->table('stock_instances');
             if (!$stockInstancesTable->hasColumn('current_location_id')) {
-                $stockInstancesTable->addColumn('current_location_id', 'integer', ['unsigned' => true, 'null' => true])
+                $stockInstancesTable->addColumn('current_location_id', 'integer', ['signed' => false, 'null' => true])
                                     ->addColumn('current_location_custom', 'string', ['limit' => 255, 'null' => true])
                                     ->addColumn('location_updated_at', 'timestamp', ['null' => true])
                                     ->update();

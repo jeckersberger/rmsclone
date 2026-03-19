@@ -10,7 +10,7 @@ class FlexibleLagerorte extends AbstractMigration
         if (!$this->table('locations')->hasColumn('emoji_icon')) {
             $this->table('locations')
                 ->addColumn('emoji_icon', 'string', ['limit' => 10, 'null' => true])
-                ->addColumn('instances_id', 'integer', ['unsigned' => true, 'null' => true])
+                ->addColumn('instances_id', 'integer', ['signed' => false, 'null' => true])
                 ->update();
         }
 
@@ -18,12 +18,12 @@ class FlexibleLagerorte extends AbstractMigration
         if (!$this->hasTable('bulk_move_log')) {
             $bulkMoveTable = $this->table('bulk_move_log', ['signed' => false]);
             $bulkMoveTable->addColumn('entity_type', 'enum', ['values' => ['asset', 'stock_instance'], 'null' => false])
-                         ->addColumn('entity_id', 'integer', ['unsigned' => true, 'null' => false])
-                         ->addColumn('source_location_id', 'integer', ['unsigned' => true, 'null' => true])
+                         ->addColumn('entity_id', 'integer', ['signed' => false, 'null' => false])
+                         ->addColumn('source_location_id', 'integer', ['signed' => false, 'null' => true])
                          ->addColumn('source_location_custom', 'string', ['limit' => 255, 'null' => true])
-                         ->addColumn('target_location_id', 'integer', ['unsigned' => true, 'null' => true])
+                         ->addColumn('target_location_id', 'integer', ['signed' => false, 'null' => true])
                          ->addColumn('target_location_custom', 'string', ['limit' => 255, 'null' => true])
-                         ->addColumn('moved_by', 'integer', ['unsigned' => true, 'null' => false])
+                         ->addColumn('moved_by', 'integer', ['signed' => false, 'null' => false])
                          ->addColumn('notes', 'text', ['null' => true])
                          ->addColumn('batch_id', 'string', ['limit' => 36, 'null' => true])
                          ->addColumn('created_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP'])
