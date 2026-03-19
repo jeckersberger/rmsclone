@@ -35,7 +35,6 @@ class SepaMandates extends AbstractMigration
                 ->addIndex(['clients_id'], ['name' => 'idx_sepa_clients_id'])
                 ->addIndex(['instances_id'], ['name' => 'idx_sepa_instances_id'])
                 ->addIndex(['status'], ['name' => 'idx_sepa_status'])
-                ->addForeignKey('clients_id', 'clients', 'clients_id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
                 ->create();
         }
 

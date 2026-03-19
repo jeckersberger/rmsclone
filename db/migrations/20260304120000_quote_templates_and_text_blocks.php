@@ -28,8 +28,6 @@ class QuoteTemplatesAndTextBlocks extends AbstractMigration
                 ->addColumn('deleted', 'boolean', ['default' => false])
                 ->addIndex(['instances_id', 'category'])
                 ->addIndex(['instances_id', 'doc_types'])
-                ->addForeignKey('instances_id', 'instances', 'instances_id', ['delete' => 'CASCADE'])
-                ->addForeignKey('created_by', 'users', 'users_userid', ['delete' => 'SET_NULL'])
                 ->create();
         }
 

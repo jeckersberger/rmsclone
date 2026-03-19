@@ -37,9 +37,6 @@ class BankImportMatching extends AbstractMigration
                 ->addIndex(['match_status'])
                 ->addIndex(['import_batch'])
                 ->addIndex(['transaction_date'])
-                    'delete' => 'SET_NULL',
-                    'update' => 'CASCADE'
-                ])
                 ->create();
         }
 

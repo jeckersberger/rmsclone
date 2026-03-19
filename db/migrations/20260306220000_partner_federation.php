@@ -66,10 +66,6 @@ class PartnerFederation extends AbstractMigration
             ])
             ->addIndex(['instances_id'])
             ->addIndex(['partner_servers_apiKey'], ['unique' => true])
-            ->addForeignKey('instances_id', 'instances', 'instances_id', [
-                'update' => 'CASCADE',
-                'delete' => 'CASCADE',
-            ])
             ->create();
 
         // Log-Tabelle fuer Federation-Kommunikation

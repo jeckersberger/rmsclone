@@ -95,18 +95,6 @@ final class MaintenanceSystem extends AbstractMigration
             ->addIndex(['asset_id'], ['name' => 'idx_schedule_asset_id'])
             ->addIndex(['instances_id'], ['name' => 'idx_schedule_instances_id'])
             ->addIndex(['next_due_at'], ['name' => 'idx_schedule_next_due_at'])
-                'constraint' => 'fk_schedule_asset_type',
-                'update' => 'CASCADE',
-                'delete' => 'SET NULL',
-            ])
-                'constraint' => 'fk_schedule_asset',
-                'update' => 'CASCADE',
-                'delete' => 'CASCADE',
-            ])
-                'constraint' => 'fk_schedule_instances',
-                'update' => 'CASCADE',
-                'delete' => 'CASCADE',
-            ])
             ->create();
 
         // maintenance_jobs - Erweiterte Wartungsaufträge (neue Tabelle, komplementär zu maintenanceJobs)
@@ -205,26 +193,6 @@ final class MaintenanceSystem extends AbstractMigration
             ->addIndex(['status'], ['name' => 'idx_job_status'])
             ->addIndex(['instances_id'], ['name' => 'idx_job_instances_id'])
             ->addIndex(['completed_at'], ['name' => 'idx_job_completed_at'])
-                'constraint' => 'fk_job_schedule',
-                'update' => 'CASCADE',
-                'delete' => 'SET NULL',
-            ])
-                'constraint' => 'fk_job_asset',
-                'update' => 'CASCADE',
-                'delete' => 'CASCADE',
-            ])
-                'constraint' => 'fk_job_assigned_to_user',
-                'update' => 'CASCADE',
-                'delete' => 'SET NULL',
-            ])
-                'constraint' => 'fk_job_completed_by_user',
-                'update' => 'CASCADE',
-                'delete' => 'SET NULL',
-            ])
-                'constraint' => 'fk_job_instances',
-                'update' => 'CASCADE',
-                'delete' => 'CASCADE',
-            ])
             ->create();
 
         // maintenance_job_photos - Fotos zu Wartungsaufträgen
@@ -269,14 +237,6 @@ final class MaintenanceSystem extends AbstractMigration
             ])
             ->addIndex(['job_id'], ['name' => 'idx_photo_job_id'])
             ->addIndex(['uploaded_by'], ['name' => 'idx_photo_uploaded_by'])
-                'constraint' => 'fk_photo_job',
-                'update' => 'CASCADE',
-                'delete' => 'CASCADE',
-            ])
-                'constraint' => 'fk_photo_uploaded_by',
-                'update' => 'CASCADE',
-                'delete' => 'RESTRICT',
-            ])
             ->create();
 
         // maintenance_checklists - Checklisten-Templates
@@ -320,14 +280,6 @@ final class MaintenanceSystem extends AbstractMigration
             ])
             ->addIndex(['asset_type_id'], ['name' => 'idx_checklist_asset_type_id'])
             ->addIndex(['instances_id'], ['name' => 'idx_checklist_instances_id'])
-                'constraint' => 'fk_checklist_asset_type',
-                'update' => 'CASCADE',
-                'delete' => 'SET NULL',
-            ])
-                'constraint' => 'fk_checklist_instances',
-                'update' => 'CASCADE',
-                'delete' => 'CASCADE',
-            ])
             ->create();
 
         // maintenance_checklist_results - Ausgefüllte Checklisten
@@ -366,18 +318,6 @@ final class MaintenanceSystem extends AbstractMigration
             ])
             ->addIndex(['job_id'], ['name' => 'idx_checklist_result_job_id'])
             ->addIndex(['checklist_id'], ['name' => 'idx_checklist_result_checklist_id'])
-                'constraint' => 'fk_checklist_result_job',
-                'update' => 'CASCADE',
-                'delete' => 'CASCADE',
-            ])
-                'constraint' => 'fk_checklist_result_checklist',
-                'update' => 'CASCADE',
-                'delete' => 'CASCADE',
-            ])
-                'constraint' => 'fk_checklist_result_completed_by',
-                'update' => 'CASCADE',
-                'delete' => 'SET NULL',
-            ])
             ->create();
     }
 }

@@ -48,9 +48,6 @@ class PartialPayments extends AbstractMigration
                     'comment' => 'Erstellungszeitpunkt'
                 ])
                 ->addIndex('document_exports_id')
-                    'delete' => 'CASCADE',
-                    'update' => 'CASCADE'
-                ])
                 ->create();
         }
 

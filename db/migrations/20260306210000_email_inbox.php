@@ -90,10 +90,6 @@ final class EmailInbox extends AbstractMigration
             ->addIndex(['emailReceived_isRead'])
             ->addIndex(['clients_id'])
             ->addIndex(['projects_id'])
-            ->addForeignKey('instances_id', 'instances', 'instances_id', [
-                'delete' => 'CASCADE',
-                'update' => 'NO_ACTION',
-            ])
             ->create();
 
         // Anhaenge der eingehenden E-Mails
@@ -129,14 +125,6 @@ final class EmailInbox extends AbstractMigration
             ])
             ->addIndex(['emailReceived_id'])
             ->addIndex(['instances_id'])
-            ->addForeignKey('emailReceived_id', 'emailReceived', 'emailReceived_id', [
-                'delete' => 'CASCADE',
-                'update' => 'NO_ACTION',
-            ])
-            ->addForeignKey('instances_id', 'instances', 'instances_id', [
-                'delete' => 'CASCADE',
-                'update' => 'NO_ACTION',
-            ])
             ->create();
     }
 }
