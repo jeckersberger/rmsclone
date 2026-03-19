@@ -460,6 +460,38 @@ CO₂-Tracking pro Transport, Energieverbrauch pro Projekt, Kunden-Reports, EU-C
 
 ---
 
+## A1 – Interne Artikelnummern & QR-Labels
+
+Automatisch generierte, softwareinterne Artikelnummern pro Asset. Freies Nummernformat mit konfigurierbaren Platzhaltern (`{PREFIX}-{KATEGORIE}-{NR}`). Die Artikelnummer ist der zentrale Identifier für die Gossen Metrawatt IZYTRON.IQ Synchronisation: gleiche Nummer in RMS und Messgerät → Prüfprotokolle werden nach E-Check automatisch per Artikelnummer zugeordnet. QR-Labels mit Artikelnummer für Geräte-Aufkleber druckbar.
+
+| # | Baustein | Status | Datei |
+|---|----------|--------|-------|
+| 1 | DB-Migration: `assets_articleNumber` Spalte (VARCHAR 20, unique pro Instanz), Instanz-Einstellungen (Prefix, Padding, Kategoriekürzel, Auto-Generate), Sequence-Eintrag in `document_sequences` | ⬜ | `db/migrations/20260320100000_article_numbers.php` |
+| 2 | ArticleNumberService: Nächste Nummer generieren (atomisch via SequenceService, Row-Level-Locking) | ⬜ | `src/services/ArticleNumberService.php` |
+| 3 | ArticleNumberService: Konfigurierbares Format-System ({PREFIX}-{KATEGORIE}-{NR}, frei definierbar pro Instanz) | ⬜ | `src/services/ArticleNumberService.php` |
+| 4 | ArticleNumberService: Validierung (max 20 Zeichen, alphanumerisch+Bindestrich, Uniqueness pro Instanz, IZYTRON.IQ-kompatibel) | ⬜ | `src/services/ArticleNumberService.php` |
+| 5 | ArticleNumberService: Manuelles Überschreiben (Admin kann Artikelnummer ändern, Uniqueness-Check) | ⬜ | `src/services/ArticleNumberService.php` |
+| 6 | ArticleNumberService: Backfill (alle bestehenden Assets ohne Artikelnummer bekommen automatisch eine zugewiesen) | ⬜ | `src/services/ArticleNumberService.php` |
+| 7 | ArticleNumberService: Lookup (Asset finden per Artikelnummer, Bulk-Lookup für Import-Matching) | ⬜ | `src/services/ArticleNumberService.php` |
+| 8 | Integration: Asset-Erstellung (auto-generate bei `newAssetFromType.php`, Allowlist erweitern) | ⬜ | `src/api/assets/newAssetFromType.php` |
+| 9 | Integration: Asset-Bearbeitung (Allowlist in `editAsset.php` erweitern, Validierung) | ⬜ | `src/api/assets/editAsset.php` |
+| 10 | Integration: BarcodeScannerService (Artikelnummer als Lookup-Pfad beim Scannen) | ⬜ | `src/services/BarcodeScannerService.php` |
+| 11 | QR-Label: Artikelnummer als Plain-Text im QR-Code (nicht RMS://-Format, für Metrawatt-Kompatibilität) | ⬜ | `src/services/QrCodeGenerator.php` |
+| 12 | QR-Label: ZPL-Generation mit Artikelnummer + Code128-Barcode für Zebra-Drucker | ⬜ | `src/api/rfid/label.php` |
+| 13 | QR-Label: Druckbares Label-Template (Artikelnummer prominent + Asset-Typ + QR-Code) | ⬜ | `src/api/rfid/label.php` |
+| 14 | Metrawatt-Export: CSV-Export aller Assets mit Artikelnummer im IZYTRON.IQ-Import-Format | ⬜ | `src/api/assets/metrawatt_export.php` |
+| 15 | Metrawatt-Import: IZYTRON.IQ Prüfprotokolle importieren, Matching per Artikelnummer → Asset | ⬜ | `src/services/MetrawattImportService.php` |
+| 16 | API: Einstellungen lesen/schreiben (Prefix, Padding, Kategorie-Kürzel, Auto-Generate) | ⬜ | `src/api/assets/articleNumber/settings.php` |
+| 17 | API: Backfill auslösen + Lookup-Endpunkt | ⬜ | `src/api/assets/articleNumber/backfill.php` |
+| 18 | UI: Asset-Detail – Artikelnummer anzeigen/bearbeiten | ⬜ | `src/asset.twig` |
+| 19 | UI: Asset-Liste – Artikelnummer als Spalte | ⬜ | `src/assets.twig` |
+| 20 | UI: Instanz-Einstellungen – Artikelnummer-Format konfigurieren + Backfill-Button | ⬜ | `src/instances/configuration/` |
+| 21 | UI: Metrawatt-Export/Import-Bereich im Maintenance-Dashboard | ⬜ | `src/maintenance/maintenance_dashboard.twig` |
+| 22 | Integration: CSV/XLSX-Export um Artikelnummer erweitern | ⬜ | `src/api/assets/export.php` |
+| 23 | Tests | 🧪 | Unit-Tests für ArticleNumberService |
+
+---
+
 ## E1 – Elektro-Check / DGUV V3 Prüfdokumentation
 
 DGUV V3 / VDE 0701-0702 / DIN EN 50699 konforme Prüfdokumentation für ortsveränderliche elektrische Betriebsmittel. RFID-Scan startet Prüf-Workflow, Messwerte werden dokumentiert, Prüfprotokoll-PDF wird generiert. Nicht bestandene Geräte werden automatisch gesperrt. Messgeräte-Integration: Gossen Metrawatt SECUTEST (IZYTRON.IQ Format) als primäres Import-Format, generischer CSV-Import für andere Hersteller (Benning, Fluke, Beha-Amprobe), optionale Bluetooth-Kopplung mit Android-App.
@@ -501,11 +533,11 @@ DGUV V3 / VDE 0701-0702 / DIN EN 50699 konforme Prüfdokumentation für ortsver�
 |--------|--------|
 | ✅ Implementiert | 162 |
 | 🔧 Braucht Integration/Review | 18 |
-| ⬜ Noch nicht implementiert | 73 |
-| 🧪 Braucht Tests | 23 |
+| ⬜ Noch nicht implementiert | 95 |
+| 🧪 Braucht Tests | 24 |
 
-**Migrationen:** 18 neue Phinx-Migrationen (68 neue DB-Tabellen)
-**Services:** 24 neue PHP-Services + 6 AI-Adapter (davon 7 KI-Services I11-I17, 1 ECheckService, 1 AiECheckService)
-**API-Endpunkte:** 164+ neue Endpunkte
+**Migrationen:** 19 neue Phinx-Migrationen (68+ neue DB-Tabellen)
+**Services:** 26 neue PHP-Services + 6 AI-Adapter (davon 7 KI-Services I11-I17, 1 ECheckService, 1 AiECheckService, 1 ArticleNumberService, 1 MetrawattImportService)
+**API-Endpunkte:** 172+ neue Endpunkte
 **Twig-Templates:** 25 neue Templates
 **CRON-Scripts:** 1 (backup_cron.php)
