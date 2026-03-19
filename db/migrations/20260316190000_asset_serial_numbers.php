@@ -9,7 +9,7 @@ class AssetSerialNumbers extends AbstractMigration
         if ($this->hasTable('assets')) {
             $table = $this->table('assets');
 
-            if (!$this->hasColumn('assets', 'assets_serialInternal')) {
+            if (!$table->hasColumn('assets_serialInternal')) {
                 $table->addColumn('assets_serialInternal', 'string', [
                     'limit' => 50,
                     'null' => true,
@@ -17,7 +17,7 @@ class AssetSerialNumbers extends AbstractMigration
                 ]);
             }
 
-            if (!$this->hasColumn('assets', 'assets_serialManufacturer')) {
+            if (!$table->hasColumn('assets_serialManufacturer')) {
                 $table->addColumn('assets_serialManufacturer', 'string', [
                     'limit' => 100,
                     'null' => true,
@@ -25,14 +25,14 @@ class AssetSerialNumbers extends AbstractMigration
                 ]);
             }
 
-            if (!$this->hasColumn('assets', 'assets_purchaseDate')) {
+            if (!$table->hasColumn('assets_purchaseDate')) {
                 $table->addColumn('assets_purchaseDate', 'date', [
                     'null' => true,
                     'comment' => 'Purchase date (for warranty tracking)'
                 ]);
             }
 
-            if (!$this->hasColumn('assets', 'assets_purchasePrice')) {
+            if (!$table->hasColumn('assets_purchasePrice')) {
                 $table->addColumn('assets_purchasePrice', 'decimal', [
                     'precision' => 12,
                     'scale' => 2,
@@ -41,14 +41,14 @@ class AssetSerialNumbers extends AbstractMigration
                 ]);
             }
 
-            if (!$this->hasColumn('assets', 'assets_warrantyUntil')) {
+            if (!$table->hasColumn('assets_warrantyUntil')) {
                 $table->addColumn('assets_warrantyUntil', 'date', [
                     'null' => true,
                     'comment' => 'Warranty expiry date'
                 ]);
             }
 
-            if (!$this->hasColumn('assets', 'assets_insuranceRef')) {
+            if (!$table->hasColumn('assets_insuranceRef')) {
                 $table->addColumn('assets_insuranceRef', 'string', [
                     'limit' => 100,
                     'null' => true,
@@ -69,27 +69,27 @@ class AssetSerialNumbers extends AbstractMigration
         if ($this->hasTable('assets')) {
             $table = $this->table('assets');
 
-            if ($this->hasColumn('assets', 'assets_serialInternal')) {
+            if ($table->hasColumn('assets_serialInternal')) {
                 $table->removeColumn('assets_serialInternal');
             }
 
-            if ($this->hasColumn('assets', 'assets_serialManufacturer')) {
+            if ($table->hasColumn('assets_serialManufacturer')) {
                 $table->removeColumn('assets_serialManufacturer');
             }
 
-            if ($this->hasColumn('assets', 'assets_purchaseDate')) {
+            if ($table->hasColumn('assets_purchaseDate')) {
                 $table->removeColumn('assets_purchaseDate');
             }
 
-            if ($this->hasColumn('assets', 'assets_purchasePrice')) {
+            if ($table->hasColumn('assets_purchasePrice')) {
                 $table->removeColumn('assets_purchasePrice');
             }
 
-            if ($this->hasColumn('assets', 'assets_warrantyUntil')) {
+            if ($table->hasColumn('assets_warrantyUntil')) {
                 $table->removeColumn('assets_warrantyUntil');
             }
 
-            if ($this->hasColumn('assets', 'assets_insuranceRef')) {
+            if ($table->hasColumn('assets_insuranceRef')) {
                 $table->removeColumn('assets_insuranceRef');
             }
 
