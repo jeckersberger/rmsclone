@@ -462,7 +462,7 @@ CO₂-Tracking pro Transport, Energieverbrauch pro Projekt, Kunden-Reports, EU-C
 
 ## E1 – Elektro-Check / DGUV V3 Prüfdokumentation
 
-DGUV V3 / VDE 0701-0702 / DIN EN 50699 konforme Prüfdokumentation für ortsveränderliche elektrische Betriebsmittel. RFID-Scan startet Prüf-Workflow, Messwerte werden dokumentiert, Prüfprotokoll-PDF wird generiert. Nicht bestandene Geräte werden automatisch gesperrt.
+DGUV V3 / VDE 0701-0702 / DIN EN 50699 konforme Prüfdokumentation für ortsveränderliche elektrische Betriebsmittel. RFID-Scan startet Prüf-Workflow, Messwerte werden dokumentiert, Prüfprotokoll-PDF wird generiert. Nicht bestandene Geräte werden automatisch gesperrt. Messgeräte-Integration: Gossen Metrawatt SECUTEST (IZYTRON.IQ Format) als primäres Import-Format, generischer CSV-Import für andere Hersteller (Benning, Fluke, Beha-Amprobe), optionale Bluetooth-Kopplung mit Android-App.
 
 | # | Baustein | Status | Datei |
 |---|----------|--------|-------|
@@ -482,11 +482,16 @@ DGUV V3 / VDE 0701-0702 / DIN EN 50699 konforme Prüfdokumentation für ortsver�
 | 14 | UI: E-Check Dashboard mit Ampelsystem (grün=bestanden, gelb=bald fällig, rot=überfällig/gesperrt) | ⬜ | `src/echeck/echeck_dashboard.twig` |
 | 15 | UI: Prüfformular mit Messwert-Eingabe + Grenzwert-Anzeige + Sofort-Validierung | ⬜ | `src/echeck/echeck_form.twig` |
 | 16 | Android-App: RFID scannen → E-Check starten (neuer Screen im Chafon-App) | ⬜ | `android-app/` |
-| 17 | Integration: Wartungssystem (MaintenanceService als Basis für Prüf-Scheduling) | ⬜ | `src/services/MaintenanceService.php` |
-| 18 | Integration: Workflow-Engine (automatische Erinnerung bei fälligen Prüfungen) | ⬜ | `src/services/WorkflowEngineService.php` |
-| 19 | Integration: RFID-System (Scan-Aktion "echeck" im UniversalScanHandler) | ⬜ | `src/services/RfidService.php` |
-| 20 | KI-Erweiterung (I18): Prüfergebnisse analysieren, Ausfallrisiko vorhersagen, Prüfintervall-Empfehlung | ⬜ | `src/services/AiECheckService.php` |
-| 21 | Tests | 🧪 | Unit-Tests für ECheckService |
+| 17 | Android-App: Manuelle Messwert-Eingabe im E-Check-Formular (Fallback ohne Geräte-Kopplung) | ⬜ | `android-app/` |
+| 18 | Messgeräte-Integration: Gossen Metrawatt IZYTRON.IQ Format als primäres Import-Format (SECUTEST BASE10/PRO/ST) | ⬜ | `src/services/ECheckImportService.php` |
+| 19 | Messgeräte-Integration: CSV/XML-Import in Web-UI (Datei hochladen → automatische Zuordnung per Seriennummer/Asset-ID) | ⬜ | `src/api/echeck/import.php` |
+| 20 | Messgeräte-Integration: Generischer CSV-Import für andere Hersteller (Benning, Fluke, Beha-Amprobe) | ⬜ | `src/services/ECheckImportService.php` |
+| 21 | Messgeräte-Integration: Bluetooth-Kopplung Android-App ↔ Messgerät (optional, für SECUTEST PRO/ST mit Bluetooth) | ⬜ | `android-app/` |
+| 22 | Integration: Wartungssystem (MaintenanceService als Basis für Prüf-Scheduling) | ⬜ | `src/services/MaintenanceService.php` |
+| 23 | Integration: Workflow-Engine (automatische Erinnerung bei fälligen Prüfungen) | ⬜ | `src/services/WorkflowEngineService.php` |
+| 24 | Integration: RFID-System (Scan-Aktion "echeck" im UniversalScanHandler) | ⬜ | `src/services/RfidService.php` |
+| 25 | KI-Erweiterung (I18): Prüfergebnisse analysieren, Ausfallrisiko vorhersagen, Prüfintervall-Empfehlung | ⬜ | `src/services/AiECheckService.php` |
+| 26 | Tests | 🧪 | Unit-Tests für ECheckService |
 
 ---
 
@@ -496,7 +501,7 @@ DGUV V3 / VDE 0701-0702 / DIN EN 50699 konforme Prüfdokumentation für ortsver�
 |--------|--------|
 | ✅ Implementiert | 162 |
 | 🔧 Braucht Integration/Review | 18 |
-| ⬜ Noch nicht implementiert | 68 |
+| ⬜ Noch nicht implementiert | 73 |
 | 🧪 Braucht Tests | 23 |
 
 **Migrationen:** 18 neue Phinx-Migrationen (68 neue DB-Tabellen)
