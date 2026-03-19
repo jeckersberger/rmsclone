@@ -70,7 +70,6 @@ class PricingEngine extends AbstractMigration
                 ->addColumn('asset_type_id', 'integer', ['unsigned' => true, 'null' => false])
                 ->addColumn('quantity', 'integer', ['unsigned' => true, 'null' => false, 'default' => 1])
                 ->addColumn('created_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP'])
-                ->addForeignKey('bundle_id', 'pricing_bundles', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
                 ->addIndex(['bundle_id'], ['name' => 'idx_bundle_items_bundle'])
                 ->create();
         }
@@ -95,7 +94,6 @@ class PricingEngine extends AbstractMigration
                 ->addColumn('asset_type_id', 'integer', ['unsigned' => true, 'null' => false])
                 ->addColumn('custom_price_per_day', 'decimal', ['precision' => 10, 'scale' => 2, 'null' => false])
                 ->addColumn('created_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP'])
-                ->addForeignKey('list_id', 'pricing_customer_lists', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
                 ->addIndex(['list_id', 'asset_type_id'], ['name' => 'idx_customer_item_lookup'])
                 ->create();
         }

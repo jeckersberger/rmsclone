@@ -32,7 +32,6 @@ final class BookingPortal extends AbstractMigration
             ->addColumn('terms_html', 'longtext', ['null' => true])
             ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
             ->addColumn('updated_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP', 'update' => 'CURRENT_TIMESTAMP'])
-            ->addForeignKey('instances_id', 'instances', 'instances_id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
             ->create();
 
         // Portal Inquiries
@@ -59,7 +58,6 @@ final class BookingPortal extends AbstractMigration
             ->addIndex(['client_id'])
             ->addIndex(['status'])
             ->addIndex(['project_id'])
-            ->addForeignKey('instances_id', 'instances', 'instances_id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
             ->create();
 
         // Portal Sessions (for guest/unregistered client access)
@@ -74,7 +72,6 @@ final class BookingPortal extends AbstractMigration
             ->addIndex('token', ['unique' => true])
             ->addIndex(['client_id'])
             ->addIndex(['expires_at'])
-            ->addForeignKey('client_id', 'clients', 'clients_id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
             ->create();
     }
 }

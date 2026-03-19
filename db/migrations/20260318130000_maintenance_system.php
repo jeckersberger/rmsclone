@@ -95,17 +95,14 @@ final class MaintenanceSystem extends AbstractMigration
             ->addIndex(['asset_id'], ['name' => 'idx_schedule_asset_id'])
             ->addIndex(['instances_id'], ['name' => 'idx_schedule_instances_id'])
             ->addIndex(['next_due_at'], ['name' => 'idx_schedule_next_due_at'])
-            ->addForeignKey('asset_type_id', 'assetTypes', 'assetTypes_id', [
                 'constraint' => 'fk_schedule_asset_type',
                 'update' => 'CASCADE',
                 'delete' => 'SET NULL',
             ])
-            ->addForeignKey('asset_id', 'assets', 'assets_id', [
                 'constraint' => 'fk_schedule_asset',
                 'update' => 'CASCADE',
                 'delete' => 'CASCADE',
             ])
-            ->addForeignKey('instances_id', 'instances', 'instances_id', [
                 'constraint' => 'fk_schedule_instances',
                 'update' => 'CASCADE',
                 'delete' => 'CASCADE',
@@ -208,27 +205,22 @@ final class MaintenanceSystem extends AbstractMigration
             ->addIndex(['status'], ['name' => 'idx_job_status'])
             ->addIndex(['instances_id'], ['name' => 'idx_job_instances_id'])
             ->addIndex(['completed_at'], ['name' => 'idx_job_completed_at'])
-            ->addForeignKey('schedule_id', 'maintenance_schedules', 'id', [
                 'constraint' => 'fk_job_schedule',
                 'update' => 'CASCADE',
                 'delete' => 'SET NULL',
             ])
-            ->addForeignKey('asset_id', 'assets', 'assets_id', [
                 'constraint' => 'fk_job_asset',
                 'update' => 'CASCADE',
                 'delete' => 'CASCADE',
             ])
-            ->addForeignKey('assigned_to', 'users', 'users_userid', [
                 'constraint' => 'fk_job_assigned_to_user',
                 'update' => 'CASCADE',
                 'delete' => 'SET NULL',
             ])
-            ->addForeignKey('completed_by', 'users', 'users_userid', [
                 'constraint' => 'fk_job_completed_by_user',
                 'update' => 'CASCADE',
                 'delete' => 'SET NULL',
             ])
-            ->addForeignKey('instances_id', 'instances', 'instances_id', [
                 'constraint' => 'fk_job_instances',
                 'update' => 'CASCADE',
                 'delete' => 'CASCADE',
@@ -277,12 +269,10 @@ final class MaintenanceSystem extends AbstractMigration
             ])
             ->addIndex(['job_id'], ['name' => 'idx_photo_job_id'])
             ->addIndex(['uploaded_by'], ['name' => 'idx_photo_uploaded_by'])
-            ->addForeignKey('job_id', 'maintenance_jobs', 'id', [
                 'constraint' => 'fk_photo_job',
                 'update' => 'CASCADE',
                 'delete' => 'CASCADE',
             ])
-            ->addForeignKey('uploaded_by', 'users', 'users_userid', [
                 'constraint' => 'fk_photo_uploaded_by',
                 'update' => 'CASCADE',
                 'delete' => 'RESTRICT',
@@ -330,12 +320,10 @@ final class MaintenanceSystem extends AbstractMigration
             ])
             ->addIndex(['asset_type_id'], ['name' => 'idx_checklist_asset_type_id'])
             ->addIndex(['instances_id'], ['name' => 'idx_checklist_instances_id'])
-            ->addForeignKey('asset_type_id', 'assetTypes', 'assetTypes_id', [
                 'constraint' => 'fk_checklist_asset_type',
                 'update' => 'CASCADE',
                 'delete' => 'SET NULL',
             ])
-            ->addForeignKey('instances_id', 'instances', 'instances_id', [
                 'constraint' => 'fk_checklist_instances',
                 'update' => 'CASCADE',
                 'delete' => 'CASCADE',
@@ -378,17 +366,14 @@ final class MaintenanceSystem extends AbstractMigration
             ])
             ->addIndex(['job_id'], ['name' => 'idx_checklist_result_job_id'])
             ->addIndex(['checklist_id'], ['name' => 'idx_checklist_result_checklist_id'])
-            ->addForeignKey('job_id', 'maintenance_jobs', 'id', [
                 'constraint' => 'fk_checklist_result_job',
                 'update' => 'CASCADE',
                 'delete' => 'CASCADE',
             ])
-            ->addForeignKey('checklist_id', 'maintenance_checklists', 'id', [
                 'constraint' => 'fk_checklist_result_checklist',
                 'update' => 'CASCADE',
                 'delete' => 'CASCADE',
             ])
-            ->addForeignKey('completed_by', 'users', 'users_userid', [
                 'constraint' => 'fk_checklist_result_completed_by',
                 'update' => 'CASCADE',
                 'delete' => 'SET NULL',

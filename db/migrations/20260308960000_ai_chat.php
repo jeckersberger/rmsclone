@@ -35,7 +35,6 @@ class AiChat extends AbstractMigration
                 ->addColumn('tokens_used', 'integer', ['default' => 0, 'signed' => false])
                 ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
                 ->addIndex(['conversation_id'])
-                ->addForeignKey('conversation_id', 'ai_chat_conversations', 'id', ['delete' => 'CASCADE'])
                 ->create();
         }
 

@@ -50,7 +50,6 @@ final class SustainabilityReporting extends AbstractMigration
                 'default' => 'CURRENT_TIMESTAMP',
                 'update' => 'CURRENT_TIMESTAMP'
             ])
-            ->addForeignKey('instances_id', 'instances', 'instances_id', ['delete' => 'CASCADE'])
             ->create();
 
         // Transport emissions logging
@@ -76,7 +75,6 @@ final class SustainabilityReporting extends AbstractMigration
             ])
             ->addColumn('instances_id', 'integer', ['null' => false])
             ->addColumn('created_at', 'datetime', ['null' => false, 'default' => 'CURRENT_TIMESTAMP'])
-            ->addForeignKey('instances_id', 'instances', 'instances_id', ['delete' => 'CASCADE'])
             ->addIndex(['instances_id', 'created_at'])
             ->addIndex(['project_id', 'instances_id'])
             ->create();
@@ -102,7 +100,6 @@ final class SustainabilityReporting extends AbstractMigration
             ])
             ->addColumn('instances_id', 'integer', ['null' => false])
             ->addColumn('created_at', 'datetime', ['null' => false, 'default' => 'CURRENT_TIMESTAMP'])
-            ->addForeignKey('instances_id', 'instances', 'instances_id', ['delete' => 'CASCADE'])
             ->addIndex(['instances_id', 'created_at'])
             ->addIndex(['project_id', 'instances_id'])
             ->create();
@@ -142,7 +139,6 @@ final class SustainabilityReporting extends AbstractMigration
                 'comment' => 'User ID who generated report'
             ])
             ->addColumn('created_at', 'datetime', ['null' => false, 'default' => 'CURRENT_TIMESTAMP'])
-            ->addForeignKey('instances_id', 'instances', 'instances_id', ['delete' => 'CASCADE'])
             ->addIndex(['instances_id', 'report_type', 'created_at'])
             ->addIndex(['instances_id', 'period_start', 'period_end'])
             ->create();

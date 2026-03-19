@@ -107,7 +107,6 @@ final class MultiAiProviders extends AbstractMigration
                 ->addIndex(['instances_id'], ['name' => 'idx_ai_task_routing_instance'])
                 ->addIndex(['task_type'], ['name' => 'idx_ai_task_routing_task'])
                 ->addIndex(['provider_id'], ['name' => 'idx_ai_task_routing_provider'])
-                ->addForeignKey('provider_id', 'ai_providers', 'id', [
                     'delete' => 'CASCADE',
                     'update' => 'CASCADE',
                     'constraint' => 'fk_ai_task_routing_provider',
@@ -160,7 +159,6 @@ final class MultiAiProviders extends AbstractMigration
                 ->addIndex(['task_type'], ['name' => 'idx_ai_usage_log_task'])
                 ->addIndex(['created_at'], ['name' => 'idx_ai_usage_log_created'])
                 ->addIndex(['instances_id', 'created_at'], ['name' => 'idx_ai_usage_log_instance_created'])
-                ->addForeignKey('provider_id', 'ai_providers', 'id', [
                     'delete' => 'SET_NULL',
                     'update' => 'CASCADE',
                     'constraint' => 'fk_ai_usage_log_provider',
@@ -188,7 +186,6 @@ final class MultiAiProviders extends AbstractMigration
                 ->addIndex(['instances_id'], ['name' => 'idx_ai_fallback_chain_instance'])
                 ->addIndex(['task_type'], ['name' => 'idx_ai_fallback_chain_task'])
                 ->addIndex(['fallback_order'], ['name' => 'idx_ai_fallback_chain_order'])
-                ->addForeignKey('provider_id', 'ai_providers', 'id', [
                     'delete' => 'CASCADE',
                     'update' => 'CASCADE',
                     'constraint' => 'fk_ai_fallback_chain_provider',

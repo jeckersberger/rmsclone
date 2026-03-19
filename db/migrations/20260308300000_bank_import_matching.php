@@ -37,7 +37,6 @@ class BankImportMatching extends AbstractMigration
                 ->addIndex(['match_status'])
                 ->addIndex(['import_batch'])
                 ->addIndex(['transaction_date'])
-                ->addForeignKey('matched_document_id', 'document_exports', 'document_exports_id', [
                     'delete' => 'SET_NULL',
                     'update' => 'CASCADE'
                 ])

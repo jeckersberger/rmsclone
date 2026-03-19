@@ -29,7 +29,6 @@ final class ClientImportCommunication extends AbstractMigration
                 ->addColumn('imported_by', 'integer', ['comment' => 'User-ID des Importierenden'])
                 ->addIndex(['instances_id'])
                 ->addIndex(['imported_at'])
-                ->addForeignKey('instances_id', 'instances', 'instances_id', [
                     'delete' => 'CASCADE',
                     'update' => 'NO_ACTION',
                 ])
@@ -59,7 +58,6 @@ final class ClientImportCommunication extends AbstractMigration
                 ->addIndex(['clients_id'])
                 ->addIndex(['communication_date'])
                 ->addIndex(['type'])
-                ->addForeignKey('clients_id', 'clients', 'clients_id', [
                     'delete' => 'CASCADE',
                     'update' => 'NO_ACTION',
                 ])

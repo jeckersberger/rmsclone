@@ -53,7 +53,6 @@ class WorkflowEngine extends AbstractMigration
               ->addColumn('condition_config', 'json', ['null' => true])
               ->addIndex(['workflow_id'])
               ->addIndex(['workflow_id', 'step_order'])
-              ->addForeignKey('workflow_id', 'workflows', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
               ->create();
 
         // Execution records
@@ -73,7 +72,6 @@ class WorkflowEngine extends AbstractMigration
               ->addIndex(['status'])
               ->addIndex(['started_at'])
               ->addIndex(['workflow_id', 'status'])
-              ->addForeignKey('workflow_id', 'workflows', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
               ->create();
 
         // Execution step logs
@@ -91,7 +89,6 @@ class WorkflowEngine extends AbstractMigration
               ->addIndex(['execution_id'])
               ->addIndex(['step_id'])
               ->addIndex(['status'])
-              ->addForeignKey('execution_id', 'workflow_executions', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
               ->create();
 
         // Pre-built workflow templates

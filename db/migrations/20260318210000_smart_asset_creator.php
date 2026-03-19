@@ -78,7 +78,6 @@ final class SmartAssetCreator extends AbstractMigration
                 ])
                 ->addColumn('corrected_by', 'integer', ['signed' => false, 'null' => true])
                 ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
-                ->addForeignKey('corrected_by', 'users', 'users_id', ['delete' => 'SET NULL'])
                 ->addIndex(['instances_id', 'field_name'], ['name' => 'idx_corrections_field'])
                 ->addIndex(['created_at'], ['name' => 'idx_corrections_date'])
                 ->create();

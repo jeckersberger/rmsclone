@@ -48,7 +48,6 @@ class PartialPayments extends AbstractMigration
                     'comment' => 'Erstellungszeitpunkt'
                 ])
                 ->addIndex('document_exports_id')
-                ->addForeignKey('document_exports_id', 'document_exports', 'document_exports_id', [
                     'delete' => 'CASCADE',
                     'update' => 'CASCADE'
                 ])

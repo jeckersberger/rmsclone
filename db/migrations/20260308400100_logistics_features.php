@@ -36,7 +36,6 @@ class LogisticsFeatures extends AbstractMigration
                 ->addColumn('warehouse_id', 'integer')
                 ->addColumn('quantity', 'integer', ['default' => 0])
                 ->addIndex(['assetTypes_id', 'warehouse_id'], ['unique' => true])
-                ->addForeignKey('warehouse_id', 'warehouses', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
                 ->create();
         }
 
@@ -58,8 +57,6 @@ class LogisticsFeatures extends AbstractMigration
                 ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
                 ->addIndex(['instances_id'])
                 ->addIndex(['planned_date'])
-                ->addForeignKey('from_warehouse_id', 'warehouses', 'id', ['delete' => 'SET_NULL', 'update' => 'CASCADE'])
-                ->addForeignKey('to_warehouse_id', 'warehouses', 'id', ['delete' => 'SET_NULL', 'update' => 'CASCADE'])
                 ->create();
         }
 
@@ -72,7 +69,6 @@ class LogisticsFeatures extends AbstractMigration
                 ->addColumn('quantity', 'integer', ['default' => 1])
                 ->addColumn('loaded', 'integer', ['limit' => \Phinx\Db\Adapter\MysqlAdapter::INT_TINY, 'default' => 0])
                 ->addColumn('delivered', 'integer', ['limit' => \Phinx\Db\Adapter\MysqlAdapter::INT_TINY, 'default' => 0])
-                ->addForeignKey('transport_plan_id', 'transport_plans', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
                 ->addIndex(['transport_plan_id'])
                 ->create();
         }

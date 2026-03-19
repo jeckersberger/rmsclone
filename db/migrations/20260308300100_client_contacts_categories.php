@@ -27,7 +27,6 @@ class ClientContactsCategories extends AbstractMigration
                 ->addColumn('notes', 'text', ['null' => true])
                 ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
                 ->addIndex(['clients_id'])
-                ->addForeignKey('clients_id', 'clients', 'clients_id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
                 ->create();
         }
 
@@ -50,8 +49,6 @@ class ClientContactsCategories extends AbstractMigration
                 ->addColumn('clients_id', 'integer')
                 ->addColumn('category_id', 'integer')
                 ->addIndex(['clients_id', 'category_id'], ['unique' => true])
-                ->addForeignKey('clients_id', 'clients', 'clients_id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
-                ->addForeignKey('category_id', 'client_categories', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
                 ->create();
         }
 

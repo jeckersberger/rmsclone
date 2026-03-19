@@ -24,7 +24,6 @@ class AiAnonymization extends AbstractMigration
                 ->addColumn('custom_rules', 'json', ['null' => true])
                 ->addColumn('provider_overrides', 'json', ['null' => true])
                 ->addColumn('updated_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP', 'update' => 'CURRENT_TIMESTAMP'])
-                ->addForeignKey('instances_id', 'instances', 'instances_id', ['delete' => 'CASCADE'])
                 ->addIndex(['mode'])
                 ->create();
         }
