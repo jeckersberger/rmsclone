@@ -1,0 +1,238 @@
+MyRMS - Implementierungs-Checkliste
+=====================================
+
+Stand: 18. Maerz 2026
+Branch: feature/rfid-cases-invoices-android
+
+Diese Datei dokumentiert den Implementierungsstatus aller Features. Jedes Feature hat eine Checkliste mit den einzelnen Bausteinen (Migration, Service, API, UI). So ist jederzeit nachvollziehbar, was fertig ist, was noch getestet werden muss und was fehlt.
+
+Technische Integration in MyRMS
+---------------------------------
+Die MyRMS-KI (AiRequestHandler + FeedbackLearningService) liest und schreibt diese Datei automatisch:
+- Lesen: ImplementationTrackerService::getChecklist() - parst diese MD-Datei und gibt den Status aller Bausteine zurueck
+- Schreiben: ImplementationTrackerService::updateStatus($module, $baustein, $status) - aktualisiert den Status eines Bausteins
+- Trigger: Nach jedem abgeschlossenen KI-Task prueft das System ob ein [WIP]-Baustein in [OK] umgewandelt werden kann
+- Dashboard-Widget: Das Admin-Dashboard zeigt ein "Implementierungsstatus"-Widget (Fortschrittsbalken pro Modul)
+- Sync: Die Datei wird bidirektional mit der ai_implementation_status-Tabelle synchronisiert.
+
+Legende:
+- [OK]   = Implementiert und committed
+- [WIP]  = Implementiert, braucht Review/Anpassung
+- [TODO] = Noch nicht implementiert
+- [TEST] = Braucht Tests
+
+===============================================================================
+
+L1 - Flexible Lagerorte
+------------------------
+Frei definierbare Lagerorte (Auto, Anhaenger, Buero, Garage, Keller etc.). Assets bleiben frei buchbar, Lagerort wird ueberall angezeigt.
+
+ #  | Baustein                                                          | Status | Datei
+----|-------------------------------------------------------------------|--------|------
+ 1  | DB-Migration: emoji_icon + instances_id auf locations, bulk_move  | [OK]   | db/migrations/20260318110000_flexible_lagerorte.php
+ 2  | LocationService erweitert: getLocationSummary()                   | [OK]   | src/services/LocationService.php
+ 3  | LocationService: bulkMoveAssets(), bulkMoveStockInstances()       | [OK]   | src/services/LocationService.php
+ 4  | LocationService: getAssetsAtLocation(), createLocationInline()    | [OK]   | src/services/LocationService.php
+ 5  | API: Location Summary Endpoint                                    | [OK]   | src/api/locations/
+ 6  | API: Bulk Move Endpoint                                           | [OK]   | src/api/locations/
+ 7  | API: Assets at Location Endpoint                                  | [OK]   | src/api/locations/
+ 8  | API: Inline Create Endpoint                                       | [OK]   | src/api/locations/
+ 9  | UI: manage.twig mit Emoji-Icons und Asset-Counts                  | [OK]   | src/locations/manage.twig
+10  | Lagerort-Spalte in Asset-Listen                                   | [WIP]  | Muss in bestehenden Asset-Tabellen ergaenzt werden
+11  | Lagerort-Abfrage bei Check-In                                     | [WIP]  | Hook in CheckInOutService noetig
+12  | Dashboard-Widget: Lagerort-Zusammenfassung                        | [TODO] | Noch nicht im Dashboard integriert
+13  | Tests                                                             | [TEST] | Unit-Tests fuer LocationService
+
+===============================================================================
+
+L2 - Preiskalkulations-Engine
+------------------------------
+Staffelpreise (Tag/Woche/Monat), Mengenrabatte, Saisonzuschlaege, Bundle-Pricing, kundenspezifische Preislisten.
+
+ #  | Baustein                                                          | Status | Datei
+----|-------------------------------------------------------------------|--------|------
+ 1  | DB-Migration: 7 Tabellen (pricing_tiers, volume_discounts, etc.) | [OK]   | db/migrations/20260318120000_pricing_engine.php
+ 2  | PricingEngineService: calculatePrice() mit Kaskade               | [OK]   | src/services/PricingEngineService.php
+ 3  | PricingEngineService: Staffelpreis-CRUD                           | [OK]   | src/services/PricingEngineService.php
+ 4  | PricingEngineService: Mengenrabatte CRUD                          | [OK]   | src/services/PricingEngineService.php
+ 5  | PricingEngineService: Saisonzuschlaege CRUD                      | [OK]   | src/services/PricingEngineService.php
+ 6  | PricingEngineService: Bundle-Verwaltung                           | [OK]   | src/services/PricingEngineService.php
+ 7  | PricingEngineService: Kundenpreislisten                           | [OK]   | src/services/PricingEngineService.php
+ 8  | API: 10 Endpunkte in /api/pricing/                                | [OK]   | src/api/pricing/
+ 9  | UI: pricing_manage.twig mit 5-Tab Layout                         | [OK]   | src/pricing/pricing_manage.twig
+10  | JS: Echtzeit-Preisrechner                                         | [OK]   | src/static-assets/js/pricing_engine.js
+11  | Integration in Projektanlage: Preisberechnung automatisch         | [WIP]  | Hook in Projektservice noetig
+12  | Integration in Rechnungserstellung                                | [WIP]  | Hook in InvoiceService noetig
+13  | Tests                                                             | [TEST] | Unit-Tests fuer calculatePrice() Kaskade
+
+===============================================================================
+
+J2 - Wartung & Predictive Maintenance
+---------------------------------------
+Wartungsplaene pro Asset, Service-Historie, automatische Erinnerungen, Checklisten.
+
+ #  | Baustein                                                          | Status | Datei
+----|-------------------------------------------------------------------|--------|------
+ 1  | DB-Migration: 5 Tabellen (schedules, jobs, photos, etc.)         | [OK]   | db/migrations/20260318130000_maintenance_system.php
+ 2  | MaintenanceService: Schedule-CRUD                                 | [OK]   | src/services/MaintenanceService.php
+ 3  | MaintenanceService: Job-Lifecycle (create, update, complete)      | [OK]   | src/services/MaintenanceService.php
+ 4  | MaintenanceService: getOverdueMaintenances(), getUpcoming()       | [OK]   | src/services/MaintenanceService.php
+ 5  | MaintenanceService: checkAndCreateScheduledJobs() (CRON)          | [OK]   | src/services/MaintenanceService.php
+ 6  | MaintenanceService: Checklisten + Foto-Upload                     | [OK]   | src/services/MaintenanceService.php
+ 7  | MaintenanceService: Kosten-Tracking + Dashboard-Stats             | [OK]   | src/services/MaintenanceService.php
+ 8  | API: 12 Endpunkte in /api/maintenance/                            | [OK]   | src/api/maintenance/
+ 9  | UI: maintenance_dashboard.twig (4 Status-Cards + 4 Tabs)          | [OK]   | src/maintenance/maintenance_dashboard.twig
+10  | Controller: index.php                                              | [OK]   | src/maintenance/index.php
+11  | Wartungsstatus-Badge auf Asset-Karte                               | [WIP]  | Muss in Asset-Ansichten integriert werden
+12  | CRON-Einrichtung fuer automatische Job-Erstellung                  | [WIP]  | Muss in CRON-Config eingetragen werden
+13  | Tests                                                             | [TEST] | Unit-Tests fuer MaintenanceService
+
+===============================================================================
+
+K1 - Automatisierte Workflow-Engine
+-------------------------------------
+No-Code WENN->DANN Logik, Event/CRON/Manuelle Trigger, 7 Aktionstypen, vorgefertigte Templates.
+
+ #  | Baustein                                                          | Status | Datei
+----|-------------------------------------------------------------------|--------|------
+ 1  | DB-Migration: 5 Tabellen (workflows, steps, executions, etc.)    | [OK]   | db/migrations/20260318140000_workflow_engine.php
+ 2  | WorkflowEngineService: Workflow-CRUD                              | [OK]   | src/services/WorkflowEngineService.php
+ 3  | WorkflowEngineService: executeWorkflow() mit Schritt-fuer-Schritt| [OK]   | src/services/WorkflowEngineService.php
+ 4  | WorkflowEngineService: 7 Aktionstypen                             | [OK]   | src/services/WorkflowEngineService.php
+ 5  | WorkflowEngineService: 4 Templates                                | [OK]   | src/services/WorkflowEngineService.php
+ 6  | WorkflowEngineService: Execution-Logging                          | [OK]   | src/services/WorkflowEngineService.php
+ 7  | API: 11 Endpunkte in /api/workflows/                              | [OK]   | src/api/workflows/
+ 8  | UI: workflows_index.twig (visueller Editor)                       | [OK]   | src/workflows/workflows_index.twig
+ 9  | Controller: index.php                                              | [OK]   | src/workflows/index.php
+10  | Event-Hooks: Trigger bei Rechnung erstellt, Asset zurueck, etc.   | [WIP]  | Muss in bestehende Services eingehaengt werden
+11  | CRON-Integration fuer zeitbasierte Trigger                         | [WIP]  | Muss in CRON-Config eingetragen werden
+12  | Tests                                                             | [TEST] | Unit-Tests fuer executeWorkflow()
+
+===============================================================================
+
+J1 - Digitales Vertragsmanagement
+-----------------------------------
+Template-Engine, Platzhalter, Versionierung, digitale Signatur, GoBD-Archivierung.
+
+ #  | Baustein                                                          | Status | Datei
+----|-------------------------------------------------------------------|--------|------
+ 1  | DB-Migration: 5 Tabellen (contracts, versions, templates, etc.)  | [OK]   | db/migrations/20260318150000_contract_management.php
+ 2  | ContractService: Template-Engine mit Platzhaltern                 | [OK]   | src/services/ContractService.php
+ 3  | ContractService: Versionierung                                    | [OK]   | src/services/ContractService.php
+ 4  | ContractService: Auto-Generierung aus Projektdaten                | [OK]   | src/services/ContractService.php
+ 5  | ContractService: PDF-Generierung (dompdf)                         | [OK]   | src/services/ContractService.php
+ 6  | ContractService: Canvas-basierte Signatur                         | [OK]   | src/services/ContractService.php
+ 7  | ContractService: Status-Workflow (Entwurf->Gesendet->Aktiv)      | [OK]   | src/services/ContractService.php
+ 8  | ContractService: AGB-Verwaltung                                   | [OK]   | src/services/ContractService.php
+ 9  | API: 12 Endpunkte in /api/contracts/                              | [OK]   | src/api/contracts/
+10  | Oeffentliche Signatur-Seite (kein Login noetig)                   | [OK]   | src/contracts/sign.php
+11  | UI: contracts_index.twig                                          | [OK]   | src/templates/contracts_index.twig
+12  | Controller: index.php                                              | [OK]   | src/contracts/index.php
+13  | GoBD-Audit-Trail (IP, User-Agent)                                 | [OK]   | In ContractService integriert
+14  | Tests                                                             | [TEST] | Unit-Tests fuer ContractService
+
+===============================================================================
+
+K3 - Schadenmanagement-Workflow
+---------------------------------
+8-Schritte-Prozess, 11 Status-Typen, Kostenvoranschlaege, Fotos, Versicherungsmeldung.
+
+ #  | Baustein                                                          | Status | Datei
+----|-------------------------------------------------------------------|--------|------
+ 1  | DB-Migration: 4 Tabellen (workflows, log, cost_estimates, photos)| [OK]   | db/migrations/20260318160000_damage_workflow.php
+ 2  | DamageWorkflowService: 11 Status mit erzwungenen Uebergaengen    | [OK]   | src/services/DamageWorkflowService.php
+ 3  | DamageWorkflowService: Multi-Vendor Kostenvoranschlaege          | [OK]   | src/services/DamageWorkflowService.php
+ 4  | DamageWorkflowService: Foto-Dokumentation (vorher/waehrend/nach) | [OK]   | src/services/DamageWorkflowService.php
+ 5  | DamageWorkflowService: Versicherungsmeldung                       | [OK]   | src/services/DamageWorkflowService.php
+ 6  | DamageWorkflowService: Kunden-Weiterbelastung + Kautionsabzug    | [OK]   | src/services/DamageWorkflowService.php
+ 7  | API: 13 Endpunkte in /api/damage/                                 | [OK]   | src/api/damage/
+ 8  | UI: Kanban-Board (damage_dashboard.twig)                          | [OK]   | src/damage/damage_dashboard.twig
+ 9  | UI: Detail-View mit Timeline (damage_detail.twig)                 | [OK]   | src/damage/damage_detail.twig
+10  | Controller: index.php                                              | [OK]   | src/damage/index.php
+11  | Integration mit bestehendem DamageReportService                    | [OK]   | Erweitert, nicht ersetzt
+12  | Tests                                                             | [TEST] | Unit-Tests fuer DamageWorkflowService
+
+===============================================================================
+
+K2 - Versicherungsmanagement
+------------------------------
+Policen-Verwaltung, Deckungspruefung, Ablauf-Warnungen, Schadenmeldungen.
+
+ #  | Baustein                                                          | Status | Datei
+----|-------------------------------------------------------------------|--------|------
+ 1  | DB-Migration: 4 Tabellen (policies, asset_coverage, etc.)        | [OK]   | db/migrations/20260318170000_insurance_management.php
+ 2  | InsuranceService: Policen-CRUD                                    | [OK]   | src/services/InsuranceService.php
+ 3  | InsuranceService: Deckungspruefung + Deckungsluecken              | [OK]   | src/services/InsuranceService.php
+ 4  | InsuranceService: Kundennachweise mit Verifizierung               | [OK]   | src/services/InsuranceService.php
+ 5  | InsuranceService: Schadenmeldungen (8 Status)                     | [OK]   | src/services/InsuranceService.php
+ 6  | InsuranceService: Dashboard-Stats                                  | [OK]   | src/services/InsuranceService.php
+ 7  | API: 12 Endpunkte in /api/insurance/                              | [OK]   | src/api/insurance/
+ 8  | UI: insurance_index.twig                                          | [OK]   | src/insurance/insurance_index.twig
+ 9  | Controller: index.php                                              | [OK]   | src/insurance/index.php
+10  | Integration mit K3 Schadenmanagement                               | [OK]   | Verknuepfung ueber damage_workflows
+11  | Tests                                                             | [TEST] | Unit-Tests fuer InsuranceService
+
+===============================================================================
+
+J3 - Transport & Logistik
+---------------------------
+Fahrzeug-Flotte, Fahrer, Tourenplanung, Kapazitaetspruefung, QR-Uebergabe, Kosten-Tracking.
+
+ #  | Baustein                                                          | Status | Datei
+----|-------------------------------------------------------------------|--------|------
+ 1  | DB-Migration: 5 Tabellen (vehicles, drivers, tours, etc.)        | [OK]   | db/migrations/20260318180000_transport_logistics.php
+ 2  | TransportLogisticsService: Fahrzeug- + Fahrer-Verwaltung          | [OK]   | src/services/TransportLogisticsService.php
+ 3  | TransportLogisticsService: Multi-Stopp Tourenplanung              | [OK]   | src/services/TransportLogisticsService.php
+ 4  | TransportLogisticsService: Kapazitaetspruefung (Gewicht+Volumen)  | [OK]   | src/services/TransportLogisticsService.php
+ 5  | TransportLogisticsService: Uebergabe-Bestaetigung mit Unterschrift| [OK]   | src/services/TransportLogisticsService.php
+ 6  | TransportLogisticsService: Kosten-Tracking                        | [OK]   | src/services/TransportLogisticsService.php
+ 7  | API: 11 Endpunkte in /api/transport/                              | [OK]   | src/api/transport/
+ 8  | UI: transport_index.twig mit Kalender                              | [OK]   | src/transport/transport_index.twig
+ 9  | Controller: index.php                                              | [OK]   | src/transport/index.php
+10  | Tests                                                             | [TEST] | Unit-Tests fuer TransportLogisticsService
+
+===============================================================================
+
+I1-I3 - Multi-KI-Provider System
+-----------------------------------
+6 Provider-Adapter, Task-Routing, Fallback-Kette, AES-256 verschluesselte Keys, Usage-Tracking.
+
+ #  | Baustein                                                          | Status | Datei
+----|-------------------------------------------------------------------|--------|------
+ 1  | DB-Migration: 4 Tabellen (providers, task_routing, etc.)         | [OK]   | db/migrations/20260318190000_multi_ai_providers.php
+ 2  | LlmProviderInterface + LlmResponse                                | [OK]   | src/services/AI/LlmProviderInterface.php
+ 3  | Adapter: ClaudeAdapter                                             | [OK]   | src/services/AI/Providers/ClaudeAdapter.php
+ 4  | Adapter: OpenAiAdapter                                             | [OK]   | src/services/AI/Providers/OpenAiAdapter.php
+ 5  | Adapter: GeminiAdapter                                             | [OK]   | src/services/AI/Providers/GeminiAdapter.php
+ 6  | Adapter: MistralAdapter                                            | [OK]   | src/services/AI/Providers/MistralAdapter.php
+ 7  | Adapter: OllamaAdapter                                             | [OK]   | src/services/AI/Providers/OllamaAdapter.php
+ 8  | Adapter: OpenAiCompatibleAdapter (generisch)                       | [OK]   | src/services/AI/Providers/OpenAiCompatibleAdapter.php
+ 9  | AiProviderRegistry: Registrierung, Task-Routing, Fallback         | [OK]   | src/services/AI/AiProviderRegistry.php
+10  | AiRequestHandler: Zentraler Einstiegspunkt fuer alle KI-Calls     | [OK]   | src/services/AI/AiRequestHandler.php
+11  | AiUsageTracker: Token-Logging + Kosten-Schaetzung                 | [OK]   | src/services/AI/AiUsageTracker.php
+12  | AiInitializer: Bootstrap-Helper                                    | [OK]   | src/services/AI/AiInitializer.php
+13  | API-Key Verschluesselung (AES-256-GCM)                            | [OK]   | In AiProviderRegistry
+14  | API: 6 Endpunkte in /api/ai/                                       | [OK]   | src/api/ai/
+15  | UI: ai_settings.twig mit Provider-Cards                            | [OK]   | src/templates/ai/ai_settings.twig
+16  | Config: ai_bootstrap.php                                           | [OK]   | config/ai_bootstrap.php
+17  | Migration bestehender ClaudeService auf AiRequestHandler           | [WIP]  | ClaudeService muss umgestellt werden
+18  | Tests                                                             | [TEST] | Unit-Tests fuer Adapter + Registry
+
+===============================================================================
+
+I6 - KI-Anonymisierung
+------------------------
+Pflicht-Anonymisierung fuer alle Cloud-KI-Requests. 3-Phasen-Pipeline, 7 Regex-Patterns, DB-Abgleich.
+
+ #  | Baustein                                                          | Status | Datei
+----|-------------------------------------------------------------------|--------|------
+ 1  | DB-Migration: 2 Tabellen (config, audit_log)                     | [OK]   | db/migrations/20260318200000_ai_anonymization.php
+ 2  | AnonymizationService: anonymize() + deAnonymize()                 | [OK]   | src/services/AI/AnonymizationService.php
+ 3  | AnonymizationService: 7 Regex-Patterns (IBAN, E-Mail, etc.)      | [OK]   | src/services/AI/AnonymizationService.php
+ 4  | AnonymizationService: DB-Abgleich (Kunden, Kontakte, Mitarbeiter)| [OK]   | src/services/AI/AnonymizationService.php
+ 5  | AnonymizationService: 4 Modi (Strikt/Standard/Minimal/Aus)       | [OK]   | src/services/AI/AnonymizationService.php
+ 6  | Integration in AiRequestHandler (automatisch)                     | [OK]   | src/services/AI/AiRequestHandler.php
+ 7  | Cloud-Provider min. Standard erzwungen                             | [OK]   | Hardcoded in AiRequestHandler
+ 8  | API: anonymization_config + anonymization_test                     | [OK]   | src/api/ai/
+ 9  | Audit-Log: nur Counts/Typen, nie echte Daten                      | [OK]   | In AnonymizationService
+10  | Tests                                                             | [TEST] | Unit-Tests fuer Regex-Patterns + Roundtrip
