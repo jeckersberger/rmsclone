@@ -117,3 +117,138 @@ Wenn eine Rechnung aus einem Projekt generiert wird, sollen die Preise aus der E
 
 **13. Tests**
 Unit-Tests für die calculatePrice()-Kaskade mit allen Kombinationen: nur Basispreis, Staffelpreis aktiv, Mengenrabatt aktiv, Saisonzuschlag aktiv, Kundenpreisliste aktiv, Bundle aktiv, alle gleichzeitig aktiv. Edge Cases: Menge = 0, Dauer = 0, kein passender Staffelpreis, überlappende Saisonzuschläge.
+
+---
+
+## J2 – Wartung & Predictive Maintenance
+
+### Überblick
+Jedes Asset soll einen eigenen Wartungsplan haben können. Der Vermieter legt fest, welche Wartungsarbeiten in welchem Intervall durchgeführt werden müssen (z.B. alle 6 Monate Ölwechsel, jährlich TÜV, nach 500 Betriebsstunden Filterwechsel). Das System erstellt automatisch Wartungsaufträge (Jobs), erinnert per Dashboard an überfällige Wartungen, und dokumentiert die gesamte Service-Historie pro Asset mit Fotos, Checklisten und Kosten.
+
+### Bausteine im Detail
+
+**1. DB-Migration: 5 Tabellen**
+- `maintenance_schedules` – Wartungspläne: Asset-ID oder Asset-Typ-ID, Intervall (Tage oder Betriebsstunden), Beschreibung, Priorität (niedrig/mittel/hoch/kritisch), letzter Ausführungstermin, nächster fälliger Termin.
+- `maintenance_jobs` – Konkrete Wartungsaufträge: Schedule-ID, Asset-ID, Status (offen/in_arbeit/abgeschlossen/abgebrochen), zugewiesener Techniker, geplantes Datum, tatsächliches Datum, Dauer in Minuten, Kosten.
+- `maintenance_photos` – Fotos zu einem Wartungsjob: Job-ID, Dateipfad, Typ (vorher/nachher/während), Zeitstempel, Beschreibung.
+- `maintenance_checklists` – Checklisten-Vorlagen: Schedule-ID, Prüfpunkt-Text, Reihenfolge, ist_pflicht (ja/nein).
+- `maintenance_checklist_results` – Ausgefüllte Checklisten: Job-ID, Checklisten-Item-ID, Status (ok/nicht_ok/übersprungen), Bemerkung.
+
+**2. MaintenanceService: Schedule-CRUD**
+Erstellen, Lesen, Aktualisieren, Löschen von Wartungsplänen. Ein Wartungsplan kann an ein einzelnes Asset gebunden sein (z.B. „Bagger #47 – Ölwechsel alle 6 Monate") oder an einen Asset-Typ (z.B. „Alle Generatoren – Luftfilter alle 3 Monate"). Bei Typ-Bindung gilt der Plan automatisch für alle Assets dieses Typs. Intervalle können in Tagen, Wochen, Monaten oder Betriebsstunden angegeben werden.
+
+**3. MaintenanceService: Job-Lifecycle**
+Ein Wartungsjob durchläuft folgende Status: `offen` → `in_arbeit` → `abgeschlossen` oder `abgebrochen`. Beim Erstellen wird ein Techniker zugewiesen und ein geplantes Datum gesetzt. Beim Starten (`in_arbeit`) wird der Zeitstempel erfasst. Beim Abschließen werden Dauer, Kosten und Checklisten-Ergebnisse gespeichert. Abgebrochene Jobs bekommen einen Grund-Text. Jeder Statuswechsel wird geloggt.
+
+**4. MaintenanceService: getOverdueMaintenances(), getUpcoming()**
+`getOverdueMaintenances()` liefert alle Wartungen, deren Fälligkeitsdatum überschritten ist, sortiert nach Dringlichkeit (Tage überfällig × Priorität). `getUpcoming()` liefert alle Wartungen, die in den nächsten X Tagen (konfigurierbar, Standard 14) fällig sind. Beide Methoden werden im Dashboard und für E-Mail-Benachrichtigungen verwendet.
+
+**5. MaintenanceService: checkAndCreateScheduledJobs() (CRON)**
+Eine Methode, die per CRON-Job (z.B. täglich um 6:00 Uhr) aufgerufen wird. Sie prüft alle aktiven Wartungspläne: Ist der nächste Fälligkeitstermin erreicht oder überschritten? Falls ja, wird automatisch ein neuer Wartungsjob im Status `offen` erstellt. So muss niemand manuell Wartungsaufträge anlegen – das System erstellt sie automatisch basierend auf den Plänen.
+
+**6. MaintenanceService: Checklisten + Foto-Upload**
+Jeder Wartungsplan kann eine Checkliste haben (z.B. „Ölstand prüfen", „Keilriemen prüfen", „Bremsbeläge messen"). Beim Durchführen der Wartung hakt der Techniker jeden Punkt als ok/nicht_ok ab und kann Bemerkungen hinzufügen. Zusätzlich können Fotos hochgeladen werden (vorher/nachher/während), die am Job gespeichert werden. Die Fotos werden auf dem Server im Upload-Verzeichnis abgelegt.
+
+**7. MaintenanceService: Kosten-Tracking + Dashboard-Stats**
+Jeder Wartungsjob kann Kosten erfassen: Materialkosten, Arbeitszeit (Stunden × Stundensatz), Fremdleistungen. Die Dashboard-Stats aggregieren: Gesamte Wartungskosten pro Monat/Quartal/Jahr, Kosten pro Asset, Kosten pro Asset-Typ, durchschnittliche Kosten pro Wartungsart. So kann der Vermieter sehen, welche Assets die höchsten Wartungskosten verursachen.
+
+**8. API: 12 Endpunkte in /api/maintenance/**
+- `GET/POST/PUT/DELETE /api/maintenance/schedules` – Wartungspläne CRUD
+- `GET/POST/PUT /api/maintenance/jobs` – Wartungsjobs verwalten
+- `POST /api/maintenance/jobs/{id}/start` – Job starten
+- `POST /api/maintenance/jobs/{id}/complete` – Job abschließen (mit Checkliste + Kosten)
+- `POST /api/maintenance/jobs/{id}/cancel` – Job abbrechen
+- `POST /api/maintenance/jobs/{id}/photos` – Foto hochladen
+- `GET /api/maintenance/overdue` – Überfällige Wartungen
+- `GET /api/maintenance/upcoming` – Anstehende Wartungen
+- `GET /api/maintenance/stats` – Dashboard-Statistiken
+
+**9. UI: maintenance_dashboard.twig**
+Das Wartungs-Dashboard zeigt oben 4 Status-Cards: Offene Jobs (Anzahl), Überfällige (Anzahl, rot), In Arbeit (Anzahl), Diesen Monat abgeschlossen (Anzahl). Darunter 4 Tabs:
+- Tab 1: **Offene Jobs** – Tabelle mit allen offenen/überfälligen Wartungsaufträgen, sortierbar nach Dringlichkeit.
+- Tab 2: **Wartungspläne** – Alle aktiven Pläne mit Asset, Intervall, nächster Fälligkeit.
+- Tab 3: **Historie** – Abgeschlossene Wartungen mit Kosten, Dauer, Ergebnissen.
+- Tab 4: **Statistiken** – Charts: Kosten pro Monat, Kosten pro Asset-Typ, Top-5 teuerste Assets.
+
+**10. Controller: index.php**
+Routet die Anfragen zum richtigen Template, lädt die Daten über den MaintenanceService und gibt sie an Twig weiter. Prüft Berechtigungen (nur Admins und Techniker sehen das Wartungs-Dashboard).
+
+**11. Wartungsstatus-Badge auf Asset-Karte**
+Auf jeder Asset-Detailseite und in Asset-Listen soll ein kleiner Badge den Wartungsstatus anzeigen: Grün „OK" (nächste Wartung > 14 Tage), Gelb „Bald fällig" (nächste Wartung ≤ 14 Tage), Rot „Überfällig" (Fälligkeitsdatum überschritten). Der Badge ist ein visueller Sofort-Indikator, ohne dass man ins Wartungs-Dashboard gehen muss.
+
+**12. CRON-Einrichtung für automatische Job-Erstellung**
+Der CRON-Job muss in der Server-Konfiguration eingetragen werden (z.B. `0 6 * * * php /path/to/scripts/maintenance_cron.php`). Das Script ruft `checkAndCreateScheduledJobs()` auf und sendet optional eine Zusammenfassungs-E-Mail an den Admin mit den neu erstellten Jobs.
+
+**13. Tests**
+Unit-Tests für: Schedule-CRUD mit Validierung (ungültige Intervalle, fehlende Pflichtfelder), Job-Lifecycle (korrekter Statuswechsel, ungültige Übergänge wie offen→abgeschlossen ohne in_arbeit), getOverdueMaintenances() mit verschiedenen Datums-Szenarien, checkAndCreateScheduledJobs() mit Plänen die fällig/nicht fällig sind, Kosten-Aggregation.
+
+---
+
+## K1 – Automatisierte Workflow-Engine
+
+### Überblick
+Eine No-Code Automatisierungsengine nach dem Prinzip „WENN X passiert, DANN tue Y". Der Benutzer kann ohne Programmierkenntnisse Workflows zusammenklicken. Trigger können Events sein (z.B. „Rechnung erstellt"), CRON-basiert (z.B. „jeden Montag um 8 Uhr") oder manuell ausgelöst. Jeder Workflow besteht aus Schritten, die nacheinander ausgeführt werden. Es gibt 7 Aktionstypen: E-Mail senden, Task erstellen, Status ändern, Benachrichtigung, Webhook aufrufen, Verzögerung, Bedingung (If/Else). Vorgefertigte Templates erleichtern den Einstieg.
+
+### Bausteine im Detail
+
+**1. DB-Migration: 5 Tabellen**
+- `workflows` – Workflow-Definitionen: Name, Beschreibung, Trigger-Typ (event/cron/manual), Trigger-Config (JSON, z.B. `{"event": "invoice.created"}` oder `{"cron": "0 8 * * 1"}`), ist_aktiv, Instanz-ID, erstellt_von, erstellt_am.
+- `workflow_steps` – Schritte eines Workflows: Workflow-ID, Reihenfolge, Aktionstyp (email/task/status_change/notify/webhook/delay/condition), Konfiguration (JSON, z.B. `{"to": "admin@firma.de", "subject": "Neue Rechnung", "body": "..."}`), Bedingung für Ausführung (optional).
+- `workflow_executions` – Laufende/abgeschlossene Ausführungen: Workflow-ID, Status (running/completed/failed/cancelled), gestartet_am, beendet_am, Trigger-Daten (JSON), aktueller Schritt.
+- `workflow_logs` – Detailliertes Log jeder Ausführung: Execution-ID, Schritt-ID, Status (success/error/skipped), Zeitstempel, Input-Daten (JSON), Output-Daten (JSON), Fehlermeldung (falls error).
+- `workflow_templates` – Vorgefertigte Vorlagen: Name, Beschreibung, Kategorie, Workflow-JSON (kompletter Workflow als Template zum Importieren).
+
+**2. WorkflowEngineService: Workflow-CRUD**
+Erstellen, Lesen, Aktualisieren, Löschen von Workflows. Beim Erstellen wird der Trigger-Typ festgelegt und die Schritte definiert. Ein Workflow kann aktiviert/deaktiviert werden (deaktivierte Workflows werden nicht getriggert). Beim Löschen eines Workflows bleiben die Execution-Logs erhalten. Validierung: Mindestens ein Schritt nötig, Trigger-Config muss zum Trigger-Typ passen.
+
+**3. WorkflowEngineService: executeWorkflow()**
+Die zentrale Ausführungsmethode. Erstellt eine neue Execution, geht Schritt für Schritt durch:
+1. Prüfe ob der Schritt eine Bedingung hat → falls Bedingung nicht erfüllt, überspringe den Schritt
+2. Führe die Aktion aus (E-Mail senden, Task erstellen, etc.)
+3. Logge das Ergebnis (Erfolg/Fehler)
+4. Falls Fehler: Workflow abbrechen oder nächsten Schritt versuchen (konfigurierbar)
+5. Falls Verzögerung: Execution pausieren und per CRON später fortsetzen
+Die Methode ist idempotent – bei einem Neustart des Servers wird eine unterbrochene Execution fortgesetzt, nicht neu gestartet.
+
+**4. WorkflowEngineService: 7 Aktionstypen**
+- **E-Mail senden:** Empfänger, Betreff, Body (mit Platzhaltern wie `{{kunde.name}}`, `{{rechnung.nummer}}`). Nutzt den bestehenden E-Mail-Service.
+- **Task erstellen:** Erstellt eine Aufgabe im Task-System mit Titel, Beschreibung, Zugewiesen-An, Fälligkeitsdatum.
+- **Status ändern:** Ändert den Status eines Objekts (z.B. Rechnung auf „Gemahnt", Asset auf „In Wartung"). Objekt-Typ und neuer Status werden konfiguriert.
+- **Benachrichtigung:** Sendet eine In-App-Benachrichtigung an einen oder mehrere Benutzer (Push-Notification im Dashboard).
+- **Webhook:** Ruft eine externe URL per HTTP POST auf mit konfigurierbarem Payload (JSON). Für Integration mit externen Systemen (Slack, Teams, Buchhaltung etc.).
+- **Verzögerung:** Pausiert die Workflow-Ausführung für X Minuten/Stunden/Tage. Beispiel: Rechnung erstellt → 14 Tage warten → prüfen ob bezahlt → Mahnung senden.
+- **Bedingung (If/Else):** Prüft eine Bedingung und verzweigt: Falls wahr → nächster Schritt, falls falsch → überspringe X Schritte oder springe zu Schritt Y. Beispiel: „Wenn Rechnungsbetrag > 1000€, dann Chef benachrichtigen".
+
+**5. WorkflowEngineService: 4 Templates**
+Vorgefertigte Workflows, die der Benutzer mit einem Klick importieren und anpassen kann:
+- **Mahnwesen:** Rechnung erstellt → 14 Tage warten → Prüfen ob bezahlt → Wenn nicht: 1. Mahnung per E-Mail → 14 Tage warten → 2. Mahnung → 14 Tage → 3. Mahnung + Chef benachrichtigen.
+- **Wartungserinnerung:** CRON täglich → Prüfe überfällige Wartungen → E-Mail an Techniker mit Liste → Task erstellen pro überfälliger Wartung.
+- **Kunden-Onboarding:** Neuer Kunde angelegt → Willkommens-E-Mail senden → Task „Vertrag vorbereiten" für Vertrieb erstellen → 3 Tage warten → Nachfass-E-Mail.
+- **Rückgabe-Erinnerung:** CRON täglich → Prüfe Projekte deren Rückgabedatum in 2 Tagen ist → E-Mail an Kunde „Bitte Rückgabe vorbereiten" → Benachrichtigung an Disponent.
+
+**6. WorkflowEngineService: Execution-Logging**
+Jeder Schritt jeder Ausführung wird detailliert geloggt: Welcher Schritt wurde wann ausgeführt, was war der Input (z.B. Rechnungsdaten), was war das Ergebnis (E-Mail gesendet an X, Task #123 erstellt), gab es Fehler (SMTP-Verbindung fehlgeschlagen). Das Log ist über die UI einsehbar und hilft beim Debugging von Workflows.
+
+**7. API: 11 Endpunkte in /api/workflows/**
+- `GET/POST/PUT/DELETE /api/workflows` – Workflow CRUD
+- `POST /api/workflows/{id}/execute` – Workflow manuell auslösen
+- `POST /api/workflows/{id}/toggle` – Workflow aktivieren/deaktivieren
+- `GET /api/workflows/{id}/executions` – Alle Ausführungen eines Workflows
+- `GET /api/workflows/executions/{id}/logs` – Logs einer bestimmten Ausführung
+- `GET /api/workflows/templates` – Verfügbare Templates
+- `POST /api/workflows/templates/{id}/import` – Template als neuen Workflow importieren
+
+**8. UI: workflows_index.twig (visueller Editor)**
+Die Workflow-Verwaltung zeigt links eine Liste aller Workflows (Name, Status aktiv/inaktiv, letzter Lauf, Erfolgsrate). Rechts ein visueller Editor: Schritte werden als Karten dargestellt, verbunden durch Pfeile. Jede Karte zeigt den Aktionstyp mit Icon, eine Kurzbeschreibung und den Status. Neue Schritte werden per Drag & Drop hinzugefügt. Klick auf eine Karte öffnet das Konfigurationsformular für diesen Schritt. Unten eine Timeline der letzten Ausführungen.
+
+**9. Controller: index.php**
+Routet Anfragen, prüft Berechtigungen (Workflows erstellen = Admin, Workflows einsehen = alle), lädt Daten und gibt sie an Twig weiter.
+
+**10. Event-Hooks**
+Die bestehenden Services (InvoiceService, ProjectService, AssetService etc.) müssen um Event-Hooks erweitert werden. Nach jeder wichtigen Aktion (Rechnung erstellt, Asset zurückgegeben, Kunde angelegt etc.) wird ein Event gefeuert, das die Workflow-Engine prüft. Beispiel: Nach `$invoiceService->createInvoice()` wird `WorkflowEngineService::triggerEvent('invoice.created', $invoiceData)` aufgerufen.
+
+**11. CRON-Integration**
+Für CRON-basierte Trigger muss ein CRON-Script eingerichtet werden, das die Workflow-Engine periodisch aufruft. Das Script prüft alle aktiven Workflows mit Trigger-Typ „cron", vergleicht die CRON-Expression mit der aktuellen Zeit und führt fällige Workflows aus. Zusätzlich werden pausierte Executions (durch Verzögerungsschritte) fortgesetzt.
+
+**12. Tests**
+Unit-Tests für: Workflow-CRUD mit Validierung, executeWorkflow() mit allen 7 Aktionstypen einzeln und in Kombination, Bedingungen (wahr/falsch), Verzögerungen (Mock der Zeit), Fehlerbehandlung (Schritt schlägt fehl → Workflow-Status = failed), Event-Trigger (Event feuern → richtiger Workflow wird ausgeführt), Template-Import.
