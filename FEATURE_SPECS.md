@@ -445,3 +445,177 @@ Wenn ein Schadenfall im K3-Modul als Versicherungsfall markiert wird, erstellt d
 
 **11. Tests**
 Unit-Tests für: Policen-CRUD, Deckungsprüfung (Asset versichert/nicht versichert, multiple Policen), Deckungslücken-Analyse, Kundennachweise (Upload, Verifizierung, Ablauf), Schadenmeldungen (Status-Übergänge, Betragsberechnung).
+
+---
+
+## J3 – Transport & Logistik
+
+### Überblick
+Verwaltung des kompletten Fuhrparks und der Tourenplanung. Fahrzeuge (LKW, Transporter, Anhänger) und Fahrer werden verwaltet, Touren mit mehreren Stopps geplant, die Kapazität (Gewicht und Volumen) geprüft. Bei der Übergabe an den Kunden wird per Unterschrift quittiert. Alle Transportkosten werden erfasst und den Projekten zugeordnet.
+
+### Bausteine im Detail
+
+**1. DB-Migration: 5 Tabellen**
+- `transport_vehicles` – Fahrzeuge: Kennzeichen, Typ (LKW/Transporter/Anhänger/PKW), Marke, Modell, max_gewicht_kg, max_volumen_m3, Status (verfügbar/unterwegs/in_wartung/stillgelegt), nächster_TÜV, Kilometerstand, Kraftstofftyp, Verbrauch_l_pro_100km.
+- `transport_drivers` – Fahrer: Name, Führerscheinklasse, Telefon, Status (verfügbar/unterwegs/krank/urlaub), Führerschein_gültig_bis.
+- `transport_tours` – Touren: Datum, Fahrer-ID, Fahrzeug-ID, Anhänger-ID (optional), Status (geplant/unterwegs/abgeschlossen/abgebrochen), geplante_km, tatsächliche_km, Startzeit, Endzeit.
+- `transport_tour_stops` – Stopps einer Tour: Tour-ID, Reihenfolge, Adresse, Typ (laden/entladen/beides), Projekt-ID (optional), geplante_Ankunft, tatsächliche_Ankunft, Unterschrift_Kunde (Dateipfad), Unterschrift_Zeitstempel, Bemerkungen.
+- `transport_costs` – Kosten: Tour-ID, Typ (kraftstoff/maut/parkgebühr/fähre/sonstiges), Betrag, Beschreibung, Beleg-Pfad (Foto/PDF).
+
+**2. TransportLogisticsService: Fahrzeug- + Fahrer-Verwaltung**
+CRUD für Fahrzeuge und Fahrer. Fahrzeuge haben einen Status (verfügbar/unterwegs/in_wartung) der automatisch aktualisiert wird, wenn eine Tour gestartet oder beendet wird. Fahrer ebenso. Das System warnt bei ablaufendem TÜV (< 30 Tage) oder ablaufendem Führerschein. Ein Kalender zeigt die Belegung aller Fahrzeuge und Fahrer auf einen Blick.
+
+**3. TransportLogisticsService: Multi-Stopp Tourenplanung**
+Eine Tour kann beliebig viele Stopps haben. Jeder Stopp hat eine Adresse, einen Typ (laden, entladen oder beides) und eine optionale Projekt-Zuordnung. Die Reihenfolge der Stopps kann per Drag & Drop geändert werden. Das System berechnet die geschätzte Gesamtstrecke und Fahrzeit (basierend auf Luftlinie × Faktor 1,3 als Näherung, oder per Geocoding-API falls konfiguriert).
+
+**4. TransportLogisticsService: Kapazitätsprüfung**
+Beim Planen einer Tour prüft das System, ob die zu transportierenden Güter in das gewählte Fahrzeug passen. Pro Stopp wird erfasst, was geladen und was entladen wird (Gewicht in kg, Volumen in m³). Das System berechnet die maximale Beladung an jedem Punkt der Tour und warnt, wenn das Gewicht- oder Volumenlimit des Fahrzeugs überschritten wird.
+
+**5. TransportLogisticsService: Übergabe-Bestätigung mit Unterschrift**
+An jedem Stopp kann der Kunde die Übergabe per Unterschrift bestätigen (Canvas-basiert, wie bei den Verträgen). Die Unterschrift wird als PNG gespeichert und dem Stopp zugeordnet. Erfasst werden: Unterschrift, Name des Empfängers, Zeitstempel, GPS-Koordinaten (falls verfügbar über die Android-App). Dies dient als Nachweis der Lieferung/Abholung.
+
+**6. TransportLogisticsService: Kosten-Tracking**
+Alle Transportkosten werden erfasst: Kraftstoff (getankte Liter × Preis), Mautgebühren, Parkgebühren, Fährkosten, Sonstiges. Zu jeder Kostenposition kann ein Beleg hochgeladen werden (Foto der Tankquittung etc.). Die Kosten werden der Tour und darüber den Projekten zugeordnet. Monatliche Auswertung: Gesamtkosten, Kosten pro km, Kosten pro Fahrzeug, Kosten pro Projekt.
+
+**7. API: 11 Endpunkte in /api/transport/**
+- `GET/POST/PUT/DELETE /api/transport/vehicles` – Fahrzeuge CRUD
+- `GET/POST/PUT/DELETE /api/transport/drivers` – Fahrer CRUD
+- `GET/POST/PUT /api/transport/tours` – Touren verwalten
+- `POST /api/transport/tours/{id}/start` – Tour starten
+- `POST /api/transport/tours/{id}/complete` – Tour abschließen
+- `POST /api/transport/tours/{id}/stops/{stopId}/sign` – Übergabe bestätigen
+- `GET/POST /api/transport/tours/{id}/costs` – Kosten erfassen/abrufen
+- `GET /api/transport/capacity-check` – Kapazitätsprüfung
+- `GET /api/transport/calendar` – Kalender-Daten (Belegung)
+
+**8. UI: transport_index.twig mit Kalender**
+Das Transport-Dashboard zeigt oben einen Wochenkalender mit allen geplanten Touren (farblich nach Fahrzeug). Darunter: Aktive Touren (live-Status), Fahrzeugübersicht (verfügbar/unterwegs), Fahrer-Status. Die Tourenplanung erfolgt per Formular: Datum wählen, Fahrzeug + Fahrer zuweisen, Stopps hinzufügen (Adresse, Typ, Projekt), Kapazitätsprüfung automatisch im Hintergrund.
+
+**9. Controller: index.php**
+Routet Anfragen, prüft Berechtigungen (Touren planen = Disponent + Admin, Touren einsehen = alle).
+
+**10. Tests**
+Unit-Tests für: Fahrzeug/Fahrer-CRUD, Tourenplanung mit Stopps (Reihenfolge, Hinzufügen, Entfernen), Kapazitätsprüfung (unter Limit, genau am Limit, über Limit, Zwischenstopps mit Laden/Entladen), Kosten-Tracking (Aggregation pro Tour/Projekt/Monat), Übergabe-Unterschrift.
+
+---
+
+## I1-I3 – Multi-KI-Provider System
+
+### Überblick
+Anstatt fest an einen KI-Anbieter (z.B. Claude) gebunden zu sein, unterstützt MyRMS 6 verschiedene KI-Provider gleichzeitig. Jeder Task-Typ (Vertragserstellung, Schadensbewertung, Kategorisierung etc.) kann einem bestimmten Provider zugeordnet werden (Task-Routing). Fällt ein Provider aus, springt automatisch der nächste in der Fallback-Kette ein. API-Keys werden AES-256 verschlüsselt in der Datenbank gespeichert. Ein Usage-Tracker protokolliert alle KI-Aufrufe mit Tokens und geschätzten Kosten.
+
+### Bausteine im Detail
+
+**1. DB-Migration: 4 Tabellen**
+- `ai_providers` – Konfigurierte Provider: Name (claude/openai/gemini/mistral/ollama/openai_compatible), API-Key (verschlüsselt), Basis-URL (für Self-Hosted/Kompatible), Modell-Name, max_tokens, temperature, ist_aktiv, Priorität (für Fallback-Reihenfolge).
+- `ai_task_routing` – Zuordnung Task-Typ → Provider: Task-Typ (contract_generation/damage_assessment/categorization/email_draft/translation/general), primärer Provider-ID, Fallback-Provider-IDs (JSON-Array).
+- `ai_usage_log` – Usage-Tracking: Provider-ID, Task-Typ, Modell, Input-Tokens, Output-Tokens, geschätzte_Kosten_EUR, Antwortzeit_ms, Status (success/error), Fehler-Text, Zeitstempel, Benutzer-ID.
+- `ai_fallback_chain` – Fallback-Konfiguration: Task-Typ, Provider-Reihenfolge (JSON-Array), max_Retries, Timeout_Sekunden.
+
+**2. LlmProviderInterface + LlmResponse**
+Ein PHP-Interface, das alle Provider implementieren müssen:
+- `chat(string $systemPrompt, string $userMessage, array $options): LlmResponse` – Standard-Chat-Completion
+- `chatWithTools(string $systemPrompt, string $userMessage, array $tools, array $options): LlmResponse` – Chat mit Tool-Use/Function-Calling
+- `getName(): string` – Provider-Name
+- `isAvailable(): bool` – Prüft ob der Provider erreichbar ist (API-Key gültig, Endpoint antwortet)
+`LlmResponse` ist ein Value Object mit: content (Text-Antwort), toolCalls (Array), inputTokens, outputTokens, model, finishReason.
+
+**3–8. Adapter: Claude, OpenAI, Gemini, Mistral, Ollama, OpenAI-Compatible**
+Sechs konkrete Implementierungen des LlmProviderInterface:
+- **ClaudeAdapter:** Anthropic Messages API, unterstützt Claude 3.5 Sonnet/Haiku/Opus, Tool-Use mit Anthropic-Format.
+- **OpenAiAdapter:** OpenAI Chat Completions API, unterstützt GPT-4o/GPT-4-turbo/GPT-3.5, Function Calling.
+- **GeminiAdapter:** Google Gemini API, unterstützt Gemini Pro/Ultra, Function Calling.
+- **MistralAdapter:** Mistral API, unterstützt Mistral Large/Medium/Small, Function Calling.
+- **OllamaAdapter:** Lokaler Ollama-Server (kein API-Key nötig), unterstützt alle Ollama-Modelle (Llama, Mixtral etc.), kein Function Calling.
+- **OpenAiCompatibleAdapter:** Generischer Adapter für alle APIs, die das OpenAI-Format sprechen (z.B. vLLM, LocalAI, Together.ai, Fireworks). Basis-URL konfigurierbar.
+
+**9. AiProviderRegistry**
+Zentrale Registry, die alle konfigurierten Provider kennt. Funktionen:
+- `getProviderForTask(string $taskType): LlmProviderInterface` – Gibt den primären Provider für einen Task-Typ zurück
+- `executewithFallback(string $taskType, callable $fn): LlmResponse` – Führt einen KI-Aufruf aus und wechselt bei Fehler automatisch zum nächsten Provider in der Fallback-Kette
+- API-Key-Management: Keys werden mit AES-256-GCM verschlüsselt und erst beim Aufruf entschlüsselt. Der Encryption-Key liegt in der `.env`-Datei, nie in der Datenbank.
+
+**10. AiRequestHandler**
+Der zentrale Einstiegspunkt für alle KI-Aufrufe in der gesamten Anwendung. Anstatt direkt einen Provider aufzurufen, nutzen alle Services den AiRequestHandler:
+```php
+$response = $aiRequestHandler->execute('contract_generation', $systemPrompt, $userMessage);
+```
+Der Handler kümmert sich um: Provider-Auswahl (via Registry), Anonymisierung (via I6), Fallback, Usage-Tracking, Fehlerbehandlung. So muss kein Service wissen, welcher KI-Provider gerade aktiv ist.
+
+**11. AiUsageTracker**
+Protokolliert jeden KI-Aufruf: Welcher Provider, welches Modell, wie viele Input/Output-Tokens, geschätzte Kosten (basierend auf Provider-spezifischen Token-Preisen), Antwortzeit, Erfolg/Fehler. Dashboard-Auswertung: Kosten pro Tag/Woche/Monat, Kosten pro Task-Typ, Kosten pro Provider, Top-10 teuerste Anfragen. So behält der Admin die KI-Kosten im Blick.
+
+**12. AiInitializer**
+Bootstrap-Helper, der beim Start der Anwendung alle Provider registriert. Liest die Provider-Konfiguration aus der Datenbank, erstellt die Adapter-Instanzen und registriert sie in der Registry. Wird einmal pro Request aufgerufen (Singleton-Pattern).
+
+**13. API-Key Verschlüsselung**
+Alle API-Keys werden mit AES-256-GCM verschlüsselt, bevor sie in die Datenbank geschrieben werden. Der Encryption-Key wird aus der Umgebungsvariable `AI_ENCRYPTION_KEY` gelesen. Jeder Eintrag hat seinen eigenen IV (Initialization Vector) und Auth-Tag. Beim Auslesen wird der Key entschlüsselt und nur im RAM gehalten, nie geloggt oder in Responses ausgegeben.
+
+**14. API: 6 Endpunkte in /api/ai/**
+- `GET/POST/PUT/DELETE /api/ai/providers` – Provider CRUD (Keys werden maskiert zurückgegeben)
+- `GET/PUT /api/ai/routing` – Task-Routing Konfiguration
+- `GET /api/ai/usage` – Usage-Statistiken
+- `POST /api/ai/test-connection` – Provider-Verbindung testen
+
+**15. UI: ai_settings.twig mit Provider-Cards**
+KI-Einstellungsseite mit Provider-Cards: Jeder Provider wird als Karte dargestellt (Logo, Name, Status aktiv/inaktiv, Modell, geschätzte Kosten/Monat). Klick öffnet das Konfigurationsformular (API-Key, Modell, Temperatur). Darunter: Task-Routing-Tabelle (welcher Task → welcher Provider), Fallback-Konfiguration. Unten: Usage-Chart (Kosten der letzten 30 Tage).
+
+**16. Config: ai_bootstrap.php**
+PHP-Konfigurationsdatei, die den AiInitializer aufruft und die globale `$aiRequestHandler`-Instanz bereitstellt. Wird in der `index.php` eingebunden.
+
+**17. Migration bestehender ClaudeService**
+Der bestehende ClaudeService (der direkt die Claude-API aufruft) muss auf den AiRequestHandler umgestellt werden. Alle Stellen, die `$claudeService->chat()` aufrufen, werden auf `$aiRequestHandler->execute()` umgestellt. So profitieren alle bestehenden KI-Features automatisch von Multi-Provider, Fallback und Anonymisierung.
+
+**18. Tests**
+Unit-Tests für: Jeden Adapter (Mock der HTTP-Responses), Registry (Task-Routing, Fallback bei Provider-Ausfall), AiRequestHandler (Integration mit Anonymisierung und Usage-Tracking), API-Key Verschlüsselung (Encrypt/Decrypt Roundtrip, ungültiger Key).
+
+---
+
+## I6 – KI-Anonymisierung
+
+### Überblick
+Pflicht-Anonymisierung für alle KI-Anfragen, die an Cloud-Provider (Claude, OpenAI, Gemini, Mistral) gesendet werden. Personenbezogene Daten (Namen, E-Mails, IBANs, Telefonnummern etc.) werden vor dem Senden durch Platzhalter ersetzt und in der Antwort wieder zurückgetauscht. So verlassen keine echten Kundendaten das Firmennetzwerk. Für lokale Provider (Ollama) kann die Anonymisierung deaktiviert werden.
+
+### Bausteine im Detail
+
+**1. DB-Migration: 2 Tabellen**
+- `ai_anonymization_config` – Konfiguration pro Instanz: Modus (strikt/standard/minimal/aus), aktive Patterns (JSON-Array), DB-Abgleich aktiv (ja/nein), maximale Mapping-Lebensdauer (Sekunden).
+- `ai_anonymization_audit_log` – Audit-Log: Request-ID, Zeitstempel, Modus, Anzahl Ersetzungen pro Typ (z.B. 3× IBAN, 2× E-Mail), keine echten Daten! Nur Zähler und Typen werden geloggt.
+
+**2. AnonymizationService: anonymize() + deAnonymize()**
+`anonymize($text)` durchsucht den Text nach personenbezogenen Daten, ersetzt sie durch Platzhalter (z.B. `[IBAN_1]`, `[EMAIL_1]`, `[NAME_1]`) und speichert die Zuordnung (Mapping) im RAM. `deAnonymize($text, $mapping)` tauscht die Platzhalter in der KI-Antwort wieder gegen die echten Daten zurück. Das Mapping wird nie persistiert, nur für die Dauer eines einzelnen Requests im Speicher gehalten.
+
+**3. 7 Regex-Patterns**
+Folgende Muster werden erkannt und ersetzt:
+- **IBAN:** Deutsches Format (DE + 2 Prüfziffern + 18 Ziffern) und internationale Formate
+- **E-Mail:** Standard-E-Mail-Regex
+- **Telefon:** Deutsche Formate (+49, 0049, 0-Vorwahl), Mobilnummern, Festnetz
+- **USt-IdNr:** Deutsches Format (DE + 9 Ziffern) und EU-Formate
+- **Steuernummer:** Deutsches Format (XX/XXX/XXXXX)
+- **IP-Adresse:** IPv4 und IPv6
+- **Datumsangaben:** Deutsche Formate (TT.MM.JJJJ, TT.MM.JJ)
+
+**4. DB-Abgleich**
+Zusätzlich zu den Regex-Patterns prüft der Service, ob im Text Namen vorkommen, die in der Datenbank als Kunden, Kontaktpersonen oder Mitarbeiter gespeichert sind. Dazu werden alle aktiven Kunden-, Kontakt- und Mitarbeiternamen geladen und per String-Matching im Text gesucht. Gefundene Namen werden durch `[PERSON_1]`, `[PERSON_2]` etc. ersetzt. Dies fängt Fälle ab, die Regex nicht erkennt (z.B. „Herr Müller hat angerufen").
+
+**5. 4 Modi**
+- **Strikt:** Alle 7 Regex-Patterns + DB-Abgleich aktiv. Maximaler Schutz, aber möglicherweise False Positives (z.B. eine Bestellnummer, die wie eine IBAN aussieht).
+- **Standard:** Alle 7 Regex-Patterns aktiv, aber kein DB-Abgleich. Guter Kompromiss zwischen Schutz und Performance.
+- **Minimal:** Nur IBAN, E-Mail und Telefon werden ersetzt. Für Fälle, wo andere Daten für die KI relevant sind.
+- **Aus:** Keine Anonymisierung. Nur für lokale Provider (Ollama) erlaubt.
+
+**6. Integration in AiRequestHandler**
+Die Anonymisierung wird automatisch im AiRequestHandler ausgeführt – kein Service muss sich selbst darum kümmern. Ablauf: User-Prompt kommt rein → `anonymize()` → anonymisierter Prompt wird an KI gesendet → Antwort kommt zurück → `deAnonymize()` → Antwort mit echten Daten wird an den Service zurückgegeben. Für Cloud-Provider wird mindestens Modus „Standard" erzwungen.
+
+**7. Cloud-Provider min. Standard erzwungen**
+Hardcoded im AiRequestHandler: Wenn der aktive Provider ein Cloud-Provider ist (alles außer Ollama), wird die Anonymisierung mindestens auf „Standard" gesetzt, auch wenn der Admin „Aus" konfiguriert hat. Dies verhindert versehentliches Senden von Klartext-Daten an Cloud-APIs. Nur bei Ollama (lokal) kann die Anonymisierung komplett deaktiviert werden.
+
+**8. API: 2 Endpunkte**
+- `GET/PUT /api/ai/anonymization/config` – Anonymisierungs-Konfiguration lesen/schreiben
+- `POST /api/ai/anonymization/test` – Test-Endpunkt: Text eingeben, anonymisierte Version sehen (zum Testen der Patterns ohne echten KI-Aufruf)
+
+**9. Audit-Log**
+Jeder anonymisierte Request wird im Audit-Log erfasst: Wie viele Ersetzungen pro Typ (3× IBAN, 2× E-Mail, 5× PERSON). Wichtig: Es werden NIEMALS die echten Daten oder die Platzhalter-Mappings geloggt! Nur die Zähler und Typen. Das Log dient zur Überprüfung, dass die Anonymisierung korrekt arbeitet.
+
+**10. Tests**
+Unit-Tests für: Alle 7 Regex-Patterns (jeweils gültige und ungültige Formate), DB-Abgleich (Name im Text gefunden, Name nicht im Text, Teilmatch), anonymize() + deAnonymize() Roundtrip (Original → anonymisiert → de-anonymisiert = Original), alle 4 Modi, Cloud-Provider-Erzwingung.
