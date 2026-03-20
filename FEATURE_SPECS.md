@@ -864,3 +864,95 @@ Routet Anfragen, prüft Berechtigungen (Drucker konfigurieren = Admin, Labels dr
 
 **14. Tests**
 Unit-Tests für: ZPL-Generierung (korrekter ZPL-Output für Text, QR, Barcode), Template-Rendering (alle Platzhalter korrekt ersetzt), Bulk-Druck (100 Labels, Fehler bei Label #37 → restliche werden trotzdem gedruckt), Druckerstatus-Abfrage, Etikettengrößen-Kompatibilitätsprüfung (Template passt nicht auf Drucker → Warnung).
+
+---
+
+## I9 – Smart Asset Creator
+
+### Überblick
+Statt jedes neue Asset mühsam von Hand mit technischen Daten zu befüllen, gibt der Benutzer nur Hersteller und Modell ein – die KI sucht den Rest: Gewicht, Maße, Leistung, Baujahr-Optionen, typische Mietpreise, passende Kategorie. Alternativ kann ein Foto des Geräts hochgeladen werden – die KI erkennt per Vision-API was es ist und füllt die Felder automatisch. Für große Bestände gibt es einen Bulk-Import: CSV mit Hersteller+Modell-Spalten hochladen, die KI reichert alle Zeilen im Hintergrund an. Korrekturen des Benutzers fließen zurück ins System (Lern-Feedback für I10).
+
+### Bausteine im Detail
+
+**1. DB-Migration: 3 Tabellen**
+- `smart_asset_cache` – Cache für KI-Lookups: Hersteller, Modell, KI-Antwort (JSON mit allen technischen Daten), Confidence-Score (0–100%), Quelle (ki_lookup/user_correction/manual), erstellt_am, ablauf_am (Cache-TTL, z.B. 90 Tage). Verhindert doppelte KI-Anfragen für dasselbe Gerät.
+- `smart_asset_corrections` – Benutzerkorrekturen: Cache-ID, Feld-Name (z.B. „gewicht"), Original-Wert (KI), Korrigierter-Wert (Benutzer), Benutzer-ID, Zeitstempel. Wird für das Lern-Feedback (I10) verwendet – wenn die KI bei „Bosch GBH 2-26" das Gewicht falsch schätzt und der Benutzer es korrigiert, lernt das System für zukünftige Anfragen.
+- `smart_asset_bulk_jobs` – Bulk-Import-Aufträge: Datei-Pfad (hochgeladene CSV), Status (wartend/verarbeitet/fertig/fehler), Fortschritt (z.B. 23/50 Zeilen), Ergebnis-Datei (CSV mit angereicherten Daten), erstellt_von, erstellt_am.
+
+**2. AssetLookupResult (Value Object)**
+Ein strukturiertes Objekt, das die KI-Antwort standardisiert:
+- `manufacturer` – Hersteller (bestätigt/korrigiert)
+- `model` – Modell (bestätigt/korrigiert)
+- `category` – Vorgeschlagene Kategorie (z.B. „Bohrhammer", „Generator", „Absperrgitter")
+- `weight_kg` – Gewicht in kg
+- `dimensions` – Maße (Länge × Breite × Höhe in cm)
+- `power_watts` – Leistung in Watt (falls elektrisch)
+- `voltage` – Spannung (230V/400V/Akku)
+- `fuel_type` – Antriebsart (Strom/Benzin/Diesel/Akku/Manuell)
+- `noise_level_db` – Lautstärke in dB (falls relevant)
+- `suggested_daily_price` – Vorgeschlagener Tages-Mietpreis (basierend auf Marktdaten)
+- `suggested_replacement_value` – Wiederbeschaffungswert
+- `description` – Kurzbeschreibung für den Katalog
+- `confidence` – Wie sicher ist die KI bei den Daten (0–100%)
+- `image_url` – Produktbild-URL (falls gefunden)
+
+**3. SmartAssetLookupService: lookup()**
+Die Hauptmethode. Ablauf:
+1. Cache prüfen: Gibt es für Hersteller+Modell bereits einen Cache-Eintrag? Falls ja und nicht abgelaufen → Cache zurückgeben.
+2. KI-Anfrage: Über den AiRequestHandler (I1-I3) einen Prompt senden: „Du bist ein Experte für Baumaschinen und Veranstaltungstechnik. Gib mir die technischen Daten für [Hersteller] [Modell] als strukturiertes JSON." Die Antwort wird als AssetLookupResult geparst.
+3. Cache speichern: KI-Antwort im Cache ablegen.
+4. Ergebnis zurückgeben: Das AssetLookupResult mit allen Feldern.
+Die KI wird über den Task-Typ `smart_asset_lookup` geroutet, sodass der Admin entscheiden kann, welcher Provider dafür genutzt wird (z.B. Claude für bessere Qualität oder Ollama für Kostenersparnis).
+
+**4. SmartAssetLookupService: lookupFromPhoto()**
+Foto-basierter Lookup per Vision-KI:
+1. Benutzer lädt ein Foto hoch (Smartphone-Kamera oder Datei).
+2. Das Foto wird an einen Vision-fähigen KI-Provider gesendet (Claude, GPT-4o, Gemini – müssen Vision unterstützen, Ollama fällt hier raus).
+3. Die KI identifiziert das Gerät und gibt Hersteller + Modell zurück.
+4. Mit Hersteller + Modell wird dann der normale `lookup()` aufgerufen.
+Falls die KI das Gerät nicht eindeutig identifizieren kann, gibt sie 3 Vorschläge zurück, aus denen der Benutzer wählt.
+
+**5. SmartAssetLookupService: bulkLookup()**
+CSV-Bulk-Import für große Bestände:
+1. Benutzer lädt eine CSV-Datei hoch mit Spalten: Hersteller, Modell, (optional: Seriennummer, Anzahl).
+2. Das System erstellt einen Bulk-Job und verarbeitet die Zeilen im Hintergrund (Queue).
+3. Pro Zeile wird `lookup()` aufgerufen (mit Cache – wenn 20 gleiche Modelle, wird nur 1× die KI gefragt).
+4. Fortschritt wird live angezeigt (z.B. „23/50 verarbeitet").
+5. Ergebnis: Angereicherte CSV zum Download oder direkt als Assets importieren.
+Rate-Limiting: Maximal 10 KI-Anfragen pro Minute, um die API nicht zu überlasten.
+
+**6. SmartAssetLookupService: suggestRentalPrice()**
+Schlägt einen Tages-Mietpreis vor, basierend auf: Wiederbeschaffungswert des Geräts, durchschnittlicher Mietpreis ähnlicher Geräte in der eigenen Datenbank, Markt-Richtwerte (KI-Schätzung basierend auf Branche und Region). Der Vorschlag ist ein Richtwert – der Benutzer kann ihn übernehmen oder anpassen.
+
+**7. SmartAssetLookupService: suggestCategory()**
+Schlägt eine Kategorie aus den bestehenden Asset-Kategorien der Instanz vor. Die KI analysiert den Gerätetyp und matcht ihn gegen die vorhandenen Kategorien. Falls keine passende Kategorie existiert, schlägt die KI einen neuen Kategorienamen vor. Beispiel: „Bosch GBH 2-26" → Kategorie „Bohrhämmer" (falls vorhanden) oder „Bohrmaschinen" (nächstbeste).
+
+**8. SmartAssetLookupService: recordCorrection()**
+Wenn der Benutzer einen KI-Wert korrigiert (z.B. Gewicht von 2,8kg auf 2,9kg ändern), wird die Korrektur gespeichert. Das Lern-System (I10) nutzt diese Korrekturen als Few-Shot-Beispiele: „Bei Bosch GBH 2-26 hast du das Gewicht als 2,8kg angegeben, der korrekte Wert ist 2,9kg." So verbessert sich die KI-Qualität über die Zeit.
+
+**9. SmartAssetLookupService: Hersteller/Modell-Autocomplete**
+Während der Benutzer den Herstellernamen tippt, erscheinen Vorschläge aus zwei Quellen:
+1. Bestehende Assets in der Datenbank (was wurde schon mal angelegt?)
+2. Cache (welche Hersteller/Modelle wurden schon per KI nachgeschlagen?)
+So muss die KI gar nicht erst gefragt werden, wenn das Gerät schon bekannt ist.
+
+**10. API: 7 Endpunkte**
+- `POST /api/assets/smart-lookup` – Lookup per Hersteller+Modell
+- `POST /api/assets/smart-lookup-photo` – Lookup per Foto
+- `POST /api/assets/smart-bulk-lookup` – Bulk-CSV-Upload
+- `GET /api/assets/smart-bulk-lookup/{id}` – Bulk-Job Status
+- `GET /api/assets/smart-bulk-lookup/{id}/result` – Bulk-Ergebnis (CSV/JSON)
+- `POST /api/assets/smart-correction` – Korrektur melden
+- `GET /api/assets/smart-autocomplete` – Hersteller/Modell-Autocomplete
+
+**11. UI: 3-Step Wizard Modal (smart_create_modal.twig)**
+Ein Modal-Dialog mit 3 Schritten:
+- **Schritt 1:** Hersteller und Modell eingeben (Autocomplete) oder Foto hochladen. „Suchen"-Button.
+- **Schritt 2:** KI-Ergebnisse anzeigen – alle gefundenen Felder mit Confidence-Anzeige (grün >80%, gelb 50-80%, rot <50%). Benutzer kann jeden Wert editieren. Kategorie-Vorschlag mit Dropdown zum Ändern. Mietpreis-Vorschlag.
+- **Schritt 3:** Zusammenfassung, Anzahl eingeben (z.B. „5 Stück dieses Geräts anlegen"), Lagerort wählen, „Assets anlegen"-Button.
+
+**12. Integration in Asset-Neuanlage**
+Das Smart-Create-Modal wird als Alternative zum normalen Asset-Formular angeboten. Auf der Asset-Neuanlage-Seite gibt es zwei Buttons: „Manuell anlegen" (klassisches Formular) und „Smart anlegen" (öffnet das KI-Modal). Der Smart-Weg ist der empfohlene Standard.
+
+**13. Tests**
+Unit-Tests für: lookup() mit Cache-Hit und Cache-Miss, lookupFromPhoto() mit Mock der Vision-API (Gerät erkannt / nicht erkannt / 3 Vorschläge), bulkLookup() mit verschiedenen CSV-Formaten (mit/ohne Header, fehlende Spalten), suggestRentalPrice() (plausible Preise), suggestCategory() (Match/kein Match), recordCorrection() (Korrektur wird gespeichert und beim nächsten Lookup berücksichtigt), Autocomplete (Ergebnisse aus DB + Cache).
