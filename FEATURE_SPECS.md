@@ -1037,3 +1037,54 @@ Langfristig soll das Lernsystem mit einer Vektordatenbank (ChromaDB oder pgvecto
 
 **13. Tests**
 Unit-Tests für: recordFeedback() (Daumen hoch/runter, mit/ohne Korrektur), buildEnrichedPrompt() (Lernprofil wird eingefügt, Few-Shot-Beispiele werden hinzugefügt, A/B-Testing wählt richtige Version), Auto-Prompt-Optimierung (Schwellwert erreicht → Vorschlag generiert), Few-Shot-Qualitäts-Score (steigt bei positivem Feedback, sinkt bei negativem).
+
+---
+
+## I11 – KI-Transportkostenberechnung
+
+### Überblick
+KI-gestützte Kostenprognose für den Fuhrpark. Bevor eine Tour gefahren wird, schätzt die KI die Gesamtkosten (Sprit, Maut, Verschleiß, Personalkosten). Zusätzlich analysiert sie den Total Cost of Ownership (TCO) jedes Fahrzeugs, erstellt Budget-Forecasts für die kommenden Monate und erkennt Anomalien (z.B. ein LKW, dessen Spritverbrauch plötzlich 30% über dem Durchschnitt liegt). Alle Berechnungen basieren auf historischen Transportdaten aus J3.
+
+### Bausteine im Detail
+
+**1. DB-Migration: 2 Tabellen**
+- `ai_transport_cost_predictions` – KI-Prognosen: Tour-ID (optional, für Einzel-Prognosen), Prognose-Typ (tour_cost/budget_forecast/anomaly), vorhergesagte_Kosten, tatsächliche_Kosten (nachträglich befüllt), Abweichung_prozent, Confidence-Score, KI-Erklärung (Text warum diese Kosten erwartet werden), erstellt_am.
+- `ai_vehicle_tco_cache` – TCO-Cache pro Fahrzeug: Fahrzeug-ID, Berechnungs-Zeitraum, Spritkosten_gesamt, Wartungskosten_gesamt, Versicherungskosten_gesamt, AfA_gesamt, Mautkosten_gesamt, TCO_gesamt, Kosten_pro_km, berechnet_am, gültig_bis.
+
+**2. AiTransportCostService: Kraftstoffkosten-Prognose**
+Berechnet die erwarteten Spritkosten für eine geplante Tour. Eingabe: Fahrzeug-ID, geplante Strecke (km), Beladung (kg). Die KI nutzt historische Verbrauchsdaten des Fahrzeugs (aus transport_costs), berücksichtigt Beladung (schwerer = mehr Verbrauch), Streckenprofil (Autobahn vs. Landstraße, basierend auf früheren Touren mit ähnlicher Route) und aktuelle Spritpreise. Ausgabe: Geschätzte Liter, geschätzte Kosten, Confidence-Score.
+
+**3. AiTransportCostService: Tourkosten-Vorhersage**
+Prognostiziert die Gesamtkosten einer Tour: Sprit + Maut + Personalkosten (Fahrer-Stunden × Stundensatz) + Verschleiß (anteilige Wartungskosten pro km) + sonstige Kosten (Parkgebühren, Fähren – basierend auf früheren ähnlichen Touren). Die KI vergleicht die geplante Tour mit historischen Touren ähnlicher Länge und Route und extrapoliert die Kosten. Nach der Tour wird die tatsächliche Abweichung gespeichert, um die Prognosequalität zu verbessern.
+
+**4. AiTransportCostService: Fahrzeug-Empfehlung**
+Bei der Tourenplanung schlägt die KI das optimale Fahrzeug vor. Kriterien: Kapazität (passt die Ladung rein?), Kosten (welches Fahrzeug ist am günstigsten für diese Strecke?), Verfügbarkeit (welches Fahrzeug ist frei?), Verschleiß-Zustand (Fahrzeug mit frischer Wartung bevorzugen). Ausgabe: Ranking der verfügbaren Fahrzeuge mit geschätzten Kosten und Begründung.
+
+**5. AiTransportCostService: TCO-Analyse pro Fahrzeug**
+Berechnet die Total Cost of Ownership für jedes Fahrzeug über einen wählbaren Zeitraum (6/12/24 Monate): Spritkosten (aus transport_costs), Wartungskosten (aus maintenance_jobs), Versicherungsprämie (aus insurance_policies), Abschreibung (Kaufpreis / Nutzungsdauer), Mautkosten, Reifenkosten. Die KI vergleicht den TCO verschiedener Fahrzeuge und identifiziert „Geldverbrenner" – Fahrzeuge die unverhältnismäßig teuer im Unterhalt sind.
+
+**6. AiTransportCostService: Budget-Forecasting**
+Prognostiziert die Transportkosten für den nächsten Monat/das nächste Quartal. Basiert auf: Geplante Touren (aus Kalender), saisonale Muster (Winter = höherer Verbrauch), historischer Trend (steigende/fallende Kosten), erwartete Spritpreisentwicklung. Der Admin sieht im Dashboard: „Erwartete Transportkosten April: 8.500€ (±15%)". Hilft bei der Budgetplanung und Preiskalkulation.
+
+**7. AiTransportCostService: Anomalie-Erkennung**
+Erkennt ungewöhnliche Kosten-Ausreißer:
+- Fahrzeug-Anomalien: „LKW #3 hatte im März 40% höhere Spritkosten als üblich" → Hinweis auf möglichen Defekt oder Fahrverhalten.
+- Tour-Anomalien: „Tour #127 hat 200€ Maut gekostet statt der üblichen 80€ auf ähnlichen Strecken" → möglicher Fehler oder falsche Routenwahl.
+- Fahrer-Anomalien: „Fahrer Müller verbraucht 15% mehr Sprit als Fahrer Schmidt auf den gleichen Strecken" → Schulungsbedarf.
+Anomalien werden als Alerts im Dashboard angezeigt und können per E-Mail an den Admin gesendet werden.
+
+**8. API: 5 Endpunkte**
+- `POST /api/ai/transport/predict-cost` – Tourkosten-Prognose
+- `POST /api/ai/transport/recommend-vehicle` – Fahrzeug-Empfehlung
+- `GET /api/ai/transport/tco/{vehicleId}` – TCO-Analyse für ein Fahrzeug
+- `GET /api/ai/transport/budget-forecast` – Budget-Prognose
+- `GET /api/ai/transport/anomalies` – Erkannte Anomalien
+
+**9. UI: KI-Kosten-Widget im Transport-Dashboard**
+Ein Widget im Transport-Dashboard (J3) mit: Kostenprognose für die nächste geplante Tour, Budget-Forecast als Balkendiagramm, Anomalie-Alerts (rote Badges). Klick auf eine Anomalie öffnet die Detail-Analyse mit Vergleichsdaten.
+
+**10. Integration: Automatische Kostenschätzung bei Touren-Erstellung**
+Wenn eine neue Tour in J3 geplant wird, läuft automatisch die Kostenprognose im Hintergrund. Der Disponent sieht sofort: „Geschätzte Kosten: ~450€" und die Fahrzeug-Empfehlung: „Transporter #2 wäre 80€ günstiger als LKW #1 für diese Tour."
+
+**11. Tests**
+Unit-Tests für: Kraftstoffprognose (mit verschiedenen Beladungen und Strecken), Tourkosten-Vorhersage (Vergleich Prognose vs. Ist), TCO-Berechnung (alle Kostenkomponenten), Budget-Forecast (saisonale Muster), Anomalie-Erkennung (Schwellwerte korrekt, False-Positive-Rate).
