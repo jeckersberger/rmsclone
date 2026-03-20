@@ -619,3 +619,141 @@ Jeder anonymisierte Request wird im Audit-Log erfasst: Wie viele Ersetzungen pro
 
 **10. Tests**
 Unit-Tests für: Alle 7 Regex-Patterns (jeweils gültige und ungültige Formate), DB-Abgleich (Name im Text gefunden, Name nicht im Text, Teilmatch), anonymize() + deAnonymize() Roundtrip (Original → anonymisiert → de-anonymisiert = Original), alle 4 Modi, Cloud-Provider-Erzwingung.
+
+---
+
+## D1 – Dokumenten-Engine mit Layout-Editor
+
+### Überblick
+Alles, was in MyRMS gedruckt oder als PDF ausgegeben werden kann – Rechnungen, Angebote, Auftragsbestätigungen, Lieferscheine, Gutschriften, Mahnungen, Stornos – wird über eine zentrale Dokumenten-Engine erzeugt. Der Clou: Jeder Dokumenttyp hat ein frei konfigurierbares Layout, das der Benutzer selbst im Browser gestaltet (Drag & Drop Layout-Editor). Kein Entwickler nötig, um das Firmenlogo zu verschieben, Spalten hinzuzufügen oder die Schriftgröße zu ändern. Jede Instanz (Mandant) kann eigene Layouts pro Dokumenttyp pflegen. Die Engine unterstützt 7 Dokumenttypen, Nummernkreise mit konfigurierbarem Format, Mehrwertsteuer-Logik (19%/7%/0%), Fremdwährung und GoBD-konforme Archivierung.
+
+### Bausteine im Detail
+
+**1. DB-Migration: 8 Tabellen**
+- `document_types` – Die 7 Dokumenttypen: Rechnung, Angebot, Auftragsbestätigung, Lieferschein, Gutschrift, Mahnung, Storno. Pro Instanz erweiterbar (z.B. „Kostenvoranschlag" als eigener Typ). Jeder Typ hat einen internen Schlüssel, einen Anzeigenamen und ein Standard-Layout.
+- `document_layouts` – Layouts pro Dokumenttyp und Instanz: Layout-Name, Dokumenttyp-ID, Instanz-ID, ist_standard (ja/nein), Layout-JSON (komplette Layoutdefinition als JSON – Positionen, Größen, Schriftarten, Farben aller Elemente). Mehrere Layouts pro Dokumenttyp möglich (z.B. „Rechnung Deutsch", „Rechnung Englisch", „Rechnung mit großem Logo").
+- `document_layout_elements` – Einzelne Elemente eines Layouts: Layout-ID, Element-Typ (text/image/table/line/rectangle/barcode/qrcode/pagebreak/dynamic_field), Position-X (mm), Position-Y (mm), Breite (mm), Höhe (mm), Seite (1/2/alle/letzte), Layer (z-index), Rotation (Grad), Konfiguration (JSON – Schriftart, Schriftgröße, Farbe, Ausrichtung, Rahmen, Padding, Hintergrundfarbe, Platzhalter-Referenz).
+- `documents` – Generierte Dokumente: Dokumenttyp-ID, Dokumentnummer (aus Nummernkreis), Projekt-ID, Kunde-ID, Status (entwurf/finalisiert/gesendet/storniert), Layout-ID (welches Layout wurde verwendet), Netto-Betrag, MwSt-Betrag, Brutto-Betrag, Währung, Sprache, erstellt_von, erstellt_am, finalisiert_am, PDF-Pfad.
+- `document_positions` – Einzelpositionen eines Dokuments: Dokument-ID, Reihenfolge, Bezeichnung, Beschreibung, Menge, Einheit (Stück/Stunden/Tage/Pauschal/km/m²/m³), Einzelpreis_netto, Rabatt_prozent, MwSt-Satz (19/7/0), Gesamtpreis_netto, Asset-Typ-ID (optional, für automatische Befüllung aus Projekt).
+- `document_sequences` – Nummernkreise: Dokumenttyp-ID, Instanz-ID, Prefix (z.B. „RE-"), Suffix (z.B. „-2026"), aktueller_Zähler, Padding (z.B. 5 → „00042"), Format-String (z.B. „{PREFIX}{JAHR}-{NR}"), Jahres-Reset (ja/nein – Zähler am 1. Januar auf 0 zurücksetzen).
+- `document_defaults` – Standardwerte pro Instanz: Standard-MwSt-Satz, Standard-Zahlungsziel (Tage), Standard-Währung, Standard-Sprache, Bankverbindung, Kontoinhaber, IBAN, BIC, Steuernummer, USt-IdNr, Handelsregisternummer, Kleinunternehmerregelung (ja/nein – §19 UStG, dann keine MwSt).
+- `document_send_log` – Versand-Protokoll: Dokument-ID, Versandart (email/post/portal), Empfänger, Zeitstempel, Status (gesendet/fehlgeschlagen/zugestellt), Fehlermeldung. GoBD-relevant: Nachweis wann welches Dokument an wen gesendet wurde.
+
+**2. DocumentService: Dokument-CRUD mit Positionsverwaltung**
+Erstellen, Lesen, Aktualisieren, Löschen von Dokumenten. Beim Erstellen wird automatisch die nächste Dokumentnummer aus dem Nummernkreis gezogen (atomisch, Row-Level-Locking, keine Lücken). Positionen können hinzugefügt, sortiert, bearbeitet und gelöscht werden. Jede Position hat Menge × Einzelpreis × (1 - Rabatt%) = Netto, plus MwSt-Berechnung. Die Summen (Netto gesamt, MwSt gesamt, Brutto gesamt) werden bei jeder Änderung automatisch neu berechnet.
+
+**3. DocumentService: 7 Dokumenttypen mit spezifischer Logik**
+Jeder Dokumenttyp hat eigene Geschäftslogik:
+- **Rechnung:** Fälligkeitsdatum (erstellt_am + Zahlungsziel), Skonto-Option (z.B. 2% bei Zahlung innerhalb 10 Tagen), Verweis auf Lieferschein-Nr. und Auftragsbestätigungs-Nr.
+- **Angebot:** Gültigkeitsdatum (z.B. 30 Tage), kann per Klick in Auftragsbestätigung umgewandelt werden, Angebotsstatus (offen/angenommen/abgelehnt/abgelaufen).
+- **Auftragsbestätigung:** Entsteht aus Angebot oder wird manuell erstellt, Verweis auf Angebots-Nr., kann in Rechnung umgewandelt werden.
+- **Lieferschein:** Enthält nur Positionen und Mengen (keine Preise), Unterschriftenfeld für Empfänger, Verweis auf Auftragsbestätigung.
+- **Gutschrift:** Negativer Betrag, Verweis auf Original-Rechnung, wird bei Retouren oder Preisnachlass erstellt.
+- **Mahnung:** Verweis auf offene Rechnung, Mahnstufe (1/2/3), Mahngebühr, neues Zahlungsziel, Verzugszinsen-Berechnung.
+- **Storno:** Storniert eine Rechnung komplett, erstellt automatisch eine Gutschrift über den vollen Betrag, Original-Rechnung wird auf Status „storniert" gesetzt.
+
+**4. DocumentService: Konvertierungskette**
+Dokumente können entlang einer Kette konvertiert werden: Angebot → Auftragsbestätigung → Lieferschein + Rechnung. Bei der Konvertierung werden alle Positionen übernommen, die Dokumentnummer ist neu (eigener Nummernkreis pro Typ), und das Quelldokument wird referenziert. So entsteht ein lückenloser Dokumentenverlauf pro Projekt/Kunde.
+
+**5. DocumentService: MwSt-Logik + Kleinunternehmerregelung**
+Pro Position kann ein individueller MwSt-Satz gewählt werden (19%, 7%, 0%). Das System gruppiert die Positionen nach MwSt-Satz und zeigt die MwSt aufgeschlüsselt an (Netto 19% = X€, MwSt 19% = Y€, Netto 7% = A€, MwSt 7% = B€). Bei Kleinunternehmerregelung (§19 UStG) wird keine MwSt ausgewiesen, stattdessen der Hinweistext „Gemäß §19 UStG wird keine Umsatzsteuer berechnet" automatisch eingefügt. Reverse-Charge bei EU-Kunden mit USt-IdNr wird ebenfalls unterstützt.
+
+**6. DocumentService: Nummernkreise**
+Jeder Dokumenttyp hat seinen eigenen Nummernkreis mit konfigurierbarem Format. Beispiele:
+- Rechnung: `RE-2026-00042` (Prefix RE-, Jahr, 5-stellig gepadded)
+- Angebot: `AN-2026-00015`
+- Lieferschein: `LS-2026-00033`
+Der Zähler kann optional am Jahresanfang zurückgesetzt werden. Das Format ist frei konfigurierbar über Platzhalter: `{PREFIX}`, `{JAHR}`, `{MONAT}`, `{NR}`, `{KUNDE_NR}`. Die Nummernvergabe ist atomar (kein doppeltes Vergeben bei gleichzeitigen Requests).
+
+**7. DocumentService: PDF-Rendering mit Layout-Engine**
+Das Layout-JSON wird interpretiert und in HTML umgewandelt, das dann per dompdf in ein PDF gerendert wird. Der Rendering-Prozess:
+1. Layout-JSON laden (alle Elemente mit Position, Größe, Stil)
+2. Platzhalter ersetzen (Firmenname, Kundenadresse, Positionen-Tabelle, Summen, Bankverbindung etc.)
+3. Elemente auf einer virtuellen Seite positionieren (mm-genaue Platzierung)
+4. Mehrseitige Dokumente: Kopfbereich auf Seite 1, Fußbereich auf letzter Seite, Positions-Tabelle fließt über mehrere Seiten
+5. HTML generieren und per dompdf in PDF konvertieren
+6. PDF serverseitig speichern + Hash für GoBD-Integrität
+
+**8. Layout-Editor: Drag & Drop im Browser**
+Der visuelle Layout-Editor ist das Herzstück. Er zeigt eine DIN-A4-Seite im Browser an (maßstabsgetreu). Elemente werden per Drag & Drop platziert:
+- **Text-Elemente:** Freitext oder Platzhalter (z.B. `{{firma.name}}`), konfigurierbare Schriftart (Roboto, Open Sans, Arial etc.), Schriftgröße (6-72pt), Farbe, Fett/Kursiv/Unterstrichen, Ausrichtung (links/rechts/zentriert/Blocksatz).
+- **Bild-Elemente:** Logo hochladen, frei positionieren und skalieren, Seitenverhältnis beibehalten oder frei.
+- **Tabellen-Element:** Die Positionstabelle – konfigurierbare Spalten (welche Spalten anzeigen: Pos-Nr, Bezeichnung, Beschreibung, Menge, Einheit, Einzelpreis, Rabatt, MwSt, Gesamtpreis), Spaltenbreiten per Drag ändern, Kopfzeilen-Stil, Zebrastreifen-Zeilen, Rahmenlinien.
+- **Linien/Rechtecke:** Trennlinien, farbige Hintergrundflächen, Rahmen.
+- **Dynamische Felder:** Dokumentnummer, Datum, Fälligkeitsdatum, Kundennummer, Summen-Block (Netto/MwSt/Brutto), Bankverbindungs-Block, Fußzeilen-Block (Handelsregister, Geschäftsführer etc.).
+- **QR-Code/Barcode:** Automatisch generiert aus Dokumentnummer oder Zahlungsinformationen (EPC-QR-Code für Überweisungen).
+- **Seitenumbruch:** Manuelle Seitenumbrüche einfügen.
+Jedes Element kann pixelgenau verschoben, in der Größe geändert und konfiguriert werden. Raster-Snapping (z.B. 5mm-Raster) hilft bei der Ausrichtung. Undo/Redo wird unterstützt.
+
+**9. Layout-Editor: Live-Vorschau**
+Während der Benutzer das Layout bearbeitet, zeigt eine Live-Vorschau rechts das fertige Dokument mit echten Beispieldaten an. Jede Änderung (Element verschieben, Schrift ändern, Spalte hinzufügen) wird sofort in der Vorschau sichtbar. Der Benutzer kann zwischen Vorschau-Datensätzen wechseln (z.B. kurze Rechnung mit 3 Positionen vs. lange Rechnung mit 50 Positionen), um zu sehen wie das Layout bei verschiedenen Dokumentlängen aussieht.
+
+**10. Layout-Editor: Template-Vorlagen**
+5 vorgefertigte Layout-Templates zum schnellen Einstieg:
+- **Klassisch:** Schwarzweiß, klare Linien, Times New Roman, traditionelles Layout.
+- **Modern:** Farb-Akzente, Open Sans, großes Logo oben links, farbiger Header-Balken.
+- **Minimalistisch:** Viel Weißraum, kleine Schrift, reduziert auf das Wesentliche.
+- **Zweispaltig:** Absender und Empfänger nebeneinander, kompaktes Layout.
+- **Branding:** Großflächiges Firmenbild als Hintergrund, Corporate Colors.
+Der Benutzer wählt ein Template und passt es dann an seine Bedürfnisse an.
+
+**11. Layout-Editor: Seitenbereiche**
+Jedes Layout hat 4 Bereiche, die separat gestaltet werden:
+- **Kopfbereich (Seite 1):** Logo, Firmenadresse, Empfängeradresse, Dokumenttitel, Datum. Nur auf der ersten Seite.
+- **Kopfbereich (Folgeseiten):** Verkleinerter Kopf auf Seite 2+ (z.B. nur Logo + Dokumentnummer + Seitenzahl).
+- **Inhaltsbereich:** Die Positionstabelle + Freitext. Fließt automatisch über mehrere Seiten.
+- **Fußbereich (letzte Seite):** Summen-Block, Zahlungsinformationen, Bankverbindung, AGB-Verweis, Unterschriftenfeld. Nur auf der letzten Seite.
+- **Fußbereich (alle Seiten):** Feste Fußzeile auf jeder Seite (z.B. Handelsregister, Geschäftsführer, Steuernummer).
+
+**12. DocumentService: Versand (E-Mail + Portal)**
+Finalisierte Dokumente können per E-Mail versendet werden. Das System hängt das PDF an, der E-Mail-Text ist konfigurierbar (Template mit Platzhaltern). Alternativ können Dokumente über das Kunden-Portal (L3) bereitgestellt werden. Der Versand wird im `document_send_log` protokolliert. Mehrfachversand ist möglich (z.B. an Kunde + Buchhaltung CC).
+
+**13. DocumentService: GoBD-Archivierung**
+Jedes finalisierte Dokument wird unveränderlich archiviert: Das PDF bekommt einen SHA-256 Hash, der in der Datenbank gespeichert wird. Nachträgliche Änderungen am PDF werden durch Hash-Vergleich erkannt. Finalisierte Dokumente können nicht mehr bearbeitet werden – Korrekturen erfordern ein Storno + neues Dokument. Der Audit-Trail protokolliert alle Aktionen (erstellt, finalisiert, gesendet, storniert).
+
+**14. DocumentService: Aus Projekt generieren**
+Per Klick auf „Rechnung erstellen" im Projekt werden automatisch alle gebuchten Assets als Positionen übernommen: Asset-Name als Bezeichnung, Mietdauer als Menge, Tagespreis als Einzelpreis (aus L2 Preiskalkulations-Engine). Der Benutzer prüft die Positionen, kann sie anpassen und finalisiert dann die Rechnung. Ebenso können Angebote und Lieferscheine aus Projektdaten generiert werden.
+
+**15. API: 15 Endpunkte in /api/documents/**
+- `GET/POST/PUT/DELETE /api/documents` – Dokument-CRUD
+- `POST /api/documents/{id}/add-position` – Position hinzufügen
+- `PUT/DELETE /api/documents/{id}/positions/{posId}` – Position bearbeiten/löschen
+- `POST /api/documents/{id}/finalize` – Dokument finalisieren (ab dann unveränderlich)
+- `POST /api/documents/{id}/send` – Per E-Mail senden
+- `POST /api/documents/{id}/convert` – In anderen Dokumenttyp konvertieren
+- `GET /api/documents/{id}/pdf` – PDF herunterladen
+- `GET/POST/PUT/DELETE /api/documents/layouts` – Layout-CRUD
+- `GET/PUT /api/documents/sequences` – Nummernkreise konfigurieren
+- `GET/PUT /api/documents/defaults` – Standardwerte konfigurieren
+- `POST /api/documents/generate-from-project` – Aus Projekt generieren
+
+**16. UI: documents_index.twig**
+Dokumentenübersicht mit Tabs pro Dokumenttyp (Rechnungen, Angebote, Lieferscheine etc.). Jeder Tab zeigt eine Tabelle mit: Dokumentnummer, Kunde, Datum, Betrag, Status (Entwurf/Finalisiert/Gesendet/Storniert mit Farbe). Filter nach Status, Kunde, Zeitraum, Betrag. Schnellaktionen: PDF öffnen, E-Mail senden, Konvertieren. Dashboard-KPIs oben: Offene Rechnungen (Summe), Überfällige Rechnungen (Summe + Anzahl), Umsatz diesen Monat.
+
+**17. UI: document_editor.twig**
+Der Dokumenten-Editor zum Erstellen/Bearbeiten eines einzelnen Dokuments. Oben: Kunde auswählen (Autocomplete), Dokumenttyp, Datum, Zahlungsziel. Mitte: Positionstabelle (Zeilen hinzufügen, sortieren, löschen, inline bearbeiten). Unten: Summenblock (Netto, MwSt aufgeschlüsselt, Brutto), Freitext-Feld (Bemerkungen, Zahlungshinweise). Rechts: Live-PDF-Vorschau des aktuellen Dokuments mit dem gewählten Layout. Button-Leiste: Speichern, Vorschau, Finalisieren, Senden.
+
+**18. UI: layout_editor.twig (Drag & Drop)**
+Der visuelle Layout-Editor als eigenständige Vollbild-Seite. Links: Element-Palette (Text, Bild, Tabelle, Linie, Feld per Drag auf die Seite ziehen). Mitte: Die DIN-A4-Seite mit allen platzierten Elementen (verschieben, skalieren, selektieren). Rechts: Properties-Panel (Eigenschaften des ausgewählten Elements: Position X/Y, Breite/Höhe, Schriftart, Farbe, Platzhalter etc.). Oben: Toolbar (Speichern, Vorschau, Raster ein/aus, Zoom, Undo/Redo, Seitenbereich wechseln). Unten: Live-Vorschau-Toggle.
+
+**19. JS: Layout-Editor Engine (layout_editor.js)**
+Die JavaScript-Engine für den Layout-Editor. Verwendet Canvas oder SVG für die Darstellung. Features:
+- Drag & Drop mit Snapping (5mm-Raster, Element-Kanten-Snapping)
+- Resize-Handles an allen 8 Punkten
+- Multi-Select (Shift+Klick, Lasso-Auswahl)
+- Ausrichtungs-Tools (linksbündig, zentriert, gleichmäßig verteilt)
+- Copy/Paste von Elementen
+- Undo/Redo-Stack (50 Schritte)
+- Zoom (25%–400%)
+- Keyboard-Shortcuts (Pfeiltasten zum Feinpositionieren, Entf zum Löschen)
+- Export als JSON (wird in der DB gespeichert)
+- Import von JSON (Layout laden)
+
+**20. Controller: index.php**
+Routet Anfragen, prüft Berechtigungen (Dokumente erstellen = Admin + Vertrieb + Buchhaltung, Layouts bearbeiten = Admin, Dokumente einsehen = alle).
+
+**21. Integration: Preiskalkulations-Engine (L2)**
+Beim Generieren eines Dokuments aus einem Projekt fließen die Preise aus der L2-Engine ein: Staffelpreise, Mengenrabatte, Saisonzuschläge, Bundle-Preise und Kundenpreislisten werden automatisch berücksichtigt. Die Aufschlüsselung (Basispreis, Rabatte, Zuschläge) kann optional als eigene Zeilen in der Positionstabelle erscheinen.
+
+**22. Tests**
+Unit-Tests für: Nummernkreise (atomische Vergabe, Jahres-Reset, Format-String), MwSt-Berechnung (19%/7%/0%, Kleinunternehmer, Reverse-Charge, gemischte Sätze), Konvertierungskette (Angebot→AB→Rechnung, Positionen korrekt übernommen), PDF-Rendering (Layout-JSON → gültiges PDF), GoBD-Archivierung (Hash-Prüfung, Unveränderlichkeit).
