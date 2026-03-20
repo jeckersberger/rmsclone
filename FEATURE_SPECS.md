@@ -252,3 +252,196 @@ Für CRON-basierte Trigger muss ein CRON-Script eingerichtet werden, das die Wor
 
 **12. Tests**
 Unit-Tests für: Workflow-CRUD mit Validierung, executeWorkflow() mit allen 7 Aktionstypen einzeln und in Kombination, Bedingungen (wahr/falsch), Verzögerungen (Mock der Zeit), Fehlerbehandlung (Schritt schlägt fehl → Workflow-Status = failed), Event-Trigger (Event feuern → richtiger Workflow wird ausgeführt), Template-Import.
+
+---
+
+## J1 – Digitales Vertragsmanagement
+
+### Überblick
+Vollständiges Vertragswesen innerhalb von MyRMS. Mietverträge, Rahmenverträge und Einzelverträge werden aus konfigurierbaren Templates generiert. Platzhalter (`{{kunde.name}}`, `{{projekt.startdatum}}`, `{{positionen}}`) werden automatisch mit echten Daten befüllt. Verträge haben eine Versionierung (jede Änderung erzeugt eine neue Version), können digital signiert werden (Canvas-Unterschrift im Browser) und werden GoBD-konform archiviert (revisionssicher mit Audit-Trail).
+
+### Bausteine im Detail
+
+**1. DB-Migration: 5 Tabellen**
+- `contracts` – Verträge: Projekt-ID (optional), Kunde-ID, Template-ID, Status (entwurf/gesendet/unterschrieben/aktiv/abgelaufen/gekuendigt), aktuelle Version-Nr, erstellt_von, erstellt_am, signiert_am, signiert_von_ip, signiert_von_useragent.
+- `contract_versions` – Versionierung: Vertrag-ID, Versionsnummer, HTML-Inhalt (gerendert), Änderungsgrund, erstellt_von, erstellt_am. Jede Änderung am Vertrag erzeugt eine neue Version, alte Versionen bleiben erhalten.
+- `contract_templates` – Vorlagen: Name, Kategorie (mietvertrag/rahmenvertrag/einzelvertrag), HTML-Template mit Platzhaltern, Standard-AGB-Set-ID, ist_standard (ja/nein).
+- `agb_sets` – AGB-Sammlungen: Name, Version, HTML-Inhalt der AGB, gültig_ab, ist_aktuell. Mehrere AGB-Versionen können existieren, der Vertrag wird immer mit der zum Erstellungszeitpunkt aktuellen AGB-Version verknüpft.
+- `contract_audit` – GoBD-Audit-Trail: Vertrag-ID, Aktion (erstellt/bearbeitet/gesendet/signiert/storniert), Benutzer-ID, IP-Adresse, User-Agent, Zeitstempel, Details (JSON).
+
+**2. ContractService: Template-Engine mit Platzhaltern**
+Templates werden in HTML geschrieben und enthalten Platzhalter in doppelten geschweiften Klammern. Verfügbare Platzhalter:
+- Kunde: `{{kunde.name}}`, `{{kunde.adresse}}`, `{{kunde.email}}`, `{{kunde.telefon}}`, `{{kunde.steuernr}}`
+- Projekt: `{{projekt.name}}`, `{{projekt.startdatum}}`, `{{projekt.enddatum}}`, `{{projekt.ort}}`
+- Positionen: `{{positionen_tabelle}}` – rendert eine HTML-Tabelle mit allen gebuchten Assets (Name, Menge, Einzelpreis, Gesamtpreis)
+- Preise: `{{gesamtpreis_netto}}`, `{{mwst_betrag}}`, `{{gesamtpreis_brutto}}`
+- Firma: `{{firma.name}}`, `{{firma.adresse}}`, `{{firma.bankverbindung}}`
+- Datum: `{{datum_heute}}`, `{{datum_rueckgabe}}`
+Die Engine ersetzt alle Platzhalter mit echten Daten und rendert das fertige HTML.
+
+**3. ContractService: Versionierung**
+Jede Änderung am Vertrag (Inhalt bearbeiten, Positionen ändern, AGB aktualisieren) erzeugt eine neue Version. Die alte Version bleibt unverändert erhalten. Der Benutzer kann alle Versionen einsehen und vergleichen (Diff-View). Ein bereits signierter Vertrag kann nicht mehr bearbeitet werden – es muss ein neuer Vertrag erstellt werden.
+
+**4. ContractService: Auto-Generierung aus Projektdaten**
+Wenn ein Projekt angelegt wird, kann per Klick automatisch ein Vertrag generiert werden. Das System wählt das passende Template (basierend auf Projekt-Typ oder Standardvorlage), befüllt alle Platzhalter mit den Projektdaten und erstellt den Vertrag im Status „Entwurf". Der Benutzer muss nur noch prüfen und absenden.
+
+**5. ContractService: PDF-Generierung (dompdf)**
+Der gerenderte HTML-Vertrag wird per dompdf in ein PDF konvertiert. Das PDF enthält: Firmenlogo, Vertragstext, Positionstabelle, AGB, Unterschriftenfeld. Das PDF wird serverseitig gespeichert und kann heruntergeladen oder per E-Mail versendet werden. Jede Version hat ihr eigenes PDF.
+
+**6. ContractService: Canvas-basierte Signatur**
+Der Kunde erhält einen Link zur Signatur-Seite (kein Login nötig, Token-basiert). Dort sieht er den kompletten Vertrag als HTML und kann am Ende per Canvas (Touch/Maus) unterschreiben. Die Unterschrift wird als PNG gespeichert und in das PDF eingebettet. Beim Signieren werden IP-Adresse und User-Agent für den GoBD-Audit-Trail erfasst.
+
+**7. ContractService: Status-Workflow**
+Ein Vertrag durchläuft: Entwurf → Gesendet (an Kunde per E-Mail) → Unterschrieben (Kunde hat signiert) → Aktiv (Vermieter hat bestätigt) → Abgelaufen (Enddatum überschritten) oder Gekündigt. Jeder Statuswechsel wird im Audit-Trail dokumentiert. Nur bestimmte Übergänge sind erlaubt (z.B. nicht direkt von Entwurf zu Aktiv).
+
+**8. ContractService: AGB-Verwaltung**
+Allgemeine Geschäftsbedingungen werden zentral verwaltet und versioniert. Wenn neue AGB erstellt werden, gilt die alte Version weiterhin für bestehende Verträge. Neue Verträge bekommen automatisch die aktuellste AGB-Version angehängt. Der Vermieter kann verschiedene AGB-Sets für verschiedene Vertragstypen pflegen.
+
+**9. API: 12 Endpunkte in /api/contracts/**
+- `GET/POST/PUT/DELETE /api/contracts` – Vertrags-CRUD
+- `POST /api/contracts/{id}/generate-pdf` – PDF generieren
+- `POST /api/contracts/{id}/send` – Vertrag per E-Mail an Kunden senden
+- `GET /api/contracts/{id}/versions` – Alle Versionen abrufen
+- `POST /api/contracts/{id}/sign` – Öffentlicher Signatur-Endpunkt
+- `GET/POST/PUT/DELETE /api/contracts/templates` – Template-CRUD
+- `GET/POST/PUT/DELETE /api/contracts/agb` – AGB-Verwaltung
+
+**10. Öffentliche Signatur-Seite**
+Eine eigenständige Seite unter `/contracts/sign/{token}`, die ohne Login erreichbar ist. Sie zeigt den Vertrag im Volltext an, hat unten ein Canvas-Feld für die Unterschrift und einen „Verbindlich unterschreiben"-Button. Nach der Unterschrift wird eine Bestätigungsseite gezeigt und eine E-Mail an beide Parteien gesendet.
+
+**11. UI: contracts_index.twig**
+Die Vertragsübersicht zeigt alle Verträge als Tabelle mit: Vertragsnummer, Kunde, Projekt, Status (mit Farbe), Erstelldatum, Signaturdatum. Filter nach Status, Kunde, Zeitraum. Klick öffnet die Detailansicht mit Vorschau, Versionshistorie und Aktions-Buttons (Bearbeiten, PDF, Senden, Signatur-Link kopieren).
+
+**12. Controller: index.php**
+Routet Anfragen, prüft Berechtigungen (Verträge erstellen/bearbeiten = Admin + Vertrieb, Verträge einsehen = alle).
+
+**13. GoBD-Audit-Trail**
+Jede Aktion am Vertrag wird mit IP-Adresse, User-Agent, Benutzer-ID und Zeitstempel protokolliert. Der Audit-Trail ist unveränderlich (nur INSERT, kein UPDATE/DELETE). Er dient als Nachweis bei Rechtsstreitigkeiten und erfüllt die GoBD-Anforderungen für digitale Geschäftsdokumente.
+
+**14. Tests**
+Unit-Tests für: Template-Engine (alle Platzhalter korrekt ersetzt, fehlende Daten → leerer String), Versionierung (neue Version nach Änderung, alte Version unverändert), Status-Workflow (erlaubte/verbotene Übergänge), PDF-Generierung (Datei wird erstellt, ist gültiges PDF), Signatur (Token-Validierung, Audit-Trail-Eintrag).
+
+---
+
+## K3 – Schadenmanagement-Workflow
+
+### Überblick
+Ein strukturierter 8-Schritte-Prozess zur Abwicklung von Schäden an Mietgeräten. Von der Schadenerfassung über Foto-Dokumentation, Kostenvoranschläge, Versicherungsmeldung bis zur Abrechnung mit dem Kunden. 11 Status-Typen bilden den kompletten Lebenszyklus eines Schadenfalles ab. Das Kanban-Board gibt einen visuellen Überblick über alle laufenden Schadenfälle.
+
+### Bausteine im Detail
+
+**1. DB-Migration: 4 Tabellen**
+- `damage_workflows` – Schadenfälle: Asset-ID, Projekt-ID, Kunde-ID, Status (11 mögliche Werte), Schadenbeschreibung, Schweregrad (kosmetisch/funktional/sicherheitsrelevant/totalschaden), entdeckt_am, entdeckt_von, geschätzte_kosten, tatsächliche_kosten, versicherungsfall (ja/nein), Kautionsabzug-Betrag.
+- `damage_workflow_log` – Status-Historie: Workflow-ID, alter_Status, neuer_Status, Benutzer-ID, Zeitstempel, Kommentar. Jeder Statuswechsel wird protokolliert.
+- `damage_cost_estimates` – Kostenvoranschläge: Workflow-ID, Anbieter-Name, Betrag, Beschreibung, Dokument-Pfad (PDF), Status (angefragt/erhalten/akzeptiert/abgelehnt), erstellt_am.
+- `damage_photos` – Fotos: Workflow-ID, Dateipfad, Typ (vorher/während/nachher), Zeitstempel, Beschreibung, aufgenommen_von.
+
+**2. DamageWorkflowService: 11 Status mit erzwungenen Übergängen**
+Die 11 Status und ihre erlaubten Übergänge:
+1. `entdeckt` – Schaden wurde festgestellt → kann zu `dokumentiert` oder `abgebrochen`
+2. `dokumentiert` – Fotos und Beschreibung erfasst → kann zu `bewertet`
+3. `bewertet` – Schweregrad und geschätzte Kosten festgelegt → kann zu `kv_angefragt` oder `reparatur_intern`
+4. `kv_angefragt` – Kostenvoranschlag bei externem Dienstleister angefragt → kann zu `kv_erhalten`
+5. `kv_erhalten` – Kostenvoranschlag liegt vor → kann zu `kv_akzeptiert` oder `kv_angefragt` (neuen KV anfordern)
+6. `kv_akzeptiert` – Reparaturauftrag erteilt → kann zu `in_reparatur`
+7. `reparatur_intern` – Wird intern repariert → kann zu `repariert`
+8. `in_reparatur` – Extern in Reparatur → kann zu `repariert`
+9. `repariert` – Reparatur abgeschlossen, Fotos nachher → kann zu `abgerechnet`
+10. `abgerechnet` – Kosten dem Kunden/Versicherung in Rechnung gestellt → kann zu `abgeschlossen`
+11. `abgeschlossen` – Fall erledigt (Endstatus)
+Plus: `abgebrochen` – Fehlalarm, kein Schaden (Endstatus)
+Ungültige Übergänge werden mit einer Fehlermeldung abgelehnt.
+
+**3. DamageWorkflowService: Multi-Vendor Kostenvoranschläge**
+Pro Schadensfall können mehrere Kostenvoranschläge von verschiedenen Anbietern eingeholt werden. Jeder KV hat: Anbieter-Name, geschätzter Betrag, Beschreibung der Reparatur, PDF-Upload des Angebots. Der Benutzer kann KVs vergleichen und den besten akzeptieren. Der akzeptierte KV wird als Grundlage für die Reparaturkosten übernommen.
+
+**4. DamageWorkflowService: Foto-Dokumentation**
+Fotos werden in drei Phasen erfasst:
+- **Vorher:** Fotos des Schadens direkt nach Entdeckung (Pflicht beim Übergang zu „dokumentiert")
+- **Während:** Optionale Fotos während der Reparatur
+- **Nachher:** Fotos nach abgeschlossener Reparatur (Pflicht beim Übergang zu „repariert")
+Fotos werden auf dem Server im Upload-Verzeichnis abgelegt, Thumbnails automatisch generiert. Die Timeline zeigt alle Fotos chronologisch.
+
+**5. DamageWorkflowService: Versicherungsmeldung**
+Wenn ein Schadensfall als Versicherungsfall markiert wird, generiert das System eine Schadenmeldung mit allen relevanten Daten: Asset-Beschreibung, Schadendatum, Schadenort (Projekt-Adresse), Schadenursache, Fotos, geschätzte/tatsächliche Kosten, Policen-Nummer (aus K2 Versicherungsmanagement). Die Meldung kann als PDF exportiert oder per E-Mail an die Versicherung geschickt werden.
+
+**6. DamageWorkflowService: Kunden-Weiterbelastung + Kautionsabzug**
+Bei Schäden, die der Kunde zu verantworten hat, berechnet das System die Weiterbelastung: Reparaturkosten abzüglich Versicherungsleistung abzüglich Kaution. Wenn eine Kaution hinterlegt wurde, wird der Kautionsbetrag (ganz oder teilweise) einbehalten. Der Restbetrag wird dem Kunden in Rechnung gestellt. Das System erstellt automatisch eine Schadenrechnung, die in die Rechnungsübersicht einfließt.
+
+**7. API: 13 Endpunkte in /api/damage/**
+- `GET/POST/PUT /api/damage/workflows` – Schadenfälle verwalten
+- `POST /api/damage/workflows/{id}/transition` – Statusübergang durchführen
+- `GET /api/damage/workflows/{id}/log` – Status-Historie abrufen
+- `GET/POST/PUT/DELETE /api/damage/workflows/{id}/cost-estimates` – Kostenvoranschläge
+- `POST /api/damage/workflows/{id}/photos` – Fotos hochladen
+- `GET /api/damage/workflows/{id}/photos` – Fotos abrufen
+- `POST /api/damage/workflows/{id}/insurance-report` – Versicherungsmeldung generieren
+- `POST /api/damage/workflows/{id}/invoice` – Schadenrechnung erstellen
+- `GET /api/damage/dashboard` – Dashboard-Daten (Zähler pro Status)
+
+**8. UI: Kanban-Board (damage_dashboard.twig)**
+Das Schadenmanagement-Dashboard zeigt ein Kanban-Board mit Spalten für jeden Status. Jede Karte zeigt: Asset-Name, Schadentyp (Icon), Schweregrad (Farbe), geschätzte Kosten, Tage seit Entdeckung. Karten können per Drag & Drop in den nächsten Status gezogen werden (unter Einhaltung der erlaubten Übergänge). Filter nach Schweregrad, Asset-Typ, Zeitraum.
+
+**9. UI: Detail-View mit Timeline (damage_detail.twig)**
+Die Detailansicht eines Schadenfalles zeigt links die Schadendetails (Asset, Kunde, Beschreibung, Kosten) und rechts eine vertikale Timeline mit allen Ereignissen: Statuswechsel, Fotos hochgeladen, KVs erstellt, Kommentare. Jeder Timeline-Eintrag hat Zeitstempel, Benutzer und Details. Unten: Fotos-Galerie (vorher/nachher nebeneinander), KV-Vergleichstabelle, Abrechnungsübersicht.
+
+**10. Controller: index.php**
+Routet Anfragen zum richtigen Template, prüft Berechtigungen.
+
+**11. Integration mit bestehendem DamageReportService**
+Der bestehende DamageReportService (einfache Schadensmeldung) wird nicht ersetzt, sondern erweitert. Wenn ein Schaden gemeldet wird, erstellt der DamageReportService weiterhin den Initialeintrag, aber zusätzlich wird automatisch ein DamageWorkflow gestartet. So bleiben bestehende Schnittstellen kompatibel.
+
+**12. Tests**
+Unit-Tests für: Alle 11 Status-Übergänge (erlaubte und verbotene), Multi-Vendor KV (erstellen, akzeptieren, ablehnen), Foto-Upload mit Typ-Validierung, Versicherungsmeldung (alle Pflichtfelder vorhanden), Kunden-Weiterbelastung (Berechnung mit/ohne Kaution, mit/ohne Versicherung).
+
+---
+
+## K2 – Versicherungsmanagement
+
+### Überblick
+Verwaltung aller Versicherungspolicen des Unternehmens. Jede Police deckt bestimmte Assets oder Asset-Typen ab. Das System prüft automatisch, ob alle Assets versichert sind (Deckungslücken-Analyse), warnt vor ablaufenden Policen und verwaltet Kundennachweise (wenn Kunden eigene Versicherungen mitbringen). Schadenmeldungen werden mit den passenden Policen verknüpft.
+
+### Bausteine im Detail
+
+**1. DB-Migration: 4 Tabellen**
+- `insurance_policies` – Policen: Versicherung-Name, Policen-Nummer, Typ (Haftpflicht/Transportversicherung/Elektronikversicherung/Maschinenbruch/Allgefahren), Deckungssumme, Selbstbeteiligung, Jahresprämie, gültig_von, gültig_bis, Status (aktiv/abgelaufen/gekündigt), Dokument-Pfad (PDF der Police).
+- `insurance_asset_coverage` – Welche Assets sind durch welche Police gedeckt: Police-ID, Asset-ID (einzelnes Asset) oder Asset-Typ-ID (alle eines Typs), Deckungssumme pro Asset (falls abweichend von Police-Gesamtsumme).
+- `insurance_client_certificates` – Kundennachweise: Kunde-ID, Versicherungstyp, Versicherung-Name, Policen-Nummer, Deckungssumme, gültig_bis, Dokument-Pfad (PDF des Nachweises), verifiziert (ja/nein), verifiziert_von, verifiziert_am.
+- `insurance_claims` – Versicherungsfälle: Police-ID, Damage-Workflow-ID (Verknüpfung zum Schadenfall), Schadensdatum, Meldedatum, Aktenzeichen der Versicherung, Status (gemeldet/in_prüfung/anerkannt/abgelehnt/ausgezahlt/teilausgezahlt/abgeschlossen/widerspruch), gemeldeter_Betrag, ausgezahlter_Betrag.
+
+**2. InsuranceService: Policen-CRUD**
+Erstellen, Lesen, Aktualisieren, Löschen von Versicherungspolicen. Beim Erstellen wird die Police mit Assets oder Asset-Typen verknüpft. Das System berechnet automatisch die Deckungsquote (wie viel Prozent des Gesamtbestands sind versichert). Ablaufende Policen (< 30 Tage) werden farblich markiert.
+
+**3. InsuranceService: Deckungsprüfung + Deckungslücken**
+Die Methode `checkCoverage($assetId)` prüft, ob ein bestimmtes Asset versichert ist und gibt die Details zurück: Welche Police, welche Deckungssumme, welche Selbstbeteiligung. `findCoverageGaps()` analysiert den gesamten Bestand und listet alle Assets auf, die durch keine aktive Police gedeckt sind. Dies wird im Dashboard als Warnung angezeigt.
+
+**4. InsuranceService: Kundennachweise mit Verifizierung**
+Manche Kunden bringen eigene Versicherungsnachweise mit (z.B. Haftpflicht für gemietete Geräte). Der Kunde lädt den Nachweis hoch (PDF), ein Mitarbeiter verifiziert ihn (prüft Gültigkeit, Deckungssumme). Verifizierte Nachweise reduzieren die Haftung des Vermieters. Bei abgelaufenem Nachweis warnt das System bei der nächsten Buchung.
+
+**5. InsuranceService: Schadenmeldungen (8 Status)**
+Versicherungsfälle durchlaufen 8 Status: gemeldet → in_prüfung → anerkannt/abgelehnt → (bei Anerkennung) ausgezahlt/teilausgezahlt → abgeschlossen, oder (bei Ablehnung) widerspruch → zurück zu in_prüfung. Pro Fall werden erfasst: Aktenzeichen der Versicherung, gemeldeter Betrag, anerkannter Betrag, ausgezahlter Betrag. Differenzen (gemeldet vs. ausgezahlt) werden in der Schadensabrechnung berücksichtigt.
+
+**6. InsuranceService: Dashboard-Stats**
+Statistiken für das Versicherungs-Dashboard: Anzahl aktive Policen, Gesamtdeckungssumme, jährliche Gesamtprämie, Deckungsquote (% versicherter Assets), laufende Schadenmeldungen, Summe offener Ansprüche, Summe ausgezahlter Leistungen (YTD), Top-5 Schadensursachen.
+
+**7. API: 12 Endpunkte in /api/insurance/**
+- `GET/POST/PUT/DELETE /api/insurance/policies` – Policen CRUD
+- `GET /api/insurance/coverage-check/{assetId}` – Deckungsprüfung für ein Asset
+- `GET /api/insurance/coverage-gaps` – Alle unversicherten Assets
+- `GET/POST/PUT/DELETE /api/insurance/client-certificates` – Kundennachweise
+- `POST /api/insurance/client-certificates/{id}/verify` – Nachweis verifizieren
+- `GET/POST/PUT /api/insurance/claims` – Schadenmeldungen
+- `POST /api/insurance/claims/{id}/transition` – Status-Übergang
+- `GET /api/insurance/dashboard` – Dashboard-Statistiken
+
+**8. UI: insurance_index.twig**
+Versicherungsübersicht mit mehreren Bereichen: Oben: KPI-Cards (aktive Policen, Deckungsquote, offene Claims, Prämien/Jahr). Mitte: Policen-Tabelle mit Status-Ampel (grün = aktiv, gelb = läuft bald ab, rot = abgelaufen). Unten: Deckungslücken-Warnung (rote Box mit Liste unversicherter Assets). Seitenleiste: Laufende Schadenmeldungen mit Status.
+
+**9. Controller: index.php**
+Routet Anfragen, prüft Berechtigungen (Versicherungen verwalten = Admin).
+
+**10. Integration mit K3 Schadenmanagement**
+Wenn ein Schadenfall im K3-Modul als Versicherungsfall markiert wird, erstellt das System automatisch einen Eintrag in `insurance_claims` und verknüpft ihn mit der passenden Police (basierend auf dem betroffenen Asset). Der Versicherungsstatus wird im Schadenmanagement-Dashboard angezeigt.
+
+**11. Tests**
+Unit-Tests für: Policen-CRUD, Deckungsprüfung (Asset versichert/nicht versichert, multiple Policen), Deckungslücken-Analyse, Kundennachweise (Upload, Verifizierung, Ablauf), Schadenmeldungen (Status-Übergänge, Betragsberechnung).
