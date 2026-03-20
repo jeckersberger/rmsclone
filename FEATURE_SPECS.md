@@ -956,3 +956,84 @@ Das Smart-Create-Modal wird als Alternative zum normalen Asset-Formular angebote
 
 **13. Tests**
 Unit-Tests für: lookup() mit Cache-Hit und Cache-Miss, lookupFromPhoto() mit Mock der Vision-API (Gerät erkannt / nicht erkannt / 3 Vorschläge), bulkLookup() mit verschiedenen CSV-Formaten (mit/ohne Header, fehlende Spalten), suggestRentalPrice() (plausible Preise), suggestCategory() (Match/kein Match), recordCorrection() (Korrektur wird gespeichert und beim nächsten Lookup berücksichtigt), Autocomplete (Ergebnisse aus DB + Cache).
+
+---
+
+## I10 – KI-Lernsystem
+
+### Überblick
+Die KI in MyRMS soll nicht statisch bleiben, sondern sich an die Bedürfnisse jeder Instanz anpassen. Das Lernsystem hat drei Säulen: (1) Explizites Feedback – Benutzer bewerten KI-Ausgaben mit Daumen hoch/runter und optionalem Kommentar. (2) Implizites Tracking – das System merkt, ob KI-generierte Texte übernommen, bearbeitet oder verworfen werden. (3) Few-Shot-Bibliothek – gute Beispiele werden automatisch als Referenz für zukünftige KI-Anfragen gespeichert. Dazu kommen Prompt-Versionierung (verschiedene Prompt-Varianten testen) und A/B-Testing (welcher Prompt liefert bessere Ergebnisse).
+
+### Bausteine im Detail
+
+**1. DB-Migration: 4 Tabellen**
+- `ai_feedback` – Explizites Feedback: Request-ID (aus ai_usage_log), Task-Typ, Bewertung (thumbs_up/thumbs_down), Kommentar (Freitext), Benutzer-ID, Zeitstempel, KI-Output (der bewertete Text), Benutzer-Korrektur (der vom Benutzer verbesserte Text, falls vorhanden).
+- `ai_few_shot_examples` – Few-Shot-Bibliothek: Task-Typ, System-Prompt, User-Input, Gewünschter-Output, Quelle (auto_from_feedback/manual/import), Qualitäts-Score (0–100, basierend auf Feedback-Häufigkeit), ist_aktiv (ja/nein), erstellt_am, Instanz-ID.
+- `ai_prompt_versions` – Prompt-Versionen: Task-Typ, Version-Nr, System-Prompt-Text, ist_aktiv (ja/nein), A/B-Test-Gruppe (A/B/null), Erstellt-Am, Performance-Score (Durchschnitt aller Feedbacks für diese Version).
+- `ai_learning_profile` – Lernprofil pro Instanz: Instanz-ID, Branche (z.B. „Veranstaltungstechnik", „Baumaschinen", „Medizintechnik"), Sprach-Stil (formell/informell/technisch), bevorzugte Tonalität, häufige Korrekturen (JSON – z.B. „KI schreibt ‚Baumaschine', wir sagen ‚Gerät'"), Custom-Vokabular (JSON – firmenspezifische Begriffe).
+
+**2. FeedbackLearningService: recordFeedback()**
+Speichert eine Bewertung für eine KI-Ausgabe. Ablauf:
+1. Benutzer klickt Daumen hoch oder runter und gibt optional einen Kommentar.
+2. Das Feedback wird mit dem KI-Request verknüpft (über Request-ID).
+3. Bei Daumen-hoch + keine Korrektur: Das Input/Output-Paar wird automatisch als Few-Shot-Beispiel vorgeschlagen (Qualitäts-Score steigt).
+4. Bei Daumen-runter + Korrektur: Der korrigierte Text wird als „gewünschter Output" in die Few-Shot-Bibliothek aufgenommen. Das System lernt aus dem Unterschied zwischen KI-Antwort und Benutzer-Korrektur.
+5. Performance-Score der verwendeten Prompt-Version wird aktualisiert.
+
+**3. FeedbackLearningService: buildEnrichedPrompt()**
+Die zentrale Methode, die einen KI-Prompt „anreichert" bevor er an den Provider gesendet wird. Anreicherung in 3 Stufen:
+1. **Lernprofil laden:** Branche, Sprach-Stil, Custom-Vokabular der Instanz. Wird als Kontext in den System-Prompt eingefügt (z.B. „Du schreibst für ein Veranstaltungstechnik-Unternehmen. Verwende ‚Gerät' statt ‚Maschine'.").
+2. **Few-Shot-Beispiele hinzufügen:** Die besten 3-5 Beispiele für den aktuellen Task-Typ werden als Few-Shot-Kontext eingefügt. Beispiel: „Hier sind Beispiele für gute Schadensbewertungen: [Input] → [Output]".
+3. **Aktive Prompt-Version wählen:** Falls A/B-Testing aktiv ist, wird zufällig Prompt-Version A oder B gewählt. Sonst die aktive Standard-Version.
+Das Ergebnis ist ein optimierter Prompt, der firmenspeziifsche Eigenheiten berücksichtigt.
+
+**4. FeedbackLearningService: Auto-Prompt-Optimierung**
+Wenn eine Prompt-Version konsistent schlechtes Feedback bekommt (z.B. >30% Daumen-runter über 50+ Bewertungen), schlägt das System dem Admin vor, den Prompt zu optimieren. Optional: Die KI analysiert die Korrekturen und schlägt selbst einen verbesserten Prompt vor. Der Admin kann den Vorschlag annehmen oder ablehnen. So entsteht ein kontinuierlicher Verbesserungszyklus.
+
+**5. FeedbackLearningService: A/B-Testing + Prompt-Versioning**
+Für jeden Task-Typ können mehrere Prompt-Versionen existieren. Der Admin kann A/B-Tests starten: 50% der Anfragen bekommen Prompt A, 50% Prompt B. Nach genügend Feedback (z.B. 100 Bewertungen pro Version) wird automatisch ausgewertet: Welche Version hat mehr Daumen-hoch? Welche wird weniger korrigiert? Der Admin kann dann die bessere Version als Standard setzen. Alte Versionen bleiben für Rollbacks erhalten.
+
+**6. FeedbackLearningService: Lernprofil pro Instanz/Benutzer**
+Das Lernprofil speichert firmenspezifische Präferenzen:
+- **Branche:** Bestimmt den Grundton der KI (Bautechnik = sachlich/technisch, Eventtechnik = lockerer).
+- **Sprachstil:** Formell (Sie-Form), Informell (Du-Form), Technisch (Fachbegriffe).
+- **Custom-Vokabular:** Firmenspezifische Begriffe (z.B. „Wir nennen Projekte ‚Jobs'", „Kunden heißen bei uns ‚Auftraggeber'").
+- **Häufige Korrekturen:** Automatisch gesammelt aus Feedback – wenn Benutzer immer „Gerät" durch „Equipment" ersetzen, lernt das System das.
+Das Profil wird beim Onboarding initial befüllt (Branche wählen, Stil wählen) und dann kontinuierlich durch Feedback verfeinert.
+
+**7. API: 7 Endpunkte in /api/ai/**
+- `POST /api/ai/feedback` – Feedback abgeben (Bewertung + Kommentar + Korrektur)
+- `GET /api/ai/feedback/stats` – Feedback-Statistiken (pro Task-Typ, pro Zeitraum)
+- `GET/POST/PUT/DELETE /api/ai/few-shot` – Few-Shot-Beispiele verwalten
+- `GET/POST/PUT /api/ai/prompt-versions` – Prompt-Versionen verwalten
+- `POST /api/ai/prompt-versions/{id}/ab-test` – A/B-Test starten/stoppen
+- `GET/PUT /api/ai/learning-profile` – Lernprofil lesen/schreiben
+
+**8. UI: Feedback-Widget (feedback_widget.twig)**
+Ein kleines Twig-Partial, das überall eingebunden wird wo KI-Ausgaben angezeigt werden. Zeigt: Daumen-hoch/Daumen-runter-Buttons, optionales Textfeld für Kommentar/Korrektur. Klickt der Benutzer auf Daumen-runter, öffnet sich ein Textfeld mit dem KI-Text zum Bearbeiten – der korrigierte Text wird als Feedback gespeichert. Das Widget ist dezent gestaltet (kleine Icons, klappt bei Klick auf) und stört den Workflow nicht.
+
+**9. UI: KI-Lernsystem Dashboard (ai_learning.twig)**
+Dashboard für Admins mit:
+- **Feedback-Übersicht:** Letzte 50 Feedbacks mit Bewertung, Task-Typ, Benutzer. Klick zeigt KI-Output vs. Benutzer-Korrektur.
+- **Few-Shot-Bibliothek:** Alle gespeicherten Beispiele, sortierbar nach Task-Typ und Qualitäts-Score. Beispiele können aktiviert/deaktiviert, bearbeitet oder gelöscht werden.
+- **Prompt-Versioning:** Alle Prompt-Versionen pro Task-Typ mit Performance-Score. A/B-Test starten/stoppen.
+- **Lernprofil:** Branche, Stil, Vokabular bearbeiten.
+- **Statistiken:** Charts – Feedback-Rate über Zeit, Daumen-hoch-Quote pro Task-Typ, Verbesserung durch Few-Shot (vorher/nachher).
+
+**10. Controller: learning.php**
+Routet Anfragen zum Dashboard, prüft Berechtigungen (KI-Lernsystem = Admin only).
+
+**11. Integration: Feedback-Widget einbinden**
+Das Feedback-Widget muss in alle bestehenden Stellen eingebunden werden, wo KI-Ausgaben angezeigt werden:
+- E-Mail-Draft-Vorschau (KI-generierter E-Mail-Text)
+- Smart Asset Creator (KI-ausgefüllte Felder)
+- Schadensbewertung (KI-Einschätzung)
+- Vertragsanalyse (KI-Zusammenfassung)
+- Chat-Antworten (KI-Chatbot-Ausgaben)
+Überall wo `{{ ai_output }}` steht, kommt `{% include 'feedback_widget.twig' %}` dazu.
+
+**12. RAG/Vektordatenbank-Integration (Future)**
+Langfristig soll das Lernsystem mit einer Vektordatenbank (ChromaDB oder pgvector) arbeiten: Alle Firmendokumente, E-Mails, Verträge werden vektorisiert und als Kontext für KI-Anfragen verwendet (Retrieval-Augmented Generation). Dies ist ein separater Baustein der auf dem bestehenden Lernsystem aufbaut und aktuell noch nicht implementiert wird.
+
+**13. Tests**
+Unit-Tests für: recordFeedback() (Daumen hoch/runter, mit/ohne Korrektur), buildEnrichedPrompt() (Lernprofil wird eingefügt, Few-Shot-Beispiele werden hinzugefügt, A/B-Testing wählt richtige Version), Auto-Prompt-Optimierung (Schwellwert erreicht → Vorschlag generiert), Few-Shot-Qualitäts-Score (steigt bei positivem Feedback, sinkt bei negativem).
