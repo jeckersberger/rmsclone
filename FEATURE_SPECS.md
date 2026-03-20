@@ -757,3 +757,110 @@ Beim Generieren eines Dokuments aus einem Projekt fließen die Preise aus der L2
 
 **22. Tests**
 Unit-Tests für: Nummernkreise (atomische Vergabe, Jahres-Reset, Format-String), MwSt-Berechnung (19%/7%/0%, Kleinunternehmer, Reverse-Charge, gemischte Sätze), Konvertierungskette (Angebot→AB→Rechnung, Positionen korrekt übernommen), PDF-Rendering (Layout-JSON → gültiges PDF), GoBD-Archivierung (Hash-Prüfung, Unveränderlichkeit).
+
+---
+
+## D2 – Labeldrucker & Etiketten-Designer
+
+### Überblick
+Überall, wo MyRMS QR-Codes, Barcodes oder Asset-Aufkleber erzeugt, muss auch ein physischer Labeldrucker angesteuert werden können. Es gibt verschiedene Druckertypen (Zebra, Brother, DYMO, Niimbot), verschiedene Etikettengrößen (12mm×40mm, 25mm×50mm, 50mm×100mm, Endlosband etc.) und verschiedene Einsatzzwecke (Asset-Label, Inventur-Label, Versand-Label, Regal-Label, Kabel-Wickler). Der Benutzer soll Etiketten-Vorlagen selbst gestalten können – genau wie beim Dokumenten-Layout-Editor (D1), nur im Miniformat. Jede Vorlage ist an eine Etikettengröße gebunden und enthält frei platzierbare Elemente (QR-Code, Barcode, Text, Logo, Artikelnummer etc.).
+
+### Bausteine im Detail
+
+**1. DB-Migration: 4 Tabellen**
+- `label_printers` – Konfigurierte Drucker: Name (z.B. „Zebra im Lager"), Typ (zebra_zpl/brother_ql/dymo_lw/niimbot/generic_ipp/generic_cups), Verbindung (USB/Netzwerk/Bluetooth), IP-Adresse oder USB-Pfad, Port, Status (online/offline/fehler), DPI (203/300/600), Druckbreite_mm, Standard-Etikettengröße-ID, letzte_Nutzung.
+- `label_sizes` – Etikettengrößen: Name (z.B. „Standard Asset-Label"), Breite_mm, Höhe_mm, Druckertyp-Kompatibilität (JSON-Array welche Druckertypen diese Größe unterstützen), ist_endlosband (ja/nein – bei Endlosband wird die Höhe dynamisch), Rand_oben_mm, Rand_links_mm, Rand_rechts_mm, Rand_unten_mm.
+- `label_templates` – Etikettenvorlagen: Name, Etikettengröße-ID, Instanz-ID, Einsatzzweck (asset_label/inventur_label/versand_label/regal_label/kabel_label/custom), Layout-JSON (identisches Format wie D1, nur im Miniformat – Elemente mit Position, Größe, Typ, Konfiguration), ist_standard (ja/nein), Vorschau-PNG (automatisch generierte Vorschau).
+- `label_print_jobs` – Druckaufträge: Template-ID, Drucker-ID, Status (wartend/druckt/fertig/fehler), Anzahl_Etiketten, Daten-JSON (Array mit den Daten für jedes Etikett – z.B. [{assetId: 42, articleNumber: "MR-KB-00042"}, ...]), erstellt_von, erstellt_am, gedruckt_am, Fehlermeldung.
+
+**2. LabelPrinterService: Drucker-Verwaltung**
+CRUD für Labeldrucker. Beim Anlegen eines Druckers wird ein Verbindungstest durchgeführt (Ping bei Netzwerkdrucker, USB-Detection bei USB, Bluetooth-Discovery bei BT). Der Status (online/offline) wird periodisch aktualisiert. Pro Drucker wird angezeigt: letzter erfolgreicher Druck, Anzahl gedruckter Etiketten gesamt, geschätzte verbleibende Etikettenrolle (falls der Drucker diese Info liefert).
+
+**3. LabelPrinterService: 6 Druckertreiber**
+Sechs Treiber-Implementierungen für verschiedene Druckermarken:
+- **Zebra ZPL:** Erzeugt ZPL-II-Befehle (Zebra Programming Language). Unterstützt Barcodes (Code128, EAN-13), QR-Codes, Texte, Linien, Grafiken. Sendet ZPL-Befehle per RAW-Socket (Port 9100) oder USB.
+- **Brother QL:** Erzeugt Brother-Raster-Befehle. Unterstützt DK-Etiketten (verschiedene Größen). Kommunikation per USB oder Netzwerk.
+- **DYMO LabelWriter:** Erzeugt DYMO-spezifisches Format. Kommunikation per USB (DYMO SDK) oder CUPS-Treiber.
+- **Niimbot:** Erzeugt Niimbot-Befehle für günstige Bluetooth-Labeldrucker. Kommunikation per Bluetooth (über Android-App) oder USB.
+- **Generic IPP:** Internet Printing Protocol – für netzwerkfähige Drucker die IPP unterstützen. Sendet das Etikett als Bild (PNG/PDF).
+- **Generic CUPS:** Für Linux-Server mit CUPS – das Etikett wird als PDF an den CUPS-Druckserver gesendet, der es an den physischen Drucker weiterleitet.
+
+**4. LabelPrinterService: Template-Rendering**
+Die Rendering-Pipeline: Template-JSON laden → Platzhalter mit echten Daten ersetzen → In das drucker-spezifische Format konvertieren. Verfügbare Platzhalter für Etiketten:
+- `{{asset.articleNumber}}` – Artikelnummer (aus A1)
+- `{{asset.name}}` – Asset-Name
+- `{{asset.type}}` – Asset-Typ
+- `{{asset.serialNumber}}` – Seriennummer
+- `{{asset.location}}` – Aktueller Lagerort
+- `{{asset.qrCode}}` – QR-Code mit Asset-ID oder Artikelnummer
+- `{{asset.barcode}}` – Code128-Barcode
+- `{{firma.name}}` – Firmenname
+- `{{firma.logo}}` – Firmenlogo (als Grafik)
+- `{{datum}}` – Aktuelles Datum
+- `{{freitext}}` – Vom Benutzer eingegebener Freitext
+Das Rendering erzeugt je nach Druckertyp: ZPL-Befehle, PNG-Bild, oder PDF.
+
+**5. LabelPrinterService: Bulk-Druck**
+Mehrere Etiketten auf einmal drucken. Anwendungsfälle:
+- **Asset-Label:** Benutzer wählt 50 Assets aus der Inventarliste → System druckt 50 Etiketten mit je Asset-Name, Artikelnummer, QR-Code.
+- **Inventur-Label:** Beim Inventur-Workflow werden für alle Assets an einem Lagerort Etiketten gedruckt.
+- **Regal-Label:** Für jeden Lagerort wird ein Label mit Ortsname und Emoji gedruckt.
+Der Bulk-Druck läuft als Background-Job, der Fortschritt wird live im Browser angezeigt (z.B. „23/50 gedruckt"). Bei Druckfehlern werden die fehlgeschlagenen Etiketten markiert und können einzeln nachgedruckt werden.
+
+**6. Etiketten-Designer: Visueller Editor**
+Ein Mini-Version des D1-Layout-Editors, optimiert für kleine Etikettengrößen. Der Editor zeigt das Etikett in Originalgröße (oder vergrößert, z.B. 400%) an. Elemente werden per Drag & Drop platziert:
+- **QR-Code:** Automatisch generiert, konfigurierbarer Inhalt (Asset-ID, Artikelnummer, URL, Freitext), Größe anpassbar, Error-Correction-Level wählbar (L/M/Q/H).
+- **Barcode:** Code128, EAN-13, EAN-8, DataMatrix. Höhe und Breite einstellbar, mit/ohne Klartext-Zeile darunter.
+- **Text:** Platzhalter oder Freitext, Schriftart (monospace/sans-serif), Schriftgröße (4-24pt für Labels), Fett, Rotation (0°/90°/180°/270° für hochkant-Labels).
+- **Logo/Bild:** Firmenlogo einfügen, automatisch auf Etikettengröße skaliert, Schwarz-Weiß-Konvertierung für Thermodrucker.
+- **Linie/Rahmen:** Trennlinien, Umrandung des gesamten Etiketts.
+Live-Vorschau mit Beispieldaten. Speichern als Template.
+
+**7. Etiketten-Designer: Vorgefertigte Templates**
+8 vorgefertigte Etiketten-Vorlagen für den schnellen Einstieg:
+- **Asset-Standard (50×25mm):** QR-Code links, Artikelnummer + Asset-Name rechts, Firma unten klein.
+- **Asset-Kompakt (40×12mm):** Nur Barcode + Artikelnummer, für kleine Geräte.
+- **Asset-Groß (100×50mm):** QR-Code, Logo, Asset-Name, Artikelnummer, Seriennummer, Lagerort, E-Check-Datum.
+- **Inventur-Label (50×25mm):** QR-Code + Lagerort + Zähldatum.
+- **Versand-Label (100×150mm):** Empfänger-Adresse, Absender, Barcode, Projekt-Nr.
+- **Regal-Label (50×25mm):** Emoji-Icon groß + Lagerort-Name + QR-Code.
+- **Kabel-Wickler (80×25mm):** Schmales Label das um Kabel gewickelt wird, mit Nummer und Farbe.
+- **E-Check-Plakette (30×30mm):** Rund, nächster Prüftermin, Prüfer-Kürzel, QR-Code zur Prüfhistorie.
+
+**8. LabelPrinterService: Druck aus verschiedenen Kontexten**
+Labels können aus vielen Stellen der Anwendung gedruckt werden:
+- Asset-Detailseite: „Label drucken"-Button → wählt Template + Drucker → druckt 1 Label
+- Asset-Liste: Mehrere Assets selektieren → „Labels drucken" → Bulk-Druck
+- Lagerort-Verwaltung: „Regal-Labels drucken" für einen oder alle Lagerorte
+- Inventur: „Inventur-Labels drucken" für alle Assets an einem Standort
+- E-Check: Nach bestandenem E-Check automatisch neues Prüfplaketten-Label drucken
+- Wareneingang: Neue Assets bekommen sofort ein Label beim Anlegen
+Überall erscheint ein einheitliches Druck-Modal: Template wählen, Drucker wählen, Anzahl, Vorschau, Drucken.
+
+**9. LabelPrinterService: Android-App Integration**
+Die Android-App (für RFID-Scanning) bekommt einen „Label drucken"-Button. Zwei Szenarien:
+- **Bluetooth-Drucker (Niimbot, mobile Zebra):** Die App verbindet sich direkt per Bluetooth mit dem Drucker und sendet das Label. Ideal für unterwegs auf der Baustelle.
+- **Netzwerk-Drucker:** Die App sendet den Druckauftrag an den Server, der das Label an den Netzwerk-Drucker weiterleitet.
+Das Template und die Druckerauswahl werden in den App-Einstellungen hinterlegt (Standard-Template + Standard-Drucker).
+
+**10. API: 10 Endpunkte in /api/labels/**
+- `GET/POST/PUT/DELETE /api/labels/printers` – Drucker CRUD
+- `POST /api/labels/printers/{id}/test` – Testdruck (druckt ein Test-Etikett)
+- `GET /api/labels/printers/{id}/status` – Drucker-Status abfragen
+- `GET/POST/PUT/DELETE /api/labels/templates` – Etiketten-Vorlagen CRUD
+- `POST /api/labels/templates/{id}/preview` – Vorschau generieren (PNG)
+- `POST /api/labels/print` – Druckauftrag erstellen (Template-ID, Drucker-ID, Daten-Array)
+- `GET /api/labels/print-jobs` – Druckaufträge anzeigen (Status, Fortschritt)
+- `GET /api/labels/sizes` – Verfügbare Etikettengrößen
+
+**11. UI: label_settings.twig**
+Einstellungsseite für Labeldrucker: Oben: Konfigurierte Drucker als Cards (Name, Typ-Icon, Status-LED grün/rot, letzter Druck). Darunter: Etiketten-Vorlagen als Grid mit Miniatur-Vorschau. Klick auf eine Vorlage öffnet den Etiketten-Designer. „Neuen Drucker hinzufügen"-Wizard: Druckertyp wählen → Verbindung konfigurieren (IP/USB/BT) → Testdruck → Fertig.
+
+**12. UI: Druck-Modal (label_print_modal.twig)**
+Das universelle Druck-Modal, das überall eingebunden wird. Schritt 1: Template wählen (Vorschau mit echten Daten). Schritt 2: Drucker wählen (zeigt nur kompatible Drucker für die gewählte Etikettengröße). Schritt 3: Anzahl pro Asset (Standard 1), Druckvorschau. Schritt 4: Drucken + Fortschrittsanzeige.
+
+**13. Controller: index.php**
+Routet Anfragen, prüft Berechtigungen (Drucker konfigurieren = Admin, Labels drucken = alle, Templates bearbeiten = Admin).
+
+**14. Tests**
+Unit-Tests für: ZPL-Generierung (korrekter ZPL-Output für Text, QR, Barcode), Template-Rendering (alle Platzhalter korrekt ersetzt), Bulk-Druck (100 Labels, Fehler bei Label #37 → restliche werden trotzdem gedruckt), Druckerstatus-Abfrage, Etikettengrößen-Kompatibilitätsprüfung (Template passt nicht auf Drucker → Warnung).
