@@ -30,7 +30,7 @@ RUN --mount=type=bind,source=composer.json,target=composer.json \
 # - https://github.com/docker-library/docs/tree/master/php#php-core-extensions
 # - https://github.com/docker-library/docs/tree/master/php#how-to-install-more-php-extensions
 
-FROM php:8.3-apache AS final
+FROM php:8.5-apache AS final
 
 LABEL org.opencontainers.image.description="MyRMS is an advanced Rental Management System for Theatre, AV & Broadcast. This image is a PHP Apache2 docker container, which exposes MyRMS on port 80."
 LABEL org.opencontainers.image.licenses=AGPL-3.0
